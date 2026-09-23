@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Dixels.SpaceOs</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="10.0.9" />
+    <ProjectReference Include="..\..\src\Dixels.SpaceOs.EntityFrameworkCore\Dixels.SpaceOs.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\Dixels.SpaceOs.Application.Tests\Dixels.SpaceOs.Application.Tests.csproj" />
+    <PackageReference Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.6.1" />
+
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,118 @@
+{
+  "template": "app",
+  "imports": {
+    "Volo.Abp.LeptonXLiteTheme": {
+      "version": "5.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.Account": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.OpenIddict": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.Identity": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.TenantManagement": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.SettingManagement": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.PermissionManagement": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.FeatureManagement": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    },
+    "Volo.Abp.BlobStoring.Database": {
+      "version": "10.6.0",
+      "isInstalled": true,
+      "creationTime": "09/23/2026 06:42:42 +00:00"
+    }
+  },
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {}
+    }
+  },
+  "packages": {
+    "Dixels.Application": {
+      "path": "src/Dixels.Application/Dixels.Application.abppkg",
+      "folder": "src"
+    },
+    "Dixels.Application.Tests": {
+      "path": "test/Dixels.Application.Tests/Dixels.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.Domain.Shared": {
+      "path": "src/Dixels.Domain.Shared/Dixels.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "Dixels.Application.Contracts": {
+      "path": "src/Dixels.Application.Contracts/Dixels.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "Dixels.HttpApi": {
+      "path": "src/Dixels.HttpApi/Dixels.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "Dixels.HttpApi.Client": {
+      "path": "src/Dixels.HttpApi.Client/Dixels.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "Dixels.Web": {
+      "path": "src/Dixels.Web/Dixels.Web.abppkg",
+      "folder": "src"
+    },
+    "Dixels.Web.Tests": {
+      "path": "test/Dixels.Web.Tests/Dixels.Web.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.EntityFrameworkCore.Tests": {
+      "path": "test/Dixels.EntityFrameworkCore.Tests/Dixels.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.EntityFrameworkCore": {
+      "path": "src/Dixels.EntityFrameworkCore/Dixels.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "Dixels.TestBase": {
+      "path": "test/Dixels.TestBase/Dixels.TestBase.abppkg",
+      "folder": "test"
+    },
+    "Dixels.Domain.Tests": {
+      "path": "test/Dixels.Domain.Tests/Dixels.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/Dixels.HttpApi.Client.ConsoleTestApp/Dixels.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "Dixels.DbMigrator": {
+      "path": "src/Dixels.DbMigrator/Dixels.DbMigrator.abppkg",
+      "folder": "src"
+    },
+    "Dixels.Domain": {
+      "path": "src/Dixels.Domain/Dixels.Domain.abppkg",
+      "folder": "src"
+    }
+  }
+}

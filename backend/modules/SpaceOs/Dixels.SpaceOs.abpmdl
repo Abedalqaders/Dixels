@@ -1,0 +1,79 @@
+{
+  "folders": {
+    "items": {
+      "src": {},
+      "test": {},
+      "host": {}
+    }
+  },
+  "packages": {
+    "Dixels.SpaceOs.Domain.Shared": {
+      "path": "src/Dixels.SpaceOs.Domain.Shared/Dixels.SpaceOs.Domain.Shared.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.Domain": {
+      "path": "src/Dixels.SpaceOs.Domain/Dixels.SpaceOs.Domain.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.Application.Contracts": {
+      "path": "src/Dixels.SpaceOs.Application.Contracts/Dixels.SpaceOs.Application.Contracts.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.Application": {
+      "path": "src/Dixels.SpaceOs.Application/Dixels.SpaceOs.Application.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.EntityFrameworkCore": {
+      "path": "src/Dixels.SpaceOs.EntityFrameworkCore/Dixels.SpaceOs.EntityFrameworkCore.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.MongoDB": {
+      "path": "src/Dixels.SpaceOs.MongoDB/Dixels.SpaceOs.MongoDB.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.HttpApi": {
+      "path": "src/Dixels.SpaceOs.HttpApi/Dixels.SpaceOs.HttpApi.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.HttpApi.Client": {
+      "path": "src/Dixels.SpaceOs.HttpApi.Client/Dixels.SpaceOs.HttpApi.Client.abppkg",
+      "folder": "src"
+    },
+    "Dixels.SpaceOs.TestBase": {
+      "path": "test/Dixels.SpaceOs.TestBase/Dixels.SpaceOs.TestBase.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.EntityFrameworkCore.Tests": {
+      "path": "test/Dixels.SpaceOs.EntityFrameworkCore.Tests/Dixels.SpaceOs.EntityFrameworkCore.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.MongoDB.Tests": {
+      "path": "test/Dixels.SpaceOs.MongoDB.Tests/Dixels.SpaceOs.MongoDB.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.Domain.Tests": {
+      "path": "test/Dixels.SpaceOs.Domain.Tests/Dixels.SpaceOs.Domain.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.Application.Tests": {
+      "path": "test/Dixels.SpaceOs.Application.Tests/Dixels.SpaceOs.Application.Tests.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.HttpApi.Host": {
+      "path": "host/Dixels.SpaceOs.HttpApi.Host/Dixels.SpaceOs.HttpApi.Host.abppkg",
+      "folder": "host"
+    },
+    "Dixels.SpaceOs.HttpApi.Client.ConsoleTestApp": {
+      "path": "test/Dixels.SpaceOs.HttpApi.Client.ConsoleTestApp/Dixels.SpaceOs.HttpApi.Client.ConsoleTestApp.abppkg",
+      "folder": "test"
+    },
+    "Dixels.SpaceOs.AuthServer": {
+      "path": "host/Dixels.SpaceOs.AuthServer/Dixels.SpaceOs.AuthServer.abppkg",
+      "folder": "host"
+    },
+    "Dixels.SpaceOs.Host.Shared": {
+      "path": "host/Dixels.SpaceOs.Host.Shared/Dixels.SpaceOs.Host.Shared.abppkg",
+      "folder": "host"
+    }
+  }
+}
