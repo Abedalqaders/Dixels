@@ -126,6 +126,30 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 clientUri: swaggerRootUrl
             );
         }
+
+        // React SPA Client
+        var appClientId = configurationSection["Dixels_App:ClientId"];
+        if (!appClientId.IsNullOrWhiteSpace())
+        {
+            var appRootUrl = configurationSection["Dixels_App:RootUrl"]?.TrimEnd('/');
+
+            await CreateApplicationAsync(
+                name: appClientId!,
+                type: OpenIddictConstants.ClientTypes.Public,
+                consentType: OpenIddictConstants.ConsentTypes.Implicit,
+                displayName: "Workspace Manager SPA",
+                secret: null,
+                grantTypes: new List<string>
+                {
+                    OpenIddictConstants.GrantTypes.AuthorizationCode,
+                    OpenIddictConstants.GrantTypes.RefreshToken
+                },
+                scopes: commonScopes,
+                redirectUri: $"{appRootUrl}/callback",
+                clientUri: appRootUrl,
+                postLogoutRedirectUri: $"{appRootUrl}/"
+            );
+        }
     }
 
     private async Task CreateApplicationAsync(

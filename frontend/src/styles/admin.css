@@ -1,0 +1,168 @@
+/* Admin dashboard — page-specific styles only. */
+
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+.tile {
+  background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2);
+}
+.tile .val { font-family: var(--font-mono); font-size: 30px; line-height: 34px; font-weight: 600; }
+.bar { height: 8px; border-radius: var(--radius-pill); background: var(--data-track); overflow: hidden; margin-top: 2px; }
+.bar > i { display: block; height: 100%; background: var(--accent-solid); }
+.flag { color: var(--state-blocked-ink); font-weight: 600; }
+
+/* hierarchy tree */
+.treetools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.searchbox {
+  display: flex; align-items: center; gap: 6px; padding: 6px var(--space-3);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); background: var(--surface-sunken);
+}
+.searchbox svg { width: 14px; height: 14px; color: var(--ink-secondary); flex: none; }
+.searchbox input {
+  border: none; background: none; outline: none; font-size: 13px; width: 160px; color: var(--ink-primary);
+}
+.searchbox input::placeholder { color: var(--ink-secondary); }
+.searchbox:focus-within { border-color: var(--border-strong); }
+
+.treelegend {
+  display: flex; gap: var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-5) 0;
+  font-size: 12px; color: var(--ink-secondary);
+}
+.treelegend span { display: inline-flex; align-items: center; gap: 6px; }
+.treelegend svg { width: 14px; height: 14px; flex: none; }
+
+.tree { padding: 8px var(--space-3) var(--space-4); position: relative; overflow-x: auto; }
+.node {
+  display: flex; align-items: center; gap: 10px; padding: 8px var(--space-3); border-radius: var(--radius-md);
+  font-size: 15px; line-height: 22px; position: relative; min-width: max-content;
+}
+.node:hover { background: var(--surface-sunken); }
+.node .m { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
+.node > svg.ic { width: 16px; height: 16px; color: var(--ink-secondary); flex: none; }
+.l1 { font-weight: 600; }
+.l2 { padding-left: 34px; }
+.l3 { padding-left: 58px; }
+.node.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.node.on:hover { background: var(--accent-soft); }
+.node.on > svg.ic, .node.on .m { color: var(--accent-ink); }
+
+/* connector guide — every space row draws its own branch off the floor above it */
+.l3 { position: relative; }
+.l3::before {
+  content: ""; position: absolute; left: 42px; top: 0; bottom: 0;
+  border-left: 1.5px solid var(--border-subtle); pointer-events: none;
+}
+.l3::after {
+  content: ""; position: absolute; left: 42px; top: 50%; width: 15px; height: 1.5px;
+  background: var(--border-subtle); pointer-events: none;
+}
+
+/* expand / collapse chevron on floor rows */
+.chev {
+  width: 20px; height: 20px; flex: none; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; color: var(--ink-secondary); border-radius: var(--radius-sm);
+}
+.chev:hover { background: var(--surface-raised); color: var(--ink-primary); }
+.chev svg { width: 13px; height: 13px; transition: transform .15s ease; }
+.node.collapsed .chev svg { transform: rotate(-90deg); }
+.node.empty .chev { visibility: hidden; }
+
+/* row actions — visible on hover/focus so the tree reads clean by default */
+.actions { display: flex; align-items: center; gap: 2px; margin-left: auto; opacity: .5; transition: opacity .12s ease; flex: none; }
+.node:hover .actions, .node:focus-within .actions { opacity: 1; }
+.rowbtn {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; color: var(--ink-secondary); border-radius: var(--radius-sm);
+}
+.rowbtn:hover { background: var(--accent-soft); color: var(--accent-ink); }
+.rowbtn svg { width: 14px; height: 14px; }
+
+.treeempty { padding: var(--space-4) var(--space-5) var(--space-3); font-size: 13px; color: var(--ink-secondary); }
+
+/* "What applies here" — the resolved values, with the level each came from */
+.effective {
+  background: var(--surface-sunken); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: var(--space-4);
+}
+.effhead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: var(--space-3); }
+.effhead h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-secondary); }
+.effhead .sc { font-size: 12px; color: var(--ink-secondary); }
+.effgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3) var(--space-4); }
+.effitem { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.effitem .k { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-secondary); }
+.effitem .v { font-family: var(--font-mono); font-size: 13px; font-weight: 500; line-height: 18px; }
+.src {
+  align-self: flex-start; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  padding: 2px 6px; border-radius: var(--radius-sm); margin-top: 2px;
+}
+.src.building { background: color-mix(in srgb, var(--data-fill-3) 26%, transparent); color: var(--data-fill-3); }
+.src.floor    { background: color-mix(in srgb, var(--data-fill-2) 24%, transparent); color: var(--data-fill-2); }
+.src.space    { background: color-mix(in srgb, var(--data-fill-1) 20%, transparent); color: var(--data-fill-1); }
+.src.none     { background: var(--surface-raised); color: var(--ink-secondary); }
+
+/* Inherit / Override rows — the UI form of "null means inherit" */
+.inh { border-top: 1px solid var(--border-subtle); padding: var(--space-3) 0; }
+.inh:first-of-type { border-top: none; padding-top: 4px; }
+.inh-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
+.inhbtn {
+  display: inline-flex; align-items: center; gap: var(--space-2); background: none; border: none;
+  padding: 0; cursor: pointer; color: var(--ink-secondary); font-size: 12px; font-weight: 600;
+}
+.inhbtn .sw2 { width: 34px; height: 20px; }
+.inhbtn .sw2::after { width: 14px; height: 14px; }
+.inh.on .inhbtn { color: var(--accent-ink); }
+.inh.on .inhbtn .sw2 { background: var(--accent-solid); }
+.inh.on .inhbtn .sw2::after { left: 17px; }
+.inhbtn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+.inhnote { display: block; font-size: 12px; line-height: 17px; color: var(--ink-secondary); margin-top: 6px; }
+.inh.on .inhnote { color: var(--accent-ink); font-weight: 600; }
+
+/* Constraints page (admin-constraints.html) — one level per page, so the
+   level block reads as the page's own card rather than a row in a stack. */
+.backlink { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
+.backlink:hover { text-decoration: underline; }
+.backlink svg { width: 14px; height: 14px; flex: none; }
+.constraintspage .level { background: var(--surface-raised); box-shadow: var(--shadow-card); padding: var(--space-5); }
+.constraintspage .effective { background: var(--surface-raised); }
+.constraintspage h1.pagetitle { margin-top: 4px; }
+
+/* constraint levels */
+.level { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4); }
+.ctrl:disabled, select.ctrl:disabled { opacity: .6; cursor: not-allowed; }
+.levelhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.levelhead h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-secondary); }
+.levelhead .sc { font-size: 13px; color: var(--ink-secondary); }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ovr { font-size: 13px; line-height: 18px; color: var(--accent-ink); font-weight: 600; }
+.inherit { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.sw2 { width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--border-strong); position: relative; flex: none; transition: background .12s ease; }
+.sw2.on { background: var(--accent-solid); }
+.sw2::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: var(--radius-pill); background: var(--surface-raised); transition: left .12s ease;
+}
+.sw2.on::after { left: 19px; }
+.saverow { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-4); }
+
+/* roster table — admin-employees.html */
+table { width: 100%; border-collapse: collapse; }
+th {
+  background: var(--surface-sunken); color: var(--ink-secondary); text-align: left; font-size: 12px;
+  font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+}
+td { padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); font-size: 15px; line-height: 22px; vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td .who { font-weight: 600; }
+td .m { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+
+@media (max-width: 1100px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .kpis { grid-template-columns: 1fr; }
+  .effgrid { grid-template-columns: 1fr; }
+  .fields { grid-template-columns: 1fr; }
+  .searchbox input { width: 110px; }
+}
