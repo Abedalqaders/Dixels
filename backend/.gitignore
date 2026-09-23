@@ -258,6 +258,7 @@ src/Dixels.AuthServer/Logs/*
 src/Dixels.HttpApi.Host/Logs/*
 src/Dixels.HttpApi.HostWithIds/Logs/*
 src/Dixels.DbMigrator/Logs/*
+src/Dixels.Domain/Logs/*
 src/Dixels.Blazor.Server/Logs/*
 src/Dixels.Blazor.Server.Tiered/Logs/*
 

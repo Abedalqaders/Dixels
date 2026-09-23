@@ -1,0 +1,84 @@
+/* Login / signed-out — page-specific styles. Loads after tokens.css + base.css. */
+
+.page { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+
+/* left brand panel */
+.brandpanel { background: var(--accent-soft); padding: 64px 56px; display: flex; flex-direction: column; }
+.mark { display: flex; }
+.mark .logo-img { height: 44px; }
+.tag { font-size: 17px; line-height: 26px; color: var(--accent-ink); margin-top: 20px; max-width: 34ch; opacity: .9; }
+.pts { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
+.pt { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 22px; color: var(--accent-ink); }
+.pt svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+
+/* right form panel */
+.formwrap { display: flex; align-items: center; justify-content: center; padding: 64px 56px; }
+.logincard {
+  width: 380px; max-width: 100%; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 32px;
+}
+.logincard h1 {
+  font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 600; margin: 0;
+}
+.loginsub { font-size: 15px; line-height: 22px; color: var(--ink-secondary); margin: 8px 0 24px; }
+.loginfield { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.loginfield input.ctrl.bad { border-color: var(--danger-solid); border-width: 2px; padding: 8px 11px; }
+.dots { letter-spacing: .25em; color: var(--ink-secondary); }
+.roletoggle {
+  display: flex; border: 1px solid var(--border-strong); border-radius: var(--radius-md); overflow: hidden;
+}
+.roleopt {
+  flex: 1; font-family: inherit; font-size: 13px; font-weight: 600; line-height: 18px; padding: 8px 10px;
+  border: none; cursor: pointer; background: var(--surface-raised); color: var(--ink-secondary);
+}
+.roleopt + .roleopt { border-left: 1px solid var(--border-strong); }
+.roleopt.on { background: var(--accent-soft); color: var(--accent-ink); }
+.loginfield .hint { margin-top: 2px; }
+.rowline { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 20px; font-size: 13px; }
+.chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
+.box { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface-raised); flex: none; }
+.link { color: var(--accent-ink); font-weight: 600; }
+.err {
+  display: flex; gap: 10px; background: var(--state-cancelled-soft); color: var(--state-cancelled-ink);
+  border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 13px; line-height: 18px;
+}
+.err svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.err b { display: block; font-size: 15px; line-height: 22px; margin-bottom: 2px; }
+.foot { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle); font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+.foot code { font-family: var(--font-mono); font-size: 12px; }
+.loginbtn { width: 100%; justify-content: center; }
+
+/* signed-out screen */
+.divider {
+  padding: 10px 24px; background: var(--surface-sunken); color: var(--ink-secondary);
+  font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);
+}
+.outwrap { min-height: 340px; display: flex; align-items: center; justify-content: center; padding: 48px; }
+.outcard {
+  width: 440px; text-align: center; background: var(--surface-raised);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); padding: 40px 32px;
+}
+.seal {
+  width: 48px; height: 48px; margin: 0 auto 20px; border-radius: var(--radius-pill); background: var(--accent-soft);
+  color: var(--accent-ink); display: flex; align-items: center; justify-content: center;
+}
+.seal svg { width: 24px; height: 24px; }
+.outcard h2 { font-family: var(--font-display); font-size: 24px; line-height: 30px; font-weight: 600; margin: 0 0 8px; }
+.outcard p { font-size: 15px; line-height: 22px; color: var(--ink-secondary); margin: 0 0 24px; }
+.outbtns { display: flex; gap: 12px; }
+.outbtns .btn { flex: 1; justify-content: center; }
+
+@media (max-width: 860px) {
+  .page { grid-template-columns: 1fr; }
+  .brandpanel { padding: 40px 32px; }
+  .pts { margin-top: 32px; }
+  .formwrap { padding: 32px 24px; }
+}
+
+@media (max-width: 420px) {
+  .brandpanel { padding: 32px 20px; }
+  .formwrap { padding: 24px 16px; }
+  .logincard { padding: 24px; }
+}
