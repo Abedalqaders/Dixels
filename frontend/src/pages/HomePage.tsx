@@ -1,5 +1,7 @@
 import { useAuth } from 'react-oidc-context'
-import { getDisplayName, hasRole } from '../auth/roles'
+import { getDisplayName } from '../auth/roles'
+import { useAuthRole } from '../auth/useAuthRole'
+import { CalendarIcon, ClockIcon } from '../components/icons'
 import logo from '../assets/logo.png'
 import '../styles/tokens.css'
 import '../styles/base.css'
@@ -12,15 +14,15 @@ import '../styles/login.css'
 // Credentials are handled entirely by the backend's own login page (see
 // Step 2 in the plan): clicking "Sign in" just kicks off the OIDC redirect,
 // same as clicking "Sign in with Google" anywhere else.
-export function Home() {
+export function HomePage() {
   const auth = useAuth()
+  const { landingPath } = useAuthRole()
 
   if (auth.isAuthenticated) {
-    const destination = hasRole(auth.user, 'admin') ? '/admin/buildings' : '/dashboard'
     return (
       <div style={{ padding: 24 }}>
         <p>You're signed in as {getDisplayName(auth.user)}.</p>
-        <a href={destination}>Go to your dashboard</a>
+        <a href={landingPath}>Go to your dashboard</a>
       </div>
     )
   }
@@ -34,11 +36,11 @@ export function Home() {
         </p>
         <div className="pts">
           <div className="pt">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2.5" y="3.5" width="15" height="13" rx="2" /><path d="M2.5 7.5h15M7 2v3M13 2v3" /></svg>
+            <CalendarIcon />
             Single and recurring bookings, validated one occurrence at a time
           </div>
           <div className="pt">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="10" cy="10" r="7.5" /><path d="M10 5.5V10l3 2" /></svg>
+            <ClockIcon />
             Every time shown in the building's own timezone
           </div>
           <div className="pt">

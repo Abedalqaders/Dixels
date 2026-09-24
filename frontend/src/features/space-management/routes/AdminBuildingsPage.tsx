@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Sidebar } from '../components/Sidebar'
-import '../styles/tokens.css'
-import '../styles/base.css'
-import '../styles/admin.css'
+import { Sidebar } from '../../../components/Sidebar'
+import { SearchIcon } from '../../../components/icons'
+import { ICONS } from '../components/spaceTypeIcons'
+import { DetailsIcon, PencilIcon, PlusIcon, ChevronIcon } from '../components/actionIcons'
+import { AddNodeModal } from '../components/AddNodeModal'
+import type { ModalState } from '../components/AddNodeModal'
+import '../../../styles/tokens.css'
+import '../../../styles/base.css'
+import '../../../styles/admin.css'
 
 type Space = { name: string; seats: number; type: 'meeting-room' | 'focus-pod' | 'desk'; blocked?: boolean }
 type Floor = { name: string; floorNum: number; spaceCount: number; spaces: Space[] }
 
-// Static sample data matching CONSTRAINTS.md's worked examples - no backend
-// yet, this is the visual design only.
+// Static sample data - no backend yet, this is the visual design only.
 const BUILDING = { name: 'Ridge House', bnum: 'RH-01', tz: 'Asia/Amman' }
 const FLOORS: Floor[] = [
   { name: 'Level 1', floorNum: 1, spaceCount: 9, spaces: [] },
@@ -30,40 +34,7 @@ const FLOORS: Floor[] = [
   { name: 'Level 4 — Engineering', floorNum: 4, spaceCount: 16, spaces: [] },
 ]
 
-const ICONS = {
-  building: (
-    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17V7l7-4 7 4v10z" /></svg>
-  ),
-  floor: (
-    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M3.5 6h13M3.5 10h13M3.5 14h13" /></svg>
-  ),
-  'meeting-room': (
-    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.2" cy="6.8" r="2.2" /><path d="M2.8 15.3c.3-2.6 2-4 4.4-4s4 1.4 4.4 4" /><circle cx="14.3" cy="7.6" r="1.7" /><path d="M12.2 11.4c.9-.4 1.9-.4 2.7.2.9.6 1.5 1.8 1.7 3.2" /></svg>
-  ),
-  'focus-pod': (
-    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 17V9.5a5.5 5.5 0 0 1 11 0V17" /><path d="M3 17h14" /></svg>
-  ),
-  desk: (
-    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3.5" width="10" height="7" rx="1" /><path d="M8 14h4M10 10.5V14" /><path d="M3 17h14" /></svg>
-  ),
-}
-
-const DetailsIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7.2" /><path d="M10 9.4v4" /><circle cx="10" cy="6.6" r=".9" fill="currentColor" stroke="none" /></svg>
-)
-const PencilIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12.7 3.3a1.5 1.5 0 0 1 2.1 0l1.9 1.9a1.5 1.5 0 0 1 0 2.1L7 17H3v-4L12.7 3.3z" /><path d="M11 5.3l3.7 3.7" /></svg>
-)
-const PlusIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M10 4.5v11M4.5 10h11" /></svg>
-)
-const ChevronIcon = () => (
-  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 8 10 12.5 14.5 8" /></svg>
-)
-
-type ModalState = { kind: 'building' | 'floor' | 'space'; parentName?: string } | null
-
-export function AdminBuildings() {
+export function AdminBuildingsPage() {
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [modal, setModal] = useState<ModalState>(null)
@@ -108,7 +79,7 @@ export function AdminBuildings() {
               <h2 className="sectiontitle">Hierarchy</h2>
               <div className="treetools">
                 <div className="searchbox">
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><circle cx="9" cy="9" r="5.5" /><path d="M13 13l4 4" /></svg>
+                  <SearchIcon />
                   <input
                     type="text"
                     placeholder="Filter by name…"
@@ -201,60 +172,6 @@ export function AdminBuildings() {
       </div>
 
       {modal && <AddNodeModal state={modal} onClose={() => setModal(null)} />}
-    </div>
-  )
-}
-
-function AddNodeModal({ state, onClose }: { state: NonNullable<ModalState>; onClose: () => void }) {
-  const titles = { building: 'Add building', floor: 'Add floor', space: 'Add space' }
-  const metaLabel = state.kind === 'building' ? 'Building number' : state.kind === 'floor' ? 'Floor number' : 'Capacity'
-  const metaPlaceholder = state.kind === 'building' ? 'e.g. RH-02' : state.kind === 'floor' ? 'e.g. 5' : 'e.g. 6'
-
-  return (
-    <div className="overlay show">
-      <div className="modal">
-        <h3>{titles[state.kind]}</h3>
-        {state.parentName && <p className="sub">Added under {state.parentName}.</p>}
-        <div className="row2">
-          <div className="field">
-            <span className="lbl">Name</span>
-            <input className="ctrl" placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'} />
-          </div>
-          <div className="field">
-            <span className="lbl">{metaLabel}</span>
-            <input className="ctrl mono" placeholder={metaPlaceholder} />
-          </div>
-        </div>
-        {state.kind === 'building' && (
-          <div className="row2">
-            <div className="field">
-              <span className="lbl">Timezone</span>
-              <select className="ctrl" defaultValue="Asia/Amman">
-                <option>Asia/Amman</option>
-                <option>Europe/London</option>
-                <option>America/New_York</option>
-                <option>UTC</option>
-              </select>
-            </div>
-          </div>
-        )}
-        {state.kind === 'space' && (
-          <div className="row2">
-            <div className="field">
-              <span className="lbl">Type</span>
-              <select className="ctrl" defaultValue="meeting-room">
-                <option value="meeting-room">Meeting room</option>
-                <option value="focus-pod">Focus pod</option>
-                <option value="desk">Desk</option>
-              </select>
-            </div>
-          </div>
-        )}
-        <div className="modalfoot">
-          <button className="btn sec" onClick={onClose}>Cancel</button>
-          <button className="btn" onClick={onClose} title="Not wired up to the backend yet">Add</button>
-        </div>
-      </div>
     </div>
   )
 }
