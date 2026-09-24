@@ -29,7 +29,7 @@ const DAY_OPEN_START = 7
 const DAY_OPEN_END = 20
 const DAY_BOOKINGS = [{ start: 9, end: 10, label: 'Meeting Room 3B' }]
 
-export function Dashboard() {
+export function DashboardPage() {
   const auth = useAuth()
   const [qbDuration, setQbDuration] = useState(1)
   const [cancelling, setCancelling] = useState<string | null>(null)

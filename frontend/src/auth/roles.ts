@@ -4,7 +4,7 @@ import type { User } from 'oidc-client-ts'
 // a single string; with more than one, oidc-client-ts gives back an array -
 // normalize both shapes here so callers don't have to care.
 export function getRoles(user: User | null | undefined): string[] {
-  const role = user?.profile.role
+  const role = user?.profile.role as string | string[] | undefined
   if (!role) return []
   return Array.isArray(role) ? role : [role]
 }
