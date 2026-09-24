@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { loadSharedFixture } from '../../../test/sharedFixtures'
-import { OperatingDays } from './operatingDays'
+import { allowedDays, OperatingDays } from './operatingDays'
 import type { DayName } from './operatingDays'
 
 interface OperatingDaysCase {
@@ -18,5 +18,21 @@ describe('OperatingDays.isSubsetOf', () => {
     const childDays = OperatingDays.fromDayNames(child)
 
     expect(childDays.isSubsetOf(parentDays)).toBe(expected)
+  })
+})
+
+describe('allowedDays', () => {
+  it("returns exactly the parent's own days", () => {
+    const parent = OperatingDays.fromDayNames(['Monday', 'Wednesday', 'Friday'])
+
+    expect(allowedDays(parent)).toEqual(['Monday', 'Wednesday', 'Friday'])
+  })
+
+  it('returns every day when the parent is Everyday', () => {
+    expect(allowedDays(OperatingDays.Everyday)).toHaveLength(7)
+  })
+
+  it('returns no days when the parent is None', () => {
+    expect(allowedDays(OperatingDays.None)).toEqual([])
   })
 })

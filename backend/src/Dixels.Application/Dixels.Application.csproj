@@ -14,6 +14,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Needed only for [HttpGet]/[HttpPost] route attributes on the few app service methods
+         whose names don't match ABP's conventional-controller naming guesses (e.g.
+         GetResolvedConstraintsAsync, GetTreeAsync). These live in the ASP.NET Core shared
+         framework (Microsoft.AspNetCore.Mvc.Core), not a standalone NuGet package. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Volo.Abp.Account.Application" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.Identity.Application" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.PermissionManagement.Application" Version="10.6.1" />

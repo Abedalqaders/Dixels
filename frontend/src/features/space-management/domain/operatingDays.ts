@@ -48,3 +48,14 @@ export class OperatingDays {
     return DAY_ORDER.filter((_, i) => (this.mask & (1 << i)) !== 0)
   }
 }
+
+/**
+ * Which days a picker should let the admin select, given the resolved parent value — the
+ * narrow-only rule means this is exactly `parentDays`' own set, nothing more. Named for the
+ * call site (`allowedDays(resolvedParentDays)`) rather than reusing `toDayNames()` directly,
+ * so a picker component reads as "what am I allowed to pick" rather than "what does this
+ * value contain".
+ */
+export function allowedDays(parentDays: OperatingDays): DayName[] {
+  return parentDays.toDayNames()
+}

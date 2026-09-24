@@ -38,6 +38,25 @@
 .node:hover { background: var(--surface-sunken); }
 .node .m { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
 .node > svg.ic { width: 16px; height: 16px; color: var(--ink-secondary); flex: none; }
+
+/* space rows get a small icon chip instead of a bare stroked glyph, so the row scans as a
+   distinct item rather than a plain text line — same treatment on both the scoped
+   Spaces-of-a-floor page and the standalone all-spaces page. */
+.spaceicon {
+  width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--surface-sunken);
+  display: flex; align-items: center; justify-content: center; flex: none;
+  transition: background .12s ease;
+}
+.spaceicon svg { width: 16px; height: 16px; color: var(--ink-secondary); }
+.node:hover .spaceicon { background: var(--accent-soft); }
+.node:hover .spaceicon svg { color: var(--accent-ink); }
+
+/* space-type tag — a plain category label, deliberately quieter than the uppercase/bold
+   Custom and Deleted status badges so it doesn't compete with them for attention. */
+.badge.type {
+  background: var(--surface-sunken); color: var(--ink-secondary); font-weight: 500;
+  text-transform: none; letter-spacing: normal;
+}
 .l1 { font-weight: 600; }
 .l2 { padding-left: 34px; }
 .l3 { padding-left: 58px; }
@@ -65,6 +84,11 @@
 .chev svg { width: 13px; height: 13px; transition: transform .15s ease; }
 .node.collapsed .chev svg { transform: rotate(-90deg); }
 .node.empty .chev { visibility: hidden; }
+/* Belt and braces alongside the visibility rule above: a genuinely disabled attribute, not
+   just a CSS hide, so there is no way to click/tab into a chevron with nothing to expand
+   (e.g. a building whose floors were stripped by the "Buildings" level filter). */
+.chev:disabled { cursor: default; }
+.chev:disabled:hover { background: none; color: var(--ink-secondary); }
 
 /* row actions — visible on hover/focus so the tree reads clean by default */
 .actions { display: flex; align-items: center; gap: 2px; margin-left: auto; opacity: .5; transition: opacity .12s ease; flex: none; }
@@ -77,6 +101,90 @@
 .rowbtn svg { width: 14px; height: 14px; }
 
 .treeempty { padding: var(--space-4) var(--space-5) var(--space-3); font-size: 13px; color: var(--ink-secondary); }
+
+/* Employees admin table — a real table, not the .tree/.node hierarchy rows: this data is
+   flat and column-shaped (name / contact / status / building), not a parent-child tree, so
+   forcing it into .node's single horizontal flex line just crammed everything into one row
+   with nothing lining up between rows. */
+.employeetable { width: 100%; border-collapse: collapse; }
+.employeetable th {
+  text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-secondary); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle);
+}
+.employeetable td {
+  padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); vertical-align: middle;
+}
+.employeetable tr:last-child td { border-bottom: none; }
+.employeetable tbody tr:hover td { background: var(--surface-sunken); }
+.employee-identity { display: flex; align-items: center; gap: var(--space-3); }
+.employee-name { font-weight: 600; font-size: 15px; line-height: 20px; }
+.employee-username { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
+.employeetable .ctrl { min-width: 200px; }
+.employeetable .col-status { width: 1%; white-space: nowrap; }
+.employeetable .col-building { width: 220px; }
+
+/* row actions — a single kebab button instead of a row of icons, rendered via a portal so
+   it's never clipped by the tree's own scroll container */
+.rowmenu-panel {
+  background: var(--surface-overlay); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay); padding: 5px; min-width: 190px;
+  display: flex; flex-direction: column; gap: 1px; z-index: 100;
+}
+.rowmenu-item {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius-sm);
+  font-size: 13px; text-align: left; background: none; border: none; cursor: pointer; color: var(--ink-primary); width: 100%;
+}
+.rowmenu-item:hover:not(:disabled) { background: var(--surface-sunken); }
+.rowmenu-item:disabled { opacity: .45; cursor: not-allowed; }
+.rowmenu-item.destructive { color: var(--state-blocked-ink); }
+.rowmenu-item.destructive:hover:not(:disabled) { background: var(--state-blocked-soft); }
+.rowmenu-item svg { width: 14px; height: 14px; flex: none; color: inherit; }
+
+/* search-match highlight */
+mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radius: 3px; padding: 0 1px; }
+
+/* filter bar — level segmented control + "Custom only" toggle + live result count, under
+   the search box */
+.filterbar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-5) 0; }
+.seg { display: flex; border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); padding: 2px; gap: 2px; }
+.segbtn {
+  border: none; background: none; cursor: pointer; font-size: 12px; font-weight: 500; color: var(--ink-secondary);
+  padding: 5px 12px; border-radius: var(--radius-pill); transition: background .12s ease, color .12s ease;
+}
+.segbtn:hover { color: var(--ink-primary); }
+.segbtn.on { background: var(--accent-solid); color: var(--on-accent); }
+.filterchip {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-subtle); background: none;
+  cursor: pointer; font-size: 12px; font-weight: 500; color: var(--ink-secondary); padding: 6px 12px; border-radius: var(--radius-pill);
+}
+.filterchip:hover { color: var(--ink-primary); }
+.filterchip.on { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+.resultcount { font-size: 12px; color: var(--ink-secondary); }
+
+/* Manage space types */
+.typelist { display: flex; flex-direction: column; gap: var(--space-3); max-height: 360px; overflow-y: auto; padding-right: 2px; }
+.typerow {
+  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised);
+}
+.typerow-top { display: flex; align-items: center; gap: var(--space-2); }
+.typerow-top .ctrl { flex: 1; }
+.iconpicker { display: flex; gap: 6px; }
+.iconswatch {
+  width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-sunken);
+  color: var(--ink-secondary); cursor: pointer; transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+.iconswatch:hover:not(:disabled) { background: var(--surface-raised); color: var(--ink-primary); border-color: var(--border-strong); }
+.iconswatch.on { background: var(--accent-soft); border-color: var(--accent-solid); color: var(--accent-ink); }
+.iconswatch:disabled { opacity: .5; cursor: not-allowed; }
+.iconswatch svg { width: 17px; height: 17px; }
+.typerow-actions { display: flex; gap: 6px; flex: none; }
+.addtype { padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: var(--space-3); }
+.addtype .lbl { display: block; margin-bottom: 6px; }
+
+/* required-field marker for create/edit forms (AddNodeModal, EditDetailsModal) */
+.req { color: var(--state-blocked-ink); margin-left: 2px; }
 
 /* "What applies here" — the resolved values, with the level each came from */
 .effective {
@@ -118,8 +226,11 @@
 
 /* Constraints page (admin-constraints.html) — one level per page, so the
    level block reads as the page's own card rather than a row in a stack. */
-.backlink { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--accent-ink); }
-.backlink:hover { text-decoration: underline; }
+.backlink {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--accent-ink);
+  padding: 8px 12px; margin: -8px -12px 0; border-radius: var(--radius-md); transition: background .12s ease;
+}
+.backlink:hover { background: var(--accent-soft); text-decoration: none; }
 .backlink svg { width: 14px; height: 14px; flex: none; }
 .constraintspage .level { background: var(--surface-raised); box-shadow: var(--shadow-card); padding: var(--space-5); }
 .constraintspage .effective { background: var(--surface-raised); }
@@ -131,6 +242,22 @@
 .levelhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .levelhead h3 { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-secondary); }
 .levelhead .sc { font-size: 13px; color: var(--ink-secondary); }
+
+/* Closures section — collapsible header + condensed rows (see ClosuresList's own doc
+   comment for why: it used to be a mandatory multi-line block per closure). */
+.closuretoggle { width: 100%; border: none; background: none; cursor: pointer; text-align: left; padding: 0; }
+.closuretoggle .chevicon { margin-left: auto; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--ink-secondary); }
+.closuretoggle .chevicon svg { width: 13px; height: 13px; transition: transform .15s ease; }
+.closuretoggle[aria-expanded="false"] .chevicon svg { transform: rotate(-90deg); }
+.closurerow {
+  display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.closurerow:first-of-type { border-top: none; }
+.closuredot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.closuredot.closed { background: var(--state-blocked-ink); }
+.closuredot.open { background: var(--accent-solid); }
+.closurelabel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .ovr { font-size: 13px; line-height: 18px; color: var(--accent-ink); font-weight: 600; }
 .inherit { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
@@ -142,7 +269,14 @@
   border-radius: var(--radius-pill); background: var(--surface-raised); transition: left .12s ease;
 }
 .sw2.on::after { left: 19px; }
-.saverow { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-4); }
+.saverow { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+.saverow .btngroup { display: flex; gap: var(--space-3); }
+
+.pager { display: flex; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-4) 0; }
+
+.breadcrumb { font-size: 13px; line-height: 18px; color: var(--ink-secondary); margin-bottom: var(--space-2); }
+.breadcrumb a { color: var(--accent-ink); text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
 
 /* roster table — admin-employees.html */
 table { width: 100%; border-collapse: collapse; }

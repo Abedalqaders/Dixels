@@ -53,10 +53,10 @@ export function HomePage() {
       <div className="formwrap">
         <div className="logincard">
           <h1>Sign in</h1>
-          <p className="loginsub">Use your corporate account to continue.</p>
+          <p className="loginsub">Use your Email to continue.</p>
 
           <button className="btn loginbtn" onClick={() => auth.signinRedirect()}>
-            Sign in with your corporate account
+            Sign in with your Email
           </button>
 
           <div className="foot">

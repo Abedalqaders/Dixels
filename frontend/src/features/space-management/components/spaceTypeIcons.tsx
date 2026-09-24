@@ -17,4 +17,24 @@ export const ICONS = {
   desk: (
     <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3.5" width="10" height="7" rx="1" /><path d="M8 14h4M10 10.5V14" /><path d="M3 17h14" /></svg>
   ),
+  // Fallback for a custom space type — a plain box, so an admin-added type still renders an
+  // intentional icon instead of silently reusing another type's icon.
+  generic: (
+    <svg className="ic" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="1.5" /></svg>
+  ),
+}
+
+/** Maps the backend's IconKey enum ordinal (MeetingRoom=0, FocusPod=1, Desk=2, Generic=3)
+ * to this map's keys. */
+export function iconKeyToIconName(iconKey: number): keyof typeof ICONS {
+  switch (iconKey) {
+    case 0:
+      return 'meeting-room'
+    case 1:
+      return 'focus-pod'
+    case 2:
+      return 'desk'
+    default:
+      return 'generic'
+  }
 }

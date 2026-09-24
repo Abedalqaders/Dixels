@@ -7,6 +7,7 @@
 // with the same field-precedence semantics instead.
 
 import { OperatingDays } from './operatingDays'
+import type { DayName } from './operatingDays'
 import { OperatingWindow } from './operatingWindow'
 
 export type ConstraintSource = 'Building' | 'Floor' | 'Space'
@@ -126,4 +127,87 @@ export function findNarrowingConflicts(
   }
 
   return conflicts
+}
+
+// isCurrentlyClosed — frontend-only display logic (no backend port exists for this: the
+// backend never needs to answer "is it closed right now", only "what are the resolved
+// constraints and closures", leaving the point-in-time resolution to whoever's displaying it).
+
+export type OverrideEffect = 'Closed' | 'Open'
+
+/** The subset of AvailabilityOverride's fields this needs — startsAt/endsAt as anything
+ * `Date` can parse, matching how the API client will hand these back over JSON. */
+export interface OverrideWindow {
+  startsAt: string | Date
+  endsAt: string | Date
+  effect: OverrideEffect
+}
+
+const DAY_NAMES_BY_JS_INDEX: readonly DayName[] = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+]
+
+/**
+ * Resolves "is this space/floor/building closed at this instant", per the closures-union
+ * rule: a Closed override at any level always wins on overlap; an Open override only
+ * extends bookability beyond the resolved days/hours and is beaten by any overlapping
+ * Closed override. With no overlapping override either way, falls back to the resolved
+ * operating days/hours.
+ *
+ * `overrides` should already be the ones applicable to this node (its own plus every
+ * ancestor's, per the closures-union rule) — this function doesn't know about the
+ * hierarchy, only about resolving a flat list of windows against a point in time.
+ */
+export function isCurrentlyClosed(
+  resolvedDays: OperatingDays,
+  resolvedHours: OperatingWindow,
+  overrides: readonly OverrideWindow[],
+  at: Date,
+): boolean {
+  const covering = overrides.filter((override) => coversInstant(override, at))
+
+  if (covering.some((override) => override.effect === 'Closed')) {
+    return true
+  }
+
+  if (covering.some((override) => override.effect === 'Open')) {
+    return false
+  }
+
+  return !isWithinOperatingWindow(resolvedDays, resolvedHours, at)
+}
+
+function coversInstant(override: OverrideWindow, at: Date): boolean {
+  const startsAt = override.startsAt instanceof Date ? override.startsAt : new Date(override.startsAt)
+  const endsAt = override.endsAt instanceof Date ? override.endsAt : new Date(override.endsAt)
+  return at >= startsAt && at < endsAt
+}
+
+function isWithinOperatingWindow(days: OperatingDays, hours: OperatingWindow, at: Date): boolean {
+  const minutesOfDay = at.getHours() * 60 + at.getMinutes()
+
+  if (hours.isOpen24Hours) {
+    return days.contains(DAY_NAMES_BY_JS_INDEX[at.getDay()])
+  }
+
+  const open = toMinutesFromHHmm(hours.open)
+  const close = toMinutesFromHHmm(hours.close)
+  const wraps = open > close
+
+  if (wraps ? minutesOfDay < open && minutesOfDay >= close : minutesOfDay < open || minutesOfDay >= close) {
+    return false
+  }
+
+  // A wrapping window that's still open past midnight (e.g. 22:00-02:00, checked at 01:00)
+  // belongs to *yesterday's* allowed day, not today's — the session started the evening
+  // before and hasn't ended yet.
+  const belongsToPreviousDay = wraps && minutesOfDay < close
+  const relevantDayIndex = belongsToPreviousDay ? (at.getDay() + 6) % 7 : at.getDay()
+
+  return days.contains(DAY_NAMES_BY_JS_INDEX[relevantDayIndex])
+}
+
+function toMinutesFromHHmm(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
 }

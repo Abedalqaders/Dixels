@@ -18,7 +18,8 @@ namespace Dixels;
     typeof(AbpPermissionManagementApplicationModule),
     typeof(AbpTenantManagementApplicationModule),
     typeof(AbpFeatureManagementApplicationModule),
-    typeof(AbpSettingManagementApplicationModule)
+    typeof(AbpSettingManagementApplicationModule),
+    typeof(AbpMapperlyModule)
     )]
 public class DixelsApplicationModule : AbpModule
 {

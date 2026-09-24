@@ -1,34 +1,144 @@
-export type ModalState = { kind: 'building' | 'floor' | 'space'; parentName?: string } | null
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import {
+  ApiError,
+  createBuilding,
+  createFloor,
+  createSpace,
+} from '../api/spaceManagementApi'
+import type { OperatingWindowDto, SpaceTypeDto } from '../api/spaceManagementApi'
 
-export function AddNodeModal({ state, onClose }: { state: NonNullable<ModalState>; onClose: () => void }) {
+export type ModalState =
+  | { kind: 'building' }
+  | { kind: 'floor'; parentName: string; parentId: string }
+  | { kind: 'space'; parentName: string; parentId: string }
+  | null
+
+// A newly-created building has no constraints editor input in this quick-add form (that's
+// what the dedicated constraints page is for) — it starts maximally permissive, and the
+// admin narrows it down afterward.
+const DEFAULT_BUILDING_DAYS = [0, 1, 2, 3, 4, 5, 6]
+const DEFAULT_BUILDING_HOURS: OperatingWindowDto = { isOpen24Hours: true, open: '00:00', close: '00:00' }
+const DEFAULT_BUILDING_MAX_DURATION_MINUTES = 120
+const DEFAULT_BUILDING_MAX_HORIZON_DAYS = 30
+const DEFAULT_BUILDING_MIN_LEAD_MINUTES = 0
+
+interface AddNodeModalProps {
+  state: NonNullable<ModalState>
+  token: string
+  spaceTypes: SpaceTypeDto[]
+  onClose: () => void
+  onCreated: () => void
+  onError: (message: string) => void
+}
+
+export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onError }: AddNodeModalProps) {
+  const [name, setName] = useState('')
+  const [meta, setMeta] = useState('')
+  const [timezone, setTimezone] = useState('UTC')
+  const [spaceTypeId, setSpaceTypeId] = useState(spaceTypes[0]?.id ?? '')
+  const [validationError, setValidationError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
   const titles = { building: 'Add building', floor: 'Add floor', space: 'Add space' }
   const metaLabel = state.kind === 'building' ? 'Building number' : state.kind === 'floor' ? 'Floor number' : 'Capacity'
   const metaPlaceholder = state.kind === 'building' ? 'e.g. RH-02' : state.kind === 'floor' ? 'e.g. 5' : 'e.g. 6'
+  const metaRequired = state.kind === 'space' // Building/Floor number are optional; Capacity is required.
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setValidationError(null)
+
+    if (!name.trim()) {
+      setValidationError('Name is required.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      if (state.kind === 'building') {
+        await createBuilding(token, {
+          name: name.trim(),
+          buildingNumber: meta.trim() || null,
+          timezone,
+          days: DEFAULT_BUILDING_DAYS,
+          hours: DEFAULT_BUILDING_HOURS,
+          maxDurationMinutes: DEFAULT_BUILDING_MAX_DURATION_MINUTES,
+          maxHorizonDays: DEFAULT_BUILDING_MAX_HORIZON_DAYS,
+          minLeadMinutes: DEFAULT_BUILDING_MIN_LEAD_MINUTES,
+        })
+      } else if (state.kind === 'floor') {
+        await createFloor(token, {
+          buildingId: state.parentId,
+          name: name.trim(),
+          floorNumber: meta.trim() ? Number(meta) : null,
+        })
+      } else {
+        const capacity = Number(meta)
+        if (!Number.isFinite(capacity) || capacity <= 0) {
+          setValidationError('Capacity must be a positive number.')
+          setSubmitting(false)
+          return
+        }
+        if (!spaceTypeId) {
+          setValidationError('Choose a space type.')
+          setSubmitting(false)
+          return
+        }
+        await createSpace(token, { floorId: state.parentId, name: name.trim(), spaceTypeId, capacity })
+      }
+
+      onCreated()
+      onClose()
+    } catch (err) {
+      onError(err instanceof ApiError ? err.message : 'Something went wrong — please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="overlay show">
-      <div className="modal">
+      <form className="modal" onSubmit={handleSubmit}>
         <h3>{titles[state.kind]}</h3>
-        {state.parentName && <p className="sub">Added under {state.parentName}.</p>}
+        {state.kind !== 'building' && <p className="sub">Added under {state.parentName}.</p>}
         <div className="row2">
           <div className="field">
-            <span className="lbl">Name</span>
-            <input className="ctrl" placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'} />
+            <span className="lbl">
+              Name<span className="req">*</span>
+            </span>
+            <input
+              className="ctrl"
+              placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
           </div>
           <div className="field">
-            <span className="lbl">{metaLabel}</span>
-            <input className="ctrl mono" placeholder={metaPlaceholder} />
+            <span className="lbl">
+              {metaLabel}
+              {metaRequired && <span className="req">*</span>}
+            </span>
+            <input
+              className="ctrl mono"
+              placeholder={metaPlaceholder}
+              value={meta}
+              onChange={(e) => setMeta(e.target.value)}
+            />
           </div>
         </div>
         {state.kind === 'building' && (
           <div className="row2">
             <div className="field">
-              <span className="lbl">Timezone</span>
-              <select className="ctrl" defaultValue="Asia/Amman">
-                <option>Asia/Amman</option>
-                <option>Europe/London</option>
-                <option>America/New_York</option>
-                <option>UTC</option>
+              <span className="lbl">
+                Timezone<span className="req">*</span>
+              </span>
+              <select className="ctrl" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                <option value="Asia/Amman">Asia/Amman</option>
+                <option value="Europe/London">Europe/London</option>
+                <option value="America/New_York">America/New_York</option>
+                <option value="UTC">UTC</option>
               </select>
             </div>
           </div>
@@ -36,20 +146,29 @@ export function AddNodeModal({ state, onClose }: { state: NonNullable<ModalState
         {state.kind === 'space' && (
           <div className="row2">
             <div className="field">
-              <span className="lbl">Type</span>
-              <select className="ctrl" defaultValue="meeting-room">
-                <option value="meeting-room">Meeting room</option>
-                <option value="focus-pod">Focus pod</option>
-                <option value="desk">Desk</option>
+              <span className="lbl">
+                Type<span className="req">*</span>
+              </span>
+              <select className="ctrl" value={spaceTypeId} onChange={(e) => setSpaceTypeId(e.target.value)}>
+                {spaceTypes.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
         )}
+        {validationError && <p className="noteline">{validationError}</p>}
         <div className="modalfoot">
-          <button className="btn sec" onClick={onClose}>Cancel</button>
-          <button className="btn" onClick={onClose} title="Not wired up to the backend yet">Add</button>
+          <button type="button" className="btn sec" onClick={onClose} disabled={submitting}>
+            Cancel
+          </button>
+          <button type="submit" className="btn" disabled={submitting}>
+            {submitting ? 'Adding…' : 'Add'}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   )
 }

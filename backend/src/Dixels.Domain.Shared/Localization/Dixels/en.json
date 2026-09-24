@@ -4,6 +4,34 @@
     "AppName": "Dixels",
     "Menu:Home": "Home",
     "Welcome": "Welcome",
-    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
+    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
+
+    "Dixels:SpaceManagement:InvalidTimezone": "'{0}' isn't a recognized timezone.",
+    "Dixels:SpaceManagement:MaxDurationMustBePositive": "The longest booking allowed must be greater than zero minutes.",
+    "Dixels:SpaceManagement:MaxHorizonDaysMustBePositive": "How far ahead people can book must be greater than zero days.",
+    "Dixels:SpaceManagement:MinLeadMinutesMustNotBeNegative": "The minimum notice before a booking can't be negative.",
+    "Dixels:SpaceManagement:CapacityMustBePositive": "Capacity must be greater than zero.",
+    "Dixels:SpaceManagement:CapacityBelowMinAttendees": "Capacity can't drop below {1} while the minimum group size is {1} — lower the minimum first.",
+    "Dixels:SpaceManagement:MinAttendeesMustBePositive": "The minimum group size must be greater than zero.",
+    "Dixels:SpaceManagement:MinAttendeesExceedsCapacity": "The minimum group size ({0}) can't exceed this space's capacity ({1}).",
+    "Dixels:SpaceManagement:DaysNotNarrower": "These operating days aren't fully covered by the parent level's operating days.",
+    "Dixels:SpaceManagement:HoursNotNarrower": "These operating hours aren't fully covered by the parent level's operating hours.",
+    "Dixels:SpaceManagement:OverrideEndsAtMustBeAfterStartsAt": "A closure's end time must be after its start time.",
+    "Dixels:SpaceManagement:ReasonDetailTooLong": "The closure's reason detail is too long.",
+    "Dixels:SpaceManagement:SpaceTypeNameAlreadyExists": "A space type named '{0}' already exists.",
+    "Dixels:SpaceManagement:SpaceTypeInUse": "This space type is still assigned to one or more spaces and can't be deleted.",
+    "Dixels:Employees:UserIsNotAnEmployee": "This user is not in the employee role, so a building can't be assigned to them.",
+
+    "PermissionGroup:Dixels": "Dixels",
+    "Permission:Buildings": "Buildings",
+    "Permission:Floors": "Floors",
+    "Permission:Spaces": "Spaces",
+    "Permission:Overrides": "Closures",
+    "Permission:SpaceTypes": "Space Types",
+    "Permission:Employees": "Employees",
+    "Permission:Assign": "Assign building",
+    "Permission:Create": "Create",
+    "Permission:Edit": "Edit",
+    "Permission:Delete": "Delete"
   }
 }
