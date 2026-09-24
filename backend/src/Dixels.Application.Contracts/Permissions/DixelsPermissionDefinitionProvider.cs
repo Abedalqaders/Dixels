@@ -33,6 +33,9 @@ public class DixelsPermissionDefinitionProvider : PermissionDefinitionProvider
         spaceTypes.AddChild(DixelsPermissions.SpaceTypes.Create, L("Permission:Create"));
         spaceTypes.AddChild(DixelsPermissions.SpaceTypes.Edit, L("Permission:Edit"));
         spaceTypes.AddChild(DixelsPermissions.SpaceTypes.Delete, L("Permission:Delete"));
+
+        var employees = dixelsGroup.AddPermission(DixelsPermissions.Employees.Default, L("Permission:Employees"));
+        employees.AddChild(DixelsPermissions.Employees.Assign, L("Permission:Assign"));
     }
 
     private static LocalizableString L(string name)

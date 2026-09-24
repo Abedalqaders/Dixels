@@ -20,6 +20,7 @@
     "Dixels:SpaceManagement:ReasonDetailTooLong": "The closure's reason detail is too long.",
     "Dixels:SpaceManagement:SpaceTypeNameAlreadyExists": "A space type named '{0}' already exists.",
     "Dixels:SpaceManagement:SpaceTypeInUse": "This space type is still assigned to one or more spaces and can't be deleted.",
+    "Dixels:Employees:UserIsNotAnEmployee": "This user is not in the employee role, so a building can't be assigned to them.",
 
     "PermissionGroup:Dixels": "Dixels",
     "Permission:Buildings": "Buildings",
@@ -27,6 +28,8 @@
     "Permission:Spaces": "Spaces",
     "Permission:Overrides": "Closures",
     "Permission:SpaceTypes": "Space Types",
+    "Permission:Employees": "Employees",
+    "Permission:Assign": "Assign building",
     "Permission:Create": "Create",
     "Permission:Edit": "Edit",
     "Permission:Delete": "Delete"

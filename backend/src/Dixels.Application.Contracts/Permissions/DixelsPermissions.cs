@@ -43,4 +43,12 @@ public static class DixelsPermissions
         public const string Edit = Default + ".Edit";
         public const string Delete = Default + ".Delete";
     }
+
+    // No Create/Edit/Delete: employee accounts are seed data only (see
+    // EmployeeUserDataSeedContributor) — the only admin action here is Assign.
+    public static class Employees
+    {
+        public const string Default = GroupName + ".Employees";
+        public const string Assign = Default + ".Assign";
+    }
 }

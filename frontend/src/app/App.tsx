@@ -9,6 +9,7 @@ import { SpacesListPage } from '../features/space-management/routes/SpacesListPa
 import { AllFloorsPage } from '../features/space-management/routes/AllFloorsPage'
 import { AllSpacesPage } from '../features/space-management/routes/AllSpacesPage'
 import { AdminConstraintsPage } from '../features/space-management/routes/AdminConstraintsPage'
+import { AdminEmployeesPage } from '../features/employees/routes/AdminEmployeesPage'
 import { HomePage } from '../pages/HomePage'
 
 function App() {
@@ -69,6 +70,14 @@ function App() {
         element={
           <RequireAdmin>
             <AdminConstraintsPage />
+          </RequireAdmin>
+        }
+      />
+      <Route
+        path="/admin/employees"
+        element={
+          <RequireAdmin>
+            <AdminEmployeesPage />
           </RequireAdmin>
         }
       />

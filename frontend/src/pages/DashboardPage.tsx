@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Sidebar } from '../components/Sidebar'
 import { getDisplayName } from '../auth/roles'
+import { useAsync } from '../hooks/useAsync'
+import { getMyBuilding } from '../features/employees/api/employeesApi'
 import '../styles/tokens.css'
 import '../styles/base.css'
 import '../styles/dashboard.css'
@@ -31,17 +33,30 @@ const DAY_BOOKINGS = [{ start: 9, end: 10, label: 'Meeting Room 3B' }]
 
 export function DashboardPage() {
   const auth = useAuth()
+  const token = auth.user?.access_token ?? ''
   const [qbDuration, setQbDuration] = useState(1)
   const [cancelling, setCancelling] = useState<string | null>(null)
 
   const firstName = getDisplayName(auth.user).split(/[\s._-]+/)[0]
+
+  // Scoped to just this employee's own assignment — see EmployeesAppService.GetMyBuildingAsync
+  // on the backend, which is why this never returns any other building.
+  const { status: buildingStatus, data: myBuilding } = useAsync(() => getMyBuilding(token), [token])
 
   return (
     <div className="app">
       <Sidebar />
       <div className="main">
         <div className="top">
-          <span className="pick"><span className="picklbl">Ridge House</span></span>
+          <span className="pick">
+            <span className="picklbl">
+              {buildingStatus === 'success'
+                ? (myBuilding?.name ?? "You haven't been assigned a building yet — ask your admin.")
+                : buildingStatus === 'error'
+                  ? "Couldn't load your building."
+                  : 'Loading…'}
+            </span>
+          </span>
         </div>
 
         <div className="content">

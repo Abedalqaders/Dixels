@@ -102,6 +102,27 @@
 
 .treeempty { padding: var(--space-4) var(--space-5) var(--space-3); font-size: 13px; color: var(--ink-secondary); }
 
+/* Employees admin table — a real table, not the .tree/.node hierarchy rows: this data is
+   flat and column-shaped (name / contact / status / building), not a parent-child tree, so
+   forcing it into .node's single horizontal flex line just crammed everything into one row
+   with nothing lining up between rows. */
+.employeetable { width: 100%; border-collapse: collapse; }
+.employeetable th {
+  text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-secondary); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle);
+}
+.employeetable td {
+  padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); vertical-align: middle;
+}
+.employeetable tr:last-child td { border-bottom: none; }
+.employeetable tbody tr:hover td { background: var(--surface-sunken); }
+.employee-identity { display: flex; align-items: center; gap: var(--space-3); }
+.employee-name { font-weight: 600; font-size: 15px; line-height: 20px; }
+.employee-username { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
+.employeetable .ctrl { min-width: 200px; }
+.employeetable .col-status { width: 1%; white-space: nowrap; }
+.employeetable .col-building { width: 220px; }
+
 /* row actions — a single kebab button instead of a row of icons, rendered via a portal so
    it's never clipped by the tree's own scroll container */
 .rowmenu-panel {

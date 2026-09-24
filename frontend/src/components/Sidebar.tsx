@@ -168,8 +168,7 @@ export function Sidebar() {
           </div>
           <NavItem
             to="/admin/employees"
-            active={false}
-            disabled
+            active={location.pathname === '/admin/employees'}
             onNavigate={closeMobile}
             icon={<PeopleIcon />}
           >
