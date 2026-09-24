@@ -52,7 +52,7 @@ public class ConstraintResolverTests
         var building = CreateBuilding();
         var floor = CreateFloor(building.Id);
         var space = CreateSpace(floor.Id);
-        space.SetOwnOperatingHours(new OperatingWindow(new TimeOnly(8, 0), new TimeOnly(18, 0)), building.Hours);
+        space.SetOwnOperatingHours(OperatingWindow.Create(new TimeOnly(8, 0), new TimeOnly(18, 0)), building.Hours);
 
         var resolved = _resolver.Resolve(building, floor, space);
 
@@ -78,8 +78,8 @@ public class ConstraintResolverTests
     [Fact]
     public void EnsureHoursNarrowing_throws_when_the_child_would_widen_access()
     {
-        var buildingHours = new OperatingWindow(new TimeOnly(7, 0), new TimeOnly(20, 0));
-        var tooWide = new OperatingWindow(new TimeOnly(6, 0), new TimeOnly(21, 0));
+        var buildingHours = OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0));
+        var tooWide = OperatingWindow.Create(new TimeOnly(6, 0), new TimeOnly(21, 0));
 
         var exception = Should.Throw<BusinessException>(() => _resolver.EnsureHoursNarrowing(tooWide, buildingHours));
 
@@ -100,14 +100,14 @@ public class ConstraintResolverTests
         var stillFits = new NarrowingCandidate(
             "Meeting Room 3C",
             OwnDays: null,
-            OwnHours: new OperatingWindow(new TimeOnly(9, 0), new TimeOnly(17, 0)));
+            OwnHours: OperatingWindow.Create(new TimeOnly(9, 0), new TimeOnly(17, 0)));
 
         var noLongerFits = new NarrowingCandidate(
             "Meeting Room 3B",
             OwnDays: null,
-            OwnHours: new OperatingWindow(new TimeOnly(6, 0), new TimeOnly(21, 0)));
+            OwnHours: OperatingWindow.Create(new TimeOnly(6, 0), new TimeOnly(21, 0)));
 
-        var proposedHours = new OperatingWindow(new TimeOnly(7, 0), new TimeOnly(20, 0));
+        var proposedHours = OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0));
 
         var conflicts = _resolver.FindNarrowingConflicts(
             [stillFits, noLongerFits],
@@ -122,7 +122,7 @@ public class ConstraintResolverTests
     public void FindNarrowingConflicts_ignores_candidates_that_inherit_the_field_being_tightened()
     {
         var inheritsHours = new NarrowingCandidate("Focus Pod 2-04", OwnDays: null, OwnHours: null);
-        var proposedHours = new OperatingWindow(new TimeOnly(7, 0), new TimeOnly(20, 0));
+        var proposedHours = OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0));
 
         var conflicts = _resolver.FindNarrowingConflicts([inheritsHours], proposedDays: null, proposedHours: proposedHours);
 

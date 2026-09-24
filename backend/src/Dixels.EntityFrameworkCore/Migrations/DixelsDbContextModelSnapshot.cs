@@ -24,6 +24,384 @@ namespace Dixels.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Dixels.SpaceManagement.AvailabilityOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<string>("Effect")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("ReasonCategory")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ReasonDetail")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Scope", "ScopeId", "StartsAt", "EndsAt");
+
+                    b.ToTable("AppAvailabilityOverrides", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppAvailabilityOverrides_EndsAfterStarts", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Building", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BuildingNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<Guid?>("DeletionBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int>("MaxDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxHorizonDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinLeadMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Timezone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AppBuildings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Floor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<Guid?>("DeletionBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<int?>("FloorNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int?>("MaxDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildingId");
+
+                    b.ToTable("AppFloors", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppFloors_HoursOpenCloseTogether", "(\"Hours_Open\" IS NULL) = (\"Hours_Close\" IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Space", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<Guid?>("DeletionBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<Guid>("FloorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<int?>("MaxDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinAttendees")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("SpaceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FloorId");
+
+                    b.HasIndex("SpaceTypeId");
+
+                    b.ToTable("AppSpaces", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppSpaces_CapacityPositive", "\"Capacity\" > 0");
+
+                            t.HasCheckConstraint("CK_AppSpaces_HoursOpenCloseTogether", "(\"Hours_Open\" IS NULL) = (\"Hours_Close\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_AppSpaces_MinAttendeesWithinCapacity", "\"MinAttendees\" IS NULL OR \"MinAttendees\" <= \"Capacity\"");
+                        });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<Guid?>("DeleterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("DeleterId");
+
+                    b.Property<DateTime?>("DeletionTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("DeletionTime");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("IconKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("IsDeleted");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("AppSpaceTypes", (string)null);
+                });
+
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1906,6 +2284,164 @@ namespace Dixels.Migrations
                     b.ToTable("AbpTenantConnectionStrings", (string)null);
                 });
 
+            modelBuilder.Entity("Dixels.SpaceManagement.Building", b =>
+                {
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingDays", "Days", b1 =>
+                        {
+                            b1.Property<Guid>("BuildingId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Mask")
+                                .HasColumnType("integer")
+                                .HasColumnName("Days");
+
+                            b1.HasKey("BuildingId");
+
+                            b1.ToTable("AppBuildings", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BuildingId");
+                        });
+
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingWindow", "Hours", b1 =>
+                        {
+                            b1.Property<Guid>("BuildingId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<TimeOnly>("Close")
+                                .HasColumnType("time without time zone");
+
+                            b1.Property<bool>("IsOpen24Hours")
+                                .HasColumnType("boolean");
+
+                            b1.Property<TimeOnly>("Open")
+                                .HasColumnType("time without time zone");
+
+                            b1.HasKey("BuildingId");
+
+                            b1.ToTable("AppBuildings", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("BuildingId");
+                        });
+
+                    b.Navigation("Days")
+                        .IsRequired();
+
+                    b.Navigation("Hours")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Floor", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Building", null)
+                        .WithMany()
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingDays", "Days", b1 =>
+                        {
+                            b1.Property<Guid>("FloorId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Mask")
+                                .HasColumnType("integer")
+                                .HasColumnName("Days");
+
+                            b1.HasKey("FloorId");
+
+                            b1.ToTable("AppFloors", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("FloorId");
+                        });
+
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingWindow", "Hours", b1 =>
+                        {
+                            b1.Property<Guid>("FloorId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<TimeOnly>("Close")
+                                .HasColumnType("time without time zone");
+
+                            b1.Property<bool>("IsOpen24Hours")
+                                .HasColumnType("boolean");
+
+                            b1.Property<TimeOnly>("Open")
+                                .HasColumnType("time without time zone");
+
+                            b1.HasKey("FloorId");
+
+                            b1.ToTable("AppFloors", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("FloorId");
+                        });
+
+                    b.Navigation("Days");
+
+                    b.Navigation("Hours");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Space", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Floor", null)
+                        .WithMany()
+                        .HasForeignKey("FloorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Dixels.SpaceManagement.SpaceType", null)
+                        .WithMany()
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingDays", "Days", b1 =>
+                        {
+                            b1.Property<Guid>("SpaceId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Mask")
+                                .HasColumnType("integer")
+                                .HasColumnName("Days");
+
+                            b1.HasKey("SpaceId");
+
+                            b1.ToTable("AppSpaces", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("SpaceId");
+                        });
+
+                    b.OwnsOne("Dixels.SpaceManagement.ValueObjects.OperatingWindow", "Hours", b1 =>
+                        {
+                            b1.Property<Guid>("SpaceId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<TimeOnly>("Close")
+                                .HasColumnType("time without time zone");
+
+                            b1.Property<bool>("IsOpen24Hours")
+                                .HasColumnType("boolean");
+
+                            b1.Property<TimeOnly>("Open")
+                                .HasColumnType("time without time zone");
+
+                            b1.HasKey("SpaceId");
+
+                            b1.ToTable("AppSpaces", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("SpaceId");
+                        });
+
+                    b.Navigation("Days");
+
+                    b.Navigation("Hours");
+                });
+
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLogAction", b =>
                 {
                     b.HasOne("Volo.Abp.AuditLogging.AuditLog", null)
@@ -2009,7 +2545,7 @@ namespace Dixels.Migrations
 
                             b1.HasKey("IdentityUserPasskeyCredentialId");
 
-                            b1.ToTable("AbpUserPasskeys");
+                            b1.ToTable("AbpUserPasskeys", (string)null);
 
                             b1
                                 .ToJson("Data")

@@ -38,6 +38,18 @@ export function BuildingDoorIcon() {
   )
 }
 
+export function FloorsIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M3.5 6h13M3.5 10h13M3.5 14h13" /></svg>
+  )
+}
+
+export function SpacesIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="3.5" width="10" height="7" rx="1" /><path d="M8 14h4M10 10.5V14" /><path d="M3 17h14" /></svg>
+  )
+}
+
 export function PeopleIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="6.5" r="2.8" /><path d="M2.5 16c.4-3.4 2.5-5.2 5-5.2s4.6 1.8 5 5.2" /><circle cx="14.5" cy="7.3" r="2.1" /><path d="M12.3 10.9c1.1-.4 2.3-.3 3.3.4 1.1.8 1.8 2.3 2 4.7" /></svg>

@@ -53,6 +53,22 @@ export class OperatingWindow {
   }
 }
 
+export interface AllowedHoursRange {
+  isOpen24Hours: boolean
+  open: string
+  close: string
+}
+
+/**
+ * The range a picker should constrain its inputs to, given the resolved parent value — the
+ * narrow-only rule means this is exactly `parentHours`' own range. Returned as a plain data
+ * shape (not the `OperatingWindow` class) so a picker component can spread it straight into
+ * `min`/`max`-style props without reaching into the class instance.
+ */
+export function allowedHoursRange(parentHours: OperatingWindow): AllowedHoursRange {
+  return { isOpen24Hours: parentHours.isOpen24Hours, open: parentHours.open, close: parentHours.close }
+}
+
 function toMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number)
   return hours * 60 + minutes

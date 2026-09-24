@@ -16,4 +16,6 @@ public static class DixelsDomainErrorCodes
     public const string HoursNotNarrower = Prefix + "HoursNotNarrower";
     public const string OverrideEndsAtMustBeAfterStartsAt = Prefix + "OverrideEndsAtMustBeAfterStartsAt";
     public const string ReasonDetailTooLong = Prefix + "ReasonDetailTooLong";
+    public const string SpaceTypeNameAlreadyExists = Prefix + "SpaceTypeNameAlreadyExists";
+    public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
 }

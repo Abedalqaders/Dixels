@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Dixels.SpaceManagement;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.Data;
@@ -23,7 +24,11 @@ public class DixelsDbContext :
     IIdentityDbContext,
     ITenantManagementDbContext
 {
-    /* Add DbSet properties for your Aggregate Roots / Entities here. */
+    public DbSet<SpaceType> SpaceTypes { get; set; }
+    public DbSet<Building> Buildings { get; set; }
+    public DbSet<Floor> Floors { get; set; }
+    public DbSet<Space> Spaces { get; set; }
+    public DbSet<AvailabilityOverride> AvailabilityOverrides { get; set; }
 
     #region Entities from the modules
 
@@ -76,11 +81,6 @@ public class DixelsDbContext :
 
         /* Configure your own tables/entities inside here */
 
-        //builder.Entity<YourEntity>(b =>
-        //{
-        //    b.ToTable(DixelsConsts.DbTablePrefix + "YourEntities", DixelsConsts.DbSchema);
-        //    b.ConfigureByConvention(); //auto configure for the base class props
-        //    //...
-        //});
+        builder.ConfigureSpaceManagement();
     }
 }

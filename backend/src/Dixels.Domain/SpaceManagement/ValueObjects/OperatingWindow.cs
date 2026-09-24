@@ -24,22 +24,32 @@ public sealed class OperatingWindow : ValueObject
 
     public static readonly OperatingWindow FullDay = new(isOpen24Hours: true, TimeOnly.MinValue, TimeOnly.MinValue);
 
-    public OperatingWindow(TimeOnly open, TimeOnly close)
-        : this(isOpen24Hours: false, open, close)
+    /// <summary>
+    /// Convenience factory for a non-24-hour window — equivalent to
+    /// <c>new OperatingWindow(false, open, close)</c>. Not a second constructor: EF Core's
+    /// constructor-based materialization picked a 2-arg constructor over this one even when
+    /// both were public (its tie-break isn't "most parameters wins" the way the docs read),
+    /// silently losing <see cref="IsOpen24Hours"/> and throwing on a stored full-24h row
+    /// where Open == Close. Keeping exactly one constructor removes the ambiguity outright
+    /// regardless of EF's exact selection rule.
+    /// </summary>
+    public static OperatingWindow Create(TimeOnly open, TimeOnly close)
     {
-        if (open == close)
+        return new OperatingWindow(isOpen24Hours: false, open, close);
+    }
+
+    public OperatingWindow(bool isOpen24Hours, TimeOnly open, TimeOnly close)
+    {
+        if (!isOpen24Hours && open == close)
         {
             throw new ArgumentException(
                 "Open and close can't be equal for a non-24-hour window — use OperatingWindow.FullDay to express 24 hours explicitly.",
                 nameof(close));
         }
-    }
 
-    private OperatingWindow(bool isOpen24Hours, TimeOnly open, TimeOnly close)
-    {
         IsOpen24Hours = isOpen24Hours;
-        Open = open;
-        Close = close;
+        Open = isOpen24Hours ? TimeOnly.MinValue : open;
+        Close = isOpen24Hours ? TimeOnly.MinValue : close;
     }
 
     /// <summary>

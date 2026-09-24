@@ -28,7 +28,7 @@ h1, h2, h3, p { margin: 0; }
   display: flex; align-items: center;
   padding: var(--space-2) var(--space-3) var(--space-5);
 }
-.logo-img { height: 32px; width: auto; display: block; }
+.logo-img { height: 44px; width: auto; display: block; }
 .nav {
   display: flex; align-items: center; gap: var(--space-3);
   padding: 9px var(--space-3); border-radius: var(--radius-md);
@@ -39,6 +39,28 @@ h1, h2, h3, p { margin: 0; }
 .nav.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .nav.on:hover { background: var(--accent-soft); }
 .nav.on svg { color: var(--accent-ink); }
+.navtoggle { width: 100%; background: none; border: none; font-family: inherit; text-align: left; }
+.navchev { margin-left: auto; width: 14px !important; height: 14px !important; color: var(--ink-secondary); transition: transform .16s ease; }
+.navtoggle[aria-expanded="true"] .navchev { transform: rotate(180deg); }
+.navtoggle.on .navchev { color: var(--accent-ink); }
+
+.navsubwrap { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .18s ease; }
+.navsubwrap.open { grid-template-rows: 1fr; }
+.navsubinner { overflow: hidden; }
+.navsub { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 2px 0; position: relative; }
+.navsub::before {
+  content: ""; position: absolute; left: calc(var(--space-3) + 9px); top: 2px; bottom: 14px;
+  width: 1px; background: var(--border-subtle);
+}
+.navsub .nav {
+  position: relative; padding-left: calc(var(--space-3) + 18px + var(--space-3)); font-size: 14px;
+}
+.navsub .nav::before {
+  content: ""; position: absolute; left: calc(var(--space-3) + 9px); top: 50%; width: 21px; height: 1px;
+  background: var(--border-subtle);
+}
+.navsub .nav svg { width: 14px; height: 14px; }
+.navsub .nav.on { box-shadow: inset 2px 0 0 var(--accent-ink); }
 .grp {
   font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
   color: var(--ink-secondary); padding: var(--space-4) var(--space-3) 4px;
@@ -193,6 +215,7 @@ select.ctrl { appearance: none; cursor: pointer; }
 }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast svg { width: 16px; height: 16px; flex: none; }
+.toast.error { background: var(--state-blocked-soft); color: var(--state-blocked-ink); }
 
 /* ---------- Mobile menu button / scrim (off-canvas sidebar) ---------- */
 .menubtn {
