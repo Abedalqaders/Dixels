@@ -2,5 +2,18 @@
 
 public static class DixelsDomainErrorCodes
 {
-    /* You can add your business exception error codes here, as constants */
+    private const string Prefix = "Dixels:SpaceManagement:";
+
+    public const string InvalidTimezone = Prefix + "InvalidTimezone";
+    public const string MaxDurationMustBePositive = Prefix + "MaxDurationMustBePositive";
+    public const string MaxHorizonDaysMustBePositive = Prefix + "MaxHorizonDaysMustBePositive";
+    public const string MinLeadMinutesMustNotBeNegative = Prefix + "MinLeadMinutesMustNotBeNegative";
+    public const string CapacityMustBePositive = Prefix + "CapacityMustBePositive";
+    public const string CapacityBelowMinAttendees = Prefix + "CapacityBelowMinAttendees";
+    public const string MinAttendeesMustBePositive = Prefix + "MinAttendeesMustBePositive";
+    public const string MinAttendeesExceedsCapacity = Prefix + "MinAttendeesExceedsCapacity";
+    public const string DaysNotNarrower = Prefix + "DaysNotNarrower";
+    public const string HoursNotNarrower = Prefix + "HoursNotNarrower";
+    public const string OverrideEndsAtMustBeAfterStartsAt = Prefix + "OverrideEndsAtMustBeAfterStartsAt";
+    public const string ReasonDetailTooLong = Prefix + "ReasonDetailTooLong";
 }
