@@ -14,14 +14,12 @@ import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useListParams } from '../../../hooks/useListParams'
 import { ApiError, getBuilding, getFloors, deleteFloor, restoreFloor } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
-
-const PAGE_SIZE = 10
 
 export function FloorsListPage() {
   const { buildingId = '' } = useParams()
@@ -29,37 +27,28 @@ export function FloorsListPage() {
   const token = auth.user?.access_token ?? ''
   const navigate = useNavigate()
 
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search)
-  const [showDeleted, setShowDeleted] = useState(false)
-  const [page, setPage] = useState(0)
+  const list = useListParams()
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
   const { toast, showToast } = useToast()
 
-  const { status, data, error, refetch } = useAsync(async () => {
-    const [building, floorsResult] = await Promise.all([
-      getBuilding(token, buildingId),
-      getFloors(token, {
-        buildingId,
-        filter: debouncedSearch.trim() || undefined,
-        includeDeleted: showDeleted,
-        skipCount: page * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
-    ])
-    return { building, floors: floorsResult.items, totalCount: floorsResult.totalCount }
-  }, [token, buildingId, debouncedSearch, showDeleted, page])
-
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setPage(0)
-  }
-
-  function handleShowDeletedChange(value: boolean) {
-    setShowDeleted(value)
-    setPage(0)
-  }
+  const { status, data, error, isRefreshing, refetch } = useAsync(
+    async () => {
+      const [building, floorsResult] = await Promise.all([
+        getBuilding(token, buildingId),
+        getFloors(token, {
+          buildingId,
+          filter: list.search || undefined,
+          includeDeleted: list.showDeleted,
+          skipCount: list.page * list.pageSize,
+          maxResultCount: list.pageSize,
+        }),
+      ])
+      return { building, floors: floorsResult.items, totalCount: floorsResult.totalCount }
+    },
+    [token, buildingId, list.search, list.showDeleted, list.page, list.pageSize],
+    { keepPreviousData: true },
+  )
 
   async function runAction(action: () => Promise<unknown>, successMessage: string) {
     try {
@@ -103,15 +92,15 @@ export function FloorsListPage() {
                     placeholder="Search floors…"
                     autoComplete="off"
                     aria-label="Search floors"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    value={list.searchInput}
+                    onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
                 <label className="chk">
                   <input
                     type="checkbox"
-                    checked={showDeleted}
-                    onChange={(e) => handleShowDeletedChange(e.target.checked)}
+                    checked={list.showDeleted}
+                    onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
                   Show deleted
                 </label>
@@ -127,13 +116,13 @@ export function FloorsListPage() {
               </div>
             </div>
 
-            <div className="tree">
+            <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading floors…</p>}
               {status === 'error' && <p className="treeempty">Couldn't load floors: {error.message}</p>}
 
               {status === 'success' && data.floors.length === 0 && (
                 <p className="treeempty">
-                  {debouncedSearch.trim() ? 'Nothing matches your search.' : 'No floors yet — add one to get started.'}
+                  {list.search ?'Nothing matches your search.' : 'No floors yet — add one to get started.'}
                 </p>
               )}
 
@@ -143,7 +132,7 @@ export function FloorsListPage() {
                     <div className="node l1" data-level="floor">
                       {ICONS.floor}
                       <Link to={`/admin/buildings/${buildingId}/floors/${floor.id}/spaces`} className="lbl2">
-                        <HighlightedText text={floor.name} query={debouncedSearch.trim()} />
+                        <HighlightedText text={floor.name} query={list.search} />
                       </Link>
                       {floor.floorNumber !== null && <span className="m">Floor {floor.floorNumber}</span>}
                       {floor.hasOverrides && <span className="badge completed">Custom</span>}
@@ -194,7 +183,13 @@ export function FloorsListPage() {
             </div>
 
             {status === 'success' && (
-              <Pager page={page} pageSize={PAGE_SIZE} totalCount={data.totalCount} onPageChange={setPage} />
+              <Pager
+                page={list.page}
+                pageSize={list.pageSize}
+                totalCount={data.totalCount}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+              />
             )}
           </section>
         </div>

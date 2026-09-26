@@ -1,0 +1,18 @@
+# Runs the backend in Docker against the Postgres already running on Windows.
+# One-time setup: export the HTTPS dev cert (see README / chat notes):
+#   dotnet dev-certs https -ep "%USERPROFILE%\.aspnet\https\dixels.pfx" -p dixels-dev
+#   dotnet dev-certs https --trust
+services:
+  web:
+    build: .
+    ports:
+      - "44334:44334"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://+:44334
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/dixels.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: dixels-dev
+      # host.docker.internal = the Windows machine, where Postgres listens on 5432.
+      ConnectionStrings__Default: Host=host.docker.internal;Port=5432;Database=Dixels;User ID=postgres;Password=1234;
+    volumes:
+      - ${USERPROFILE}/.aspnet/https:/https:ro

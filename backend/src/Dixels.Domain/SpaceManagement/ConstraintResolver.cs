@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Volo.Abp;
 using Volo.Abp.Domain.Services;
@@ -15,9 +16,18 @@ public class ConstraintResolver : IDomainService
 {
     public ResolvedConstraints Resolve(Building building, Floor floor, Space? space = null)
     {
-        var days = Pick(space?.Days, floor.Days, building.Days);
-        var hours = Pick(space?.Hours, floor.Hours, building.Hours);
-        var maxDurationMinutes = Pick(space?.MaxDurationMinutes, floor.MaxDurationMinutes, building.MaxDurationMinutes);
+        var days = Pick(
+            (space?.Days, ConstraintSource.Space),
+            (floor.Days, ConstraintSource.Floor),
+            (building.Days, ConstraintSource.Building));
+        var hours = Pick(
+            (space?.Hours, ConstraintSource.Space),
+            (floor.Hours, ConstraintSource.Floor),
+            (building.Hours, ConstraintSource.Building));
+        var maxDurationMinutes = Pick(
+            (space?.MaxDurationMinutes, ConstraintSource.Space),
+            (floor.MaxDurationMinutes, ConstraintSource.Floor),
+            (building.MaxDurationMinutes, ConstraintSource.Building));
 
         return new ResolvedConstraints(
             building.Timezone,
@@ -76,34 +86,37 @@ public class ConstraintResolver : IDomainService
         return conflicts;
     }
 
-    private static FieldValue<T> Pick<T>(T? spaceValue, T? floorValue, T building)
+    // Levels are walked in the order given — the first non-null value wins. Adding a level to
+    // the hierarchy (e.g. a "Wing" between Building and Floor) means adding one more tuple at
+    // each call site above; this method itself never needs to change (Open/Closed).
+    private static FieldValue<T> Pick<T>(params (T? Value, ConstraintSource Source)[] levels)
         where T : class
     {
-        if (spaceValue is not null)
+        foreach (var (value, source) in levels)
         {
-            return new FieldValue<T>(spaceValue, ConstraintSource.Space);
+            if (value is not null)
+            {
+                return new FieldValue<T>(value, source);
+            }
         }
 
-        if (floorValue is not null)
-        {
-            return new FieldValue<T>(floorValue, ConstraintSource.Floor);
-        }
-
-        return new FieldValue<T>(building, ConstraintSource.Building);
+        throw new InvalidOperationException("The last level in the chain must always supply a non-null value.");
     }
 
-    private static FieldValue<int> Pick(int? spaceValue, int? floorValue, int building)
+    // Separate overload for value-typed fields (int) — C# can't express "T? that's either a
+    // nullable reference or a Nullable<T> value type" with one unconstrained generic method, so
+    // this duplication is a language limitation, not a hierarchy-precedence rule living in two
+    // places.
+    private static FieldValue<int> Pick(params (int? Value, ConstraintSource Source)[] levels)
     {
-        if (spaceValue.HasValue)
+        foreach (var (value, source) in levels)
         {
-            return new FieldValue<int>(spaceValue.Value, ConstraintSource.Space);
+            if (value.HasValue)
+            {
+                return new FieldValue<int>(value.Value, source);
+            }
         }
 
-        if (floorValue.HasValue)
-        {
-            return new FieldValue<int>(floorValue.Value, ConstraintSource.Floor);
-        }
-
-        return new FieldValue<int>(building, ConstraintSource.Building);
+        throw new InvalidOperationException("The last level in the chain must always supply a non-null value.");
     }
 }
