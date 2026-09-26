@@ -12,11 +12,10 @@ import { AddNodeModal } from '../components/AddNodeModal'
 import type { ModalState } from '../components/AddNodeModal'
 import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
-import { ManageSpaceTypesModal } from '../components/ManageSpaceTypesModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { ApiError, getBuildings, getSpaceTypes, deleteBuilding, restoreBuilding } from '../api/spaceManagementApi'
+import { ApiError, getBuildings, deleteBuilding, restoreBuilding } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
@@ -35,20 +34,16 @@ export function BuildingsListPage() {
   const [page, setPage] = useState(0)
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
-  const [manageTypesOpen, setManageTypesOpen] = useState(false)
   const { toast, showToast } = useToast()
 
   const { status, data, error, refetch } = useAsync(async () => {
-    const [buildingsResult, spaceTypesResult] = await Promise.all([
-      getBuildings(token, {
-        filter: debouncedSearch.trim() || undefined,
-        includeDeleted: showDeleted,
-        skipCount: page * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
-      getSpaceTypes(token),
-    ])
-    return { buildings: buildingsResult.items, totalCount: buildingsResult.totalCount, spaceTypes: spaceTypesResult.items }
+    const buildingsResult = await getBuildings(token, {
+      filter: debouncedSearch.trim() || undefined,
+      includeDeleted: showDeleted,
+      skipCount: page * PAGE_SIZE,
+      maxResultCount: PAGE_SIZE,
+    })
+    return { buildings: buildingsResult.items, totalCount: buildingsResult.totalCount }
   }, [token, debouncedSearch, showDeleted, page])
 
   function handleSearchChange(value: string) {
@@ -112,9 +107,6 @@ export function BuildingsListPage() {
                   />
                   Show deleted
                 </label>
-                <button className="btn sm sec" onClick={() => setManageTypesOpen(true)}>
-                  Manage space types
-                </button>
                 <button className="btn sm sec" onClick={() => setModal({ kind: 'building' })}>+ Building</button>
               </div>
             </div>
@@ -201,7 +193,7 @@ export function BuildingsListPage() {
         <AddNodeModal
           state={modal}
           token={token}
-          spaceTypes={data?.spaceTypes ?? []}
+          spaceTypes={[]}
           onClose={() => setModal(null)}
           onCreated={() => {
             showToast('Building added.')
@@ -214,23 +206,13 @@ export function BuildingsListPage() {
         <EditDetailsModal
           state={editState}
           token={token}
-          spaceTypes={data?.spaceTypes ?? []}
+          spaceTypes={[]}
           onClose={() => setEditState(null)}
           onSaved={() => {
             showToast('Details saved.')
             refetch()
           }}
           onError={(message) => showToast(message, 'error')}
-        />
-      )}
-      {manageTypesOpen && (
-        <ManageSpaceTypesModal
-          token={token}
-          spaceTypes={data?.spaceTypes ?? []}
-          onClose={() => setManageTypesOpen(false)}
-          onChanged={refetch}
-          onError={(message) => showToast(message, 'error')}
-          onSuccess={(message) => showToast(message)}
         />
       )}
       <Toast toast={toast} />

@@ -10,6 +10,7 @@ import { HighlightedText } from '../components/HighlightedText'
 import { Pager } from '../../../components/Pager'
 import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
+import { ManageSpaceTypesModal } from '../components/ManageSpaceTypesModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
@@ -38,6 +39,7 @@ export function AllSpacesPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [page, setPage] = useState(0)
   const [editState, setEditState] = useState<EditDetailsState>(null)
+  const [manageTypesOpen, setManageTypesOpen] = useState(false)
   const { toast, showToast } = useToast()
 
   const { status, data, error, refetch } = useAsync(async () => {
@@ -139,6 +141,9 @@ export function AllSpacesPage() {
                   />
                   Show deleted
                 </label>
+                <button className="btn sm sec" onClick={() => setManageTypesOpen(true)}>
+                  Manage space types
+                </button>
               </div>
             </div>
 
@@ -240,6 +245,16 @@ export function AllSpacesPage() {
             refetch()
           }}
           onError={(message) => showToast(message, 'error')}
+        />
+      )}
+      {manageTypesOpen && (
+        <ManageSpaceTypesModal
+          token={token}
+          spaceTypes={data?.spaceTypes ?? []}
+          onClose={() => setManageTypesOpen(false)}
+          onChanged={refetch}
+          onError={(message) => showToast(message, 'error')}
+          onSuccess={(message) => showToast(message)}
         />
       )}
       <Toast toast={toast} />
