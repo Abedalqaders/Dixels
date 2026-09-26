@@ -1,21 +1,18 @@
-import { useState } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { Sidebar } from '../../../components/Sidebar'
 import { SearchIcon } from '../../../components/icons'
 import { Pager } from '../../../components/Pager'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useListParams } from '../../../hooks/useListParams'
 import { ApiError, assignEmployeeBuilding, getEmployees } from '../api/employeesApi'
 import type { EmployeeDto } from '../api/employeesApi'
-import { getBuildings } from '../../space-management/api/spaceManagementApi'
+import { BuildingPicker } from '../../space-management/components/BuildingPicker'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 
 const UNASSIGNED = ''
-const ANY_BUILDING = ''
-const PAGE_SIZE = 10
 
 function labelFor(employee: EmployeeDto): string {
   return [employee.name, employee.surname].filter(Boolean).join(' ') || employee.userName
@@ -36,35 +33,22 @@ export function AdminEmployeesPage() {
   const token = auth.user?.access_token ?? ''
   const { toast, showToast } = useToast()
 
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search)
-  const [buildingFilter, setBuildingFilter] = useState(ANY_BUILDING)
-  const [page, setPage] = useState(0)
+  const list = useListParams()
+  const buildingFilter = list.getFilter('building')
 
-  const { status, data, error, refetch } = useAsync(async () => {
-    const [employeesResult, buildingsResult] = await Promise.all([
-      getEmployees(token, {
-        filter: debouncedSearch.trim() || undefined,
+  const { status, data, error, isRefreshing, refetch } = useAsync(
+    async () => {
+      const employeesResult = await getEmployees(token, {
+        filter: list.search || undefined,
         buildingId: buildingFilter || undefined,
-        skipCount: page * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
-      // Every building, for the filter dropdown and the per-row assignment picker — not
-      // paged, since an admin needs the whole list to choose from either way.
-      getBuildings(token, { maxResultCount: 1000 }),
-    ])
-    return { employees: employeesResult.items, totalCount: employeesResult.totalCount, buildings: buildingsResult.items }
-  }, [token, debouncedSearch, buildingFilter, page])
-
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setPage(0)
-  }
-
-  function handleBuildingFilterChange(value: string) {
-    setBuildingFilter(value)
-    setPage(0)
-  }
+        skipCount: list.page * list.pageSize,
+        maxResultCount: list.pageSize,
+      })
+      return { employees: employeesResult.items, totalCount: employeesResult.totalCount }
+    },
+    [token, list.search, buildingFilter, list.page, list.pageSize],
+    { keepPreviousData: true },
+  )
 
   async function handleAssign(employeeUserId: string, employeeLabel: string, buildingId: string) {
     try {
@@ -100,33 +84,26 @@ export function AdminEmployeesPage() {
                     placeholder="Search by name, username or email…"
                     autoComplete="off"
                     aria-label="Search employees"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    value={list.searchInput}
+                    onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <select
-                  className="ctrl"
-                  style={{ width: 'auto' }}
-                  aria-label="Filter by building"
+                <BuildingPicker
+                  token={token}
                   value={buildingFilter}
-                  onChange={(e) => handleBuildingFilterChange(e.target.value)}
-                >
-                  <option value={ANY_BUILDING}>All buildings</option>
-                  {data?.buildings.map((building) => (
-                    <option key={building.id} value={building.id}>
-                      {building.name}
-                    </option>
-                  ))}
-                </select>
+                  noneLabel="All buildings"
+                  ariaLabel="Filter by building"
+                  onChange={(id) => list.setFilter('building', id)}
+                />
               </div>
             </div>
 
-            <div className="pad">
+            <div className={`pad${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading employees…</p>}
               {status === 'error' && <p className="treeempty">Couldn't load employees: {error.message}</p>}
               {status === 'success' && data.employees.length === 0 && (
                 <p className="treeempty">
-                  {debouncedSearch.trim() || buildingFilter
+                  {list.search || buildingFilter
                     ? 'No employees match the current search and filter.'
                     : 'No employee accounts yet.'}
                 </p>
@@ -164,19 +141,14 @@ export function AdminEmployeesPage() {
                             </span>
                           </td>
                           <td className="col-building">
-                            <select
-                              className="ctrl"
-                              aria-label={`Building for ${label}`}
+                            <BuildingPicker
+                              token={token}
                               value={employee.assignedBuildingId ?? UNASSIGNED}
-                              onChange={(e) => handleAssign(employee.id, label, e.target.value)}
-                            >
-                              <option value={UNASSIGNED}>Not assigned</option>
-                              {(data?.buildings ?? []).map((building) => (
-                                <option key={building.id} value={building.id}>
-                                  {building.name}
-                                </option>
-                              ))}
-                            </select>
+                              selectedName={employee.assignedBuildingName}
+                              noneLabel="Not assigned"
+                              ariaLabel={`Building for ${label}`}
+                              onChange={(id) => handleAssign(employee.id, label, id)}
+                            />
                           </td>
                         </tr>
                       )
@@ -187,7 +159,13 @@ export function AdminEmployeesPage() {
             </div>
 
             {status === 'success' && (
-              <Pager page={page} pageSize={PAGE_SIZE} totalCount={data.totalCount} onPageChange={setPage} />
+              <Pager
+                page={list.page}
+                pageSize={list.pageSize}
+                totalCount={data.totalCount}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+              />
             )}
           </section>
         </div>

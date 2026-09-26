@@ -13,14 +13,14 @@ import type { EditDetailsState } from '../components/EditDetailsModal'
 import { ManageSpaceTypesModal } from '../components/ManageSpaceTypesModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useListParams } from '../../../hooks/useListParams'
+import { BuildingPicker } from '../components/BuildingPicker'
 import { ApiError, getSpaces, getSpaceTypes, deleteSpace, restoreSpace } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
 
-const PAGE_SIZE = 10
 const ALL_SPACE_TYPES = ''
 
 // Standalone, unscoped counterpart to SpacesListPage.tsx (which lists one floor's spaces) —
@@ -33,49 +33,37 @@ export function AllSpacesPage() {
   const token = auth.user?.access_token ?? ''
   const navigate = useNavigate()
 
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search)
-  const [spaceTypeId, setSpaceTypeId] = useState(ALL_SPACE_TYPES)
-  const [showDeleted, setShowDeleted] = useState(false)
-  const [page, setPage] = useState(0)
+  const list = useListParams()
+  const spaceTypeId = list.getFilter('type')
+  const buildingId = list.getFilter('building')
   const [editState, setEditState] = useState<EditDetailsState>(null)
   const [manageTypesOpen, setManageTypesOpen] = useState(false)
   const { toast, showToast } = useToast()
 
-  const { status, data, error, refetch } = useAsync(async () => {
-    const [spacesResult, spaceTypesResult] = await Promise.all([
-      getSpaces(token, {
-        filter: debouncedSearch.trim() || undefined,
-        spaceTypeId: spaceTypeId || undefined,
-        includeDeleted: showDeleted,
-        skipCount: page * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
-      getSpaceTypes(token),
-    ])
-    return { spaces: spacesResult.items, totalCount: spacesResult.totalCount, spaceTypes: spaceTypesResult.items }
-  }, [token, debouncedSearch, spaceTypeId, showDeleted, page])
+  const { status, data, error, isRefreshing, refetch } = useAsync(
+    async () => {
+      const [spacesResult, spaceTypesResult] = await Promise.all([
+        getSpaces(token, {
+          filter: list.search || undefined,
+          spaceTypeId: spaceTypeId || undefined,
+          buildingId: buildingId || undefined,
+          includeDeleted: list.showDeleted,
+          skipCount: list.page * list.pageSize,
+          maxResultCount: list.pageSize,
+        }),
+        getSpaceTypes(token),
+      ])
+      return { spaces: spacesResult.items, totalCount: spacesResult.totalCount, spaceTypes: spaceTypesResult.items }
+    },
+    [token, list.search, spaceTypeId, buildingId, list.showDeleted, list.page, list.pageSize],
+    { keepPreviousData: true },
+  )
 
   const spaceTypeById = useMemo(() => {
     const map = new Map<string, { name: string; iconKey: number }>()
     for (const st of data?.spaceTypes ?? []) map.set(st.id, st)
     return map
   }, [data])
-
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setPage(0)
-  }
-
-  function handleSpaceTypeChange(value: string) {
-    setSpaceTypeId(value)
-    setPage(0)
-  }
-
-  function handleShowDeletedChange(value: boolean) {
-    setShowDeleted(value)
-    setPage(0)
-  }
 
   async function runAction(action: () => Promise<unknown>, successMessage: string) {
     try {
@@ -116,15 +104,22 @@ export function AllSpacesPage() {
                     placeholder="Search spaces, floors or buildings…"
                     autoComplete="off"
                     aria-label="Search spaces, floors or buildings"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    value={list.searchInput}
+                    onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
+                <BuildingPicker
+                  token={token}
+                  value={buildingId}
+                  noneLabel="All buildings"
+                  ariaLabel="Filter by building"
+                  onChange={(id) => list.setFilter('building', id)}
+                />
                 <select
                   className="ctrl"
                   aria-label="Filter by space type"
                   value={spaceTypeId}
-                  onChange={(e) => handleSpaceTypeChange(e.target.value)}
+                  onChange={(e) => list.setFilter('type', e.target.value)}
                 >
                   <option value={ALL_SPACE_TYPES}>All types</option>
                   {(data?.spaceTypes ?? []).map((st) => (
@@ -136,8 +131,8 @@ export function AllSpacesPage() {
                 <label className="chk">
                   <input
                     type="checkbox"
-                    checked={showDeleted}
-                    onChange={(e) => handleShowDeletedChange(e.target.checked)}
+                    checked={list.showDeleted}
+                    onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
                   Show deleted
                 </label>
@@ -153,13 +148,13 @@ export function AllSpacesPage() {
               <span>{ICONS.desk} Desk</span>
             </p>
 
-            <div className="tree">
+            <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading spaces…</p>}
               {status === 'error' && <p className="treeempty">Couldn't load spaces: {error.message}</p>}
 
               {status === 'success' && data.spaces.length === 0 && (
                 <p className="treeempty">
-                  {debouncedSearch.trim() || spaceTypeId ? 'Nothing matches the current filters.' : 'No spaces yet.'}
+                  {list.search || spaceTypeId || buildingId ? 'Nothing matches the current filters.' : 'No spaces yet.'}
                 </p>
               )}
 
@@ -168,14 +163,14 @@ export function AllSpacesPage() {
                   <div className="node l1" data-level="space" key={space.id} style={space.isDeleted ? { opacity: 0.55 } : undefined}>
                     <span className="spaceicon">{ICONS[iconKeyToIconName(spaceTypeById.get(space.spaceTypeId)?.iconKey ?? 3)]}</span>
                     <span className="lbl2">
-                      <HighlightedText text={space.name} query={debouncedSearch.trim()} />
+                      <HighlightedText text={space.name} query={list.search} />
                     </span>
                     {spaceTypeById.get(space.spaceTypeId)?.name && (
                       <span className="badge type">{spaceTypeById.get(space.spaceTypeId)?.name}</span>
                     )}
                     <span className="m">
-                      <HighlightedText text={space.buildingName ?? ''} query={debouncedSearch.trim()} /> ·{' '}
-                      <HighlightedText text={space.floorName ?? ''} query={debouncedSearch.trim()} />
+                      <HighlightedText text={space.buildingName ?? ''} query={list.search} /> ·{' '}
+                      <HighlightedText text={space.floorName ?? ''} query={list.search} />
                     </span>
                     <span className="m">
                       {space.capacity} seat{space.capacity === 1 ? '' : 's'}
@@ -228,7 +223,13 @@ export function AllSpacesPage() {
             </div>
 
             {status === 'success' && (
-              <Pager page={page} pageSize={PAGE_SIZE} totalCount={data.totalCount} onPageChange={setPage} />
+              <Pager
+                page={list.page}
+                pageSize={list.pageSize}
+                totalCount={data.totalCount}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+              />
             )}
           </section>
         </div>

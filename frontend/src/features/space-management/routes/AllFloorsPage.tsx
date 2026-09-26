@@ -12,15 +12,13 @@ import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { ApiError, getBuildings, getFloors, deleteFloor, restoreFloor } from '../api/spaceManagementApi'
+import { useListParams } from '../../../hooks/useListParams'
+import { BuildingPicker } from '../components/BuildingPicker'
+import { ApiError, getFloors, deleteFloor, restoreFloor } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
-
-const PAGE_SIZE = 10
-const ALL_BUILDINGS = ''
 
 // Standalone, unscoped counterpart to FloorsListPage.tsx (which lists one building's
 // floors) — this lists every floor across every building in one flat, paged table, with the
@@ -32,44 +30,25 @@ export function AllFloorsPage() {
   const token = auth.user?.access_token ?? ''
   const navigate = useNavigate()
 
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search)
-  const [buildingId, setBuildingId] = useState(ALL_BUILDINGS)
-  const [showDeleted, setShowDeleted] = useState(false)
-  const [page, setPage] = useState(0)
+  const list = useListParams()
+  const buildingId = list.getFilter('building')
   const [editState, setEditState] = useState<EditDetailsState>(null)
   const { toast, showToast } = useToast()
 
-  const { status, data, error, refetch } = useAsync(async () => {
-    const [floorsResult, buildingsResult] = await Promise.all([
-      getFloors(token, {
+  const { status, data, error, isRefreshing, refetch } = useAsync(
+    async () => {
+      const floorsResult = await getFloors(token, {
         buildingId: buildingId || undefined,
-        filter: debouncedSearch.trim() || undefined,
-        includeDeleted: showDeleted,
-        skipCount: page * PAGE_SIZE,
-        maxResultCount: PAGE_SIZE,
-      }),
-      // maxResultCount is set high since this dropdown needs every building, not a page of
-      // them — the endpoint defaults to ABP's standard page size (10) otherwise.
-      getBuildings(token, { maxResultCount: 1000 }),
-    ])
-    return { floors: floorsResult.items, totalCount: floorsResult.totalCount, buildings: buildingsResult.items }
-  }, [token, buildingId, debouncedSearch, showDeleted, page])
-
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setPage(0)
-  }
-
-  function handleBuildingChange(value: string) {
-    setBuildingId(value)
-    setPage(0)
-  }
-
-  function handleShowDeletedChange(value: boolean) {
-    setShowDeleted(value)
-    setPage(0)
-  }
+        filter: list.search || undefined,
+        includeDeleted: list.showDeleted,
+        skipCount: list.page * list.pageSize,
+        maxResultCount: list.pageSize,
+      })
+      return { floors: floorsResult.items, totalCount: floorsResult.totalCount }
+    },
+    [token, buildingId, list.search, list.showDeleted, list.page, list.pageSize],
+    { keepPreviousData: true },
+  )
 
   async function runAction(action: () => Promise<unknown>, successMessage: string) {
     try {
@@ -110,41 +89,35 @@ export function AllFloorsPage() {
                     placeholder="Search floors or buildings…"
                     autoComplete="off"
                     aria-label="Search floors or buildings"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    value={list.searchInput}
+                    onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <select
-                  className="ctrl"
-                  aria-label="Filter by building"
+                <BuildingPicker
+                  token={token}
                   value={buildingId}
-                  onChange={(e) => handleBuildingChange(e.target.value)}
-                >
-                  <option value={ALL_BUILDINGS}>All buildings</option>
-                  {(data?.buildings ?? []).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                  noneLabel="All buildings"
+                  ariaLabel="Filter by building"
+                  onChange={(id) => list.setFilter('building', id)}
+                />
                 <label className="chk">
                   <input
                     type="checkbox"
-                    checked={showDeleted}
-                    onChange={(e) => handleShowDeletedChange(e.target.checked)}
+                    checked={list.showDeleted}
+                    onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
                   Show deleted
                 </label>
               </div>
             </div>
 
-            <div className="tree">
+            <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading floors…</p>}
               {status === 'error' && <p className="treeempty">Couldn't load floors: {error.message}</p>}
 
               {status === 'success' && data.floors.length === 0 && (
                 <p className="treeempty">
-                  {debouncedSearch.trim() || buildingId ? 'Nothing matches the current filters.' : 'No floors yet.'}
+                  {list.search || buildingId ? 'Nothing matches the current filters.' : 'No floors yet.'}
                 </p>
               )}
 
@@ -154,10 +127,10 @@ export function AllFloorsPage() {
                     <div className="node l1" data-level="floor">
                       {ICONS.floor}
                       <Link to={`/admin/buildings/${floor.buildingId}/floors/${floor.id}/spaces`} className="lbl2">
-                        <HighlightedText text={floor.name} query={debouncedSearch.trim()} />
+                        <HighlightedText text={floor.name} query={list.search} />
                       </Link>
                       <span className="m">
-                        <HighlightedText text={floor.buildingName ?? ''} query={debouncedSearch.trim()} />
+                        <HighlightedText text={floor.buildingName ?? ''} query={list.search} />
                       </span>
                       {floor.floorNumber !== null && <span className="m">Floor {floor.floorNumber}</span>}
                       {floor.hasOverrides && <span className="badge completed">Custom</span>}
@@ -208,7 +181,13 @@ export function AllFloorsPage() {
             </div>
 
             {status === 'success' && (
-              <Pager page={page} pageSize={PAGE_SIZE} totalCount={data.totalCount} onPageChange={setPage} />
+              <Pager
+                page={list.page}
+                pageSize={list.pageSize}
+                totalCount={data.totalCount}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+              />
             )}
           </section>
         </div>

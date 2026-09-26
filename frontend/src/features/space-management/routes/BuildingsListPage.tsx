@@ -14,47 +14,36 @@ import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { useListParams } from '../../../hooks/useListParams'
 import { ApiError, getBuildings, deleteBuilding, restoreBuilding } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
 
-const PAGE_SIZE = 10
-
 export function BuildingsListPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const navigate = useNavigate()
 
-  const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search)
-  const [showDeleted, setShowDeleted] = useState(false)
-  const [page, setPage] = useState(0)
+  const list = useListParams()
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
   const { toast, showToast } = useToast()
 
-  const { status, data, error, refetch } = useAsync(async () => {
-    const buildingsResult = await getBuildings(token, {
-      filter: debouncedSearch.trim() || undefined,
-      includeDeleted: showDeleted,
-      skipCount: page * PAGE_SIZE,
-      maxResultCount: PAGE_SIZE,
-    })
-    return { buildings: buildingsResult.items, totalCount: buildingsResult.totalCount }
-  }, [token, debouncedSearch, showDeleted, page])
-
-  function handleSearchChange(value: string) {
-    setSearch(value)
-    setPage(0)
-  }
-
-  function handleShowDeletedChange(value: boolean) {
-    setShowDeleted(value)
-    setPage(0)
-  }
+  const { status, data, error, isRefreshing, refetch } = useAsync(
+    async () => {
+      const buildingsResult = await getBuildings(token, {
+        filter: list.search || undefined,
+        includeDeleted: list.showDeleted,
+        skipCount: list.page * list.pageSize,
+        maxResultCount: list.pageSize,
+      })
+      return { buildings: buildingsResult.items, totalCount: buildingsResult.totalCount }
+    },
+    [token, list.search, list.showDeleted, list.page, list.pageSize],
+    { keepPreviousData: true },
+  )
 
   async function runAction(action: () => Promise<unknown>, successMessage: string) {
     try {
@@ -95,15 +84,15 @@ export function BuildingsListPage() {
                     placeholder="Search buildings…"
                     autoComplete="off"
                     aria-label="Search buildings"
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    value={list.searchInput}
+                    onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
                 <label className="chk">
                   <input
                     type="checkbox"
-                    checked={showDeleted}
-                    onChange={(e) => handleShowDeletedChange(e.target.checked)}
+                    checked={list.showDeleted}
+                    onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
                   Show deleted
                 </label>
@@ -111,13 +100,13 @@ export function BuildingsListPage() {
               </div>
             </div>
 
-            <div className="tree">
+            <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading buildings…</p>}
               {status === 'error' && <p className="treeempty">Couldn't load buildings: {error.message}</p>}
 
               {status === 'success' && data.buildings.length === 0 && (
                 <p className="treeempty">
-                  {debouncedSearch.trim() ? 'Nothing matches your search.' : 'No buildings yet — add one to get started.'}
+                  {list.search ? 'Nothing matches your search.' : 'No buildings yet — add one to get started.'}
                 </p>
               )}
 
@@ -127,7 +116,7 @@ export function BuildingsListPage() {
                     <div className="node l1" data-level="building">
                       {ICONS.building}
                       <Link to={`/admin/buildings/${building.id}/floors`} className="lbl2">
-                        <HighlightedText text={building.name} query={debouncedSearch.trim()} />
+                        <HighlightedText text={building.name} query={list.search} />
                       </Link>
                       {building.buildingNumber && <span className="m">{building.buildingNumber}</span>}
                       {building.isDeleted && <span className="badge cancelled">Deleted</span>}
@@ -183,7 +172,13 @@ export function BuildingsListPage() {
             </div>
 
             {status === 'success' && (
-              <Pager page={page} pageSize={PAGE_SIZE} totalCount={data.totalCount} onPageChange={setPage} />
+              <Pager
+                page={list.page}
+                pageSize={list.pageSize}
+                totalCount={data.totalCount}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+              />
             )}
           </section>
         </div>
