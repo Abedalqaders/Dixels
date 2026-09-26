@@ -1,0 +1,86 @@
+[
+  {
+    "description": "exact match, non-wrapping",
+    "parent": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "child": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "expected": true
+  },
+  {
+    "description": "non-wrapping child strictly inside non-wrapping parent",
+    "parent": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "child": { "isOpen24Hours": false, "open": "08:00", "close": "18:00" },
+    "expected": true
+  },
+  {
+    "description": "non-wrapping child exceeds parent close by one minute",
+    "parent": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "child": { "isOpen24Hours": false, "open": "08:00", "close": "20:01" },
+    "expected": false
+  },
+  {
+    "description": "non-wrapping child starts before parent opens",
+    "parent": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "child": { "isOpen24Hours": false, "open": "06:59", "close": "18:00" },
+    "expected": false
+  },
+  {
+    "description": "wrapping child inside wrapping parent",
+    "parent": { "isOpen24Hours": false, "open": "22:00", "close": "06:00" },
+    "child": { "isOpen24Hours": false, "open": "23:00", "close": "05:00" },
+    "expected": true
+  },
+  {
+    "description": "wrapping child starts before wrapping parent opens",
+    "parent": { "isOpen24Hours": false, "open": "22:00", "close": "06:00" },
+    "child": { "isOpen24Hours": false, "open": "21:00", "close": "05:00" },
+    "expected": false
+  },
+  {
+    "description": "non-wrapping child inside wrapping parent, early-morning segment",
+    "parent": { "isOpen24Hours": false, "open": "22:00", "close": "06:00" },
+    "child": { "isOpen24Hours": false, "open": "02:00", "close": "03:00" },
+    "expected": true
+  },
+  {
+    "description": "non-wrapping child inside wrapping parent, late-night segment",
+    "parent": { "isOpen24Hours": false, "open": "22:00", "close": "06:00" },
+    "child": { "isOpen24Hours": false, "open": "23:00", "close": "23:30" },
+    "expected": true
+  },
+  {
+    "description": "non-wrapping child outside wrapping parent (daytime, parent is closed then)",
+    "parent": { "isOpen24Hours": false, "open": "22:00", "close": "06:00" },
+    "child": { "isOpen24Hours": false, "open": "09:00", "close": "17:00" },
+    "expected": false
+  },
+  {
+    "description": "wrapping child inside non-wrapping parent is never valid",
+    "parent": { "isOpen24Hours": false, "open": "09:00", "close": "17:00" },
+    "child": { "isOpen24Hours": false, "open": "22:00", "close": "02:00" },
+    "expected": false
+  },
+  {
+    "description": "full-24h parent accepts a non-wrapping child",
+    "parent": { "isOpen24Hours": true, "open": "00:00", "close": "00:00" },
+    "child": { "isOpen24Hours": false, "open": "09:00", "close": "17:00" },
+    "expected": true
+  },
+  {
+    "description": "full-24h parent accepts a wrapping child",
+    "parent": { "isOpen24Hours": true, "open": "00:00", "close": "00:00" },
+    "child": { "isOpen24Hours": false, "open": "22:00", "close": "02:00" },
+    "expected": true
+  },
+  {
+    "description": "full-24h child is never valid inside a non-full parent",
+    "parent": { "isOpen24Hours": false, "open": "07:00", "close": "20:00" },
+    "child": { "isOpen24Hours": true, "open": "00:00", "close": "00:00" },
+    "expected": false
+  },
+  {
+    "description": "full-24h parent and full-24h child",
+    "parent": { "isOpen24Hours": true, "open": "00:00", "close": "00:00" },
+    "child": { "isOpen24Hours": true, "open": "00:00", "close": "00:00" },
+    "expected": true
+  }
+]
