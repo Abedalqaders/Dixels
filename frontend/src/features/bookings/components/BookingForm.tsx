@@ -7,13 +7,10 @@ import { Label } from '@/components/ui/label'
 import {
   addDays,
   formatDate,
-  fromMinutes,
   nowInZone,
-  slotTimes,
   toLocalDateTime,
   toMinutes,
 } from '../../../lib/time/buildingTime'
-import type { HhMm } from '../../../lib/time/buildingTime'
 import { ApiError, createBooking } from '../api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestDto } from '../api/bookingsApi'
 import { formatDays, formatDuration, formatHours } from '../format'
@@ -21,10 +18,8 @@ import { useBookingPreview } from '../hooks/useBookingPreview'
 import { suggestSlot } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { DatePicker } from './DatePicker'
-import { TimeSelect } from './TimeSelect'
+import { TimeRangeFields } from './TimeRangeFields'
 import { VerdictPanel } from './VerdictPanel'
-
-const DAY_MINUTES = 24 * 60
 
 interface BookingFormProps {
   token: string
@@ -62,10 +57,9 @@ export function BookingForm({
   const [idempotencyKey] = useState(() => crypto.randomUUID())
 
   const slot = building.slotMinutes
-  const today = nowInZone(building.timezone).date
+  const now = nowInZone(building.timezone)
+  const today = now.date
   const lastDate = addDays(today, building.maxHorizonDays)
-  const startOptions = slotTimes(slot, 0, DAY_MINUTES - slot)
-  const endOptions = slotTimes(slot, toMinutes(start) + slot, DAY_MINUTES)
 
   // Only the fields that affect the rules — the title is deliberately left out, so typing
   // one doesn't re-check availability on every keystroke.
@@ -82,13 +76,6 @@ export function BookingForm({
   }, [space.id, date, start, end, attendees])
 
   const { state: preview, recheck } = useBookingPreview(token, request)
-
-  function changeStart(next: HhMm) {
-    // Keep the booking's length when the start moves, so "move it an hour later" is one change.
-    const length = toMinutes(end) - toMinutes(start)
-    setStart(next)
-    setEnd(fromMinutes(Math.min(toMinutes(next) + Math.max(length, slot), DAY_MINUTES)))
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -143,19 +130,23 @@ export function BookingForm({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.4fr_1fr_1fr]">
-            <div className="col-span-2 grid gap-2 sm:col-span-1">
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
+            <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="bk-date">Date</Label>
               <DatePicker id="bk-date" value={date} min={today} max={lastDate} onChange={setDate} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="bk-start">Start</Label>
-              <TimeSelect id="bk-start" value={start} options={startOptions} onChange={changeStart} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="bk-end">End</Label>
-              <TimeSelect id="bk-end" value={end} options={endOptions} onChange={setEnd} />
-            </div>
+            <TimeRangeFields
+              idPrefix="bk"
+              start={start}
+              end={end}
+              slotMinutes={slot}
+              maxDuration={space.maxDurationMinutes.value}
+              minStartMinute={date === today ? now.minutes + building.minLeadMinutes : 0}
+              onChange={(range) => {
+                setStart(range.start)
+                setEnd(range.end)
+              }}
+            />
           </div>
 
           <div className="grid gap-2">

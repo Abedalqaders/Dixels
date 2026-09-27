@@ -140,7 +140,8 @@ describe('FindSpacePage', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Book Meeting Room 201' })
     expect(within(dialog).getByLabelText('Start')).toHaveTextContent('10:00')
-    expect(within(dialog).getByLabelText('End')).toHaveTextContent('11:00')
+    expect(within(dialog).getByText('10:00–11:00')).toBeInTheDocument()
+    expect(within(dialog).getByRole('radio', { name: '1h' })).toHaveAttribute('aria-checked', 'true')
     expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
   })
 })

@@ -2,11 +2,11 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { addDays, fromMinutes, nowInZone, slotTimes, toMinutes } from '../../../lib/time/buildingTime'
+import { addDays, nowInZone } from '../../../lib/time/buildingTime'
 import type { HhMm, IsoDate } from '../../../lib/time/buildingTime'
 import type { BookableBuildingDto } from '../api/bookingsApi'
 import { DatePicker } from './DatePicker'
-import { TimeSelect } from './TimeSelect'
+import { TimeRangeFields } from './TimeRangeFields'
 
 export interface SearchValues {
   date: IsoDate
@@ -23,8 +23,6 @@ interface SearchBarProps {
   onChange: (patch: Partial<SearchValues>) => void
 }
 
-const DAY_MINUTES = 24 * 60
-
 // Radix Select can't use an empty string as an item value, so "no filter" has its own token.
 const ANY = 'any'
 
@@ -35,18 +33,13 @@ const ANY = 'any'
  */
 export function SearchBar({ building, value, onChange }: SearchBarProps) {
   const slot = building.slotMinutes
-  const today = nowInZone(building.timezone).date
+  const now = nowInZone(building.timezone)
+  const today = now.date
   const lastDate = addDays(today, building.maxHorizonDays)
 
   const spaceTypes = new Map<string, string>()
   for (const floor of building.floors) {
     for (const space of floor.spaces) spaceTypes.set(space.spaceTypeId, space.spaceTypeName)
-  }
-
-  function changeStart(next: HhMm) {
-    // Moving the start keeps the length, so "an hour later" is one change, not two.
-    const length = Math.max(toMinutes(value.end) - toMinutes(value.start), slot)
-    onChange({ start: next, end: fromMinutes(Math.min(toMinutes(next) + length, DAY_MINUTES)) })
   }
 
   return (
@@ -55,27 +48,21 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         role="search"
         aria-label="Find a free space"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.4fr_1fr_1fr_0.7fr_1.2fr_1.2fr]"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.2fr_0.9fr_1.8fr_0.6fr_1fr_1fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
           <Label htmlFor="fs-date">Date</Label>
           <DatePicker id="fs-date" value={value.date} min={today} max={lastDate} onChange={(date) => onChange({ date })} />
         </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="fs-from">From</Label>
-          <TimeSelect id="fs-from" value={value.start} options={slotTimes(slot, 0, DAY_MINUTES - slot)} onChange={changeStart} />
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor="fs-to">To</Label>
-          <TimeSelect
-            id="fs-to"
-            value={value.end}
-            options={slotTimes(slot, toMinutes(value.start) + slot, DAY_MINUTES)}
-            onChange={(end) => onChange({ end })}
-          />
-        </div>
+        <TimeRangeFields
+          idPrefix="fs"
+          start={value.start}
+          end={value.end}
+          slotMinutes={slot}
+          minStartMinute={value.date === today ? now.minutes + building.minLeadMinutes : 0}
+          onChange={onChange}
+        />
 
         <div className="grid gap-2">
           <Label htmlFor="fs-people">People</Label>
