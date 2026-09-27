@@ -2,12 +2,13 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { addDays, nowInZone } from '../../../lib/time/buildingTime'
+import { addDays, fromMinutes, nowInZone, toMinutes } from '../../../lib/time/buildingTime'
 import type { HhMm, IsoDate } from '../../../lib/time/buildingTime'
 import type { BookableBuildingDto } from '../api/bookingsApi'
-import { closingMinute } from '../preferences'
 import { DatePicker } from './DatePicker'
-import { TimeRangeFields } from './TimeRangeFields'
+import { StartTimePicker } from './StartTimePicker'
+
+const DAY_MINUTES = 24 * 60
 
 export interface SearchValues {
   date: IsoDate
@@ -29,7 +30,8 @@ const ANY = 'any'
 
 /**
  * The question Find a space answers: when, and for how many people. Floor and type are
- * optional narrowing. Every control is a real picker on the building's clock and slot
+ * optional narrowing. There's no length field — rooms are checked for the usual length,
+ * and any other length is picked by dragging on a room's bar in the results. Every control is a real picker on the building's clock and slot
  * grid, so there's nothing to type in a wrong format.
  */
 export function SearchBar({ building, value, onChange }: SearchBarProps) {
@@ -38,13 +40,13 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
   const today = now.date
   const lastDate = addDays(today, building.maxHorizonDays)
 
-  // "Until closing" in a search means the latest any matching space stays open — the rooms
-  // that close earlier then show as unavailable, with their own hours as the reason.
-  const matching = building.floors
-    .filter((f) => !value.floorId || f.id === value.floorId)
-    .flatMap((f) => f.spaces)
-    .filter((sp) => !value.spaceTypeId || sp.spaceTypeId === value.spaceTypeId)
-  const latestClosing = matching.length ? Math.max(...matching.map(closingMinute)) : undefined
+  // The search checks "free at this time for your usual length"; the length itself is
+  // picked by dragging on a room's bar. Moving the time keeps the length.
+  function changeStart(next: HhMm) {
+    const length = Math.max(toMinutes(value.end) - toMinutes(value.start), slot)
+    const start = toMinutes(next)
+    onChange({ start: next, end: fromMinutes(Math.min(start + length, DAY_MINUTES)) })
+  }
 
   const spaceTypes = new Map<string, string>()
   for (const floor of building.floors) {
@@ -57,22 +59,23 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         role="search"
         aria-label="Find a free space"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.2fr_1fr_1.3fr_0.6fr_1fr_1fr]"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_0.7fr_1.2fr_1.2fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
           <Label htmlFor="fs-date">Date</Label>
           <DatePicker id="fs-date" value={value.date} min={today} max={lastDate} onChange={(date) => onChange({ date })} />
         </div>
 
-        <TimeRangeFields
-          idPrefix="fs"
-          start={value.start}
-          end={value.end}
-          slotMinutes={slot}
-          minStartMinute={value.date === today ? now.minutes + building.minLeadMinutes : 0}
-          closingMinute={latestClosing}
-          onChange={onChange}
-        />
+        <div className="grid gap-2">
+          <Label htmlFor="fs-at">At</Label>
+          <StartTimePicker
+            id="fs-at"
+            value={value.start}
+            slotMinutes={slot}
+            minMinute={value.date === today ? now.minutes + building.minLeadMinutes : 0}
+            onChange={changeStart}
+          />
+        </div>
 
         <div className="grid gap-2">
           <Label htmlFor="fs-people">People</Label>

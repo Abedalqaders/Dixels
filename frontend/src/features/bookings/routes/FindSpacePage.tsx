@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { dateOf, formatDate, fromMinutes, timeOf, toLocalDateTime, toMinutes } from '../../../lib/time/buildingTime'
+import { dateOf, formatDate, fromMinutes, nowInZone, timeOf, toLocalDateTime, toMinutes } from '../../../lib/time/buildingTime'
 import { ICONS, iconKeyToIconName } from '../../space-management/components/spaceTypeIcons'
 import { ApiError, getMyBookableBuilding, searchAvailability } from '../api/bookingsApi'
 import type { BookableBuildingDto, BookingDto, SearchAvailabilityInput, SpaceAvailabilityDto } from '../api/bookingsApi'
@@ -19,7 +19,11 @@ import { DayBar } from '../components/DayBar'
 import { SearchBar } from '../components/SearchBar'
 import type { SearchValues } from '../components/SearchBar'
 import { dayAxis } from '../dayAxis'
+import { formatDuration } from '../format'
 import { suggestWindow } from '../suggestSlot'
+import type { Slot } from '../suggestSlot'
+import { readLastDuration } from '../preferences'
+import type { DayBarPick } from '../components/DayBar'
 
 /**
  * Find a space answers one question: "what can I book for this time?". Pick when and for
@@ -67,7 +71,7 @@ export function FindSpacePage() {
 function SpaceSearch({ token, building }: { token: string; building: BookableBuildingDto }) {
   const { toast, showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [booking, setBooking] = useState<SpaceAvailabilityDto | null>(null)
+  const [booking, setBooking] = useState<{ room: SpaceAvailabilityDto; slot: Slot } | null>(null)
   const [defaults] = useState(() => suggestWindow(building))
 
   // The search lives in the URL (?date=&from=&to=&people=&floor=&type=), so it survives a
@@ -127,11 +131,38 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   }
 
   const selection = { startMinute: toMinutes(values.start), endMinute: toMinutes(values.end) }
+  const searchLength = selection.endMinute - selection.startMinute
+  const zonedNow = nowInZone(building.timezone)
+  const minStart = values.date === zonedNow.date ? zonedNow.minutes + building.minLeadMinutes : 0
+
+  function bookSearched(room: SpaceAvailabilityDto) {
+    setBooking({ room, slot: { date: values.date, start: values.start, end: values.end } })
+  }
+
+  // Each bar is a picker: drag (or click, or ←/→ + Enter) on free time to book exactly that.
+  function pickerFor(room: SpaceAvailabilityDto): DayBarPick {
+    return {
+      rules: {
+        open: room.open.map((r) => ({ start: r.startMinute, end: r.endMinute })),
+        blockers: [...room.busy, ...room.closed].map((r) => ({ start: r.startMinute, end: r.endMinute })),
+        slotMinutes: building.slotMinutes,
+        minStart,
+        maxDuration: room.space.maxDurationMinutes.value,
+      },
+      defaultLength: readLastDuration() ?? searchLength,
+      roomName: room.space.name,
+      onPick: (range) =>
+        setBooking({
+          room,
+          slot: { date: values.date, start: fromMinutes(range.start), end: fromMinutes(range.end) },
+        }),
+    }
+  }
   const spaces = results.data?.spaces ?? []
   const free = spaces.filter((s) => s.isAvailable)
   const taken = spaces.filter((s) => !s.isAvailable)
   const axis = dayAxis(spaces, selection)
-  const windowLabel = `${formatDate(values.date)}, ${values.start}–${values.end}`
+  const windowLabel = `${formatDate(values.date)} at ${values.start} for ${formatDuration(searchLength)}`
 
   return (
     <>
@@ -164,11 +195,11 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
               <Legend />
             </div>
 
-            {free.length === 0 && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try another time — the spaces below show when they're free next.
-              </p>
-            )}
+            <p className="mt-1 text-sm text-muted-foreground">
+              {free.length === 0
+                ? "Try another time — or drag on a room's bar below to book any free time it has."
+                : "Book for this time, or drag on a room's bar to pick a different time and length."}
+            </p>
 
             {free.length > 0 && (
               <ul className="mt-3 grid gap-2">
@@ -182,9 +213,10 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                         busy={room.busy}
                         selection={selection}
                         label={freeLabel(room)}
+                        pick={pickerFor(room)}
                       />
                       <span className="text-sm font-medium">{freeLabel(room)}</span>
-                      <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => setBooking(room)}>
+                      <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => bookSearched(room)}>
                         Book
                       </Button>
                     </ResultRow>
@@ -213,6 +245,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                             busy={room.busy}
                             selection={selection}
                             label={room.violations[0]?.shortMessage ?? ''}
+                            pick={pickerFor(room)}
                           />
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -260,9 +293,9 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
         <BookingForm
           token={token}
           building={building}
-          space={booking.space}
-          floorName={booking.floorName}
-          initialSlot={{ date: values.date, start: values.start, end: values.end }}
+          space={booking.room.space}
+          floorName={booking.room.floorName}
+          initialSlot={booking.slot}
           initialAttendees={values.people}
           onClose={() => setBooking(null)}
           onBooked={handleBooked}
@@ -280,9 +313,9 @@ function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; mute
   return (
     <Card
       className={cn(
-        'grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 py-3',
+        'grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 pt-5 pb-3',
         'lg:grid-cols-[minmax(200px,1.1fr)_2fr_minmax(150px,0.8fr)_auto]',
-        '[&>[role=img]]:col-span-2 lg:[&>[role=img]]:col-span-1',
+        '[&>[data-daybar]]:col-span-2 lg:[&>[data-daybar]]:col-span-1',
         muted && 'bg-muted shadow-none',
       )}
     >
