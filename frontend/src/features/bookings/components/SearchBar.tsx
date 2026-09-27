@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { addDays, nowInZone } from '../../../lib/time/buildingTime'
 import type { HhMm, IsoDate } from '../../../lib/time/buildingTime'
 import type { BookableBuildingDto } from '../api/bookingsApi'
+import { closingMinute } from '../preferences'
 import { DatePicker } from './DatePicker'
 import { TimeRangeFields } from './TimeRangeFields'
 
@@ -37,6 +38,14 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
   const today = now.date
   const lastDate = addDays(today, building.maxHorizonDays)
 
+  // "Until closing" in a search means the latest any matching space stays open — the rooms
+  // that close earlier then show as unavailable, with their own hours as the reason.
+  const matching = building.floors
+    .filter((f) => !value.floorId || f.id === value.floorId)
+    .flatMap((f) => f.spaces)
+    .filter((sp) => !value.spaceTypeId || sp.spaceTypeId === value.spaceTypeId)
+  const latestClosing = matching.length ? Math.max(...matching.map(closingMinute)) : undefined
+
   const spaceTypes = new Map<string, string>()
   for (const floor of building.floors) {
     for (const space of floor.spaces) spaceTypes.set(space.spaceTypeId, space.spaceTypeName)
@@ -61,6 +70,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
           end={value.end}
           slotMinutes={slot}
           minStartMinute={value.date === today ? now.minutes + building.minLeadMinutes : 0}
+          closingMinute={latestClosing}
           onChange={onChange}
         />
 

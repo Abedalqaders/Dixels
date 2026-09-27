@@ -1,8 +1,10 @@
 import { addDays, fromMinutes, nextSlot, nowInZone, toMinutes } from '../../lib/time/buildingTime'
 import type { HhMm, IsoDate } from '../../lib/time/buildingTime'
 import type { BookableBuildingDto, BookableSpaceDto } from './api/bookingsApi'
+import { readLastDuration } from './preferences'
 
 const DAY_MINUTES = 24 * 60
+/** Used until the employee has booked once; after that, their last booking's length. */
 const DEFAULT_LENGTH_MINUTES = 60
 
 export interface Slot {
@@ -17,9 +19,14 @@ export interface Slot {
  * or the space's maximum if shorter. It's only a starting point — the live preview is what
  * says whether it's actually free.
  */
-export function suggestSlot(building: BookableBuildingDto, space: BookableSpaceDto, now = new Date()): Slot {
+export function suggestSlot(
+  building: BookableBuildingDto,
+  space: BookableSpaceDto,
+  now = new Date(),
+  preferredLength = readLastDuration() ?? DEFAULT_LENGTH_MINUTES,
+): Slot {
   const slot = building.slotMinutes
-  const length = Math.min(DEFAULT_LENGTH_MINUTES, space.maxDurationMinutes.value)
+  const length = Math.min(preferredLength, space.maxDurationMinutes.value)
   const hours = space.hours.value
   const zoned = nowInZone(building.timezone, now)
 
@@ -41,16 +48,22 @@ export function suggestSlot(building: BookableBuildingDto, space: BookableSpaceD
 
 /**
  * The window a search starts with before the employee picks one: the next slot after the
- * building's minimum notice, for an hour, today on the building's clock — or 09:00
- * tomorrow once today has no full hour left.
+ * building's minimum notice, today on the building's clock, for the employee's usual
+ * length (their last booking's, else an hour) — or 09:00 tomorrow once today has no room
+ * left for it.
  */
-export function suggestWindow(building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>, now = new Date()): Slot {
+export function suggestWindow(
+  building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>,
+  now = new Date(),
+  length = readLastDuration() ?? DEFAULT_LENGTH_MINUTES,
+): Slot {
   const zoned = nowInZone(building.timezone, now)
   const start = nextSlot(zoned.minutes + building.minLeadMinutes, building.slotMinutes)
 
-  if (start + DEFAULT_LENGTH_MINUTES > DAY_MINUTES) {
-    return { date: addDays(zoned.date, 1), start: '09:00', end: '10:00' }
+  if (start + length > DAY_MINUTES) {
+    const morning = 9 * 60
+    return { date: addDays(zoned.date, 1), start: fromMinutes(morning), end: fromMinutes(Math.min(morning + length, DAY_MINUTES)) }
   }
 
-  return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(start + DEFAULT_LENGTH_MINUTES) }
+  return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(start + length) }
 }

@@ -63,3 +63,21 @@ describe('suggestWindow', () => {
     })
   })
 })
+
+describe('remembered length', () => {
+  it("uses the employee's usual length for the first suggestion", () => {
+    // 09:07 in Amman + notice → 09:30, for the remembered 2h.
+    expect(suggestWindow(building, new Date('2026-09-29T06:07:00Z'), 120)).toEqual({
+      date: '2026-09-29',
+      start: '09:30',
+      end: '11:30',
+    })
+  })
+
+  it("still caps a room's suggestion at the room's maximum", () => {
+    const slot = suggestSlot(building, spaceWith('07:00', '20:00', 60), new Date('2026-09-29T06:07:00Z'), 180)
+
+    expect(slot.end).toBe('10:30')
+  })
+})
+

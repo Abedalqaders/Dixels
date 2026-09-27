@@ -15,6 +15,8 @@ interface TimeRangeFieldsProps {
   maxDuration?: number
   /** Earliest bookable minute (today: now + notice). */
   minStartMinute?: number
+  /** When the space (or, in a search, the latest-closing space) closes — enables "Until HH:mm". */
+  closingMinute?: number
   onChange: (range: { start: HhMm; end: HhMm }) => void
 }
 
@@ -30,6 +32,7 @@ export function TimeRangeFields({
   slotMinutes,
   maxDuration = DAY_MINUTES,
   minStartMinute = 0,
+  closingMinute,
   onChange,
 }: TimeRangeFieldsProps) {
   const startMinute = toMinutes(start)
@@ -70,6 +73,11 @@ export function TimeRangeFields({
           value={duration}
           slotMinutes={slotMinutes}
           max={limitFor(startMinute)}
+          untilClosing={
+            closingMinute !== undefined && closingMinute > startMinute
+              ? { minutes: closingMinute - startMinute, label: `Until ${fromMinutes(closingMinute)}` }
+              : undefined
+          }
           onChange={changeDuration}
         />
       </div>

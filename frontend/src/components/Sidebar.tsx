@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '../auth/roles'
 import { useAuthRole } from '../auth/useAuthRole'
-import { BuildingDoorIcon, CalendarIcon, CalendarLinesIcon, ClockIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, SpacesIcon, TagIcon } from './icons'
+import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, SpacesIcon, TagIcon } from './icons'
 import logo from '../assets/logo.png'
 
 type NavItemProps = {
@@ -87,12 +87,12 @@ export function Sidebar() {
       {!isAdmin && (
         <>
           <NavItem
-            to="/dashboard"
-            active={location.pathname === '/dashboard'}
+            to="/find-space"
+            active={location.pathname === '/find-space'}
             onNavigate={closeMobile}
-            icon={<CalendarIcon />}
+            icon={<SearchIcon />}
           >
-            Dashboard
+            Find a space
           </NavItem>
           <NavItem
             to="/my-calendar"
@@ -102,23 +102,6 @@ export function Sidebar() {
             icon={<CalendarLinesIcon />}
           >
             My calendar
-          </NavItem>
-          <NavItem
-            to="/find-space"
-            active={location.pathname === '/find-space'}
-            onNavigate={closeMobile}
-            icon={<SearchIcon />}
-          >
-            Find a space
-          </NavItem>
-          <NavItem
-            to="/history"
-            active={false}
-            disabled
-            onNavigate={closeMobile}
-            icon={<ClockIcon />}
-          >
-            History
           </NavItem>
         </>
       )}

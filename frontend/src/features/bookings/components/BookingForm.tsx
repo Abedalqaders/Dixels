@@ -15,6 +15,7 @@ import { ApiError, createBooking } from '../api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestDto } from '../api/bookingsApi'
 import { formatDays, formatDuration, formatHours } from '../format'
 import { useBookingPreview } from '../hooks/useBookingPreview'
+import { closingMinute, rememberDuration } from '../preferences'
 import { suggestSlot } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { DatePicker } from './DatePicker'
@@ -84,7 +85,9 @@ export function BookingForm({
     setSubmitting(true)
     setSubmitError(null)
     try {
-      onBooked(await createBooking(token, { ...request, title: title.trim() || null, idempotencyKey }))
+      const booking = await createBooking(token, { ...request, title: title.trim() || null, idempotencyKey })
+      rememberDuration(toMinutes(end) - toMinutes(start))
+      onBooked(booking)
     } catch (err) {
       if (err instanceof ApiError) {
         setSubmitError(err.message)
@@ -142,6 +145,7 @@ export function BookingForm({
               slotMinutes={slot}
               maxDuration={space.maxDurationMinutes.value}
               minStartMinute={date === today ? now.minutes + building.minLeadMinutes : 0}
+              closingMinute={closingMinute(space)}
               onChange={(range) => {
                 setStart(range.start)
                 setEnd(range.end)

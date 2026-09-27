@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { RequireAdmin } from './RequireAdmin'
+import { EMPLOYEE_LANDING_PATH } from './useAuthRole'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 
@@ -28,7 +29,7 @@ function renderAsRole(role: string) {
             </RequireAdmin>
           }
         />
-        <Route path="/dashboard" element={<p>Employee dashboard</p>} />
+        <Route path={EMPLOYEE_LANDING_PATH} element={<p>Employee landing</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -38,7 +39,7 @@ describe('RequireAdmin', () => {
   it('redirects a signed-in non-admin to the employee landing page', () => {
     renderAsRole('employee')
 
-    expect(screen.getByText('Employee dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Employee landing')).toBeInTheDocument()
     expect(screen.queryByText('Admin content')).not.toBeInTheDocument()
   })
 
