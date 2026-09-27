@@ -1,19 +1,24 @@
 /* Dixels — shared layout, nav and component styles.
    Load tokens.css before this file on every page. */
 
-* , *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body {
-  font-family: var(--font-sans);
-  color: var(--ink-primary);
-  background: var(--surface-canvas);
-  -webkit-font-smoothing: antialiased;
-}
-a { color: inherit; text-decoration: none; }
-button, input, select { font: inherit; color: inherit; }
-img, svg { display: block; }
+/* Element resets live in the `base` cascade layer so that utility classes (Tailwind /
+   shadcn/ui, see ui.css) can override them. Class rules below stay unlayered, so every
+   existing page renders exactly as before — class selectors already beat these. */
+@layer base {
+  * , *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--ink-primary);
+    background: var(--surface-canvas);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button, input, select { font: inherit; color: inherit; }
+  img, svg { display: block; }
 
-h1, h2, h3, p { margin: 0; }
+  h1, h2, h3, p { margin: 0; }
+}
 
 /* ---------- App shell: sidebar + topbar ---------- */
 .app { display: flex; min-height: 100vh; }

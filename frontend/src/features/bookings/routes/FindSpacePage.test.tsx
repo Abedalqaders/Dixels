@@ -110,17 +110,18 @@ describe('FindSpacePage', () => {
   it('folds the unavailable rooms underneath with their reason and next free time', async () => {
     renderPage()
 
-    const summary = await screen.findByText('2 not available at this time')
-    const details = summary.closest('details')!
-    expect(within(details).getByText(/Already booked at that time · free from 12:00/)).toBeInTheDocument()
-    expect(within(details).getByText('Seats 1 — you need 4')).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /2 not available at this time/ }))
+
+    expect(screen.getByText(/Already booked at that time · free from 12:00/)).toBeInTheDocument()
+    expect(screen.getByText('Seats 1 — you need 4')).toBeInTheDocument()
   })
 
   it('moves the search to a room\'s next free time, keeping the length', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByText('2 not available at this time'))
+    await user.click(await screen.findByRole('button', { name: /2 not available at this time/ }))
     await user.click(screen.getByRole('button', { name: 'Try 12:00 for Desk 12' }))
 
     await waitFor(() =>
@@ -138,8 +139,8 @@ describe('FindSpacePage', () => {
     await user.click(await screen.findByRole('button', { name: 'Book Meeting Room 201' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Book Meeting Room 201' })
-    expect(within(dialog).getByLabelText('Start')).toHaveValue('10:00')
-    expect(within(dialog).getByLabelText('End')).toHaveValue('11:00')
+    expect(within(dialog).getByLabelText('Start')).toHaveTextContent('10:00')
+    expect(within(dialog).getByLabelText('End')).toHaveTextContent('11:00')
     expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
   })
 })

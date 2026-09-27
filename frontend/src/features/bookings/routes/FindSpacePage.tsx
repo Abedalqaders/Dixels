@@ -1,6 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from 'react-oidc-context'
 import { useSearchParams } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
@@ -14,7 +20,6 @@ import { SearchBar } from '../components/SearchBar'
 import type { SearchValues } from '../components/SearchBar'
 import { dayAxis } from '../dayAxis'
 import { suggestWindow } from '../suggestSlot'
-import '../bookings.css'
 
 /**
  * Find a space answers one question: "what can I book for this time?". Pick when and for
@@ -28,7 +33,7 @@ export function FindSpacePage() {
   const { status, data: building, error } = useAsync(() => getMyBookableBuilding(token), [token])
 
   return (
-    <>
+    <TooltipProvider>
       <div className="top">
         <span className="pick">
           <span className="picklbl">{building?.name ?? (status === 'loading' ? 'Loading…' : '')}</span>
@@ -47,15 +52,15 @@ export function FindSpacePage() {
         )}
 
         {status === 'success' && !building && (
-          <div className="card emptystate">
+          <Card className="mt-6 gap-1 p-6">
             <p>You haven't been assigned to a building yet, so there's nothing to book.</p>
-            <p className="muted">Ask an administrator to assign you to your building.</p>
-          </div>
+            <p className="text-sm text-muted-foreground">Ask an administrator to assign you to your building.</p>
+          </Card>
         )}
 
         {status === 'success' && building && <SpaceSearch token={token} building={building} />}
       </div>
-    </>
+    </TooltipProvider>
   )
 }
 
@@ -84,25 +89,27 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
     setSearchParams(params, { replace: true })
   }
 
-  const input = useMemo<SearchAvailabilityInput | null>(
-    () =>
-      toMinutes(values.end) > toMinutes(values.start)
-        ? {
-            localStart: toLocalDateTime(values.date, values.start),
-            localEnd: toLocalDateTime(values.date, values.end),
-            attendees: values.people,
-            floorId: values.floorId || undefined,
-            spaceTypeId: values.spaceTypeId || undefined,
-          }
-        : null,
-    [values.date, values.start, values.end, values.people, values.floorId, values.spaceTypeId],
-  )
+  const { date, start, end, people, floorId, spaceTypeId } = values
+  const input: SearchAvailabilityInput | null =
+    toMinutes(end) > toMinutes(start)
+      ? {
+          localStart: toLocalDateTime(date, start),
+          localEnd: toLocalDateTime(date, end),
+          attendees: people,
+          floorId: floorId || undefined,
+          spaceTypeId: spaceTypeId || undefined,
+        }
+      : null
 
-  // Typing "12" in People shouldn't search for 1 and then 12.
-  const debouncedInput = useDebouncedValue(input, 250)
+  // Debounced as a string key: equal searches compare equal, and typing "12" in People
+  // doesn't search for 1 and then 12.
+  const searchKey = useDebouncedValue(input ? JSON.stringify(input) : '', 250)
   const results = useAsync(
-    () => (debouncedInput ? searchAvailability(token, debouncedInput) : Promise.resolve(null)),
-    [token, JSON.stringify(debouncedInput)],
+    () =>
+      searchKey
+        ? searchAvailability(token, JSON.parse(searchKey) as SearchAvailabilityInput)
+        : Promise.resolve(null),
+    [token, searchKey],
     { keepPreviousData: true },
   )
 
@@ -112,6 +119,11 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
       `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
     )
     results.refetch()
+  }
+
+  function tryTime(start: string) {
+    const length = toMinutes(values.end) - toMinutes(values.start)
+    update({ start, end: fromMinutes(toMinutes(start) + length) })
   }
 
   const selection = { startMinute: toMinutes(values.start), endMinute: toMinutes(values.end) }
@@ -129,107 +141,120 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
       <SearchBar building={building} value={values} onChange={update} />
 
-      <div className={`results${results.isRefreshing ? ' refreshing' : ''}`} aria-busy={results.status === 'loading' || results.isRefreshing}>
+      <section
+        className={cn('mt-6 transition-opacity', results.isRefreshing && 'opacity-60')}
+        aria-busy={results.status === 'loading' || results.isRefreshing}
+      >
         {results.status === 'loading' && <p className="lead">Checking every space…</p>}
 
         {results.status === 'error' && (
-          <div className="verdict bad" role="alert">
+          <p role="alert" className="rounded-md bg-slot-closed px-4 py-3 text-sm">
             {results.error instanceof ApiError ? results.error.message : "Couldn't check availability — please try again."}
-          </div>
+          </p>
         )}
 
         {results.status === 'success' && results.data && (
           <>
-            <h2 className="resultshead" aria-live="polite">
-              {free.length > 0
-                ? `${free.length} ${free.length === 1 ? 'space' : 'spaces'} free · ${windowLabel}`
-                : `Nothing free · ${windowLabel}`}
-            </h2>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold" aria-live="polite">
+                {free.length > 0
+                  ? `${free.length} ${free.length === 1 ? 'space' : 'spaces'} free · ${windowLabel}`
+                  : `Nothing free · ${windowLabel}`}
+              </h2>
+              <Legend />
+            </div>
 
             {free.length === 0 && (
-              <p className="muted">Try another time — the spaces below show when they're free next.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Try another time — the spaces below show when they're free next.
+              </p>
             )}
 
             {free.length > 0 && (
-              <ul className="spacelist">
+              <ul className="mt-3 grid gap-2">
                 {free.map((room) => (
-                  <li key={room.space.id} className="resultrow card">
-                    <RoomHeading room={room} />
-                    <DayBar
-                      axis={axis}
-                      open={room.open}
-                      closed={room.closed}
-                      busy={room.busy}
-                      selection={selection}
-                      label={freeLabel(room)}
-                    />
-                    <span className="hint ok">{freeLabel(room)}</span>
-                    <button
-                      type="button"
-                      className="btn sm"
-                      aria-label={`Book ${room.space.name}`}
-                      onClick={() => setBooking(room)}
-                    >
-                      Book
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {taken.length > 0 && (
-              <details className="unavailable" open={free.length === 0}>
-                <summary>
-                  {taken.length} not available at this time
-                </summary>
-                <ul className="spacelist">
-                  {taken.map((room) => (
-                    <li key={room.space.id} className="resultrow card taken">
-                      <RoomHeading room={room} />
+                  <li key={room.space.id}>
+                    <ResultRow room={room}>
                       <DayBar
                         axis={axis}
                         open={room.open}
                         closed={room.closed}
                         busy={room.busy}
                         selection={selection}
-                        label={room.violations[0]?.shortMessage ?? ''}
+                        label={freeLabel(room)}
                       />
-                      <span className="hint bad" title={room.violations.map((v) => v.message).join('\n')}>
-                        {room.violations[0]?.shortMessage}
-                        {room.nextFreeStart && ` · free from ${room.nextFreeStart}`}
-                      </span>
-                      {room.nextFreeStart ? (
-                        <button
-                          type="button"
-                          className="btn sm sec"
-                          aria-label={`Try ${room.nextFreeStart} for ${room.space.name}`}
-                          onClick={() => {
-                            const length = selection.endMinute - selection.startMinute
-                            update({
-                              start: room.nextFreeStart!,
-                              end: fromMinutes(toMinutes(room.nextFreeStart!) + length),
-                            })
-                          }}
-                        >
-                          Try {room.nextFreeStart}
-                        </button>
-                      ) : (
-                        <span />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+                      <span className="text-sm font-medium">{freeLabel(room)}</span>
+                      <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => setBooking(room)}>
+                        Book
+                      </Button>
+                    </ResultRow>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {taken.length > 0 && (
+              <Collapsible defaultOpen={free.length === 0} className="mt-6">
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="group -ml-3 text-muted-foreground">
+                    <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
+                    {taken.length} not available at this time
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ul className="mt-2 grid gap-2">
+                    {taken.map((room) => (
+                      <li key={room.space.id}>
+                        <ResultRow room={room} muted>
+                          <DayBar
+                            axis={axis}
+                            open={room.open}
+                            closed={room.closed}
+                            busy={room.busy}
+                            selection={selection}
+                            label={room.violations[0]?.shortMessage ?? ''}
+                          />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4">
+                                {room.violations[0]?.shortMessage}
+                                {room.nextFreeStart && ` · free from ${room.nextFreeStart}`}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              {room.violations.map((v) => (
+                                <p key={v.code + v.message}>{v.message}</p>
+                              ))}
+                            </TooltipContent>
+                          </Tooltip>
+                          {room.nextFreeStart ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-label={`Try ${room.nextFreeStart} for ${room.space.name}`}
+                              onClick={() => tryTime(room.nextFreeStart!)}
+                            >
+                              Try {room.nextFreeStart}
+                            </Button>
+                          ) : (
+                            <span />
+                          )}
+                        </ResultRow>
+                      </li>
+                    ))}
+                  </ul>
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {spaces.length === 0 && (
-              <div className="card emptystate">
+              <Card className="mt-4 p-6">
                 <p>No spaces match these filters.</p>
-              </div>
+              </Card>
             )}
           </>
         )}
-      </div>
+      </section>
 
       {booking && (
         <BookingForm
@@ -249,20 +274,49 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   )
 }
 
-function RoomHeading({ room }: { room: SpaceAvailabilityDto }) {
+/** Room name/meta on the left, then the day bar, the status and the action — stacking on narrow screens. */
+function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; muted?: boolean; children: React.ReactNode }) {
   const { space } = room
   return (
-    <span className="roomhead">
-      <span className="spaceicon" aria-hidden="true">
-        {ICONS[iconKeyToIconName(space.iconKey)]}
-      </span>
-      <span className="spaceinfo">
-        <span className="spacename">{space.name}</span>
-        <span className="spacemeta">
-          {room.floorName} · {space.spaceTypeName} · {space.capacity} {space.capacity === 1 ? 'seat' : 'seats'}
+    <Card
+      className={cn(
+        'grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 py-3',
+        'lg:grid-cols-[minmax(200px,1.1fr)_2fr_minmax(150px,0.8fr)_auto]',
+        '[&>[role=img]]:col-span-2 lg:[&>[role=img]]:col-span-1',
+        muted && 'bg-muted shadow-none',
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="grid size-9 flex-none place-items-center rounded-md bg-accent text-accent-foreground [&_.ic]:size-5" aria-hidden="true">
+          {ICONS[iconKeyToIconName(space.iconKey)]}
         </span>
-      </span>
+        <div className="min-w-0">
+          <div className="truncate font-semibold">{space.name}</div>
+          <div className="truncate text-sm text-muted-foreground">
+            {room.floorName} · {space.spaceTypeName} · {space.capacity} {space.capacity === 1 ? 'seat' : 'seats'}
+          </div>
+        </div>
+      </div>
+      {children}
+    </Card>
+  )
+}
+
+function Legend() {
+  const item = (swatch: string, label: string) => (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn('size-2.5 rounded-sm', swatch)} aria-hidden="true" />
+      {label}
     </span>
+  )
+  return (
+    <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      {item('bg-slot-open', 'Open')}
+      {item('bg-slot-busy', 'Booked')}
+      {item('bg-slot-mine', 'Yours')}
+      {item('bg-slot-closed', 'Closed')}
+      {item('border-2 border-solid border-foreground', 'Your time')}
+    </p>
   )
 }
 

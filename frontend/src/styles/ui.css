@@ -1,0 +1,67 @@
+/* Tailwind + shadcn/ui, mapped onto the existing Dixels design tokens.
+
+   - No preflight: Tailwind's global reset would restyle every existing page. Only the
+     theme variables and the utilities are loaded; base.css keeps its own resets (in the
+     `base` layer, so utilities win over them).
+   - shadcn's semantic colours point at our tokens rather than shadcn's own palette, so
+     every component uses the brand colours and follows light/dark (data-theme or the
+     system preference) with no extra work. */
+
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+
+/* dark: utilities follow the same rule as tokens.css — an explicit data-theme="dark", or
+   the system preference unless the page forces light. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+@theme inline {
+  --color-background: var(--surface-canvas);
+  --color-foreground: var(--ink-primary);
+  --color-card: var(--surface-raised);
+  --color-card-foreground: var(--ink-primary);
+  --color-popover: var(--surface-overlay);
+  --color-popover-foreground: var(--ink-primary);
+  --color-primary: var(--accent-solid);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--surface-sunken);
+  --color-secondary-foreground: var(--ink-primary);
+  --color-muted: var(--surface-sunken);
+  --color-muted-foreground: var(--ink-secondary);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--accent-ink);
+  --color-destructive: var(--danger-solid);
+  --color-border: var(--border-subtle);
+  --color-input: var(--border-strong);
+  --color-ring: var(--focus-ring);
+  --color-brand: var(--focus-ring);
+
+  /* Day-bar colours for Find a space. Built from the theme's own hue (--focus-ring: purple
+     in light, teal in dark), so the timeline changes with the theme instead of a fixed green. */
+  --color-slot-open: color-mix(in srgb, var(--focus-ring) 14%, var(--surface-raised));
+  --color-slot-busy: color-mix(in srgb, var(--ink-secondary) 55%, var(--surface-raised));
+  --color-slot-mine: var(--focus-ring);
+  --color-slot-closed: var(--state-blocked-soft);
+
+}
+
+/* shadcn components mark every element they render with data-slot. Without preflight
+   those need the one reset Tailwind's `border` utilities assume: a solid, zero-width
+   border in the theme's border colour. Scoped to them, nothing else on the page. */
+@layer base {
+  [data-slot],
+  [data-slot]::before,
+  [data-slot]::after {
+    border: 0 solid var(--color-border);
+  }
+}

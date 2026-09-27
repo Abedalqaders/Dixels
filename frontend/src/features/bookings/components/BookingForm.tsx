@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Dialog } from '../../../components/Dialog'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   addDays,
   formatDate,
@@ -17,6 +20,8 @@ import { formatDays, formatDuration, formatHours } from '../format'
 import { useBookingPreview } from '../hooks/useBookingPreview'
 import { suggestSlot } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
+import { DatePicker } from './DatePicker'
+import { TimeSelect } from './TimeSelect'
 import { VerdictPanel } from './VerdictPanel'
 
 const DAY_MINUTES = 24 * 60
@@ -112,113 +117,86 @@ export function BookingForm({
     : `${space.capacity} seats`
 
   return (
-    <Dialog title={`Book ${space.name}`} subtitle={`${floorName} · ${space.spaceTypeName}`} onClose={onClose} wide>
-      <form className="bookingform" onSubmit={handleSubmit}>
-        <p className="rules">
-          Open {formatHours(space.hours.value)}, {formatDays(space.days.value)} · up to{' '}
-          {formatDuration(space.maxDurationMinutes.value)} · {rules}
-        </p>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Book {space.name}</DialogTitle>
+          <DialogDescription>
+            {floorName} · {space.spaceTypeName}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="field">
-          <label className="lbl" htmlFor="bk-title">
-            Title
-          </label>
-          <input
-            id="bk-title"
-            className="ctrl"
-            placeholder="Booking"
-            maxLength={128}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-        </div>
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <p className="font-mono text-xs text-muted-foreground">
+            Open {formatHours(space.hours.value)}, {formatDays(space.days.value)} · up to{' '}
+            {formatDuration(space.maxDurationMinutes.value)} · {rules}
+          </p>
 
-        <div className="row3">
-          <div className="field">
-            <label className="lbl" htmlFor="bk-date">
-              Date
-            </label>
-            <input
-              id="bk-date"
-              className="ctrl mono"
-              type="date"
-              min={today}
-              max={lastDate}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+          <div className="grid gap-2">
+            <Label htmlFor="bk-title">Title</Label>
+            <Input
+              id="bk-title"
+              placeholder="Booking"
+              maxLength={128}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
-          <div className="field">
-            <label className="lbl" htmlFor="bk-start">
-              Start
-            </label>
-            <select id="bk-start" className="ctrl mono" value={start} onChange={(e) => changeStart(e.target.value)}>
-              {startOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.4fr_1fr_1fr]">
+            <div className="col-span-2 grid gap-2 sm:col-span-1">
+              <Label htmlFor="bk-date">Date</Label>
+              <DatePicker id="bk-date" value={date} min={today} max={lastDate} onChange={setDate} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="bk-start">Start</Label>
+              <TimeSelect id="bk-start" value={start} options={startOptions} onChange={changeStart} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="bk-end">End</Label>
+              <TimeSelect id="bk-end" value={end} options={endOptions} onChange={setEnd} />
+            </div>
           </div>
-          <div className="field">
-            <label className="lbl" htmlFor="bk-end">
-              End
-            </label>
-            <select id="bk-end" className="ctrl mono" value={end} onChange={(e) => setEnd(e.target.value)}>
-              {endOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t === '24:00' ? '24:00 (midnight)' : t}
-                </option>
-              ))}
-            </select>
+
+          <div className="grid gap-2">
+            <Label htmlFor="bk-attendees">Attendees</Label>
+            <div className="flex max-w-64 items-center gap-2">
+              <Input
+                id="bk-attendees"
+                type="number"
+                className="font-mono"
+                min={1}
+                max={space.capacity}
+                value={Number.isNaN(attendees) ? '' : attendees}
+                onChange={(e) => setAttendees(e.target.valueAsNumber)}
+                required
+              />
+              <span className="whitespace-nowrap text-sm text-muted-foreground">of {space.capacity} seats</span>
+            </div>
           </div>
-        </div>
 
-        <div className="field">
-          <label className="lbl" htmlFor="bk-attendees">
-            Attendees
-          </label>
-          <div className="pair narrow">
-            <input
-              id="bk-attendees"
-              className="ctrl mono"
-              type="number"
-              min={1}
-              max={space.capacity}
-              value={Number.isNaN(attendees) ? '' : attendees}
-              onChange={(e) => setAttendees(e.target.valueAsNumber)}
-              required
-            />
-            <span className="unit">of {space.capacity} seats</span>
-          </div>
-        </div>
+          <p className="text-sm text-muted-foreground">
+            Times are in {building.timezone} ({building.name}'s local time). You can book up to {formatDate(lastDate)}.
+          </p>
 
-        <p className="tzhint">
-          Times are in {building.timezone} ({building.name}'s local time). You can book up to {formatDate(lastDate)}.
-        </p>
+          <VerdictPanel state={preview} slotLabel={`${formatDate(date)}, ${start}–${end}`} timezone={building.timezone} />
 
-        <VerdictPanel
-          state={preview}
-          slotLabel={`${formatDate(date)}, ${start}–${end}`}
-          timezone={building.timezone}
-        />
+          {submitError && (
+            <p className="rounded-md bg-slot-closed px-4 py-3 text-sm" role="alert">
+              {submitError}
+            </p>
+          )}
 
-        {submitError && (
-          <div className="verdict bad" role="alert">
-            {submitError}
-          </div>
-        )}
-
-        <div className="modalfoot">
-          <button type="button" className="btn sec" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={!canBook}>
-            {submitting ? 'Booking…' : 'Book'}
-          </button>
-        </div>
-      </form>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canBook}>
+              {submitting ? 'Booking…' : 'Book'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
     </Dialog>
   )
 }
