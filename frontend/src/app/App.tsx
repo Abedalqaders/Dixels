@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from '../auth/RequireAuth'
 import { RequireAdmin } from '../auth/RequireAdmin'
 import { CallbackPage } from '../pages/CallbackPage'
@@ -6,8 +6,9 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { BuildingsListPage } from '../features/space-management/routes/BuildingsListPage'
 import { FloorsListPage } from '../features/space-management/routes/FloorsListPage'
 import { SpacesListPage } from '../features/space-management/routes/SpacesListPage'
-import { AllFloorsPage } from '../features/space-management/routes/AllFloorsPage'
 import { AllSpacesPage } from '../features/space-management/routes/AllSpacesPage'
+import { SpaceManagementLayout } from '../features/space-management/routes/SpaceManagementLayout'
+import { SpaceTypesPage } from '../features/space-management/routes/SpaceTypesPage'
 import { AdminConstraintsPage } from '../features/space-management/routes/AdminConstraintsPage'
 import { AdminEmployeesPage } from '../features/employees/routes/AdminEmployeesPage'
 import { HomePage } from '../pages/HomePage'
@@ -26,42 +27,24 @@ function App() {
         }
       />
       <Route
-        path="/admin/buildings"
         element={
           <RequireAdmin>
-            <BuildingsListPage />
+            <SpaceManagementLayout />
           </RequireAdmin>
         }
-      />
+      >
+        <Route path="/admin/buildings" element={<BuildingsListPage />} />
+        <Route path="/admin/buildings/:buildingId/floors" element={<FloorsListPage />} />
+        <Route path="/admin/buildings/:buildingId/floors/:floorId/spaces" element={<SpacesListPage />} />
+        <Route path="/admin/spaces" element={<AllSpacesPage />} />
+      </Route>
+      {/* The flat Floors page was folded into the explorer tree; keep old links working. */}
+      <Route path="/admin/floors" element={<Navigate to="/admin/buildings" replace />} />
       <Route
-        path="/admin/buildings/:buildingId/floors"
+        path="/admin/space-types"
         element={
           <RequireAdmin>
-            <FloorsListPage />
-          </RequireAdmin>
-        }
-      />
-      <Route
-        path="/admin/buildings/:buildingId/floors/:floorId/spaces"
-        element={
-          <RequireAdmin>
-            <SpacesListPage />
-          </RequireAdmin>
-        }
-      />
-      <Route
-        path="/admin/floors"
-        element={
-          <RequireAdmin>
-            <AllFloorsPage />
-          </RequireAdmin>
-        }
-      />
-      <Route
-        path="/admin/spaces"
-        element={
-          <RequireAdmin>
-            <AllSpacesPage />
+            <SpaceTypesPage />
           </RequireAdmin>
         }
       />

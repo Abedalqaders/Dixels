@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { Sidebar } from '../../../components/Sidebar'
 import { SearchIcon } from '../../../components/icons'
 import { ICONS, iconKeyToIconName } from '../components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '../components/actionIcons'
 import { RowActionsMenu } from '../components/RowActionsMenu'
+import { SpaceTypeChips } from '../components/SpaceTypeChips'
 import { HighlightedText } from '../components/HighlightedText'
 import { Pager } from '../../../components/Pager'
 import { AddNodeModal } from '../components/AddNodeModal'
@@ -20,8 +20,6 @@ import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
-
-const ALL_SPACE_TYPES = ''
 
 export function SpacesListPage() {
   const { buildingId = '', floorId = '' } = useParams()
@@ -77,8 +75,7 @@ export function SpacesListPage() {
   }
 
   return (
-    <div className="app">
-      <Sidebar />
+    <>
       <div className="main">
         <div className="content">
           <div>
@@ -107,19 +104,6 @@ export function SpacesListPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <select
-                  className="ctrl"
-                  aria-label="Filter by space type"
-                  value={spaceTypeId}
-                  onChange={(e) => list.setFilter('type', e.target.value)}
-                >
-                  <option value={ALL_SPACE_TYPES}>All types</option>
-                  {(data?.spaceTypes ?? []).map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name}
-                    </option>
-                  ))}
-                </select>
                 <label className="chk">
                   <input
                     type="checkbox"
@@ -138,11 +122,9 @@ export function SpacesListPage() {
               </div>
             </div>
 
-            <p className="treelegend">
-              <span>{ICONS['meeting-room']} Meeting room</span>
-              <span>{ICONS['focus-pod']} Focus pod</span>
-              <span>{ICONS.desk} Desk</span>
-            </p>
+            <div className="typebar">
+              <SpaceTypeChips spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
+            </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading spaces…</p>}
@@ -254,6 +236,6 @@ export function SpacesListPage() {
         />
       )}
       <Toast toast={toast} />
-    </div>
+    </>
   )
 }

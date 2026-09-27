@@ -335,4 +335,18 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         result.Items.Select(f => f.Id).ShouldContain(floorInMatchingBuilding.Id);
         result.Items.Select(f => f.Id).ShouldNotContain(floorInOtherBuilding.Id);
     }
+
+    [Fact]
+    public async Task GetListAsync_FloorNameOnly_Ignores_Building_Name_Matches()
+    {
+        var riverside = await CreateBuildingAsync("Riverside Tower");
+        var lakeside = await CreateBuildingAsync("Lakeside Tower");
+        var floorNamedAfterRiver = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = lakeside.Id, Name = "Riverside Lounge" });
+        var floorInRiversideBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = riverside.Id, Name = "Level 1" });
+
+        var result = await _floorsAppService.GetListAsync(new GetFloorsInput { Filter = "Riverside", FloorNameOnly = true });
+
+        result.Items.Select(f => f.Id).ShouldContain(floorNamedAfterRiver.Id);
+        result.Items.Select(f => f.Id).ShouldNotContain(floorInRiversideBuilding.Id);
+    }
 }

@@ -50,6 +50,12 @@ export function SpacesIcon() {
   )
 }
 
+export function TagIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 10.2V4.5a1 1 0 0 1 1-1h5.7l6.3 6.3a1 1 0 0 1 0 1.4l-5.3 5.3a1 1 0 0 1-1.4 0z" /><circle cx="7" cy="7" r="1.1" /></svg>
+  )
+}
+
 export function PeopleIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="6.5" r="2.8" /><path d="M2.5 16c.4-3.4 2.5-5.2 5-5.2s4.6 1.8 5 5.2" /><circle cx="14.5" cy="7.3" r="2.1" /><path d="M12.3 10.9c1.1-.4 2.3-.3 3.3.4 1.1.8 1.8 2.3 2 4.7" /></svg>

@@ -170,9 +170,11 @@ export interface UpdateFloorConstraintsDto {
 }
 
 export interface FloorListInput extends PagedListInput {
-  /** Omit to list floors across every building (the standalone Floors page); set to scope
-   * to one building (the drill-down Floors-of-a-building page). */
+  /** Omit to list floors across every building (the explorer's search); set to scope to
+   * one building (the drill-down Floors-of-a-building page). */
   buildingId?: string
+  /** Match `filter` against the floor's own name only, not its building's name. */
+  floorNameOnly?: boolean
 }
 
 export function getFloors(token: string, input: FloorListInput) {
