@@ -9,7 +9,7 @@ public class BookableSpaceDto
     public string Name { get; set; } = string.Empty;
     public Guid SpaceTypeId { get; set; }
     public string SpaceTypeName { get; set; } = string.Empty;
-    public string IconKey { get; set; } = string.Empty;
+    public IconKey IconKey { get; set; }
     public int Capacity { get; set; }
     public int? MinAttendees { get; set; }
     public FieldValueDto<int[]> Days { get; set; } = new();

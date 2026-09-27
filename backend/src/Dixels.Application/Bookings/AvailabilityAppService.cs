@@ -104,7 +104,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
         var dto = ObjectMapper.Map<Space, BookableSpaceDto>(space);
         dto.SpaceTypeName = spaceType.Name;
-        dto.IconKey = spaceType.IconKey.ToString();
+        dto.IconKey = spaceType.IconKey;
         dto.Days = new FieldValueDto<int[]>
         {
             Value = ConstraintDtoConversions.ToDayArray(rules.Days.Value),

@@ -105,8 +105,7 @@ export function Sidebar() {
           </NavItem>
           <NavItem
             to="/find-space"
-            active={false}
-            disabled
+            active={location.pathname === '/find-space'}
             onNavigate={closeMobile}
             icon={<SearchIcon />}
           >

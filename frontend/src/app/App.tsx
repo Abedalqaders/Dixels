@@ -12,6 +12,8 @@ import { SpaceTypesPage } from '../features/space-management/routes/SpaceTypesPa
 import { AdminConstraintsPage } from '../features/space-management/routes/AdminConstraintsPage'
 import { AdminEmployeesPage } from '../features/employees/routes/AdminEmployeesPage'
 import { HomePage } from '../pages/HomePage'
+import { EmployeeLayout } from '../components/EmployeeLayout'
+import { FindSpacePage } from '../features/bookings/routes/FindSpacePage'
 
 function App() {
   return (
@@ -26,6 +28,15 @@ function App() {
           </RequireAuth>
         }
       />
+      <Route
+        element={
+          <RequireAuth>
+            <EmployeeLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/find-space" element={<FindSpacePage />} />
+      </Route>
       <Route
         element={
           <RequireAdmin>
