@@ -69,7 +69,9 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
             if (!input.Filter.IsNullOrWhiteSpace())
             {
-                joined = joined.Where(x => x.Floor.Name.Contains(input.Filter!) || x.BuildingName.Contains(input.Filter!));
+                joined = input.FloorNameOnly
+                    ? joined.Where(x => x.Floor.Name.Contains(input.Filter!))
+                    : joined.Where(x => x.Floor.Name.Contains(input.Filter!) || x.BuildingName.Contains(input.Filter!));
             }
 
             var totalCount = await AsyncExecuter.CountAsync(joined);

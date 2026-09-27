@@ -1,33 +1,30 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { Sidebar } from '../../../components/Sidebar'
 import { SearchIcon } from '../../../components/icons'
 import { ICONS, iconKeyToIconName } from '../components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '../components/actionIcons'
 import { RowActionsMenu } from '../components/RowActionsMenu'
+import { SpaceTypeChips } from '../components/SpaceTypeChips'
 import { HighlightedText } from '../components/HighlightedText'
 import { Pager } from '../../../components/Pager'
 import { EditDetailsModal } from '../components/EditDetailsModal'
 import type { EditDetailsState } from '../components/EditDetailsModal'
-import { ManageSpaceTypesModal } from '../components/ManageSpaceTypesModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useListParams } from '../../../hooks/useListParams'
-import { BuildingPicker } from '../components/BuildingPicker'
-import { ApiError, getSpaces, getSpaceTypes, deleteSpace, restoreSpace } from '../api/spaceManagementApi'
+import { ApiError, getBuilding, getFloor, getSpaces, getSpaceTypes, deleteSpace, restoreSpace } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
 
-const ALL_SPACE_TYPES = ''
-
-// Standalone, unscoped counterpart to SpacesListPage.tsx (which lists one floor's spaces) —
-// this lists every space across every floor/building in one flat, paged table, with the
-// parent Floor's and Building's names shown per row. Reached directly from the sidebar. No
-// "+ Space" here: creation stays on the scoped drill-down page, reached by opening a
-// specific floor.
+// Standalone counterpart to SpacesListPage.tsx (which lists one floor's spaces) — every
+// space across every floor/building in one flat, paged table, with the parent Floor's and
+// Building's names shown per row. Answers questions that cut across the hierarchy ("every
+// meeting room"). Clicking a building or floor in the explorer tree narrows it via
+// ?building= / ?floor=. No "+ Space" here: creation stays on the scoped drill-down page,
+// reached by opening a specific floor.
 export function AllSpacesPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
@@ -36,26 +33,28 @@ export function AllSpacesPage() {
   const list = useListParams()
   const spaceTypeId = list.getFilter('type')
   const buildingId = list.getFilter('building')
+  const floorId = list.getFilter('floor')
   const [editState, setEditState] = useState<EditDetailsState>(null)
-  const [manageTypesOpen, setManageTypesOpen] = useState(false)
   const { toast, showToast } = useToast()
 
   const { status, data, error, isRefreshing, refetch } = useAsync(
     async () => {
-      const [spacesResult, spaceTypesResult] = await Promise.all([
+      const [spacesResult, spaceTypesResult, scopeLabel] = await Promise.all([
         getSpaces(token, {
           filter: list.search || undefined,
           spaceTypeId: spaceTypeId || undefined,
           buildingId: buildingId || undefined,
+          floorId: floorId || undefined,
           includeDeleted: list.showDeleted,
           skipCount: list.page * list.pageSize,
           maxResultCount: list.pageSize,
         }),
         getSpaceTypes(token),
+        loadScopeLabel(token, buildingId, floorId),
       ])
-      return { spaces: spacesResult.items, totalCount: spacesResult.totalCount, spaceTypes: spaceTypesResult.items }
+      return { spaces: spacesResult.items, totalCount: spacesResult.totalCount, spaceTypes: spaceTypesResult.items, scopeLabel }
     },
-    [token, list.search, spaceTypeId, buildingId, list.showDeleted, list.page, list.pageSize],
+    [token, list.search, spaceTypeId, buildingId, floorId, list.showDeleted, list.page, list.pageSize],
     { keepPreviousData: true },
   )
 
@@ -75,27 +74,42 @@ export function AllSpacesPage() {
     }
   }
 
+  function clearScope() {
+    list.setFilter('building', '')
+    list.setFilter('floor', '')
+  }
+
+  const scoped = Boolean(buildingId || floorId)
+
   function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
     if (!window.confirm(confirmMessage)) return
     runAction(action, successMessage)
   }
 
   return (
-    <div className="app">
-      <Sidebar />
+    <>
       <div className="main">
         <div className="content">
           <div>
             <h1 className="pagetitle">Spaces</h1>
             <p className="lead">
-              {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'} across every floor. ` : ''}
-              Bookable spaces across the whole portfolio.
+              {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'} ` : ''}
+              {scoped ? (
+                <>
+                  in {data?.scopeLabel ?? '…'}.{' '}
+                  <button type="button" className="linkbtn" onClick={clearScope}>
+                    Show all buildings
+                  </button>
+                </>
+              ) : (
+                'across the whole portfolio. Pick a building or floor on the left to narrow down.'
+              )}
             </p>
           </div>
 
           <section className="card" id="spaces">
             <div className="cardhead">
-              <h2 className="sectiontitle">All spaces</h2>
+              <h2 className="sectiontitle">{scoped ? (data?.scopeLabel ?? 'Spaces') : 'All spaces'}</h2>
               <div className="treetools">
                 <div className="searchbox">
                   <SearchIcon />
@@ -108,26 +122,6 @@ export function AllSpacesPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <BuildingPicker
-                  token={token}
-                  value={buildingId}
-                  noneLabel="All buildings"
-                  ariaLabel="Filter by building"
-                  onChange={(id) => list.setFilter('building', id)}
-                />
-                <select
-                  className="ctrl"
-                  aria-label="Filter by space type"
-                  value={spaceTypeId}
-                  onChange={(e) => list.setFilter('type', e.target.value)}
-                >
-                  <option value={ALL_SPACE_TYPES}>All types</option>
-                  {(data?.spaceTypes ?? []).map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name}
-                    </option>
-                  ))}
-                </select>
                 <label className="chk">
                   <input
                     type="checkbox"
@@ -136,17 +130,12 @@ export function AllSpacesPage() {
                   />
                   Show deleted
                 </label>
-                <button className="btn sm sec" onClick={() => setManageTypesOpen(true)}>
-                  Manage space types
-                </button>
               </div>
             </div>
 
-            <p className="treelegend">
-              <span>{ICONS['meeting-room']} Meeting room</span>
-              <span>{ICONS['focus-pod']} Focus pod</span>
-              <span>{ICONS.desk} Desk</span>
-            </p>
+            <div className="typebar">
+              <SpaceTypeChips spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
+            </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading spaces…</p>}
@@ -154,7 +143,7 @@ export function AllSpacesPage() {
 
               {status === 'success' && data.spaces.length === 0 && (
                 <p className="treeempty">
-                  {list.search || spaceTypeId || buildingId ? 'Nothing matches the current filters.' : 'No spaces yet.'}
+                  {list.search || spaceTypeId || scoped ? 'Nothing matches the current filters.' : 'No spaces yet.'}
                 </p>
               )}
 
@@ -248,17 +237,22 @@ export function AllSpacesPage() {
           onError={(message) => showToast(message, 'error')}
         />
       )}
-      {manageTypesOpen && (
-        <ManageSpaceTypesModal
-          token={token}
-          spaceTypes={data?.spaceTypes ?? []}
-          onClose={() => setManageTypesOpen(false)}
-          onChanged={refetch}
-          onError={(message) => showToast(message, 'error')}
-          onSuccess={(message) => showToast(message)}
-        />
-      )}
       <Toast toast={toast} />
-    </div>
+    </>
   )
+}
+
+// "Tower A" or "Tower A · Level 3" for the heading. A plain single-floor fetch doesn't carry
+// its building's name, so a floor scope looks the building up too.
+async function loadScopeLabel(token: string, buildingId: string, floorId: string): Promise<string | null> {
+  if (!buildingId && !floorId) return null
+  try {
+    const [building, floor] = await Promise.all([
+      buildingId ? getBuilding(token, buildingId) : null,
+      floorId ? getFloor(token, floorId) : null,
+    ])
+    return [building?.name, floor?.name].filter(Boolean).join(' · ') || null
+  } catch {
+    return 'the selected location'
+  }
 }

@@ -4,9 +4,9 @@ import { ApiError, createSpaceType, deleteSpaceType, updateSpaceType } from '../
 import type { SpaceTypeDto } from '../api/spaceManagementApi'
 import { ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
-// Never built in the mock (it only ever showed the space-type dropdown, not a way to
-// manage the types behind it) — a real CRUD screen, since createSpaceType/updateSpaceType/
-// deleteSpaceType all existed on the backend with nothing in the UI ever calling them.
+// The list + add form behind the Space types page (reached from the sidebar under Space
+// management). Started life as a modal on the All Spaces page; moved to its own page so
+// space types have one obvious home instead of hiding behind a button on one list.
 //
 // The icon set is deliberately closed to these 4 (see the backend's IconKey enum doc
 // comment) rather than an arbitrary upload — picking one is a click on a swatch below, not
@@ -40,16 +40,15 @@ function IconPicker({ value, onChange, disabled }: { value: number; onChange: (v
   )
 }
 
-interface ManageSpaceTypesModalProps {
+interface SpaceTypesManagerProps {
   token: string
   spaceTypes: SpaceTypeDto[]
-  onClose: () => void
   onChanged: () => void
   onError: (message: string) => void
   onSuccess: (message: string) => void
 }
 
-export function ManageSpaceTypesModal({ token, spaceTypes, onClose, onChanged, onError, onSuccess }: ManageSpaceTypesModalProps) {
+export function SpaceTypesManager({ token, spaceTypes, onChanged, onError, onSuccess }: SpaceTypesManagerProps) {
   const [newName, setNewName] = useState('')
   const [newIconKey, setNewIconKey] = useState(0)
   const [adding, setAdding] = useState(false)
@@ -73,40 +72,29 @@ export function ManageSpaceTypesModal({ token, spaceTypes, onClose, onChanged, o
   }
 
   return (
-    <div className="overlay show">
-      <div className="modal wide">
-        <h3>Manage space types</h3>
-        <p className="sub">Space types are shared across every building — renaming or re-icon-ing one updates it everywhere it's used.</p>
+    <div className="typesmanager">
+      <div className="typelist">
+        {spaceTypes.length === 0 && <p className="noteline">No space types yet — add one below.</p>}
+        {spaceTypes.map((st) => (
+          <SpaceTypeRow key={st.id} spaceType={st} token={token} onChanged={onChanged} onError={onError} onSuccess={onSuccess} />
+        ))}
+      </div>
 
-        <div className="typelist">
-          {spaceTypes.length === 0 && <p className="noteline">No space types yet — add one below.</p>}
-          {spaceTypes.map((st) => (
-            <SpaceTypeRow key={st.id} spaceType={st} token={token} onChanged={onChanged} onError={onError} onSuccess={onSuccess} />
-          ))}
+      <form className="addtype" onSubmit={handleAdd}>
+        <div className="field">
+          <span className="lbl">Add a space type</span>
+          <input className="ctrl" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Phone booth" />
         </div>
-
-        <form className="addtype" onSubmit={handleAdd}>
-          <div className="field">
-            <span className="lbl">Add a space type</span>
-            <input className="ctrl" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Phone booth" />
-          </div>
-          <div className="field">
-            <span className="lbl">Icon</span>
-            <IconPicker value={newIconKey} onChange={setNewIconKey} disabled={adding} />
-          </div>
-          <div className="modalfoot" style={{ justifyContent: 'flex-start' }}>
-            <button type="submit" className="btn sec" disabled={adding || !newName.trim()}>
-              {adding ? 'Adding…' : '+ Add type'}
-            </button>
-          </div>
-        </form>
-
-        <div className="modalfoot">
-          <button type="button" className="btn" onClick={onClose}>
-            Done
+        <div className="field">
+          <span className="lbl">Icon</span>
+          <IconPicker value={newIconKey} onChange={setNewIconKey} disabled={adding} />
+        </div>
+        <div>
+          <button type="submit" className="btn sec" disabled={adding || !newName.trim()}>
+            {adding ? 'Adding…' : '+ Add type'}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   )
 }

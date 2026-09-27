@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { Sidebar } from '../../../components/Sidebar'
 import { SearchIcon } from '../../../components/icons'
 import { ICONS } from '../components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '../components/actionIcons'
@@ -15,6 +14,7 @@ import type { EditDetailsState } from '../components/EditDetailsModal'
 import { Toast, useToast } from '../../../components/Toast'
 import { useAsync } from '../../../hooks/useAsync'
 import { useListParams } from '../../../hooks/useListParams'
+import { notifyHierarchyChanged } from '../hierarchyEvents'
 import { ApiError, getBuilding, getFloors, deleteFloor, restoreFloor } from '../api/spaceManagementApi'
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
@@ -55,6 +55,7 @@ export function FloorsListPage() {
       await action()
       showToast(successMessage)
       refetch()
+      notifyHierarchyChanged()
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
     }
@@ -66,8 +67,7 @@ export function FloorsListPage() {
   }
 
   return (
-    <div className="app">
-      <Sidebar />
+    <>
       <div className="main">
         <div className="content">
           <div>
@@ -204,6 +204,7 @@ export function FloorsListPage() {
           onCreated={() => {
             showToast('Floor added.')
             refetch()
+            notifyHierarchyChanged()
           }}
           onError={(message) => showToast(message, 'error')}
         />
@@ -217,11 +218,12 @@ export function FloorsListPage() {
           onSaved={() => {
             showToast('Details saved.')
             refetch()
+            notifyHierarchyChanged()
           }}
           onError={(message) => showToast(message, 'error')}
         />
       )}
       <Toast toast={toast} />
-    </div>
+    </>
   )
 }

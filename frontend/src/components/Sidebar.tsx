@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '../auth/roles'
 import { useAuthRole } from '../auth/useAuthRole'
-import { BuildingDoorIcon, CalendarIcon, CalendarLinesIcon, ClockIcon, FloorsIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, SpacesIcon } from './icons'
+import { BuildingDoorIcon, CalendarIcon, CalendarLinesIcon, ClockIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, SpacesIcon, TagIcon } from './icons'
 import logo from '../assets/logo.png'
 
 type NavItemProps = {
@@ -54,7 +54,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
 
-  // Buildings/Floors/Spaces collapse under one "Space management" toggle. `null` means
+  // Locations/All spaces/Space types collapse under one "Space management" toggle. `null` means
   // "not explicitly toggled yet" — it then follows whether the current route is one of the
   // three, so opening a space-management page always shows it expanded without a click.
   // Once the admin explicitly opens/closes it, that choice sticks regardless of route.
@@ -62,8 +62,8 @@ export function Sidebar() {
   const isSpaceManagementRoute =
     location.pathname === '/admin/buildings' ||
     location.pathname.startsWith('/admin/buildings/') ||
-    location.pathname === '/admin/floors' ||
-    location.pathname === '/admin/spaces'
+    location.pathname === '/admin/spaces' ||
+    location.pathname === '/admin/space-types'
   const spaceManagementOpen = spaceManagementManualOpen ?? isSpaceManagementRoute
 
   const initials = displayName
@@ -141,19 +141,11 @@ export function Sidebar() {
               <div className="navsub">
                 <NavItem
                   to="/admin/buildings"
-                  active={location.pathname === '/admin/buildings'}
+                  active={location.pathname === '/admin/buildings' || location.pathname.startsWith('/admin/buildings/')}
                   onNavigate={closeMobile}
                   icon={<BuildingDoorIcon />}
                 >
-                  Buildings
-                </NavItem>
-                <NavItem
-                  to="/admin/floors"
-                  active={location.pathname === '/admin/floors'}
-                  onNavigate={closeMobile}
-                  icon={<FloorsIcon />}
-                >
-                  Floors
+                  Locations
                 </NavItem>
                 <NavItem
                   to="/admin/spaces"
@@ -161,7 +153,15 @@ export function Sidebar() {
                   onNavigate={closeMobile}
                   icon={<SpacesIcon />}
                 >
-                  Spaces
+                  All spaces
+                </NavItem>
+                <NavItem
+                  to="/admin/space-types"
+                  active={location.pathname === '/admin/space-types'}
+                  onNavigate={closeMobile}
+                  icon={<TagIcon />}
+                >
+                  Space types
                 </NavItem>
               </div>
             </div>

@@ -295,7 +295,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 }
 
 /* a list re-fetching (next page, new search) stays visible but dimmed instead of blanking */
-.tree.refreshing, .pad.refreshing { opacity: .55; transition: opacity .15s ease; }
+.tree.refreshing, .pad.refreshing, .typespage.refreshing { opacity: .55; transition: opacity .15s ease; }
 
 /* building picker — type-to-search combobox */
 .combo { position: relative; min-width: 200px; }
@@ -342,3 +342,77 @@ td .m { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
   .fields { grid-template-columns: 1fr; }
   .searchbox input { width: 110px; }
 }
+
+/* space-management explorer — Building → Floor tree beside the list pages */
+.explorer {
+  width: 260px; flex: none; background: var(--surface-raised); border-right: 1px solid var(--border-subtle);
+  padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: 4px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.explorer .searchbox { margin-bottom: var(--space-2); }
+.explorer .searchbox input { width: 100%; }
+.xtree, .xfloors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.xfloors { margin-left: 22px; padding-left: 6px; border-left: 1px solid var(--border-subtle); }
+.xrow {
+  display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: var(--radius-md);
+  font-size: 13px; line-height: 20px; color: var(--ink-primary); min-width: 0;
+}
+.xrow:hover { background: var(--surface-sunken); }
+.xrow.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.xrow svg.ic { width: 14px; height: 14px; flex: none; color: var(--ink-secondary); }
+.xrow.on svg.ic { color: var(--accent-ink); }
+.xrow.root { font-weight: 600; margin-bottom: 2px; }
+.xlbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xcount { font-family: var(--font-mono); font-size: 12px; color: var(--ink-secondary); }
+.xtoggle {
+  width: 18px; height: 18px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; padding: 0; border-radius: var(--radius-sm); cursor: pointer; color: var(--ink-secondary);
+}
+.xtoggle:hover { background: var(--border-subtle); }
+.xtoggle svg { width: 14px; height: 14px; transition: transform .14s ease; }
+.xtoggle.open svg { transform: rotate(90deg); }
+.xtoggle:focus-visible, .xrow:focus-visible, .xlbl:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.xnote { font-size: 12px; color: var(--ink-secondary); padding: 4px 6px; }
+.xmore, .xlink {
+  background: none; border: none; padding: 4px 6px; font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--accent-ink); cursor: pointer; text-align: left; border-radius: var(--radius-sm);
+}
+.xlink { padding: 0; }
+.xmore:hover, .xlink:hover { text-decoration: underline; }
+
+/* explorer header: search + hide button; collapsed it shrinks to a thin rail */
+.xhead { display: flex; align-items: center; gap: 6px; margin-bottom: var(--space-2); }
+.xhead .searchbox { flex: 1; min-width: 0; margin-bottom: 0; }
+.xpanelbtn {
+  width: 30px; height: 30px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--ink-secondary);
+}
+.xpanelbtn:hover { background: var(--surface-sunken); color: var(--ink-primary); }
+.xpanelbtn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.xpanelbtn svg { width: 16px; height: 16px; }
+.explorer.collapsed { width: 48px; padding: var(--space-4) 8px; align-items: center; }
+.xsection {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-secondary); padding: var(--space-3) 6px 2px;
+}
+.xsub { display: block; font-size: 11px; line-height: 14px; color: var(--ink-secondary); font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+
+/* inline text-style button inside a sentence ("Show all buildings") */
+.linkbtn { background: none; border: none; padding: 0; font: inherit; color: var(--accent-ink); cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }
+
+/* space-type filter chips above a spaces list */
+.typebar { padding: var(--space-3) var(--space-5) 0; }
+.typechips button { display: inline-flex; align-items: center; gap: 6px; }
+.typechips svg { width: 14px; height: 14px; flex: none; }
+
+@media (max-width: 860px) {
+  .explorer, .explorer.collapsed {
+    position: static; width: 100%; height: auto; max-height: 280px; align-items: stretch;
+    border-right: 0; border-bottom: 1px solid var(--border-subtle); padding-top: calc(var(--space-3) + 44px);
+  }
+}
+
+/* Space types page — the manager's list gets the whole card, not a modal's scroll box */
+.typespage { padding: var(--space-5); }
+.typespage .typelist { max-height: none; overflow: visible; }
