@@ -302,6 +302,76 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         (await _availabilityAppService.GetMyBuildingAsync()).ShouldBeNull();
     }
 
+    private static SearchAvailabilityInput Search(int startHour, int endHour, int attendees = 2)
+        => new()
+        {
+            LocalStart = Tomorrow.AddHours(startHour),
+            LocalEnd = Tomorrow.AddHours(endHour),
+            Attendees = attendees,
+        };
+
+    [Fact]
+    public async Task Search_lists_a_free_space_with_how_long_it_stays_free()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(s.Space.Id, 14, 15));
+
+        var result = await _availabilityAppService.SearchAsync(Search(10, 11));
+
+        var room = result.Spaces.ShouldHaveSingleItem();
+        room.IsAvailable.ShouldBeTrue();
+        room.Violations.ShouldBeEmpty();
+        room.FreeUntil.ShouldBe("14:00");
+        room.Busy.ShouldHaveSingleItem().StartMinute.ShouldBe(14 * 60);
+        room.Busy[0].IsMine.ShouldBeTrue();
+        room.Open.ShouldHaveSingleItem().EndMinute.ShouldBe(24 * 60);
+    }
+
+    [Fact]
+    public async Task Search_marks_a_booked_space_unavailable_and_suggests_the_next_free_start()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 12));
+
+        var room = (await _availabilityAppService.SearchAsync(Search(10, 11))).Spaces.ShouldHaveSingleItem();
+
+        room.IsAvailable.ShouldBeFalse();
+        room.Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
+        room.Violations[0].ShortMessage.ShouldBe("Already booked at that time");
+        room.NextFreeStart.ShouldBe("12:00");
+    }
+
+    [Fact]
+    public async Task Search_gives_no_next_time_when_the_space_is_simply_too_small()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var room = (await _availabilityAppService.SearchAsync(Search(10, 11, attendees: 9))).Spaces.ShouldHaveSingleItem();
+
+        room.IsAvailable.ShouldBeFalse();
+        room.Violations.ShouldHaveSingleItem().ShortMessage.ShouldBe("Seats 8 — you need 9");
+        room.NextFreeStart.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Search_rejects_a_window_that_runs_into_the_next_day()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _availabilityAppService.SearchAsync(new SearchAvailabilityInput
+        {
+            LocalStart = Tomorrow.AddHours(23),
+            LocalEnd = Tomorrow.AddHours(25),
+            Attendees = 2,
+        }));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingInvalidTimeRange);
+    }
+
     [Fact]
     public void The_employee_role_is_seeded_with_the_real_booking_permission_names()
     {

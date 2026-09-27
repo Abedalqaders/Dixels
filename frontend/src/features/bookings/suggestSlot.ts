@@ -38,3 +38,19 @@ export function suggestSlot(building: BookableBuildingDto, space: BookableSpaceD
 
   return { date, start: fromMinutes(start), end: fromMinutes(start + length) }
 }
+
+/**
+ * The window a search starts with before the employee picks one: the next slot after the
+ * building's minimum notice, for an hour, today on the building's clock — or 09:00
+ * tomorrow once today has no full hour left.
+ */
+export function suggestWindow(building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>, now = new Date()): Slot {
+  const zoned = nowInZone(building.timezone, now)
+  const start = nextSlot(zoned.minutes + building.minLeadMinutes, building.slotMinutes)
+
+  if (start + DEFAULT_LENGTH_MINUTES > DAY_MINUTES) {
+    return { date: addDays(zoned.date, 1), start: '09:00', end: '10:00' }
+  }
+
+  return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(start + DEFAULT_LENGTH_MINUTES) }
+}

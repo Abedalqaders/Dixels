@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Permissions;
@@ -26,6 +27,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
     private readonly BookingOptions _bookingOptions;
+    private readonly BookingManager _bookingManager;
+    private readonly BookingViolationLocalizer _violationLocalizer;
 
     public AvailabilityAppService(
         BookingAccessChecker accessChecker,
@@ -34,7 +37,9 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         IRepository<Floor, Guid> floorRepository,
         IRepository<Space, Guid> spaceRepository,
         IRepository<SpaceType, Guid> spaceTypeRepository,
-        IOptions<BookingOptions> bookingOptions)
+        IOptions<BookingOptions> bookingOptions,
+        BookingManager bookingManager,
+        BookingViolationLocalizer violationLocalizer)
     {
         _accessChecker = accessChecker;
         _constraintResolver = constraintResolver;
@@ -43,6 +48,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         _spaceRepository = spaceRepository;
         _spaceTypeRepository = spaceTypeRepository;
         _bookingOptions = bookingOptions.Value;
+        _bookingManager = bookingManager;
+        _violationLocalizer = violationLocalizer;
     }
 
     [HttpGet("api/app/availability/my-building")]
@@ -92,6 +99,66 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
                     Spaces = spacesByFloor[floor.Id]
                         .OrderBy(s => s.Name)
                         .Select(space => ToDto(building, floor, space, spaceTypes[space.SpaceTypeId]))
+                        .ToList(),
+                })
+                .ToList(),
+        };
+    }
+
+    [HttpGet("api/app/availability/search")]
+    public async Task<AvailabilitySearchResultDto> SearchAsync(SearchAvailabilityInput input)
+    {
+        var search = await _bookingManager.SearchAsync(
+            CurrentUser.GetId(), input.LocalStart, input.LocalEnd, input.Attendees, input.FloorId, input.SpaceTypeId);
+
+        var spaceTypes = (await _spaceTypeRepository.GetListAsync()).ToDictionary(t => t.Id);
+        var dayStartLocal = search.LocalClock.ToLocal(search.Day.Start);
+
+        // Minutes from local midnight, so the client draws the day without timezone math.
+        int ToMinute(DateTimeOffset utc) => (int)(search.LocalClock.ToLocal(utc) - dayStartLocal).TotalMinutes;
+
+        List<DayRangeDto> ToRanges(IEnumerable<TimeRange> ranges) =>
+            ranges.Select(r => new DayRangeDto { StartMinute = ToMinute(r.Start), EndMinute = ToMinute(r.End) }).ToList();
+
+        string? ToHhMm(DateTimeOffset? utc)
+        {
+            if (utc is null)
+            {
+                return null;
+            }
+
+            var minute = ToMinute(utc.Value);
+            return $"{minute / 60:00}:{minute % 60:00}";
+        }
+
+        return new AvailabilitySearchResultDto
+        {
+            BuildingId = search.Building.Id,
+            BuildingName = search.Building.Name,
+            Timezone = search.Building.Timezone,
+            LocalStart = input.LocalStart,
+            LocalEnd = input.LocalEnd,
+            Spaces = search.Spaces
+                .OrderByDescending(s => s.IsAvailable)
+                .ThenBy(s => s.Floor.FloorNumber)
+                .ThenBy(s => s.Floor.Name)
+                .ThenBy(s => s.Space.Name)
+                .Select(s => new SpaceAvailabilityDto
+                {
+                    Space = ToDto(search.Building, s.Floor, s.Space, spaceTypes[s.Space.SpaceTypeId]),
+                    FloorId = s.Floor.Id,
+                    FloorName = s.Floor.Name,
+                    IsAvailable = s.IsAvailable,
+                    Violations = s.Violations.Select(_violationLocalizer.ToDto).ToList(),
+                    FreeUntil = ToHhMm(s.FreeUntil),
+                    NextFreeStart = ToHhMm(s.NextFreeStart),
+                    Open = ToRanges(s.Open),
+                    Closed = ToRanges(s.Closed),
+                    Busy = s.Busy
+                        .Select(b => b.Range.ClipTo(search.Day) is { } r
+                            ? new DayRangeDto { StartMinute = ToMinute(r.Start), EndMinute = ToMinute(r.End), IsMine = b.IsMine }
+                            : null)
+                        .OfType<DayRangeDto>()
                         .ToList(),
                 })
                 .ToList(),

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp.Domain.Repositories;
@@ -20,6 +21,13 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     Task LockSpaceAsync(Guid spaceId, CancellationToken cancellationToken = default);
 
     Task<bool> AnyConfirmedOverlapAsync(Guid spaceId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default);
+
+    /// <summary>Every confirmed booking on any of these spaces that overlaps <c>[start, end)</c> — one query for a whole building's day.</summary>
+    Task<List<Booking>> GetConfirmedOverlappingAsync(
+        IReadOnlyCollection<Guid> spaceIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken cancellationToken = default);
 
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 

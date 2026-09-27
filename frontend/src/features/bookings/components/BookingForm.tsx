@@ -16,6 +16,7 @@ import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestD
 import { formatDays, formatDuration, formatHours } from '../format'
 import { useBookingPreview } from '../hooks/useBookingPreview'
 import { suggestSlot } from '../suggestSlot'
+import type { Slot } from '../suggestSlot'
 import { VerdictPanel } from './VerdictPanel'
 
 const DAY_MINUTES = 24 * 60
@@ -27,15 +28,27 @@ interface BookingFormProps {
   floorName: string
   onClose: () => void
   onBooked: (booking: BookingDto) => void
+  /** Pre-fill from a search ("free 10:00–11:00"); otherwise the next sensible slot is suggested. */
+  initialSlot?: Slot
+  initialAttendees?: number
 }
 
-export function BookingForm({ token, building, space, floorName, onClose, onBooked }: BookingFormProps) {
-  const initial = useMemo(() => suggestSlot(building, space), [building, space])
+export function BookingForm({
+  token,
+  building,
+  space,
+  floorName,
+  onClose,
+  onBooked,
+  initialSlot,
+  initialAttendees,
+}: BookingFormProps) {
+  const [initial] = useState(() => initialSlot ?? suggestSlot(building, space))
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(initial.date)
   const [start, setStart] = useState(initial.start)
   const [end, setEnd] = useState(initial.end)
-  const [attendees, setAttendees] = useState(space.minAttendees ?? 1)
+  const [attendees, setAttendees] = useState(initialAttendees ?? space.minAttendees ?? 1)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 

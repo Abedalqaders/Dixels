@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Permissions;
@@ -19,17 +18,20 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
+    private readonly BookingViolationLocalizer _violationLocalizer;
 
     public BookingsAppService(
         BookingManager bookingManager,
         IRepository<Space, Guid> spaceRepository,
         IRepository<Floor, Guid> floorRepository,
-        IRepository<Building, Guid> buildingRepository)
+        IRepository<Building, Guid> buildingRepository,
+        BookingViolationLocalizer violationLocalizer)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
+        _violationLocalizer = violationLocalizer;
     }
 
     // Fully-qualified route, like the other custom actions in this app (see
@@ -44,7 +46,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         return new BookingPreviewDto
         {
             IsValid = evaluation.IsValid,
-            Violations = evaluation.Violations.Select(ToDto).ToList(),
+            Violations = evaluation.Violations.Select(_violationLocalizer.ToDto).ToList(),
             StartsAt = evaluation.StartUtc,
             EndsAt = evaluation.EndUtc,
             Timezone = evaluation.Building.Timezone,
@@ -71,7 +73,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         {
             // The domain names the level in English ("Space"); swap in the localized word so
             // the {level} placeholder in the error message reads naturally in any language.
-            ex.WithData("level", LevelName(level));
+            ex.WithData("level", _violationLocalizer.LevelName(level));
             throw;
         }
     }
@@ -108,28 +110,4 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             return dto;
         }).ToList();
     }
-
-    private BookingViolationDto ToDto(BookingViolation violation)
-    {
-        var message = L[violation.Code].Value;
-
-        foreach (var (key, value) in violation.Data)
-        {
-            message = message.Replace("{" + key + "}", Convert.ToString(value, CultureInfo.InvariantCulture));
-        }
-
-        if (violation.Level is { } level)
-        {
-            message = message.Replace("{level}", LevelName(level));
-        }
-
-        return new BookingViolationDto
-        {
-            Code = violation.Code,
-            Level = violation.Level?.ToString(),
-            Message = message,
-        };
-    }
-
-    private string LevelName(ConstraintSource level) => L["Enum:ConstraintSource." + level].Value;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { BookableBuildingDto, BookableSpaceDto } from './api/bookingsApi'
-import { suggestSlot } from './suggestSlot'
+import { suggestSlot, suggestWindow } from './suggestSlot'
 
 const building = {
   timezone: 'Asia/Amman', // UTC+3
@@ -41,5 +41,25 @@ describe('suggestSlot', () => {
     const slot = suggestSlot(building, spaceWith('07:00', '20:00', 30), new Date('2026-09-29T06:07:00Z'))
 
     expect(slot.end).toBe('10:00')
+  })
+})
+
+describe('suggestWindow', () => {
+  it('starts the search at the next slot after the notice period, for an hour', () => {
+    // 09:07 in Amman + 15 min notice → 09:30.
+    expect(suggestWindow(building, new Date('2026-09-29T06:07:00Z'))).toEqual({
+      date: '2026-09-29',
+      start: '09:30',
+      end: '10:30',
+    })
+  })
+
+  it('moves to tomorrow morning late in the evening', () => {
+    // 23:30 in Amman.
+    expect(suggestWindow(building, new Date('2026-09-29T20:30:00Z'))).toEqual({
+      date: '2026-09-30',
+      start: '09:00',
+      end: '10:00',
+    })
   })
 })

@@ -15,4 +15,12 @@ public readonly record struct TimeRange(DateTimeOffset Start, DateTimeOffset End
     public bool Contains(DateTimeOffset start, DateTimeOffset end) => Start <= start && end <= End;
 
     public TimeSpan Duration => End - Start;
+
+    /// <summary>The part of this range inside <paramref name="window"/>, or null if they don't overlap.</summary>
+    public TimeRange? ClipTo(TimeRange window)
+    {
+        var start = Start > window.Start ? Start : window.Start;
+        var end = End < window.End ? End : window.End;
+        return end > start ? new TimeRange(start, end) : null;
+    }
 }

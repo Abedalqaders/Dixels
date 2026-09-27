@@ -117,6 +117,139 @@ public class BookingManager : DomainService
         return (await _bookingRepository.InsertConfirmedAsync(booking), false);
     }
 
+    // A room that's unavailable only because of *when* (booked, closed for maintenance,
+    // outside hours) can be offered a later time; one that's too small or too far ahead can't.
+    private static readonly HashSet<string> TimeOnlyViolations = new()
+    {
+        DixelsDomainErrorCodes.BookingOverlap,
+        DixelsDomainErrorCodes.BookingSpaceClosed,
+        DixelsDomainErrorCodes.BookingOutsideHours,
+    };
+
+    /// <summary>
+    /// "Which spaces in my building can I book for this window?" — every space (optionally
+    /// narrowed by floor/type) checked by the same validator a real booking runs, plus that
+    /// space's day around the window for the timeline. Bookings and closures for the whole
+    /// building's day are loaded in one query each, not one per space. The window must sit
+    /// within one building-local day.
+    /// </summary>
+    public async Task<AvailabilitySearch> SearchAsync(
+        Guid userId,
+        DateTime localStart,
+        DateTime localEnd,
+        int attendees,
+        Guid? floorId = null,
+        Guid? spaceTypeId = null)
+    {
+        if (attendees < 1)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesMustBePositive);
+        }
+
+        var buildingId = await _accessChecker.FindBookableBuildingIdAsync(userId);
+        var building = buildingId is null ? null : await _buildingRepository.FindAsync(buildingId.Value);
+        if (building is null)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingNotAssignedToBuilding);
+        }
+
+        var clock = new BuildingClock(building.Timezone);
+        var startUtc = clock.ToUtc(localStart);
+        var endUtc = clock.ToUtc(localEnd);
+        var date = DateOnly.FromDateTime(localStart);
+        var day = new TimeRange(clock.StartOfLocalDay(date), clock.StartOfLocalDay(date.AddDays(1)));
+
+        if (endUtc <= startUtc || endUtc > day.End)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingInvalidTimeRange);
+        }
+
+        var floors = await _floorRepository.GetListAsync(f =>
+            f.BuildingId == building.Id && (floorId == null || f.Id == floorId));
+        var floorIds = floors.Select(f => f.Id).ToList();
+
+        var spaces = await _spaceRepository.GetListAsync(s =>
+            floorIds.Contains(s.FloorId) && (spaceTypeId == null || s.SpaceTypeId == spaceTypeId));
+        var spaceIds = spaces.Select(s => s.Id).ToList();
+
+        var dayOverrides = await _overrideRepository.GetListAsync(o =>
+            ((o.Scope == OverrideScope.Building && o.ScopeId == building.Id)
+             || (o.Scope == OverrideScope.Floor && floorIds.Contains(o.ScopeId))
+             || (o.Scope == OverrideScope.Space && spaceIds.Contains(o.ScopeId)))
+            && o.StartsAt < day.End
+            && o.EndsAt > day.Start);
+
+        var bookingsBySpace = (await _bookingRepository.GetConfirmedOverlappingAsync(spaceIds, day.Start, day.End))
+            .ToLookup(b => b.SpaceId);
+
+        var floorById = floors.ToDictionary(f => f.Id);
+        var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
+        var request = new BookingRequest(startUtc, endUtc, attendees);
+
+        var results = spaces.Select(space =>
+        {
+            var floor = floorById[space.FloorId];
+            var rules = _constraintResolver.Resolve(building, floor, space);
+
+            // Closures union across levels: the space's own, its floor's, and the building's.
+            var overrides = dayOverrides
+                .Where(o => (o.Scope == OverrideScope.Space && o.ScopeId == space.Id)
+                            || (o.Scope == OverrideScope.Floor && o.ScopeId == floor.Id)
+                            || o.Scope == OverrideScope.Building)
+                .Select(OverrideWindow.From)
+                .ToList();
+
+            var busy = bookingsBySpace[space.Id]
+                .Select(b => new BusyRange(new TimeRange(b.StartsAt, b.EndsAt), b.UserId == userId))
+                .ToList();
+
+            var violations = _validator.Validate(
+                rules,
+                clock,
+                request,
+                overrides.Where(o => o.Range.Overlaps(startUtc, endUtc)).ToList(),
+                busy.Any(b => b.Range.Overlaps(startUtc, endUtc)),
+                now,
+                _options.SlotMinutes);
+
+            var open = OpenIntervals.Compute(
+                    rules.Days.Value,
+                    rules.Hours.Value,
+                    clock,
+                    date,
+                    date,
+                    overrides.Where(o => o.Effect == OverrideEffect.Open).Select(o => o.Range))
+                .Select(r => r.ClipTo(day))
+                .OfType<TimeRange>()
+                .ToList();
+
+            var closed = overrides
+                .Where(o => o.Effect == OverrideEffect.Closed)
+                .Select(o => o.Range.ClipTo(day))
+                .OfType<TimeRange>()
+                .ToList();
+
+            var blockers = closed.Concat(busy.Select(b => b.Range)).ToList();
+
+            DateTimeOffset? freeUntil = null;
+            DateTimeOffset? nextFreeStart = null;
+
+            if (violations.Count == 0)
+            {
+                freeUntil = FreeTime.FreeUntil(open, blockers, startUtc, endUtc);
+            }
+            else if (violations.All(v => TimeOnlyViolations.Contains(v.Code)))
+            {
+                nextFreeStart = FreeTime.NextFreeStart(
+                    open, blockers, startUtc, endUtc - startUtc, _options.SlotMinutes, day.End);
+            }
+
+            return new SpaceAvailability(space, floor, rules, violations, open, closed, busy, freeUntil, nextFreeStart);
+        }).ToList();
+
+        return new AvailabilitySearch(building, clock, startUtc, endUtc, day, results);
+    }
+
     private async Task<BookingContext> LoadContextAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)
     {
         if (attendees < 1)

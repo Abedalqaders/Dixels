@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dixels.EntityFrameworkCore;
@@ -46,6 +48,21 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
                  && b.StartsAt < end
                  && b.EndsAt > start,
             GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<List<Booking>> GetConfirmedOverlappingAsync(
+        IReadOnlyCollection<Guid> spaceIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        return await bookings
+            .Where(b => spaceIds.Contains(b.SpaceId)
+                        && b.Status == BookingStatus.Confirmed
+                        && b.StartsAt < end
+                        && b.EndsAt > start)
+            .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
     public async Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)

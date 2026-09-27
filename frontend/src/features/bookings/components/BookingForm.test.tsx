@@ -54,8 +54,8 @@ describe('BookingForm', () => {
       ...valid,
       isValid: false,
       violations: [
-        { code: 'Dixels:Bookings:BelowMinAttendees', level: 'Space', message: 'This space needs at least 2 attendees (Space rule).' },
-        { code: 'Dixels:Bookings:TooLong', level: 'Building', message: 'Bookings here can last at most 2h (Building rule).' },
+        { code: 'Dixels:Bookings:BelowMinAttendees', level: 'Space', message: 'This space needs at least 2 attendees (Space rule).', shortMessage: 'Needs at least 2 people' },
+        { code: 'Dixels:Bookings:TooLong', level: 'Building', message: 'Bookings here can last at most 2h (Building rule).', shortMessage: 'Max 2h per booking' },
       ],
     })
 

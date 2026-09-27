@@ -10,4 +10,7 @@ public class BookingViolationDto
 
     /// <summary>Localized, ready to show: names the rule, quotes the limit, says what to do.</summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>A few words for tight spaces like a result list ("Seats 1 — you need 4").</summary>
+    public string ShortMessage { get; set; } = string.Empty;
 }
