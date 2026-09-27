@@ -22,8 +22,9 @@ interface TimeRangeFieldsProps {
 
 /**
  * "Start at … for …" instead of two long From/To lists — the way people think about a
- * booking ("at 10, for an hour"). The end is derived and shown, never typed. Renders two
- * grid cells (Start, Duration) so the parent form lays them out.
+ * booking ("at 10, for an hour"). The end is derived and shown on the Duration field,
+ * never typed. Renders two grid cells (Start, Duration), each a single control the same
+ * height as the other filters, so the parent form lays them out in one even row.
  */
 export function TimeRangeFields({
   idPrefix,
@@ -62,17 +63,13 @@ export function TimeRangeFields({
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor={`${idPrefix}-duration`}>
-          Duration
-          <span className="ml-auto font-mono text-xs font-normal text-muted-foreground">
-            {start}–{end}
-          </span>
-        </Label>
+        <Label htmlFor={`${idPrefix}-duration`}>Duration</Label>
         <DurationPicker
           id={`${idPrefix}-duration`}
           value={duration}
           slotMinutes={slotMinutes}
           max={limitFor(startMinute)}
+          endsAt={end}
           untilClosing={
             closingMinute !== undefined && closingMinute > startMinute
               ? { minutes: closingMinute - startMinute, label: `Until ${fromMinutes(closingMinute)}` }

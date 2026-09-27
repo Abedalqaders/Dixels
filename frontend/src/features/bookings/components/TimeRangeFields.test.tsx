@@ -15,10 +15,14 @@ function renderFields(props: Partial<Parameters<typeof TimeRangeFields>[0]> = {}
 }
 
 describe('TimeRangeFields', () => {
-  it('shows the derived end time next to the duration', () => {
+  const openDuration = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByLabelText('Duration'))
+
+  it('shows the length and the derived end time on the field', async () => {
+    const user = userEvent.setup()
     renderFields()
 
-    expect(screen.getByText('10:30–11:30')).toBeInTheDocument()
+    expect(screen.getByLabelText('Duration')).toHaveTextContent('1h · ends 11:30')
+    await openDuration(user)
     expect(screen.getByRole('radio', { name: '1h' })).toHaveAttribute('aria-checked', 'true')
   })
 
@@ -36,13 +40,16 @@ describe('TimeRangeFields', () => {
     const user = userEvent.setup()
     const onChange = renderFields()
 
+    await openDuration(user)
     await user.click(screen.getByRole('radio', { name: '2h' }))
 
     expect(onChange).toHaveBeenCalledWith({ start: '10:30', end: '12:30' })
   })
 
-  it("disables lengths over the room's maximum", () => {
+  it("disables lengths over the room's maximum", async () => {
+    const user = userEvent.setup()
     renderFields({ maxDuration: 60 })
+    await openDuration(user)
 
     expect(screen.getByRole('radio', { name: '1h' })).toBeEnabled()
     expect(screen.getByRole('radio', { name: '2h' })).toBeDisabled()
@@ -62,15 +69,18 @@ describe('TimeRangeFields', () => {
     const user = userEvent.setup()
     const onChange = renderFields({ closingMinute: 20 * 60 })
 
-    await user.click(screen.getByRole('radio', { name: 'Until 20:00' }))
+    await openDuration(user)
+    await user.click(screen.getByRole('button', { name: 'Until 20:00' }))
 
     expect(onChange).toHaveBeenCalledWith({ start: '10:30', end: '20:00' })
   })
 
-  it('disables "Until closing" when that would be longer than allowed', () => {
+  it('disables "Until closing" when that would be longer than allowed', async () => {
+    const user = userEvent.setup()
     renderFields({ closingMinute: 20 * 60, maxDuration: 120 })
+    await openDuration(user)
 
-    expect(screen.getByRole('radio', { name: 'Until 20:00' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Until 20:00' })).toBeDisabled()
   })
 
   it('offers "Now" on today, jumping to the earliest bookable slot', async () => {
