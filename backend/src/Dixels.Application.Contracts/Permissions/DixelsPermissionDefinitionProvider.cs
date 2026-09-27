@@ -1,4 +1,4 @@
-using Dixels.Localization;
+﻿using Dixels.Localization;
 using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Localization;
 
@@ -36,6 +36,10 @@ public class DixelsPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var employees = dixelsGroup.AddPermission(DixelsPermissions.Employees.Default, L("Permission:Employees"));
         employees.AddChild(DixelsPermissions.Employees.Assign, L("Permission:Assign"));
+
+        var bookings = dixelsGroup.AddPermission(DixelsPermissions.Bookings.Default, L("Permission:Bookings"));
+        bookings.AddChild(DixelsPermissions.Bookings.Create, L("Permission:Create"));
+        bookings.AddChild(DixelsPermissions.Bookings.ManageAll, L("Permission:ManageAllBookings"));
     }
 
     private static LocalizableString L(string name)

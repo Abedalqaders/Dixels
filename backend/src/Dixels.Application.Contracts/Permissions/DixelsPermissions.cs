@@ -1,4 +1,4 @@
-namespace Dixels.Permissions;
+﻿namespace Dixels.Permissions;
 
 public static class DixelsPermissions
 {
@@ -50,5 +50,15 @@ public static class DixelsPermissions
     {
         public const string Default = GroupName + ".Employees";
         public const string Assign = Default + ".Assign";
+    }
+
+    // Employees get Default + Create through the "employee" role (RoleDataSeedContributor).
+    // ManageAll is for administrators acting on other people's bookings (force cancel) —
+    // defined now so that feature is a grant, not a new permission, when it lands.
+    public static class Bookings
+    {
+        public const string Default = GroupName + ".Bookings";
+        public const string Create = Default + ".Create";
+        public const string ManageAll = Default + ".ManageAll";
     }
 }

@@ -1,9 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Dixels.Bookings;
 using Dixels.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Emailing;
+using Volo.Abp.Timing;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
@@ -59,6 +62,18 @@ public class DixelsDomainModule : AbpModule
         Configure<AbpMultiTenancyOptions>(options =>
         {
             options.IsEnabled = MultiTenancyConsts.IsEnabled;
+        });
+
+        // "Bookings" section in appsettings (install-time settings, see BookingOptions).
+        Configure<BookingOptions>(context.Services.GetConfiguration().GetSection("Bookings"));
+
+        // BRS: every stored timestamp is UTC. With Kind = Utc, ABP's IClock returns UTC and
+        // audit columns (CreationTime etc.) are written as UTC. Wall-clock values that must
+        // NOT be shifted (a booking's building-local start/end in DTOs) opt out with
+        // [DisableDateTimeNormalization].
+        Configure<AbpClockOptions>(options =>
+        {
+            options.Kind = DateTimeKind.Utc;
         });
 
 #if DEBUG

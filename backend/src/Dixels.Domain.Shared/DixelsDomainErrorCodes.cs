@@ -21,4 +21,27 @@ public static class DixelsDomainErrorCodes
     public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
 
     public const string UserIsNotAnEmployee = EmployeesPrefix + "UserIsNotAnEmployee";
+
+    // Booking rule violations. Each message names the rule, quotes the real limit, the level
+    // that set it ({level}, read from the resolved value's provenance), and what to do next.
+    private const string BookingsPrefix = "Dixels:Bookings:";
+
+    public const string BookingNotAligned = BookingsPrefix + "NotAligned";
+    public const string BookingSpaceClosed = BookingsPrefix + "SpaceClosed";
+    public const string BookingOverCapacity = BookingsPrefix + "OverCapacity";
+    public const string BookingBelowMinAttendees = BookingsPrefix + "BelowMinAttendees";
+    public const string BookingTooLong = BookingsPrefix + "TooLong";
+    public const string BookingClosedDay = BookingsPrefix + "ClosedDay";
+    public const string BookingOutsideHours = BookingsPrefix + "OutsideHours";
+    public const string BookingBeyondHorizon = BookingsPrefix + "BeyondHorizon";
+    public const string BookingStartInPast = BookingsPrefix + "StartInPast";
+    public const string BookingTooSoon = BookingsPrefix + "TooSoon";
+    public const string BookingOverlap = BookingsPrefix + "Overlap";
+
+    // Request-level errors — not rule violations, thrown before any rule is evaluated.
+    public const string BookingInvalidTimeRange = BookingsPrefix + "InvalidTimeRange";
+    public const string BookingAttendeesMustBePositive = BookingsPrefix + "AttendeesMustBePositive";
+    public const string BookingNotAssignedToBuilding = BookingsPrefix + "NotAssignedToBuilding";
+    public const string BookingIdempotencyKeyReused = BookingsPrefix + "IdempotencyKeyReused";
+    public const string BookingNotCancellable = BookingsPrefix + "NotCancellable";
 }

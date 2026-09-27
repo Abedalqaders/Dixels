@@ -28,6 +28,7 @@
     <Project Path="test/Dixels.Domain.Tests/Dixels.Domain.Tests.csproj" />
     <Project Path="test/Dixels.EntityFrameworkCore.Tests/Dixels.EntityFrameworkCore.Tests.csproj" />
     <Project Path="test/Dixels.HttpApi.Client.ConsoleTestApp/Dixels.HttpApi.Client.ConsoleTestApp.csproj" />
+    <Project Path="test/Dixels.Postgres.Tests/Dixels.Postgres.Tests.csproj" />
     
     <Project Path="test/Dixels.TestBase/Dixels.TestBase.csproj" />
     <Project Path="test/Dixels.Web.Tests/Dixels.Web.Tests.csproj" />
