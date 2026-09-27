@@ -2,13 +2,11 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { addDays, fromMinutes, nowInZone, toMinutes } from '../../../lib/time/buildingTime'
+import { addDays, nowInZone } from '../../../lib/time/buildingTime'
 import type { HhMm, IsoDate } from '../../../lib/time/buildingTime'
 import type { BookableBuildingDto } from '../api/bookingsApi'
 import { DatePicker } from './DatePicker'
-import { StartTimePicker } from './StartTimePicker'
-
-const DAY_MINUTES = 24 * 60
+import { FromToFields } from './FromToFields'
 
 export interface SearchValues {
   date: IsoDate
@@ -30,8 +28,8 @@ const ANY = 'any'
 
 /**
  * The question Find a space answers: when, and for how many people. Floor and type are
- * optional narrowing. There's no length field — rooms are checked for the usual length,
- * and any other length is picked by dragging on a room's bar in the results. Every control is a real picker on the building's clock and slot
+ * optional narrowing. From only offers times that haven't passed, and To only times after
+ * From. Dragging on a room's bar in the results picks any other time. Every control is a real picker on the building's clock and slot
  * grid, so there's nothing to type in a wrong format.
  */
 export function SearchBar({ building, value, onChange }: SearchBarProps) {
@@ -39,14 +37,6 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
   const now = nowInZone(building.timezone)
   const today = now.date
   const lastDate = addDays(today, building.maxHorizonDays)
-
-  // The search checks "free at this time for your usual length"; the length itself is
-  // picked by dragging on a room's bar. Moving the time keeps the length.
-  function changeStart(next: HhMm) {
-    const length = Math.max(toMinutes(value.end) - toMinutes(value.start), slot)
-    const start = toMinutes(next)
-    onChange({ start: next, end: fromMinutes(Math.min(start + length, DAY_MINUTES)) })
-  }
 
   const spaceTypes = new Map<string, string>()
   for (const floor of building.floors) {
@@ -59,23 +49,21 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         role="search"
         aria-label="Find a free space"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_0.7fr_1.2fr_1.2fr]"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr_1.2fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
           <Label htmlFor="fs-date">Date</Label>
           <DatePicker id="fs-date" value={value.date} min={today} max={lastDate} onChange={(date) => onChange({ date })} />
         </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="fs-at">At</Label>
-          <StartTimePicker
-            id="fs-at"
-            value={value.start}
-            slotMinutes={slot}
-            minMinute={value.date === today ? now.minutes + building.minLeadMinutes : 0}
-            onChange={changeStart}
-          />
-        </div>
+        <FromToFields
+          idPrefix="fs"
+          start={value.start}
+          end={value.end}
+          slotMinutes={slot}
+          minStart={value.date === today ? now.minutes + building.minLeadMinutes : 0}
+          onChange={onChange}
+        />
 
         <div className="grid gap-2">
           <Label htmlFor="fs-people">People</Label>

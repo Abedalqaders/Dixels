@@ -19,7 +19,7 @@ import { closingMinute, rememberDuration } from '../preferences'
 import { suggestSlot } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { DatePicker } from './DatePicker'
-import { TimeRangeFields } from './TimeRangeFields'
+import { FromToFields } from './FromToFields'
 import { VerdictPanel } from './VerdictPanel'
 
 interface BookingFormProps {
@@ -138,14 +138,14 @@ export function BookingForm({
               <Label htmlFor="bk-date">Date</Label>
               <DatePicker id="bk-date" value={date} min={today} max={lastDate} onChange={setDate} />
             </div>
-            <TimeRangeFields
+            <FromToFields
               idPrefix="bk"
               start={start}
               end={end}
               slotMinutes={slot}
-              maxDuration={space.maxDurationMinutes.value}
-              minStartMinute={date === today ? now.minutes + building.minLeadMinutes : 0}
-              closingMinute={closingMinute(space)}
+              minStart={date === today ? now.minutes + building.minLeadMinutes : 0}
+              maxLength={space.maxDurationMinutes.value}
+              latestEnd={closingMinute(space)}
               onChange={(range) => {
                 setStart(range.start)
                 setEnd(range.end)

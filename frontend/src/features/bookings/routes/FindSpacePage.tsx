@@ -19,7 +19,6 @@ import { DayBar } from '../components/DayBar'
 import { SearchBar } from '../components/SearchBar'
 import type { SearchValues } from '../components/SearchBar'
 import { dayAxis } from '../dayAxis'
-import { formatDuration } from '../format'
 import { suggestWindow } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { readLastDuration } from '../preferences'
@@ -162,7 +161,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   const free = spaces.filter((s) => s.isAvailable)
   const taken = spaces.filter((s) => !s.isAvailable)
   const axis = dayAxis(spaces, selection)
-  const windowLabel = `${formatDate(values.date)} at ${values.start} for ${formatDuration(searchLength)}`
+  const windowLabel = `${formatDate(values.date)}, ${values.start}–${values.end}`
 
   return (
     <>
@@ -198,7 +197,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             <p className="mt-1 text-sm text-muted-foreground">
               {free.length === 0
                 ? "Try another time — or drag on a room's bar below to book any free time it has."
-                : "Book for this time, or drag on a room's bar to pick a different time and length."}
+                : "Book for this time, or drag on a room's bar to pick a different time."}
             </p>
 
             {free.length > 0 && (

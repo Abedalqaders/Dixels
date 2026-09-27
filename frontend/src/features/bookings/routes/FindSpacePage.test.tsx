@@ -96,7 +96,7 @@ describe('FindSpacePage', () => {
   it('searches for the window in the URL and lists the free rooms with how long they stay free', async () => {
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: /1 space free · Thu 1 Oct at 10:00 for 1h/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /1 space free · Thu 1 Oct, 10:00–11:00/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Book Meeting Room 201' })).toBeInTheDocument()
     expect(screen.getAllByText('Free until 14:00').length).toBeGreaterThan(0)
 
@@ -139,8 +139,8 @@ describe('FindSpacePage', () => {
     await user.click(await screen.findByRole('button', { name: 'Book Meeting Room 201' }))
 
     const dialog = screen.getByRole('dialog', { name: 'Book Meeting Room 201' })
-    expect(within(dialog).getByLabelText('Start')).toHaveTextContent('10:00')
-    expect(within(dialog).getByLabelText('Duration')).toHaveTextContent('1h · ends 11:00')
+    expect(within(dialog).getByLabelText('From')).toHaveTextContent('10:00')
+    expect(within(dialog).getByLabelText('To')).toHaveTextContent('11:00')
     expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
   })
 })
