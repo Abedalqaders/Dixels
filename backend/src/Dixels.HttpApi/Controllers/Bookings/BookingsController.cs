@@ -1,0 +1,26 @@
+using System.Threading.Tasks;
+using Dixels.Bookings;
+using Microsoft.AspNetCore.Mvc;
+using Volo.Abp;
+
+namespace Dixels.Controllers.Bookings;
+
+[RemoteService(Name = DixelsRemoteServiceConsts.RemoteServiceName)]
+[Area(DixelsRemoteServiceConsts.ModuleName)]
+[Route("api/app/bookings")]
+public class BookingsController : DixelsController, IBookingsAppService
+{
+    private readonly IBookingsAppService _bookingsAppService;
+
+    public BookingsController(IBookingsAppService bookingsAppService)
+    {
+        _bookingsAppService = bookingsAppService;
+    }
+
+    [HttpPost("preview")]
+    public virtual Task<BookingPreviewDto> PreviewAsync([FromBody] BookingRequestDto input) =>
+        _bookingsAppService.PreviewAsync(input);
+
+    [HttpPost]
+    public virtual Task<BookingDto> CreateAsync([FromBody] CreateBookingDto input) => _bookingsAppService.CreateAsync(input);
+}

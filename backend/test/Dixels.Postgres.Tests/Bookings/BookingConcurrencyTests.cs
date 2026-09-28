@@ -3,8 +3,8 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Bookings;
-using Dixels.Employees;
 using Dixels.SpaceManagement;
+using Dixels.Users;
 using Dixels.SpaceManagement.ValueObjects;
 using Shouldly;
 using Volo.Abp;
@@ -51,10 +51,8 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
         var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "Room", spaceType.Id, 8));
 
         var user = new IdentityUser(Guid.NewGuid(), "pg" + Guid.NewGuid().ToString("N")[..10], $"{Guid.NewGuid():N}@test.io");
+        user.SetBuildingId(building.Id);
         (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
-
-        await GetRequiredService<IRepository<EmployeeBuildingAssignment, Guid>>()
-            .InsertAsync(new EmployeeBuildingAssignment(Guid.NewGuid(), user.Id, building.Id));
 
         return new Scenario(user.Id, space.Id);
     });

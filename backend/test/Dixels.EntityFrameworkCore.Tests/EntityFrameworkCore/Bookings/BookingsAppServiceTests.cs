@@ -3,11 +3,11 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Bookings;
-using Dixels.Employees;
 using Dixels.Identity;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
+using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
@@ -28,7 +28,6 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
-    private readonly IRepository<EmployeeBuildingAssignment, Guid> _assignmentRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentPrincipalAccessor _principalAccessor;
 
@@ -45,7 +44,6 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         _floorRepository = GetRequiredService<IRepository<Floor, Guid>>();
         _spaceRepository = GetRequiredService<IRepository<Space, Guid>>();
         _spaceTypeRepository = GetRequiredService<IRepository<SpaceType, Guid>>();
-        _assignmentRepository = GetRequiredService<IRepository<EmployeeBuildingAssignment, Guid>>();
         _userManager = GetRequiredService<IdentityUserManager>();
         _principalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
@@ -70,12 +68,12 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         await _spaceRepository.InsertAsync(space);
 
         var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io");
-        (await _userManager.CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
-
         if (assign)
         {
-            await _assignmentRepository.InsertAsync(new EmployeeBuildingAssignment(Guid.NewGuid(), user.Id, building.Id));
+            user.SetBuildingId(building.Id);
         }
+
+        (await _userManager.CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
 
         return new Scenario(user.Id, building, floor, space);
     });

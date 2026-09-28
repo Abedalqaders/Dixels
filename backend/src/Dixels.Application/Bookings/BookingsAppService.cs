@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
@@ -34,10 +33,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _violationLocalizer = violationLocalizer;
     }
 
-    // Fully-qualified route, like the other custom actions in this app (see
-    // EmployeesAppService.AssignBuildingAsync) — an explicit Http* attribute stops ABP
-    // prepending the controller prefix.
-    [HttpPost("api/app/bookings/preview")]
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateAsync(

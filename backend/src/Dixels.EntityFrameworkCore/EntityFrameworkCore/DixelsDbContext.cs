@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Dixels.Bookings;
-using Dixels.Employees;
 using Dixels.SpaceManagement;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -33,7 +32,6 @@ public class DixelsDbContext :
     public DbSet<Floor> Floors { get; set; }
     public DbSet<Space> Spaces { get; set; }
     public DbSet<AvailabilityOverride> AvailabilityOverrides { get; set; }
-    public DbSet<EmployeeBuildingAssignment> EmployeeBuildingAssignments { get; set; }
     public DbSet<Booking> Bookings { get; set; }
 
     #region Entities from the modules
@@ -114,7 +112,6 @@ public class DixelsDbContext :
         /* Configure your own tables/entities inside here */
 
         builder.ConfigureSpaceManagement();
-        builder.ConfigureEmployees();
         builder.ConfigureBookings();
     }
 }

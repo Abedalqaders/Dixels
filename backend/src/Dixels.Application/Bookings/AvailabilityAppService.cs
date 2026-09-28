@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
@@ -52,7 +51,6 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         _violationLocalizer = violationLocalizer;
     }
 
-    [HttpGet("api/app/availability/my-building")]
     public async Task<BookableBuildingDto?> GetMyBuildingAsync()
     {
         var buildingId = await _accessChecker.FindBookableBuildingIdAsync(CurrentUser.GetId());
@@ -62,7 +60,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         }
 
         // Null when the assigned building was soft-deleted — the same "not assigned" answer
-        // EmployeesAppService.GetMyBuildingAsync gives, rather than a broken reference.
+        // UsersAppService.GetMyBuildingAsync gives, rather than a broken reference.
         var building = await _buildingRepository.FindAsync(buildingId.Value);
         if (building is null)
         {
@@ -105,7 +103,6 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         };
     }
 
-    [HttpGet("api/app/availability/search")]
     public async Task<AvailabilitySearchResultDto> SearchAsync(SearchAvailabilityInput input)
     {
         var search = await _bookingManager.SearchAsync(

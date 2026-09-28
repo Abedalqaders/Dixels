@@ -44,13 +44,8 @@ public static class DixelsPermissions
         public const string Delete = Default + ".Delete";
     }
 
-    // No Create/Edit/Delete: employee accounts are seed data only (see
-    // EmployeeUserDataSeedContributor) — the only admin action here is Assign.
-    public static class Employees
-    {
-        public const string Default = GroupName + ".Employees";
-        public const string Assign = Default + ".Assign";
-    }
+    // No Users permissions here: listing users and assigning their building go through ABP's
+    // own user service, so ABP's AbpIdentity.Users(.Update) permissions cover them.
 
     // Employees get Default + Create through the "employee" role (RoleDataSeedContributor).
     // ManageAll is for administrators acting on other people's bookings (force cancel) —

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
@@ -137,12 +136,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         return MapToDto(space);
     }
 
-    // Fully-qualified route: ABP's conventional-controller routing doesn't auto-prepend the
-    // "api/app/spaces" controller prefix once an action carries its own explicit Http*
-    // attribute, so a bare "constraints" would collide with Buildings'/Floors' own actions
-    // of the same name at the application root (confirmed via a real SwaggerGeneratorException
-    // before this fix).
-    [HttpPut("api/app/spaces/{id}/constraints")]
     [Authorize(DixelsPermissions.Spaces.Edit)]
     public async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateSpaceConstraintsDto input)
     {
@@ -177,8 +170,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         };
     }
 
-    // Fully-qualified route, same reasoning as UpdateConstraintsAsync above.
-    [HttpGet("api/app/spaces/{id}/resolved-constraints")]
     public async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id)
     {
         var space = await _spaceRepository.GetAsync(id);
@@ -229,8 +220,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
     }
 
-    // Fully-qualified route, same reasoning as UpdateConstraintsAsync above.
-    [HttpPost("api/app/spaces/{id}/restore")]
     [Authorize(DixelsPermissions.Spaces.Edit)]
     public async Task RestoreAsync(Guid id)
     {

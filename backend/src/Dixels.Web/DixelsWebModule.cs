@@ -110,8 +110,7 @@ public class DixelsWebModule : AbpModule
         ConfigureUrls(configuration);
         ConfigureBundles();
         ConfigureVirtualFileSystem(hostingEnvironment);
-        ConfigureNavigationServices();
-        ConfigureAutoApiControllers();
+        ConfigureNavigationServices();
         ConfigureSwaggerServices(context.Services);
         ConfigureCors(context.Services, configuration);
 
@@ -172,13 +171,9 @@ public class DixelsWebModule : AbpModule
         });
     }
 
-    private void ConfigureAutoApiControllers()
-    {
-        Configure<AbpAspNetCoreMvcOptions>(options =>
-        {
-            options.ConventionalControllers.Create(typeof(DixelsApplicationModule).Assembly);
-        });
-    }
+    // No auto API controllers: every endpoint is an explicit controller in Dixels.HttpApi
+    // (Controllers/...), so routes, verbs and bindings are declared in one visible place
+    // instead of being derived from app service method names.
 
     private void ConfigureCors(IServiceCollection services, IConfiguration configuration)
     {

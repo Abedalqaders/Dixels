@@ -3,7 +3,6 @@
 public static class DixelsDomainErrorCodes
 {
     private const string Prefix = "Dixels:SpaceManagement:";
-    private const string EmployeesPrefix = "Dixels:Employees:";
 
     public const string InvalidTimezone = Prefix + "InvalidTimezone";
     public const string MaxDurationMustBePositive = Prefix + "MaxDurationMustBePositive";
@@ -20,7 +19,7 @@ public static class DixelsDomainErrorCodes
     public const string SpaceTypeNameAlreadyExists = Prefix + "SpaceTypeNameAlreadyExists";
     public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
 
-    public const string UserIsNotAnEmployee = EmployeesPrefix + "UserIsNotAnEmployee";
+    public const string InvalidBuildingId = "Dixels:Users:InvalidBuildingId";
 
     // Booking rule violations. Each message names the rule, quotes the real limit, the level
     // that set it ({level}, read from the resolved value's provenance), and what to do next.

@@ -34,9 +34,6 @@ public class DixelsPermissionDefinitionProvider : PermissionDefinitionProvider
         spaceTypes.AddChild(DixelsPermissions.SpaceTypes.Edit, L("Permission:Edit"));
         spaceTypes.AddChild(DixelsPermissions.SpaceTypes.Delete, L("Permission:Delete"));
 
-        var employees = dixelsGroup.AddPermission(DixelsPermissions.Employees.Default, L("Permission:Employees"));
-        employees.AddChild(DixelsPermissions.Employees.Assign, L("Permission:Assign"));
-
         var bookings = dixelsGroup.AddPermission(DixelsPermissions.Bookings.Default, L("Permission:Bookings"));
         bookings.AddChild(DixelsPermissions.Bookings.Create, L("Permission:Create"));
         bookings.AddChild(DixelsPermissions.Bookings.ManageAll, L("Permission:ManageAllBookings"));

@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using Dixels.Users;
 using Volo.Abp.Identity;
 using Volo.Abp.ObjectExtending;
 using Volo.Abp.Threading;
@@ -37,6 +39,24 @@ public static class DixelsModuleExtensionConfigurator
 
     private static void ConfigureExtraProperties()
     {
+        ObjectExtensionManager.Instance.Modules()
+            .ConfigureIdentity(identity =>
+            {
+                identity.ConfigureUser(user =>
+                {
+                    // Set by an admin from the Users page, never by the user themselves —
+                    // so it stays hidden from ABP's own profile/user-management UI.
+                    user.AddOrUpdateProperty<Guid?>(
+                        DixelsUserConsts.BuildingIdPropertyName,
+                        property =>
+                        {
+                            property.UI.OnTable.IsVisible = false;
+                            property.UI.OnCreateForm.IsVisible = false;
+                            property.UI.OnEditForm.IsVisible = false;
+                        });
+                });
+            });
+
         /* You can configure extra properties for the
          * entities defined in the modules used by your application.
          *

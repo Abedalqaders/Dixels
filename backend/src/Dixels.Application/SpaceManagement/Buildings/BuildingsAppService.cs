@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
@@ -108,8 +107,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return MapToDto(building);
     }
 
-    // Fully-qualified route, same reasoning as GetTreeAsync above.
-    [HttpPut("api/app/buildings/{id}/constraints")]
     [Authorize(DixelsPermissions.Buildings.Edit)]
     public async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateBuildingConstraintsDto input)
     {
@@ -197,8 +194,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
     }
 
-    // Fully-qualified route, same reasoning as GetTreeAsync above.
-    [HttpPost("api/app/buildings/{id}/restore")]
     [Authorize(DixelsPermissions.Buildings.Edit)]
     public async Task RestoreAsync(Guid id)
     {

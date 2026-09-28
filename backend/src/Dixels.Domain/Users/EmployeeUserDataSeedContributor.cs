@@ -1,23 +1,22 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Identity;
 using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Guids;
 using Volo.Abp.Identity;
 
-namespace Dixels.Employees;
+namespace Dixels.Users;
 
-/* Seeds a handful of employee accounts so the admin's Employees page (and each employee's
+/* Seeds a handful of employee accounts so the admin's Users page (and each employee's
  * own sign-in) has real users to work with. There's no add/update/delete-employee feature —
  * accounts are provisioned by seed data only, same spirit as the "employee" role itself
  * (see RoleDataSeedContributor) being seeded rather than created through the UI. Building
  * assignment is deliberately NOT seeded here — that's the admin's own action through the
- * Employees page, not a fixture. */
+ * Users page, not a fixture. */
 public class EmployeeUserDataSeedContributor : IDataSeedContributor, ITransientDependency
 {
-    private const string EmployeeRoleName = "employee";
-
     // ABP's own default admin password ("1q2w3E*") — reused here rather than invented, so
     // every seeded account in this app follows the same known convention for local/dev use.
     private const string SeedPassword = "1q2w3E*";
@@ -31,15 +30,25 @@ public class EmployeeUserDataSeedContributor : IDataSeedContributor, ITransientD
 
     private readonly IdentityUserManager _userManager;
     private readonly IGuidGenerator _guidGenerator;
+    private readonly RoleDataSeedContributor _roleSeeder;
 
-    public EmployeeUserDataSeedContributor(IdentityUserManager userManager, IGuidGenerator guidGenerator)
+    public EmployeeUserDataSeedContributor(
+        IdentityUserManager userManager,
+        IGuidGenerator guidGenerator,
+        RoleDataSeedContributor roleSeeder)
     {
         _userManager = userManager;
         _guidGenerator = guidGenerator;
+        _roleSeeder = roleSeeder;
     }
 
     public async Task SeedAsync(DataSeedContext context)
     {
+        // ABP runs seed contributors in no guaranteed order, and the accounts below need the
+        // "employee" role to exist first — so ensure it here. Idempotent, so it doesn't matter
+        // that the role seeder also runs on its own.
+        await _roleSeeder.SeedAsync(context);
+
         foreach (var (userName, name, surname, email) in Employees)
         {
             if (await _userManager.FindByNameAsync(userName) is not null)
@@ -60,11 +69,11 @@ public class EmployeeUserDataSeedContributor : IDataSeedContributor, ITransientD
                     $"Could not create employee user '{userName}': {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, EmployeeRoleName);
+            var roleResult = await _userManager.AddToRoleAsync(user, RoleDataSeedContributor.EmployeeRoleName);
             if (!roleResult.Succeeded)
             {
                 throw new AbpException(
-                    $"Could not add '{userName}' to the '{EmployeeRoleName}' role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
+                    $"Could not add '{userName}' to the '{RoleDataSeedContributor.EmployeeRoleName}' role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}");
             }
         }
     }

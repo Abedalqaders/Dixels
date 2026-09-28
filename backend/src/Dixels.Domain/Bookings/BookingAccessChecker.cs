@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using Dixels.Employees;
+using Dixels.Users;
 using Volo.Abp;
-using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
+using Volo.Abp.Identity;
 
 namespace Dixels.Bookings;
 
@@ -14,18 +14,19 @@ namespace Dixels.Bookings;
 /// </summary>
 public class BookingAccessChecker : DomainService
 {
-    private readonly IRepository<EmployeeBuildingAssignment, Guid> _assignmentRepository;
+    private readonly IIdentityUserRepository _userRepository;
 
-    public BookingAccessChecker(IRepository<EmployeeBuildingAssignment, Guid> assignmentRepository)
+    public BookingAccessChecker(IIdentityUserRepository userRepository)
     {
-        _assignmentRepository = assignmentRepository;
+        _userRepository = userRepository;
     }
 
     /// <summary>The building this user can book in, or null when they aren't assigned to one.</summary>
     public async Task<Guid?> FindBookableBuildingIdAsync(Guid userId)
     {
-        var assignment = await _assignmentRepository.FindAsync(a => a.EmployeeUserId == userId);
-        return assignment?.BuildingId;
+        // includeDetails: false — only the BuildingId column is needed, not roles/claims/logins.
+        var user = await _userRepository.FindAsync(userId, includeDetails: false);
+        return user?.GetBuildingId();
     }
 
     public async Task EnsureCanBookAsync(Guid userId, Guid buildingId)
