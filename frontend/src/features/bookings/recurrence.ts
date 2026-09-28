@@ -129,7 +129,10 @@ export function describeRecurrence(rule: RecurrenceDto, date: IsoDate, openDays:
     if (n === 1 && workdays.length >= 2 && workdays.length < 7 && days.join() === workdays.join()) {
       return `Occurs every workday (${formatDays(workdays)})${until}`
     }
-    const names = joinNames(days.map((d) => DAY_NAMES[d]))
+    // Three or more days in a row read as a range, like Teams' "every weekday": "every Sun–Thu".
+    const isRun = days.length >= 3 && days.length < 7 && days[days.length - 1] - days[0] === days.length - 1
+    const names = isRun ? formatDays(days) : joinNames(days.map((d) => DAY_NAMES[d]))
+    if (days.length === 7) return `Occurs ${n === 1 ? 'every day' : `every ${n} weeks, every day`}${until}`
     return `Occurs ${n === 1 ? `every ${names}` : `every ${n} weeks on ${names}`}${until}`
   }
 

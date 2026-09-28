@@ -18,6 +18,7 @@ export interface BuildingDraft {
   hours: OperatingWindow
   maxDurationMinutes: number
   maxHorizonDays: number
+  maxSeriesHorizonDays: number
   minLeadMinutes: number
   ownOverlapPolicy: OwnOverlapPolicy
 }
@@ -46,10 +47,36 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
               type="number"
               min={1}
               value={draft.maxHorizonDays}
-              onChange={(e) => onChange({ ...draft, maxHorizonDays: Number(e.target.value) })}
+              onChange={(e) => {
+                // The recurring horizon can't be the shorter one — it moves up with this one.
+                const maxHorizonDays = Number(e.target.value)
+                onChange({ ...draft, maxHorizonDays, maxSeriesHorizonDays: Math.max(draft.maxSeriesHorizonDays, maxHorizonDays) })
+              }}
             />
             <span className="unit">days</span>
           </div>
+        </div>
+        <div className="field">
+          <label className="lbl" htmlFor="series-horizon">
+            Recurring bookings horizon
+          </label>
+          <div className="pair">
+            <input
+              id="series-horizon"
+              className="ctrl mono"
+              type="number"
+              min={draft.maxHorizonDays}
+              value={draft.maxSeriesHorizonDays}
+              onChange={(e) => onChange({ ...draft, maxSeriesHorizonDays: Number(e.target.value) })}
+              aria-describedby="series-horizon-hint"
+            />
+            <span className="unit">days</span>
+          </div>
+          <span id="series-horizon-hint" className={draft.maxSeriesHorizonDays < draft.maxHorizonDays ? 'hint text-destructive' : 'hint'}>
+            {draft.maxSeriesHorizonDays < draft.maxHorizonDays
+              ? `Must be at least the booking horizon (${draft.maxHorizonDays} days).`
+              : 'How far ahead the last date of a repeating booking may be.'}
+          </span>
         </div>
         <div className="field">
           <span className="lbl">Minimum lead time</span>

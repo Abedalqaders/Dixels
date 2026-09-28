@@ -153,6 +153,7 @@ export function AdminConstraintsPage() {
           { label: 'Operating hours', value: describeHours(hours), source: 'Building' },
           { label: 'Maximum duration', value: `${minutesToHours(building.maxDurationMinutes)}h`, source: 'Building' },
           { label: 'Booking horizon', value: `${building.maxHorizonDays} days`, source: 'Building' },
+          { label: 'Recurring bookings horizon', value: `${building.maxSeriesHorizonDays} days`, source: 'Building' },
           { label: 'Minimum lead time', value: `${building.minLeadMinutes} min`, source: 'Building' },
           {
             label: 'Overlapping bookings',
@@ -172,6 +173,7 @@ export function AdminConstraintsPage() {
             hours,
             maxDurationMinutes: building.maxDurationMinutes,
             maxHorizonDays: building.maxHorizonDays,
+            maxSeriesHorizonDays: building.maxSeriesHorizonDays,
             minLeadMinutes: building.minLeadMinutes,
             ownOverlapPolicy: building.ownOverlapPolicy,
           },
@@ -362,6 +364,7 @@ export function AdminConstraintsPage() {
           maxDurationMinutes: buildingDraft.maxDurationMinutes,
           maxHorizonDays: buildingDraft.maxHorizonDays,
           minLeadMinutes: buildingDraft.minLeadMinutes,
+          maxSeriesHorizonDays: buildingDraft.maxSeriesHorizonDays,
           ownOverlapPolicy: buildingDraft.ownOverlapPolicy,
           concurrencyStamp: data.concurrencyStamp,
         })

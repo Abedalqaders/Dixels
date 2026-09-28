@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
 import { OperatingDays } from '@/features/space-management/operatingDays'
@@ -14,9 +14,29 @@ const draft: BuildingDraft = {
   hours: OperatingWindow.FullDay,
   maxDurationMinutes: 120,
   maxHorizonDays: 60,
+  maxSeriesHorizonDays: 90,
   minLeadMinutes: 15,
   ownOverlapPolicy: OwnOverlapPolicy.Warn,
 }
+
+describe('BuildingLevelFields — recurring bookings horizon', () => {
+  it('moves up with the booking horizon, never below it', () => {
+    const onChange = vi.fn()
+    render(<BuildingLevelFields draft={draft} buildingName="Riverside HQ" onChange={onChange} />)
+
+    fireEvent.change(screen.getByDisplayValue('60'), { target: { value: '120' } })
+    expect(onChange.mock.lastCall![0]).toMatchObject({ maxHorizonDays: 120, maxSeriesHorizonDays: 120 })
+
+    fireEvent.change(screen.getByDisplayValue('60'), { target: { value: '45' } })
+    expect(onChange.mock.lastCall![0]).toMatchObject({ maxHorizonDays: 45, maxSeriesHorizonDays: 90 })
+  })
+
+  it('says why a value below the booking horizon is wrong', () => {
+    render(<BuildingLevelFields draft={{ ...draft, maxSeriesHorizonDays: 30 }} buildingName="Riverside HQ" onChange={vi.fn()} />)
+
+    expect(screen.getByText('Must be at least the booking horizon (60 days).')).toBeInTheDocument()
+  })
+})
 
 describe('BuildingLevelFields — overlapping bookings per person', () => {
   it('shows the current choice with what it means', () => {

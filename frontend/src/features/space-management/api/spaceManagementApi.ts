@@ -75,6 +75,8 @@ export interface BuildingDto {
   hours: OperatingWindowDto
   maxDurationMinutes: number
   maxHorizonDays: number
+  /** How far ahead recurring bookings may run — never shorter than maxHorizonDays. */
+  maxSeriesHorizonDays: number
   minLeadMinutes: number
   ownOverlapPolicy: OwnOverlapPolicy
   isDeleted: boolean
@@ -103,6 +105,7 @@ export interface UpdateBuildingConstraintsDto {
   hours: OperatingWindowDto
   maxDurationMinutes: number
   maxHorizonDays: number
+  maxSeriesHorizonDays: number
   minLeadMinutes: number
   ownOverlapPolicy: OwnOverlapPolicy
   concurrencyStamp: string

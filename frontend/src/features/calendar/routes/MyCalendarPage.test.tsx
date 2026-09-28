@@ -316,7 +316,7 @@ describe('MyCalendarPage', () => {
     await user.click(block)
 
     const detail = screen.getByRole('dialog')
-    expect(within(detail).getByText(/^Occurs every Sunday, Monday, Tuesday, Wednesday and Thursday until Thu 31 Dec/)).toBeInTheDocument()
+    expect(within(detail).getByText(/^Occurs every Sun–Thu until Thu 31 Dec/)).toBeInTheDocument()
     await user.click(within(detail).getByRole('button', { name: 'Cancel booking' }))
 
     const confirm = screen.getByRole('alertdialog', { name: 'Cancel recurring booking?' })

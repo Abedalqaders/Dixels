@@ -36,6 +36,8 @@ describe('describeRecurrence', () => {
     expect(describeRecurrence(rule({ interval: 2, weekdays: [0, 2, 4] }), TUE)).toBe(
       'Occurs every 2 weeks on Sunday, Tuesday and Thursday until Tue 27 Oct',
     )
+    // A run of days reads as a range even without the room's open days (the calendar's detail view).
+    expect(describeRecurrence(rule({ weekdays: SUN_THU }), TUE)).toBe('Occurs every Sun–Thu until Tue 27 Oct')
     expect(describeRecurrence(rule({ weekdays: SUN_THU }), TUE, SUN_THU)).toBe('Occurs every workday (Sun–Thu) until Tue 27 Oct')
     expect(describeRecurrence(rule({ frequency: Frequency.Daily, interval: 3 }), TUE)).toBe('Occurs every 3 days until Tue 27 Oct')
   })

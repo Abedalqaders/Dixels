@@ -27,6 +27,7 @@ export function buildingDraftEquals(a: BuildingDraft, b: BuildingDraft): boolean
     hoursEquals(a.hours, b.hours) &&
     a.maxDurationMinutes === b.maxDurationMinutes &&
     a.maxHorizonDays === b.maxHorizonDays &&
+    a.maxSeriesHorizonDays === b.maxSeriesHorizonDays &&
     a.minLeadMinutes === b.minLeadMinutes &&
     a.ownOverlapPolicy === b.ownOverlapPolicy
   )
