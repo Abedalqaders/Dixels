@@ -20,7 +20,7 @@ interface FromToFieldsProps {
 }
 
 /**
- * From and To, each a tap-to-pick grid. From only offers times that haven't passed; To only
+ * From and To, each a dropdown of times. From only offers times that haven't passed; To only
  * offers times after From — and, for a specific room, no later than its closing time or
  * its maximum length. Moving From keeps the booking's length where it still fits. Renders
  * two grid cells so the parent lays them out.

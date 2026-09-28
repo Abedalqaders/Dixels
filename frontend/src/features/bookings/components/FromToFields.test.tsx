@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { FromToFields } from './FromToFields'
+
+// Radix Select calls pointer-capture and scrollIntoView, which jsdom doesn't implement.
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false
+  Element.prototype.releasePointerCapture ??= () => {}
+  Element.prototype.scrollIntoView ??= () => {}
+})
 
 function renderFields(props: Partial<Parameters<typeof FromToFields>[0]> = {}) {
   const onChange = vi.fn()
@@ -14,8 +21,7 @@ function renderFields(props: Partial<Parameters<typeof FromToFields>[0]> = {}) {
   return onChange
 }
 
-const hourButtons = () =>
-  screen.getAllByRole('button').filter((b) => /^\d{2}$/.test(b.textContent ?? '')).map((b) => b.textContent)
+const offered = () => screen.getAllByRole('option').map((o) => o.textContent)
 
 describe('FromToFields', () => {
   it('never offers a To earlier than From', async () => {
@@ -24,10 +30,9 @@ describe('FromToFields', () => {
 
     await user.click(screen.getByLabelText('To'))
 
-    // From is 16:00, so To starts at 16:15: no hour before 16, and no 16:00, is offered.
-    expect(hourButtons()[0]).toBe('16')
-    expect(screen.queryByRole('button', { name: ':00' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: ':15' })).toBeInTheDocument()
+    // From is 16:00, so To starts at 16:15.
+    expect(offered()[0]).toBe('16:15')
+    expect(offered()).not.toContain('16:00')
   })
 
   it('does not offer past times for From on today', async () => {
@@ -36,9 +41,8 @@ describe('FromToFields', () => {
 
     await user.click(screen.getByLabelText('From'))
 
-    expect(hourButtons()[0]).toBe('14')
-    expect(hourButtons()).not.toContain('13')
-    expect(screen.getByRole('button', { name: 'Now · 14:15' })).toBeInTheDocument()
+    expect(offered()[0]).toBe('14:15 · now')
+    expect(offered()).not.toContain('14:00')
   })
 
   it("stops To at the room's closing time and maximum length", async () => {
@@ -48,7 +52,16 @@ describe('FromToFields', () => {
     await user.click(screen.getByLabelText('To'))
 
     // 16:00 + 2h max = 18:00, earlier than the 20:00 close.
-    expect(hourButtons().at(-1)).toBe('18')
+    expect(offered().at(-1)).toBe('18:00')
+  })
+
+  it('offers midnight as the last end on a 24h day', async () => {
+    const user = userEvent.setup()
+    renderFields()
+
+    await user.click(screen.getByLabelText('To'))
+
+    expect(offered().at(-1)).toBe('24:00 (midnight)')
   })
 
   it('keeps the length when From moves', async () => {
@@ -56,17 +69,17 @@ describe('FromToFields', () => {
     const onChange = renderFields()
 
     await user.click(screen.getByLabelText('From'))
-    await user.click(screen.getByRole('button', { name: '09' }))
+    await user.click(screen.getByRole('option', { name: '09:00' }))
 
     expect(onChange).toHaveBeenCalledWith({ start: '09:00', end: '10:00' })
   })
 
-  it('sets To from the grid', async () => {
+  it('sets To from the list', async () => {
     const user = userEvent.setup()
     const onChange = renderFields()
 
     await user.click(screen.getByLabelText('To'))
-    await user.click(screen.getByRole('button', { name: '18' }))
+    await user.click(screen.getByRole('option', { name: '18:00' }))
 
     expect(onChange).toHaveBeenCalledWith({ start: '16:00', end: '18:00' })
   })

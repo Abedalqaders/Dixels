@@ -38,3 +38,12 @@ export function iconKeyToIconName(iconKey: number): keyof typeof ICONS {
       return 'generic'
   }
 }
+
+/** The closed set of icons a space type can use (see the backend's IconKey enum doc
+ * comment) — picked from swatches rather than uploaded, so every type renders cleanly. */
+export const ICON_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: 'Meeting room' },
+  { value: 1, label: 'Focus pod' },
+  { value: 2, label: 'Desk' },
+  { value: 3, label: 'Generic' },
+]

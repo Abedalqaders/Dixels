@@ -102,44 +102,6 @@
 
 .treeempty { padding: var(--space-4) var(--space-5) var(--space-3); font-size: 13px; color: var(--ink-secondary); }
 
-/* Employees admin table — a real table, not the .tree/.node hierarchy rows: this data is
-   flat and column-shaped (name / contact / status / building), not a parent-child tree, so
-   forcing it into .node's single horizontal flex line just crammed everything into one row
-   with nothing lining up between rows. */
-.employeetable { width: 100%; border-collapse: collapse; }
-.employeetable th {
-  text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--ink-secondary); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle);
-}
-.employeetable td {
-  padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); vertical-align: middle;
-}
-.employeetable tr:last-child td { border-bottom: none; }
-.employeetable tbody tr:hover td { background: var(--surface-sunken); }
-.employee-identity { display: flex; align-items: center; gap: var(--space-3); }
-.employee-name { font-weight: 600; font-size: 15px; line-height: 20px; }
-.employee-username { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
-.employeetable .ctrl { min-width: 200px; }
-.employeetable .col-status { width: 1%; white-space: nowrap; }
-.employeetable .col-building { width: 220px; }
-
-/* row actions — a single kebab button instead of a row of icons, rendered via a portal so
-   it's never clipped by the tree's own scroll container */
-.rowmenu-panel {
-  background: var(--surface-overlay); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-overlay); padding: 5px; min-width: 190px;
-  display: flex; flex-direction: column; gap: 1px; z-index: 100;
-}
-.rowmenu-item {
-  display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius-sm);
-  font-size: 13px; text-align: left; background: none; border: none; cursor: pointer; color: var(--ink-primary); width: 100%;
-}
-.rowmenu-item:hover:not(:disabled) { background: var(--surface-sunken); }
-.rowmenu-item:disabled { opacity: .45; cursor: not-allowed; }
-.rowmenu-item.destructive { color: var(--state-blocked-ink); }
-.rowmenu-item.destructive:hover:not(:disabled) { background: var(--state-blocked-soft); }
-.rowmenu-item svg { width: 14px; height: 14px; flex: none; color: inherit; }
-
 /* search-match highlight */
 mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radius: 3px; padding: 0 1px; }
 
@@ -160,28 +122,6 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .filterchip:hover { color: var(--ink-primary); }
 .filterchip.on { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
 .resultcount { font-size: 12px; color: var(--ink-secondary); }
-
-/* Manage space types */
-.typelist { display: flex; flex-direction: column; gap: var(--space-3); max-height: 360px; overflow-y: auto; padding-right: 2px; }
-.typerow {
-  display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3);
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised);
-}
-.typerow-top { display: flex; align-items: center; gap: var(--space-2); }
-.typerow-top .ctrl { flex: 1; }
-.iconpicker { display: flex; gap: 6px; }
-.iconswatch {
-  width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-sunken);
-  color: var(--ink-secondary); cursor: pointer; transition: background .12s ease, color .12s ease, border-color .12s ease;
-}
-.iconswatch:hover:not(:disabled) { background: var(--surface-raised); color: var(--ink-primary); border-color: var(--border-strong); }
-.iconswatch.on { background: var(--accent-soft); border-color: var(--accent-solid); color: var(--accent-ink); }
-.iconswatch:disabled { opacity: .5; cursor: not-allowed; }
-.iconswatch svg { width: 17px; height: 17px; }
-.typerow-actions { display: flex; gap: 6px; flex: none; }
-.addtype { padding-top: var(--space-3); border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: var(--space-3); }
-.addtype .lbl { display: block; margin-bottom: 6px; }
 
 /* required-field marker for create/edit forms (AddNodeModal, EditDetailsModal) */
 .req { color: var(--state-blocked-ink); margin-left: 2px; }
@@ -295,26 +235,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 }
 
 /* a list re-fetching (next page, new search) stays visible but dimmed instead of blanking */
-.tree.refreshing, .pad.refreshing, .typespage.refreshing { opacity: .55; transition: opacity .15s ease; }
-
-/* building picker — type-to-search combobox */
-.combo { position: relative; min-width: 200px; }
-.combo .ctrl { padding: 7px var(--space-3); font-size: 13px; line-height: 18px; cursor: pointer; }
-.combo .ctrl:focus { cursor: text; }
-.combo-panel {
-  position: absolute; top: calc(100% + 4px); left: 0; min-width: 100%; width: max-content; max-width: 320px; z-index: 100;
-  background: var(--surface-overlay); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-overlay); padding: 5px;
-}
-.combo-panel ul { list-style: none; margin: 0; padding: 0; max-height: 280px; overflow-y: auto; }
-.combo-option {
-  padding: 7px 10px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--ink-primary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.combo-option.none { color: var(--ink-secondary); }
-.combo-option.active { background: var(--surface-sunken); }
-.combo-option[aria-selected="true"] { color: var(--accent-ink); font-weight: 600; }
-.combo-foot { padding: 7px 10px 4px; font-size: 12px; color: var(--ink-secondary); border-top: 1px solid var(--border-subtle); margin-top: 4px; }
+.tree.refreshing, .pad.refreshing { opacity: .55; transition: opacity .15s ease; }
 
 .breadcrumb { font-size: 13px; line-height: 18px; color: var(--ink-secondary); margin-bottom: var(--space-2); }
 .breadcrumb a { color: var(--accent-ink); text-decoration: none; }
@@ -401,11 +322,6 @@ td .m { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
 .linkbtn { background: none; border: none; padding: 0; font: inherit; color: var(--accent-ink); cursor: pointer; }
 .linkbtn:hover { text-decoration: underline; }
 
-/* space-type filter chips above a spaces list */
-.typebar { padding: var(--space-3) var(--space-5) 0; }
-.typechips button { display: inline-flex; align-items: center; gap: 6px; }
-.typechips svg { width: 14px; height: 14px; flex: none; }
-
 @media (max-width: 860px) {
   .explorer, .explorer.collapsed {
     position: static; width: 100%; height: auto; max-height: 280px; align-items: stretch;
@@ -413,6 +329,3 @@ td .m { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
   }
 }
 
-/* Space types page — the manager's list gets the whole card, not a modal's scroll box */
-.typespage { padding: var(--space-5); }
-.typespage .typelist { max-height: none; overflow: visible; }

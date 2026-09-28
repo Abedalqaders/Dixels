@@ -1,5 +1,9 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useEffect, useState } from 'react'
+import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { getBuilding, getBuildings } from '../api/spaceManagementApi'
 
@@ -15,6 +19,7 @@ interface BuildingPickerProps {
   noneLabel: string
   ariaLabel: string
   onChange: (buildingId: string) => void
+  className?: string
 }
 
 interface Option {
@@ -22,18 +27,15 @@ interface Option {
   name: string
 }
 
-// Type-to-search building combobox. Searches the server (20 results at a time) instead of
-// loading every building into a native <select>, which stops being usable past a few dozen
-// options and was hard-capped at 1000.
-export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabel, onChange }: BuildingPickerProps) {
-  const listId = useId()
-  const inputRef = useRef<HTMLInputElement>(null)
-
+// Type-to-search building combobox (shadcn Popover + Command). Searches the server, 20
+// results at a time, instead of loading every building into a list — which stops being
+// usable past a few dozen buildings. cmdk's own filtering is off (shouldFilter={false})
+// because the server already did it.
+export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabel, onChange, className }: BuildingPickerProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebouncedValue(query, 200).trim()
   const [results, setResults] = useState<{ items: Option[]; totalCount: number } | null>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
   const [fetchedName, setFetchedName] = useState<{ id: string; name: string } | null>(null)
 
   const knownName = selectedName ?? (fetchedName?.id === value ? fetchedName.name : null)
@@ -54,109 +56,83 @@ export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabe
     if (!open) return
     let cancelled = false
     getBuildings(token, { filter: debouncedQuery || undefined, maxResultCount: RESULT_LIMIT })
-      .then((r) => {
-        if (cancelled) return
-        setResults({ items: r.items.map((b) => ({ id: b.id, name: b.name })), totalCount: r.totalCount })
-        setActiveIndex(0)
-      })
+      .then((r) => !cancelled && setResults({ items: r.items.map((b) => ({ id: b.id, name: b.name })), totalCount: r.totalCount }))
       .catch(() => !cancelled && setResults({ items: [], totalCount: 0 }))
     return () => {
       cancelled = true
     }
   }, [token, open, debouncedQuery])
 
-  // Index 0 is always the "none" option; results follow.
-  const options: Option[] = [{ id: '', name: noneLabel }, ...(results?.items ?? [])]
-  const displayText = open ? query : value ? (knownName ?? '…') : noneLabel
-
-  function openPanel() {
-    setQuery('')
-    setResults(null)
-    setOpen(true)
-  }
-
-  function close() {
-    setOpen(false)
-    setQuery('')
+  function handleOpenChange(next: boolean) {
+    setOpen(next)
+    if (next) {
+      setQuery('')
+      setResults(null)
+    }
   }
 
   function choose(option: Option) {
-    close()
-    inputRef.current?.blur()
+    setOpen(false)
     if (option.id !== value) {
       if (option.id) setFetchedName({ id: option.id, name: option.name })
       onChange(option.id)
     }
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (!open) return openPanel()
-      const step = e.key === 'ArrowDown' ? 1 : -1
-      setActiveIndex((i) => (i + step + options.length) % options.length)
-    } else if (e.key === 'Enter' && open) {
-      e.preventDefault()
-      const option = options[activeIndex]
-      if (option) choose(option)
-    } else if (e.key === 'Escape' && open) {
-      e.preventDefault()
-      close()
-    }
-  }
-
+  const label = value ? (knownName ?? '…') : noneLabel
   const hiddenCount = results ? results.totalCount - results.items.length : 0
+  // Index 0 is always the "none" option; results follow.
+  const options: Option[] = [{ id: '', name: noneLabel }, ...(results?.items ?? [])]
 
   return (
-    <div className="combo">
-      <input
-        ref={inputRef}
-        className="ctrl"
-        role="combobox"
-        aria-label={ariaLabel}
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        aria-activedescendant={open ? `${listId}-${activeIndex}` : undefined}
-        autoComplete="off"
-        placeholder={open ? 'Type to search buildings…' : undefined}
-        value={displayText}
-        onFocus={openPanel}
-        onBlur={close}
-        onChange={(e) => {
-          setQuery(e.target.value)
-          if (!open) setOpen(true)
-        }}
-        onKeyDown={handleKeyDown}
-      />
-      {open && (
-        // preventDefault on mousedown keeps focus in the input, so picking an option (or
-        // dragging the panel's scrollbar) doesn't blur-and-close before the click lands.
-        <div className="combo-panel" onMouseDown={(e) => e.preventDefault()}>
-          <ul id={listId} role="listbox" aria-label={ariaLabel}>
-            {options.map((option, i) => (
-              <li
-                key={option.id || 'none'}
-                id={`${listId}-${i}`}
-                role="option"
-                aria-selected={option.id === value}
-                className={`combo-option${i === activeIndex ? ' active' : ''}${option.id === '' ? ' none' : ''}`}
-                onMouseEnter={() => setActiveIndex(i)}
-                onClick={() => choose(option)}
-              >
-                {option.name}
-              </li>
-            ))}
-          </ul>
-          {results === null && <p className="combo-foot">Searching…</p>}
-          {results !== null && results.items.length === 0 && <p className="combo-foot">No buildings match “{debouncedQuery}”.</p>}
-          {hiddenCount > 0 && (
-            <p className="combo-foot">
-              {hiddenCount} more — keep typing to narrow down.
-            </p>
-          )}
-        </div>
-      )}
-    </div>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          aria-label={ariaLabel}
+          className={cn('w-56 justify-between font-normal', !value && 'text-muted-foreground', className)}
+        >
+          <span className="truncate">{label}</span>
+          <ChevronsUpDownIcon className="opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Search buildings…" value={query} onValueChange={setQuery} />
+          <CommandList>
+            {results === null ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Searching…</p>
+            ) : (
+              <>
+                <CommandGroup>
+                  {options.map((option) => (
+                    <CommandItem
+                      key={option.id || 'none'}
+                      value={option.id || 'none'}
+                      onSelect={() => choose(option)}
+                      className={cn(option.id === '' && 'text-muted-foreground')}
+                    >
+                      <CheckIcon className={cn(option.id === value ? 'opacity-100' : 'opacity-0')} />
+                      <span className="truncate">{option.name}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                {/* Not CommandEmpty: the "none" option is always listed, so cmdk never sees an empty list. */}
+                {results.items.length === 0 && debouncedQuery && (
+                  <p className="border-t px-3 py-2 text-xs text-muted-foreground">No buildings match “{debouncedQuery}”.</p>
+                )}
+                {hiddenCount > 0 && (
+                  <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+                    {hiddenCount} more — keep typing to narrow down.
+                  </p>
+                )}
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   )
 }

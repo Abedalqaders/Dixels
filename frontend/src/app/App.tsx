@@ -6,11 +6,10 @@ import { DashboardPage } from '../pages/DashboardPage'
 import { BuildingsListPage } from '../features/space-management/routes/BuildingsListPage'
 import { FloorsListPage } from '../features/space-management/routes/FloorsListPage'
 import { SpacesListPage } from '../features/space-management/routes/SpacesListPage'
-import { AllSpacesPage } from '../features/space-management/routes/AllSpacesPage'
 import { SpaceManagementLayout } from '../features/space-management/routes/SpaceManagementLayout'
 import { SpaceTypesPage } from '../features/space-management/routes/SpaceTypesPage'
 import { AdminConstraintsPage } from '../features/space-management/routes/AdminConstraintsPage'
-import { AdminEmployeesPage } from '../features/employees/routes/AdminEmployeesPage'
+import { AdminUsersPage } from '../features/users/routes/AdminUsersPage'
 import { HomePage } from '../pages/HomePage'
 import { EmployeeLayout } from '../components/EmployeeLayout'
 import { FindSpacePage } from '../features/bookings/routes/FindSpacePage'
@@ -47,10 +46,10 @@ function App() {
         <Route path="/admin/buildings" element={<BuildingsListPage />} />
         <Route path="/admin/buildings/:buildingId/floors" element={<FloorsListPage />} />
         <Route path="/admin/buildings/:buildingId/floors/:floorId/spaces" element={<SpacesListPage />} />
-        <Route path="/admin/spaces" element={<AllSpacesPage />} />
       </Route>
-      {/* The flat Floors page was folded into the explorer tree; keep old links working. */}
+      {/* Old admin URLs that have since moved — keep bookmarks working. */}
       <Route path="/admin/floors" element={<Navigate to="/admin/buildings" replace />} />
+      <Route path="/admin/employees" element={<Navigate to="/admin/users" replace />} />
       <Route
         path="/admin/space-types"
         element={
@@ -68,10 +67,10 @@ function App() {
         }
       />
       <Route
-        path="/admin/employees"
+        path="/admin/users"
         element={
           <RequireAdmin>
-            <AdminEmployeesPage />
+            <AdminUsersPage />
           </RequireAdmin>
         }
       />

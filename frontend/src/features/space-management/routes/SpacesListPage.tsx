@@ -5,7 +5,7 @@ import { SearchIcon } from '../../../components/icons'
 import { ICONS, iconKeyToIconName } from '../components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '../components/actionIcons'
 import { RowActionsMenu } from '../components/RowActionsMenu'
-import { SpaceTypeChips } from '../components/SpaceTypeChips'
+import { SpaceTypeFilter } from '../components/SpaceTypeFilter'
 import { HighlightedText } from '../components/HighlightedText'
 import { Pager } from '../../../components/Pager'
 import { AddNodeModal } from '../components/AddNodeModal'
@@ -104,6 +104,7 @@ export function SpacesListPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
+                <SpaceTypeFilter spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
                 <label className="chk">
                   <input
                     type="checkbox"
@@ -122,9 +123,6 @@ export function SpacesListPage() {
               </div>
             </div>
 
-            <div className="typebar">
-              <SpaceTypeChips spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
-            </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <p className="treeempty">Loading spaces…</p>}

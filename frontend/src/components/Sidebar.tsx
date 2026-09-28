@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '../auth/roles'
 import { useAuthRole } from '../auth/useAuthRole'
-import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, SpacesIcon, TagIcon } from './icons'
+import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
 import logo from '../assets/logo.png'
 
 type NavItemProps = {
@@ -54,15 +54,14 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
 
-  // Locations/All spaces/Space types collapse under one "Space management" toggle. `null` means
+  // Hierarchy/Space types collapse under one "Space management" toggle. `null` means
   // "not explicitly toggled yet" — it then follows whether the current route is one of the
-  // three, so opening a space-management page always shows it expanded without a click.
+  // two, so opening a space-management page always shows it expanded without a click.
   // Once the admin explicitly opens/closes it, that choice sticks regardless of route.
   const [spaceManagementManualOpen, setSpaceManagementManualOpen] = useState<boolean | null>(null)
   const isSpaceManagementRoute =
     location.pathname === '/admin/buildings' ||
     location.pathname.startsWith('/admin/buildings/') ||
-    location.pathname === '/admin/spaces' ||
     location.pathname === '/admin/space-types'
   const spaceManagementOpen = spaceManagementManualOpen ?? isSpaceManagementRoute
 
@@ -87,14 +86,6 @@ export function Sidebar() {
       {!isAdmin && (
         <>
           <NavItem
-            to="/find-space"
-            active={location.pathname === '/find-space'}
-            onNavigate={closeMobile}
-            icon={<SearchIcon />}
-          >
-            Find a space
-          </NavItem>
-          <NavItem
             to="/my-calendar"
             active={false}
             disabled
@@ -102,6 +93,14 @@ export function Sidebar() {
             icon={<CalendarLinesIcon />}
           >
             My calendar
+          </NavItem>
+          <NavItem
+            to="/find-space"
+            active={location.pathname === '/find-space'}
+            onNavigate={closeMobile}
+            icon={<SearchIcon />}
+          >
+            Find a space
           </NavItem>
         </>
       )}
@@ -127,15 +126,7 @@ export function Sidebar() {
                   onNavigate={closeMobile}
                   icon={<BuildingDoorIcon />}
                 >
-                  Locations
-                </NavItem>
-                <NavItem
-                  to="/admin/spaces"
-                  active={location.pathname === '/admin/spaces'}
-                  onNavigate={closeMobile}
-                  icon={<SpacesIcon />}
-                >
-                  All spaces
+                  Hierarchy
                 </NavItem>
                 <NavItem
                   to="/admin/space-types"
@@ -149,12 +140,12 @@ export function Sidebar() {
             </div>
           </div>
           <NavItem
-            to="/admin/employees"
-            active={location.pathname === '/admin/employees'}
+            to="/admin/users"
+            active={location.pathname === '/admin/users'}
             onNavigate={closeMobile}
             icon={<PeopleIcon />}
           >
-            Employees
+            Users
           </NavItem>
         </>
       )}

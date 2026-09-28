@@ -74,9 +74,7 @@ function writeCollapsed(value: boolean) {
 // never go in the tree at all (a floor can hold hundreds of desks, so they stay in the
 // paged list on the right).
 //
-// It has two modes, picked by the page beside it. On the Buildings drill-down pages a click
-// navigates (building → its floors, floor → its spaces). On All spaces it filters instead,
-// writing ?building= / ?floor= into that page's URL and keeping its other filters.
+// A click navigates: building → its floors, floor → its spaces.
 //
 // Lives in SpaceManagementLayout, so it stays mounted (and keeps what it loaded) while the
 // admin moves between pages.
@@ -85,30 +83,18 @@ export function SpaceExplorer() {
   const token = auth.user?.access_token ?? ''
   const location = useLocation()
 
-  const spacesMode = location.pathname === '/admin/spaces'
-  const searchParams = new URLSearchParams(location.search)
   // The layout sits above the page routes, so useParams() here wouldn't see :buildingId —
-  // read the selection straight off the path (or the query string, on All spaces) instead.
+  // read the selection straight off the path instead.
   const floorMatch = matchPath('/admin/buildings/:buildingId/floors/:floorId/*', location.pathname)
   const buildingMatch = matchPath('/admin/buildings/:buildingId/*', location.pathname)
-  const activeBuildingId = spacesMode ? (searchParams.get('building') ?? '') : (buildingMatch?.params.buildingId ?? '')
-  const activeFloorId = spacesMode ? (searchParams.get('floor') ?? '') : (floorMatch?.params.floorId ?? '')
-  const rootIsCurrent = spacesMode ? !activeBuildingId && !activeFloorId : location.pathname === '/admin/buildings'
+  const activeBuildingId = buildingMatch?.params.buildingId ?? ''
+  const activeFloorId = floorMatch?.params.floorId ?? ''
+  const rootIsCurrent = location.pathname === '/admin/buildings'
 
   function scopeLink(buildingId?: string, floorId?: string) {
-    if (!spacesMode) {
-      if (buildingId && floorId) return `/admin/buildings/${buildingId}/floors/${floorId}/spaces`
-      if (buildingId) return `/admin/buildings/${buildingId}/floors`
-      return '/admin/buildings'
-    }
-    const next = new URLSearchParams(location.search)
-    next.delete('page')
-    next.delete('building')
-    next.delete('floor')
-    if (buildingId) next.set('building', buildingId)
-    if (floorId) next.set('floor', floorId)
-    const qs = next.toString()
-    return `/admin/spaces${qs ? `?${qs}` : ''}`
+    if (buildingId && floorId) return `/admin/buildings/${buildingId}/floors/${floorId}/spaces`
+    if (buildingId) return `/admin/buildings/${buildingId}/floors`
+    return '/admin/buildings'
   }
 
   const [collapsed, setCollapsed] = useState(readCollapsed)

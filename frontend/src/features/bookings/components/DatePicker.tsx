@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
+import { ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { formatDate } from '../../../lib/time/buildingTime'
 import type { IsoDate } from '../../../lib/time/buildingTime'
 
 interface DatePickerProps {
@@ -26,21 +26,25 @@ function toIso(date: Date): IsoDate {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/** A date field that opens a month calendar; dates outside the booking horizon can't be picked. */
+/** shadcn's basic date picker — a button that opens a plain month calendar (‹ › arrows),
+ * limited to the booking horizon: dates outside it are disabled and the arrows stop at its
+ * first and last months. */
 export function DatePicker({ id, value, min, max, onChange }: DatePickerProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id={id} variant="outline" className="w-full justify-start font-mono font-normal">
-          <CalendarIcon className="text-muted-foreground" />
-          {formatDate(value)}
+        <Button id={id} variant="outline" className="w-full justify-between text-left font-normal">
+          {format(toDate(value), 'PPP')}
+          <ChevronDownIcon className="text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto overflow-hidden p-0" align="start">
         <Calendar
           mode="single"
+          startMonth={toDate(min)}
+          endMonth={toDate(max)}
           selected={toDate(value)}
           defaultMonth={toDate(value)}
           disabled={[{ before: toDate(min) }, { after: toDate(max) }]}

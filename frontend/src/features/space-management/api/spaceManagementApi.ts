@@ -9,7 +9,7 @@
 // there's no generated client here, only the interfaces/DTOs.
 //
 // The request/ApiError/query plumbing itself lives in ../../../lib/api/httpClient — shared
-// with employeesApi.ts, since it's generic HTTP-client code, not space-management-specific.
+// with usersApi.ts, since it's generic HTTP-client code, not space-management-specific.
 
 import { request, query } from '../../../lib/api/httpClient'
 import type { ListResultDto, PagedResultDto } from '../../../lib/api/httpClient'
