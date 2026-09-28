@@ -24,11 +24,12 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
     public async Task<List<IdentityUser>> GetListAsync(
         string? filter,
         Guid? buildingId,
+        Guid? roleId,
         int skipCount,
         int maxResultCount,
         CancellationToken cancellationToken = default)
     {
-        var query = await BuildQueryAsync(filter, buildingId);
+        var query = await BuildQueryAsync(filter, buildingId, roleId);
 
         return await query
             .OrderBy(u => u.UserName)
@@ -37,13 +38,13 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<long> GetCountAsync(string? filter, Guid? buildingId, CancellationToken cancellationToken = default)
+    public async Task<long> GetCountAsync(string? filter, Guid? buildingId, Guid? roleId, CancellationToken cancellationToken = default)
     {
-        var query = await BuildQueryAsync(filter, buildingId);
+        var query = await BuildQueryAsync(filter, buildingId, roleId);
         return await query.LongCountAsync(cancellationToken);
     }
 
-    private async Task<IQueryable<IdentityUser>> BuildQueryAsync(string? filter, Guid? buildingId)
+    private async Task<IQueryable<IdentityUser>> BuildQueryAsync(string? filter, Guid? buildingId, Guid? roleId)
     {
         var dbContext = await _dbContextProvider.GetDbContextAsync();
         // Tracked on purpose: ABP copies mapped extra-property columns (BuildingId) into
@@ -56,6 +57,12 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
             // The extra property is a mapped column (DixelsEfCoreEntityExtensionMappings),
             // so EF.Property turns this into a plain WHERE "BuildingId" = @id.
             query = query.Where(u => EF.Property<Guid?>(u, DixelsUserConsts.BuildingIdPropertyName) == buildingId);
+        }
+
+        if (roleId is not null)
+        {
+            // AbpUserRoles link rows: an EXISTS subquery, not a join, so no user appears twice.
+            query = query.Where(u => u.Roles.Any(r => r.RoleId == roleId));
         }
 
         if (!filter.IsNullOrWhiteSpace())

@@ -1,4 +1,4 @@
-import { OwnOverlapPolicy } from '../api/spaceManagementApi'
+import { OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
 
 // What each choice means to the people booking — shown under the picker.
 export const OWN_OVERLAP_OPTIONS: { value: OwnOverlapPolicy; label: string; hint: string }[] = [

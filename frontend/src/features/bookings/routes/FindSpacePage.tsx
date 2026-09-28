@@ -7,26 +7,27 @@ import { Card } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { Toast, useToast } from '../../../components/Toast'
-import { useAsync } from '../../../hooks/useAsync'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { dateOf, formatDate, fromMinutes, nowInZone, timeOf, toLocalDateTime, toMinutes } from '../../../lib/time/buildingTime'
-import { ICONS, iconKeyToIconName } from '../../space-management/components/spaceTypeIcons'
-import { ApiError, getMyBookableBuilding, searchAvailability } from '../api/bookingsApi'
-import type { BookableBuildingDto, BookingDto, SearchAvailabilityInput, SpaceAvailabilityDto } from '../api/bookingsApi'
-import { BookingForm } from '../components/BookingForm'
-import { DayBar } from '../components/DayBar'
-import { FloorFilter } from '../components/FloorFilter'
-import { OwnClashNotice } from '../components/OwnClashNotice'
-import { SearchBar } from '../components/SearchBar'
-import type { SearchValues } from '../components/SearchBar'
-import { dayAxis } from '../dayAxis'
-import { suggestWindow } from '../suggestSlot'
-import type { Slot } from '../suggestSlot'
-import { readLastDuration } from '../preferences'
-import { useBookingsChanged } from '../bookingEvents'
-import type { DayBarPick } from '../components/DayBar'
-import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '../../../components/LoadingSkeletons'
+import { Toast, useToast } from '@/components/Toast'
+import { useAsync } from '@/hooks/useAsync'
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { dateOf, formatDate, fromMinutes, nowInZone, timeOf, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
+import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
+import { ApiError, getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookingDto, SearchAvailabilityInput, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
+import { BookingForm } from '@/features/bookings/components/BookingForm'
+import { DayBar } from '@/features/bookings/components/DayBar'
+import { FloorFilter } from '@/features/bookings/components/FloorFilter'
+import { OwnClashNotice } from '@/features/bookings/components/OwnClashNotice'
+import { SearchBar } from '@/features/bookings/components/SearchBar'
+import type { SearchValues } from '@/features/bookings/components/SearchBar'
+import { dayAxis } from '@/features/bookings/dayAxis'
+import { suggestWindow } from '@/features/bookings/suggestSlot'
+import type { Slot } from '@/features/bookings/suggestSlot'
+import { readLastDuration } from '@/features/bookings/preferences'
+import { useBookingsChanged } from '@/features/bookings/bookingEvents'
+import type { DayBarPick } from '@/features/bookings/components/DayBar'
+import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/LoadingSkeletons'
 
 /**
  * Find a space answers one question: "what can I book for this time?". Pick when and for
@@ -37,7 +38,12 @@ import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '../../../compo
 export function FindSpacePage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
-  const { status, data: building, error } = useAsync(() => getMyBookableBuilding(token), [token])
+  // keepPreviousData: a refetch on returning to the tab swaps in the fresh building (rules,
+  // floors, spaces) in place, instead of dropping back to the skeleton and losing the search.
+  const { status, data: building, error, refetch } = useAsync(() => getMyBookableBuilding(token), [token], {
+    keepPreviousData: true,
+  })
+  useRefetchOnFocus(refetch)
 
   return (
     <TooltipProvider>
@@ -127,6 +133,8 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
   // Made here or cancelled on My calendar: either way the day bars are out of date.
   useBookingsChanged(results.refetch)
+  // Someone else's booking, or an admin's rule change, while this tab was in the background.
+  useRefetchOnFocus(results.refetch)
 
   function handleBooked(created: BookingDto) {
     setBooking(null)
@@ -225,7 +233,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             </p>
 
             {free.length > 0 && (
-              <ul className="mt-3 grid gap-2">
+              <ul className="mt-3 grid list-none gap-2 p-0">
                 {free.map((room) => (
                   <li key={room.space.id}>
                     <ResultRow room={room}>
@@ -257,7 +265,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <ul className="mt-2 grid gap-2">
+                  <ul className="mt-2 grid list-none gap-2 p-0">
                     {taken.map((room) => (
                       <li key={room.space.id}>
                         <ResultRow room={room} muted>

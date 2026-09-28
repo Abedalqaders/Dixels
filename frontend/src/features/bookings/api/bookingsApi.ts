@@ -1,6 +1,6 @@
-import { ApiError, query, request } from '../../../lib/api/httpClient'
-import type { FieldValueDto, OperatingWindowDto } from '../../space-management/api/spaceManagementApi'
-import type { IsoDate } from '../../../lib/time/buildingTime'
+import { ApiError, query, request } from '@/lib/api/httpClient'
+import type { FieldValueDto, OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
+import type { IsoDate } from '@/lib/time/buildingTime'
 
 export { ApiError }
 

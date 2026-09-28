@@ -1,5 +1,5 @@
-import { addDays } from '../../lib/time/buildingTime'
-import type { IsoDate } from '../../lib/time/buildingTime'
+import { addDays } from '@/lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
 
 // Calendar arithmetic on "YYYY-MM-DD" strings — the building's calendar days, never the
 // browser's. Weeks start on Sunday, matching the Sun–Thu work week the product targets.

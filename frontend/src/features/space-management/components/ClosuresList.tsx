@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { OverrideEffect, ReasonCategory } from '../api/spaceManagementApi'
-import type { AvailabilityOverrideDto, CreateAvailabilityOverrideDto, OverrideScope } from '../api/spaceManagementApi'
+import { OverrideEffect, ReasonCategory } from '@/features/space-management/api/spaceManagementApi'
+import type { AvailabilityOverrideDto, CreateAvailabilityOverrideDto, OverrideScope } from '@/features/space-management/api/spaceManagementApi'
 import { ChevronIcon, TrashIcon } from './actionIcons'
 
 // Dated closures (or special openings) — a real, repeatable list per scope, not the

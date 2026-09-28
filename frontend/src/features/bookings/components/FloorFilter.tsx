@@ -1,6 +1,6 @@
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { BookableFloorDto, SpaceAvailabilityDto } from '../api/bookingsApi'
+import type { BookableFloorDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 
 interface FloorFilterProps {
   /** The building's floors, in its own order. */

@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils'
-import { addDays, timeOf } from '../../../lib/time/buildingTime'
-import type { IsoDate } from '../../../lib/time/buildingTime'
-import type { BookingDto } from '../../bookings/api/bookingsApi'
-import { dayOfMonth, monthGrid, startOfMonth } from '../calendarDates'
+import { addDays, timeOf } from '@/lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
+import type { BookingDto } from '@/features/bookings/api/bookingsApi'
+import { dayOfMonth, monthGrid, startOfMonth } from '@/features/calendar/calendarDates'
 
 // More than this per day and the rest fold into "+N more".
 const MAX_CHIPS = 3

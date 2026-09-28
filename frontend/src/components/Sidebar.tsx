@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { getDisplayName } from '../auth/roles'
-import { useAuthRole } from '../auth/useAuthRole'
+import { getDisplayName } from '@/features/auth/roles'
+import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
-import logo from '../assets/logo.png'
+import logo from '@/assets/logo.png'
 
 type NavItemProps = {
   to: string
@@ -45,6 +45,7 @@ function ChevronDownIcon() {
 
 export function Sidebar() {
   const auth = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthRole()
   const displayName = getDisplayName(auth.user)
@@ -160,7 +161,7 @@ export function Sidebar() {
         <button
           className="out"
           title="Sign out"
-          onClick={() => auth.signoutRedirect()}
+          onClick={() => navigate('/signing-out')}
         >
           <SignOutIcon />
         </button>

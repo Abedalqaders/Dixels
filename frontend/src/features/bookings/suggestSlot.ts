@@ -1,6 +1,6 @@
-import { addDays, fromMinutes, nextSlot, nowInZone, toMinutes } from '../../lib/time/buildingTime'
-import type { HhMm, IsoDate } from '../../lib/time/buildingTime'
-import type { BookableBuildingDto, BookableSpaceDto } from './api/bookingsApi'
+import { addDays, fromMinutes, nextSlot, nowInZone, toMinutes } from '@/lib/time/buildingTime'
+import type { HhMm, IsoDate } from '@/lib/time/buildingTime'
+import type { BookableBuildingDto, BookableSpaceDto } from '@/features/bookings/api/bookingsApi'
 import { readLastDuration } from './preferences'
 
 const DAY_MINUTES = 24 * 60

@@ -1,13 +1,13 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
-import { fromMinutes, timeOf } from '../../../lib/time/buildingTime'
-import type { IsoDate } from '../../../lib/time/buildingTime'
-import type { BookingDto } from '../../bookings/api/bookingsApi'
-import { dayOfMonth, shortWeekday } from '../calendarDates'
-import { bookingMinutes, layoutDay } from '../dayLayout'
-import { dragHint } from '../durationLimits'
-import type { DurationLimits } from '../durationLimits'
+import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
+import type { BookingDto } from '@/features/bookings/api/bookingsApi'
+import { dayOfMonth, shortWeekday } from '@/features/calendar/calendarDates'
+import { bookingMinutes, layoutDay } from '@/features/calendar/dayLayout'
+import { dragHint } from '@/features/calendar/durationLimits'
+import type { DurationLimits } from '@/features/calendar/durationLimits'
 
 // One hour of the grid, in pixels. 15 minutes = 12px — big enough to aim a drag at.
 export const HOUR_PX = 48

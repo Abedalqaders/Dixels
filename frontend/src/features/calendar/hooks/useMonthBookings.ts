@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { addDays } from '../../lib/time/buildingTime'
-import type { IsoDate } from '../../lib/time/buildingTime'
-import { getMyBookings } from '../bookings/api/bookingsApi'
-import type { BookingDto } from '../bookings/api/bookingsApi'
-import { addMonths, monthGrid } from './calendarDates'
+import { addDays } from '@/lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
+import { getMyBookings } from '@/features/bookings/api/bookingsApi'
+import type { BookingDto } from '@/features/bookings/api/bookingsApi'
+import { addMonths, monthGrid } from '@/features/calendar/calendarDates'
 
 /**
  * My bookings, one month grid at a time (the Sunday before the 1st to the Saturday after

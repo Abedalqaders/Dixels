@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SpaceAvailabilityDto } from '../bookings/api/bookingsApi'
+import type { SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { groupUnavailable } from './unavailableGroups'
 
 const C = 'Dixels:Bookings:'

@@ -11,4 +11,9 @@ public static class DixelsUserConsts
     /// Stored as its own <c>AbpUsers.BuildingId</c> column, not inside the ExtraProperties
     /// JSON, so the Users list can filter by it in SQL.</summary>
     public const string BuildingIdPropertyName = "BuildingId";
+
+    /// <summary>Not a stored property: the key the user list reads from its input's extra
+    /// properties (<c>?ExtraProperties[Role]=employee</c>) to return only one role's members.
+    /// ABP's own list has no role filter.</summary>
+    public const string RoleFilterKey = "Role";
 }

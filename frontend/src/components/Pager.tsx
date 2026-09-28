@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { PAGE_SIZE_OPTIONS } from '../hooks/useListParams'
+import { PAGE_SIZE_OPTIONS } from '@/hooks/useListParams'
 
 interface PagerProps {
   /** Zero-indexed current page. */

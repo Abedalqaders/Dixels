@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { getDisplayName } from '../auth/roles'
-import { useAuthRole } from '../auth/useAuthRole'
-import { CalendarIcon, ClockIcon } from '../components/icons'
-import logo from '../assets/logo.png'
-import '../styles/tokens.css'
-import '../styles/base.css'
-import '../styles/login.css'
+import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
+import { clearSignedOut, wasJustSignedOut } from '@/features/auth/signOutNotice'
+import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
+import { CalendarIcon, ClockIcon } from '@/components/icons'
+import logo from '@/assets/logo.png'
+import '@/styles/tokens.css'
+import '@/styles/base.css'
+import '@/styles/login.css'
 
 // Root route. Also where signoutRedirect() sends the user back to, so it
 // doubles as the "signed out" landing page from the mock.
@@ -17,14 +20,27 @@ import '../styles/login.css'
 export function HomePage() {
   const auth = useAuth()
   const { landingPath } = useAuthRole()
+  // Read once, cleared in an effect rather than in the initializer: StrictMode calls the
+  // initializer twice in development, and the second call would find the flag gone.
+  const [signedOut] = useState(wasJustSignedOut)
+  const [redirecting, setRedirecting] = useState(false)
 
+  useEffect(() => {
+    if (signedOut) clearSignedOut()
+  }, [signedOut])
+
+  // Already signed in (e.g. opened the site again): go straight to their home page.
   if (auth.isAuthenticated) {
-    return (
-      <div style={{ padding: 24 }}>
-        <p>You're signed in as {getDisplayName(auth.user)}.</p>
-        <a href={landingPath}>Go to your dashboard</a>
-      </div>
-    )
+    return <Navigate to={landingPath} replace />
+  }
+
+  if (redirecting) {
+    return <AuthStatusScreen state="busy" title="Taking you to sign in…" detail="Opening your organization's sign-in page." />
+  }
+
+  function signIn() {
+    setRedirecting(true)
+    auth.signinRedirect().catch(() => setRedirecting(false))
   }
 
   return (
@@ -52,10 +68,18 @@ export function HomePage() {
 
       <div className="formwrap">
         <div className="logincard">
+          {signedOut && (
+            <p className="signedout" role="status">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12.5 10 17.5 19 7.5" />
+              </svg>
+              You're signed out. Sign in again anytime.
+            </p>
+          )}
           <h1>Sign in</h1>
           <p className="loginsub">Use your Email to continue.</p>
 
-          <button className="btn loginbtn" onClick={() => auth.signinRedirect()}>
+          <button className="btn loginbtn" onClick={signIn}>
             Sign in with your Email
           </button>
 

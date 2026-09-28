@@ -1,5 +1,5 @@
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react'
-import type { PreviewState } from '../hooks/useBookingPreview'
+import type { PreviewState } from '@/features/bookings/hooks/useBookingPreview'
 import { OwnClashNotice } from './OwnClashNotice'
 
 interface VerdictPanelProps {

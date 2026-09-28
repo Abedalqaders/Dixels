@@ -1,6 +1,7 @@
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Dixels.Identity;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
@@ -44,12 +45,17 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
         maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0)));
 
     // Unique per test: the fixture's database is shared by every test in the run.
-    private Task<IdentityUser> CreateUserAsync(Guid? buildingId = null) => WithUnitOfWorkAsync(async () =>
+    private Task<IdentityUser> CreateUserAsync(Guid? buildingId = null, string? role = null) => WithUnitOfWorkAsync(async () =>
     {
         var tag = Guid.NewGuid().ToString("N")[..10];
         var user = new IdentityUser(Guid.NewGuid(), "u" + tag, $"{tag}@test.io") { Name = "Test", Surname = tag };
         user.SetBuildingId(buildingId);
         (await _userManager.CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
+        if (role is not null)
+        {
+            (await _userManager.AddToRoleAsync(user, role)).Succeeded.ShouldBeTrue();
+        }
+
         return user;
     });
 
@@ -108,6 +114,49 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
 
         result.TotalCount.ShouldBe(1);
         result.Items.ShouldHaveSingleItem().Id.ShouldBe(assigned.Id);
+    }
+
+    [Fact]
+    public async Task List_filters_by_role()
+    {
+        // The surname tag keeps the count to this test's users on the shared database.
+        var employee = await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
+        var noRole = await CreateUserAsync();
+
+        var input = new GetIdentityUsersInput { Filter = employee.Surname };
+        input.ExtraProperties[DixelsUserConsts.RoleFilterKey] = RoleDataSeedContributor.EmployeeRoleName;
+        var result = await _identityUserAppService.GetListAsync(input);
+
+        result.Items.ShouldHaveSingleItem().Id.ShouldBe(employee.Id);
+
+        input.Filter = noRole.Surname;
+        (await _identityUserAppService.GetListAsync(input)).TotalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task List_filters_by_role_and_building_together()
+    {
+        var building = await CreateBuildingAsync();
+        var employeeHere = await CreateUserAsync(building.Id, RoleDataSeedContributor.EmployeeRoleName);
+        await CreateUserAsync(building.Id);
+        await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
+
+        var input = new GetIdentityUsersInput();
+        input.ExtraProperties[BuildingIdKey] = building.Id.ToString();
+        input.ExtraProperties[DixelsUserConsts.RoleFilterKey] = RoleDataSeedContributor.EmployeeRoleName;
+        var result = await _identityUserAppService.GetListAsync(input);
+
+        result.TotalCount.ShouldBe(1);
+        result.Items.ShouldHaveSingleItem().Id.ShouldBe(employeeHere.Id);
+    }
+
+    [Fact]
+    public async Task List_for_an_unknown_role_is_empty()
+    {
+        var input = new GetIdentityUsersInput();
+        input.ExtraProperties[DixelsUserConsts.RoleFilterKey] = "no-such-role";
+
+        (await _identityUserAppService.GetListAsync(input)).TotalCount.ShouldBe(0);
     }
 
     [Fact]

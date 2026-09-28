@@ -1,6 +1,6 @@
-import { dateOf, timeOf, toMinutes } from '../../lib/time/buildingTime'
-import type { IsoDate } from '../../lib/time/buildingTime'
-import type { BookableBuildingDto, BookingDto } from '../bookings/api/bookingsApi'
+import { dateOf, timeOf, toMinutes } from '@/lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
+import type { BookableBuildingDto, BookingDto } from '@/features/bookings/api/bookingsApi'
 
 export interface Placed<T> {
   item: T

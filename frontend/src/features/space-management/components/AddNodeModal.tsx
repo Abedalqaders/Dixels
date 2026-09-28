@@ -5,8 +5,8 @@ import {
   createBuilding,
   createFloor,
   createSpace,
-} from '../api/spaceManagementApi'
-import type { OperatingWindowDto, SpaceTypeDto } from '../api/spaceManagementApi'
+} from '@/features/space-management/api/spaceManagementApi'
+import type { OperatingWindowDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 
 export type ModalState =
   | { kind: 'building' }

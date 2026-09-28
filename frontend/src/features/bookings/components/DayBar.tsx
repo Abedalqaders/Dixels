@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
-import { fromMinutes } from '../../../lib/time/buildingTime'
-import type { DayRangeDto } from '../api/bookingsApi'
-import type { DayAxis } from '../dayAxis'
-import { clickRange, dragRange, freeStretchAt } from '../dragRange'
-import type { FreeTimeRules, MinuteRange } from '../dragRange'
+import { fromMinutes } from '@/lib/time/buildingTime'
+import type { DayRangeDto } from '@/features/bookings/api/bookingsApi'
+import type { DayAxis } from '@/features/bookings/dayAxis'
+import { clickRange, dragRange, freeStretchAt } from '@/features/bookings/dragRange'
+import type { FreeTimeRules, MinuteRange } from '@/features/bookings/dragRange'
 
 export interface DayBarPick {
   rules: FreeTimeRules

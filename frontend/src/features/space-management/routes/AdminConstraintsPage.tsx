@@ -1,27 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { Sidebar } from '../../../components/Sidebar'
-import { useAsync } from '../../../hooks/useAsync'
-import { useUnsavedChangesWarning } from '../hooks/useUnsavedChangesWarning'
-import { Toast, useToast } from '../../../components/Toast'
-import { EffectiveValueStrip } from '../components/EffectiveValueStrip'
-import type { EffectiveItem, EffectiveSource } from '../components/EffectiveValueStrip'
-import { BuildingLevelFields } from '../components/BuildingLevelFields'
-import { OWN_OVERLAP_OPTIONS } from '../domain/ownOverlapPolicy'
-import type { BuildingDraft } from '../components/BuildingLevelFields'
-import { FloorLevelFields } from '../components/FloorLevelFields'
-import type { FloorDraft } from '../components/FloorLevelFields'
-import { SpaceLevelFields } from '../components/SpaceLevelFields'
-import type { SpaceDraft } from '../components/SpaceLevelFields'
-import { ClosuresList } from '../components/ClosuresList'
-import { ResetToParentButton } from '../components/ResetToParentButton'
-import { buildingDraftEquals, floorDraftEquals, spaceDraftEquals } from '../components/draftEquality'
-import { minutesToHours } from '../components/DurationPicker'
-import { OperatingDays } from '../domain/operatingDays'
-import { OperatingWindow } from '../domain/operatingWindow'
-import { isCurrentlyClosed } from '../domain/constraintResolver'
-import type { OverrideWindow } from '../domain/constraintResolver'
+import { Sidebar } from '@/components/Sidebar'
+import { useAsync } from '@/hooks/useAsync'
+import { useUnsavedChangesWarning } from '@/features/space-management/hooks/useUnsavedChangesWarning'
+import { Toast, useToast } from '@/components/Toast'
+import { EffectiveValueStrip } from '@/features/space-management/components/EffectiveValueStrip'
+import type { EffectiveItem, EffectiveSource } from '@/features/space-management/components/EffectiveValueStrip'
+import { BuildingLevelFields } from '@/features/space-management/components/BuildingLevelFields'
+import { OWN_OVERLAP_OPTIONS } from '@/features/space-management/ownOverlapPolicy'
+import type { BuildingDraft } from '@/features/space-management/components/BuildingLevelFields'
+import { FloorLevelFields } from '@/features/space-management/components/FloorLevelFields'
+import type { FloorDraft } from '@/features/space-management/components/FloorLevelFields'
+import { SpaceLevelFields } from '@/features/space-management/components/SpaceLevelFields'
+import type { SpaceDraft } from '@/features/space-management/components/SpaceLevelFields'
+import { ClosuresList } from '@/features/space-management/components/ClosuresList'
+import { ResetToParentButton } from '@/features/space-management/components/ResetToParentButton'
+import { buildingDraftEquals, floorDraftEquals, spaceDraftEquals } from '@/features/space-management/components/draftEquality'
+import { minutesToHours } from '@/features/space-management/components/DurationPicker'
+import { OperatingDays } from '@/features/space-management/operatingDays'
+import { OperatingWindow } from '@/features/space-management/operatingWindow'
+import { isCurrentlyClosed } from '@/features/space-management/constraintResolver'
+import type { OverrideWindow } from '@/features/space-management/constraintResolver'
 import {
   ApiError,
   getBuilding,
@@ -37,17 +37,17 @@ import {
   updateSpaceConstraints,
   OverrideScope,
   OverrideEffect,
-} from '../api/spaceManagementApi'
+} from '@/features/space-management/api/spaceManagementApi'
 import type {
   AvailabilityOverrideDto,
   CreateAvailabilityOverrideDto,
   OperatingWindowDto,
-} from '../api/spaceManagementApi'
-import '../../../styles/tokens.css'
-import '../../../styles/base.css'
-import '../../../styles/admin.css'
-import '../../../styles/login.css'
-import { FormSkeleton } from '../../../components/LoadingSkeletons'
+} from '@/features/space-management/api/spaceManagementApi'
+import '@/styles/tokens.css'
+import '@/styles/base.css'
+import '@/styles/admin.css'
+import '@/styles/login.css'
+import { FormSkeleton } from '@/components/LoadingSkeletons'
 
 type Level = 'building' | 'floor' | 'space'
 

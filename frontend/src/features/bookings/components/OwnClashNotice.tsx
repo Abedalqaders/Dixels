@@ -1,5 +1,5 @@
 import { TriangleAlert } from 'lucide-react'
-import type { BookingViolationDto } from '../api/bookingsApi'
+import type { BookingViolationDto } from '@/features/bookings/api/bookingsApi'
 
 /**
  * "Heads-up: you already have Desk 7 booked Tue 29 Sep 10:00–12:00." — shown wherever a

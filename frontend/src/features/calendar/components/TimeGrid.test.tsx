@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { buildDurationLimits } from '../durationLimits'
+import { buildDurationLimits } from '@/features/calendar/durationLimits'
 import { bookingsByDay, HOUR_PX, TimeGrid } from './TimeGrid'
 
 // jsdom has no layout: every column starts at y = 0, so a minute's y is just its offset.

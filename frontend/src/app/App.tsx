@@ -1,25 +1,27 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { RequireAuth } from '../auth/RequireAuth'
-import { RequireAdmin } from '../auth/RequireAdmin'
-import { CallbackPage } from '../pages/CallbackPage'
-import { DashboardPage } from '../pages/DashboardPage'
-import { BuildingsListPage } from '../features/space-management/routes/BuildingsListPage'
-import { FloorsListPage } from '../features/space-management/routes/FloorsListPage'
-import { SpacesListPage } from '../features/space-management/routes/SpacesListPage'
-import { SpaceManagementLayout } from '../features/space-management/routes/SpaceManagementLayout'
-import { SpaceTypesPage } from '../features/space-management/routes/SpaceTypesPage'
-import { AdminConstraintsPage } from '../features/space-management/routes/AdminConstraintsPage'
-import { AdminUsersPage } from '../features/users/routes/AdminUsersPage'
-import { HomePage } from '../pages/HomePage'
-import { EmployeeLayout } from '../components/EmployeeLayout'
-import { FindSpacePage } from '../features/bookings/routes/FindSpacePage'
-import { MyCalendarPage } from '../features/calendar/routes/MyCalendarPage'
+import { RequireAuth } from '@/features/auth/components/RequireAuth'
+import { RequireAdmin } from '@/features/auth/components/RequireAdmin'
+import { CallbackPage } from '@/features/auth/routes/CallbackPage'
+import { SignOutPage } from '@/features/auth/routes/SignOutPage'
+import { DashboardPage } from '@/features/dashboard/routes/DashboardPage'
+import { BuildingsListPage } from '@/features/space-management/routes/BuildingsListPage'
+import { FloorsListPage } from '@/features/space-management/routes/FloorsListPage'
+import { SpacesListPage } from '@/features/space-management/routes/SpacesListPage'
+import { SpaceManagementLayout } from '@/features/space-management/routes/SpaceManagementLayout'
+import { SpaceTypesPage } from '@/features/space-management/routes/SpaceTypesPage'
+import { AdminConstraintsPage } from '@/features/space-management/routes/AdminConstraintsPage'
+import { AdminUsersPage } from '@/features/users/routes/AdminUsersPage'
+import { HomePage } from '@/features/auth/routes/HomePage'
+import { EmployeeLayout } from '@/components/EmployeeLayout'
+import { FindSpacePage } from '@/features/bookings/routes/FindSpacePage'
+import { MyCalendarPage } from '@/features/calendar/routes/MyCalendarPage'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/callback" element={<CallbackPage />} />
+      <Route path="/signing-out" element={<SignOutPage />} />
       <Route
         path="/dashboard"
         element={

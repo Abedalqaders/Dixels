@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { ApiError, updateBuilding, updateFloor, updateSpace } from '../api/spaceManagementApi'
-import type { SpaceTypeDto } from '../api/spaceManagementApi'
+import { ApiError, updateBuilding, updateFloor, updateSpace } from '@/features/space-management/api/spaceManagementApi'
+import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 
 // The identity-fields counterpart to AddNodeModal — Name/BuildingNumber/Timezone (Building),
 // Name/FloorNumber (Floor), Name/SpaceType/Capacity (Space). Deliberately separate from the

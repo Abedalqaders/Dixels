@@ -10,15 +10,15 @@ import {
   nowInZone,
   toLocalDateTime,
   toMinutes,
-} from '../../../lib/time/buildingTime'
-import { ApiError, createBooking } from '../api/bookingsApi'
-import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestDto } from '../api/bookingsApi'
-import { formatDays, formatDuration, formatHours } from '../format'
-import { useBookingPreview } from '../hooks/useBookingPreview'
-import { closingMinute, rememberDuration } from '../preferences'
-import { emitBookingsChanged } from '../bookingEvents'
-import { suggestSlot } from '../suggestSlot'
-import type { Slot } from '../suggestSlot'
+} from '@/lib/time/buildingTime'
+import { ApiError, createBooking } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestDto } from '@/features/bookings/api/bookingsApi'
+import { formatDays, formatDuration, formatHours } from '@/features/bookings/format'
+import { useBookingPreview } from '@/features/bookings/hooks/useBookingPreview'
+import { closingMinute, rememberDuration } from '@/features/bookings/preferences'
+import { emitBookingsChanged } from '@/features/bookings/bookingEvents'
+import { suggestSlot } from '@/features/bookings/suggestSlot'
+import type { Slot } from '@/features/bookings/suggestSlot'
 import { DatePicker } from './DatePicker'
 import { FromToFields } from './FromToFields'
 import { VerdictPanel } from './VerdictPanel'
@@ -93,8 +93,10 @@ export function BookingForm({
     } catch (err) {
       if (err instanceof ApiError) {
         setSubmitError(err.message)
-        // 409: someone took the slot between the preview and the click — refresh the verdict.
-        if (err.status === 409) recheck()
+        // The server said no, so what the verdict panel showed is out of date: someone took
+        // the slot (409), or an admin changed the room's rules since the preview. Re-check
+        // either way, so the panel never says "valid" next to a rejection.
+        recheck()
       } else {
         setSubmitError('Something went wrong — please try again.')
       }

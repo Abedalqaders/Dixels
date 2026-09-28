@@ -1,5 +1,5 @@
-import type { BookableBuildingDto } from '../bookings/api/bookingsApi'
-import { formatDuration } from '../bookings/format'
+import type { BookableBuildingDto } from '@/features/bookings/api/bookingsApi'
+import { formatDuration } from '@/features/bookings/format'
 
 /**
  * Every room's maximum booking length in the building, sorted — built once when the

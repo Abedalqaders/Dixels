@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, previewBooking } from '../api/bookingsApi'
-import type { BookingPreviewDto, BookingRequestDto } from '../api/bookingsApi'
+import { ApiError, previewBooking } from '@/features/bookings/api/bookingsApi'
+import type { BookingPreviewDto, BookingRequestDto } from '@/features/bookings/api/bookingsApi'
 
 export type PreviewState =
   | { status: 'idle' }

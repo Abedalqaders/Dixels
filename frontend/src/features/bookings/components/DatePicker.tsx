@@ -4,7 +4,7 @@ import { ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import type { IsoDate } from '../../../lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
 
 interface DatePickerProps {
   id: string

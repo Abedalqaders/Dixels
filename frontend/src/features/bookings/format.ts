@@ -1,4 +1,4 @@
-import type { OperatingWindowDto } from '../space-management/api/spaceManagementApi'
+import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
 
 // Display wording for booking rules — kept in step with the backend's BookingFormat so a
 // rule reads the same in the space list as it does in a rejection message.

@@ -1,5 +1,5 @@
 import { Calendar } from '@/components/ui/calendar'
-import type { IsoDate } from '../../../lib/time/buildingTime'
+import type { IsoDate } from '@/lib/time/buildingTime'
 
 interface MiniCalendarProps {
   /** The day the main view is on. */

@@ -19,7 +19,8 @@ namespace Dixels.Users;
 /// ABP's own user service (<c>/api/identity/users</c>), extended for the user's building —
 /// the <see cref="DixelsUserConsts.BuildingIdPropertyName"/> extra property:
 /// <list type="bullet">
-/// <item>the list can be filtered by it: <c>?ExtraProperties[BuildingId]={id}</c>;</item>
+/// <item>the list can be filtered by it: <c>?ExtraProperties[BuildingId]={id}</c>, and by
+/// role: <c>?ExtraProperties[Role]=employee</c> (the Users page lists employees only);</item>
 /// <item>create/update check that the building it names exists.</item>
 /// </list>
 /// Everything else is ABP's behaviour, unchanged. Reading and writing the value itself needs
@@ -50,16 +51,30 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
     [Authorize(IdentityPermissions.Users.Default)]
     public override async Task<PagedResultDto<IdentityUserDto>> GetListAsync(GetIdentityUsersInput input)
     {
-        var (hasBuildingFilter, buildingId) = ReadBuildingId(input.ExtraProperties);
-        if (!hasBuildingFilter || buildingId is null)
+        var (_, buildingId) = ReadBuildingId(input.ExtraProperties);
+        var roleName = ReadString(input.ExtraProperties, DixelsUserConsts.RoleFilterKey);
+        if (buildingId is null && roleName is null)
         {
             return await base.GetListAsync(input);
         }
 
-        // ABP's IIdentityUserRepository can't filter on an extra-property column, so a
-        // building-filtered list goes through our own query (same text filter semantics).
-        var count = await _userDirectoryRepository.GetCountAsync(input.Filter, buildingId);
-        var users = await _userDirectoryRepository.GetListAsync(input.Filter, buildingId, input.SkipCount, input.MaxResultCount);
+        Guid? roleId = null;
+        if (roleName is not null)
+        {
+            var role = await RoleRepository.FindByNormalizedNameAsync(UserManager.NormalizeName(roleName));
+            if (role is null)
+            {
+                // A role that doesn't exist has no members — an empty page, not an error.
+                return new PagedResultDto<IdentityUserDto>(0, new List<IdentityUserDto>());
+            }
+
+            roleId = role.Id;
+        }
+
+        // ABP's IIdentityUserRepository can filter by neither an extra-property column nor a
+        // role, so a filtered list goes through our own query (same text filter semantics).
+        var count = await _userDirectoryRepository.GetCountAsync(input.Filter, buildingId, roleId);
+        var users = await _userDirectoryRepository.GetListAsync(input.Filter, buildingId, roleId, input.SkipCount, input.MaxResultCount);
 
         return new PagedResultDto<IdentityUserDto>(count, ObjectMapper.Map<List<IdentityUser>, List<IdentityUserDto>>(users));
     }
@@ -97,6 +112,24 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         }
 
         extraProperties[DixelsUserConsts.BuildingIdPropertyName] = buildingId;
+    }
+
+    private static string? ReadString(ExtraPropertyDictionary extraProperties, string key)
+    {
+        if (!extraProperties.TryGetValue(key, out var raw))
+        {
+            return null;
+        }
+
+        var text = raw switch
+        {
+            null => null,
+            JsonElement { ValueKind: JsonValueKind.Null } => null,
+            JsonElement e => e.ToString(),
+            _ => raw.ToString(),
+        };
+
+        return text.IsNullOrWhiteSpace() ? null : text!.Trim();
     }
 
     private static (bool Present, Guid? BuildingId) ReadBuildingId(ExtraPropertyDictionary extraProperties)

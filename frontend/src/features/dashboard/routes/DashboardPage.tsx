@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useAuth } from 'react-oidc-context'
-import { Sidebar } from '../components/Sidebar'
-import { getDisplayName } from '../auth/roles'
-import { useAsync } from '../hooks/useAsync'
-import { getMyBuilding } from '../features/users/api/usersApi'
-import '../styles/tokens.css'
-import '../styles/base.css'
-import '../styles/dashboard.css'
-import { TextSkeleton } from '../components/LoadingSkeletons'
+import { Sidebar } from '@/components/Sidebar'
+import { getDisplayName } from '@/features/auth/roles'
+import { useAsync } from '@/hooks/useAsync'
+import { getMyBuilding } from '@/features/users/api/usersApi'
+import '@/styles/tokens.css'
+import '@/styles/base.css'
+import '@/styles/dashboard.css'
+import { TextSkeleton } from '@/components/LoadingSkeletons'
 
 // Static sample data for now - no backend yet, this is the visual design
 // only. Shapes loosely mirror what the real BookingsAppService will return.

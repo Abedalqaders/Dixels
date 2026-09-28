@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { SearchIcon } from '../../../components/icons'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { getBuilding, getBuildings, getFloors } from '../api/spaceManagementApi'
-import { useHierarchyChanged } from '../hierarchyEvents'
+import { SearchIcon } from '@/components/icons'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { getBuilding, getBuildings, getFloors } from '@/features/space-management/api/spaceManagementApi'
+import { useHierarchyChanged } from '@/features/space-management/hierarchyEvents'
 import { ICONS } from './spaceTypeIcons'
-import { TreeSkeleton } from '../../../components/LoadingSkeletons'
+import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 const BUILDING_PAGE = 30
 const FLOOR_PAGE = 50

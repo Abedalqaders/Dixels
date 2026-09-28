@@ -1,4 +1,4 @@
-import type { SpaceAvailabilityDto } from '../bookings/api/bookingsApi'
+import type { SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 
 const CODE = 'Dixels:Bookings:'
 export const TOO_LONG = `${CODE}TooLong`

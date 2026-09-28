@@ -5,8 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { ApiError, createSpaceType, updateSpaceType } from '../api/spaceManagementApi'
-import type { SpaceTypeDto } from '../api/spaceManagementApi'
+import { ApiError, createSpaceType, updateSpaceType } from '@/features/space-management/api/spaceManagementApi'
+import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
 interface SpaceTypeFormDialogProps {

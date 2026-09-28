@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { SpaceTypeDto } from '../api/spaceManagementApi'
+import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
 // Radix Select reserves '' for "nothing selected", so "All types" needs a real value.

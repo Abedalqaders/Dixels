@@ -4,13 +4,13 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { getMyBookableBuilding, searchAvailability } from '../api/bookingsApi'
-import type { BookableBuildingDto, BookableSpaceDto, SpaceAvailabilityDto } from '../api/bookingsApi'
+import { getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { FindSpacePage } from './FindSpacePage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
-vi.mock('../api/bookingsApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/bookingsApi')>()
+vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
   return { ...actual, getMyBookableBuilding: vi.fn(), searchAvailability: vi.fn(), previewBooking: vi.fn(() => new Promise(() => {})) }
 })
 

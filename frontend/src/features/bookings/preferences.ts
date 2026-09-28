@@ -1,5 +1,5 @@
-import { toMinutes } from '../../lib/time/buildingTime'
-import type { BookableSpaceDto } from './api/bookingsApi'
+import { toMinutes } from '@/lib/time/buildingTime'
+import type { BookableSpaceDto } from '@/features/bookings/api/bookingsApi'
 
 const LAST_DURATION_KEY = 'dixels.bookings.lastDurationMinutes'
 const DAY_MINUTES = 24 * 60

@@ -3,14 +3,21 @@
 // backend's DixelsIdentityUserAppService also lets the list filter by. Only my-building is
 // a Dixels endpoint. Same request/ApiError plumbing as spaceManagementApi.ts.
 
-import { request, query } from '../../../lib/api/httpClient'
-import type { PagedResultDto } from '../../../lib/api/httpClient'
-import type { BuildingDto } from '../../space-management/api/spaceManagementApi'
+import { request, query } from '@/lib/api/httpClient'
+import type { PagedResultDto } from '@/lib/api/httpClient'
+import type { BuildingDto } from '@/features/space-management/api/spaceManagementApi'
 
-export { ApiError } from '../../../lib/api/httpClient'
+export { ApiError } from '@/lib/api/httpClient'
 
 /** Key of the building extra property — matches DixelsUserConsts.BuildingIdPropertyName. */
 export const BUILDING_ID_PROPERTY = 'BuildingId'
+
+/** Filter key for the user list's role filter — matches DixelsUserConsts.RoleFilterKey. */
+const ROLE_FILTER_KEY = 'Role'
+
+/** The role whose members get a building — matches RoleDataSeedContributor.EmployeeRoleName.
+ * Admins run the whole system rather than sitting in one building, so they're not listed. */
+export const EMPLOYEE_ROLE = 'employee'
 
 type ExtraProperties = Record<string, unknown>
 
@@ -28,16 +35,13 @@ export interface IdentityUserDto {
   extraProperties: ExtraProperties | null
 }
 
-export interface IdentityRoleDto {
-  id: string
-  name: string
-}
-
 export interface GetUsersInput {
   /** Name/username/email search — ABP's own filter. */
   filter?: string
   /** Only users assigned to this building. Omit to return everyone. */
   buildingId?: string
+  /** Only members of this role (by name). Omit for every role. */
+  role?: string
   skipCount?: number
   maxResultCount?: number
 }
@@ -47,14 +51,14 @@ export function buildingIdOf(user: IdentityUserDto): string | null {
   return typeof value === 'string' && value ? value : null
 }
 
-export function getUsers(token: string, { buildingId, ...input }: GetUsersInput = {}) {
+export function getUsers(token: string, { buildingId, role, ...input }: GetUsersInput = {}) {
   // ABP binds ExtraProperties[Key]=value from the query string into the input's extra properties.
-  const params = { ...input, [`ExtraProperties[${BUILDING_ID_PROPERTY}]`]: buildingId }
+  const params = {
+    ...input,
+    [`ExtraProperties[${BUILDING_ID_PROPERTY}]`]: buildingId,
+    [`ExtraProperties[${ROLE_FILTER_KEY}]`]: role,
+  }
   return request<PagedResultDto<IdentityUserDto>>(`/api/identity/users${query(params)}`, token)
-}
-
-export function getUserRoles(token: string, userId: string) {
-  return request<{ items: IdentityRoleDto[] }>(`/api/identity/users/${userId}/roles`, token)
 }
 
 /**

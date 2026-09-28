@@ -1,4 +1,4 @@
-import type { DayRangeDto } from './api/bookingsApi'
+import type { DayRangeDto } from '@/features/bookings/api/bookingsApi'
 
 export interface DayAxis {
   /** Minutes from local midnight where the bar starts and ends — shared by every row so they line up. */

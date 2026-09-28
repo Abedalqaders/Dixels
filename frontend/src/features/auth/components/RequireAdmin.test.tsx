@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { RequireAdmin } from './RequireAdmin'
-import { EMPLOYEE_LANDING_PATH } from './useAuthRole'
+import { EMPLOYEE_LANDING_PATH } from '@/features/auth/hooks/useAuthRole'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 

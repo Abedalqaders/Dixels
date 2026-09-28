@@ -1,5 +1,5 @@
-import { allowedDays, OperatingDays } from '../domain/operatingDays'
-import type { DayName } from '../domain/operatingDays'
+import { allowedDays, OperatingDays } from '@/features/space-management/operatingDays'
+import type { DayName } from '@/features/space-management/operatingDays'
 
 // Port of the mock's renderChips/dayOptions (js/admin-constraints.js), but proactive
 // rather than reactive: days outside the parent's own set are rendered disabled instead

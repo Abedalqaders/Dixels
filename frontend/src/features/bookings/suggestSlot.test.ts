@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BookableBuildingDto, BookableSpaceDto } from './api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto } from '@/features/bookings/api/bookingsApi'
 import { suggestSlot, suggestWindow } from './suggestSlot'
 
 const building = {

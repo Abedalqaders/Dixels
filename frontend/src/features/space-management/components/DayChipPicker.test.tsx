@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DayChipPicker } from './DayChipPicker'
-import { OperatingDays } from '../domain/operatingDays'
+import { OperatingDays } from '@/features/space-management/operatingDays'
 
 describe('DayChipPicker', () => {
   it('disables days outside the parent set (proactive grey-out, not reactive rejection)', () => {

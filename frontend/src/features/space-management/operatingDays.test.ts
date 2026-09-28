@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadSharedFixture } from '../../../test/sharedFixtures'
+import { loadSharedFixture } from '@/test/sharedFixtures'
 import { allowedDays, OperatingDays } from './operatingDays'
 import type { DayName } from './operatingDays'
 

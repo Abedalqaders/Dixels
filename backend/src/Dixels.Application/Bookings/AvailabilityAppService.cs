@@ -77,31 +77,23 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
         var spacesByFloor = spaces.ToLookup(s => s.FloorId);
 
-        return new BookableBuildingDto
-        {
-            Id = building.Id,
-            Name = building.Name,
-            Timezone = building.Timezone,
-            MaxHorizonDays = building.MaxHorizonDays,
-            MinLeadMinutes = building.MinLeadMinutes,
-            OwnOverlapPolicy = building.OwnOverlapPolicy,
-            SlotMinutes = _bookingOptions.SlotMinutes,
-            Floors = floors
-                .Where(f => spacesByFloor[f.Id].Any())
-                .OrderBy(f => f.FloorNumber)
-                .ThenBy(f => f.Name)
-                .Select(floor => new BookableFloorDto
-                {
-                    Id = floor.Id,
-                    Name = floor.Name,
-                    FloorNumber = floor.FloorNumber,
-                    Spaces = spacesByFloor[floor.Id]
-                        .OrderBy(s => s.Name)
-                        .Select(space => ToDto(building, floor, space, spaceTypes[space.SpaceTypeId]))
-                        .ToList(),
-                })
-                .ToList(),
-        };
+        var dto = ObjectMapper.Map<Building, BookableBuildingDto>(building);
+        dto.SlotMinutes = _bookingOptions.SlotMinutes;
+        dto.Floors = floors
+            .Where(f => spacesByFloor[f.Id].Any())
+            .OrderBy(f => f.FloorNumber)
+            .ThenBy(f => f.Name)
+            .Select(floor =>
+            {
+                var floorDto = ObjectMapper.Map<Floor, BookableFloorDto>(floor);
+                floorDto.Spaces = spacesByFloor[floor.Id]
+                    .OrderBy(s => s.Name)
+                    .Select(space => ToDto(building, floor, space, spaceTypes[space.SpaceTypeId]))
+                    .ToList();
+                return floorDto;
+            })
+            .ToList();
+        return dto;
     }
 
     public async Task<AvailabilitySearchResultDto> SearchAsync(SearchAvailabilityInput input)

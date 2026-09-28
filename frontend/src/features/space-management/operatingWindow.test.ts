@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadSharedFixture } from '../../../test/sharedFixtures'
+import { loadSharedFixture } from '@/test/sharedFixtures'
 import { allowedHoursRange, OperatingWindow } from './operatingWindow'
 
 interface OperatingWindowSpec {

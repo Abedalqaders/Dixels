@@ -3,7 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem } from '@/components/ui/pagination'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { PAGE_SIZE_OPTIONS } from '../hooks/useListParams'
+import { PAGE_SIZE_OPTIONS } from '@/hooks/useListParams'
 import { pageSlots } from './Pager'
 
 interface TablePaginationProps {

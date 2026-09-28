@@ -4,15 +4,15 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { addDays, nowInZone } from '../../../lib/time/buildingTime'
-import { cancelBooking, getMyBookableBuilding, getMyBookings, searchAvailability } from '../../bookings/api/bookingsApi'
-import type { BookableBuildingDto, BookableSpaceDto, BookingDto } from '../../bookings/api/bookingsApi'
-import { addMonths, gridMonthFor, monthGrid, startOfWeek } from '../calendarDates'
+import { addDays, nowInZone } from '@/lib/time/buildingTime'
+import { cancelBooking, getMyBookableBuilding, getMyBookings, searchAvailability } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto, BookingDto } from '@/features/bookings/api/bookingsApi'
+import { addMonths, gridMonthFor, monthGrid, startOfWeek } from '@/features/calendar/calendarDates'
 import { MyCalendarPage } from './MyCalendarPage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
-vi.mock('../../bookings/api/bookingsApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../bookings/api/bookingsApi')>()
+vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
   return {
     ...actual,
     getMyBookableBuilding: vi.fn(),
@@ -162,7 +162,7 @@ describe('MyCalendarPage', () => {
 
   it('keeps the cancel dialog open with the reason when the server refuses', async () => {
     const user = userEvent.setup()
-    const { ApiError } = await import('../../bookings/api/bookingsApi')
+    const { ApiError } = await import('@/features/bookings/api/bookingsApi')
     vi.mocked(cancelBooking).mockRejectedValue(new ApiError(400, { error: { message: "This booking has already started, so it can't be cancelled." } }))
     renderPage()
 

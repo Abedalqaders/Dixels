@@ -11,11 +11,11 @@
 // The request/ApiError/query plumbing itself lives in ../../../lib/api/httpClient — shared
 // with usersApi.ts, since it's generic HTTP-client code, not space-management-specific.
 
-import { request, query } from '../../../lib/api/httpClient'
-import type { ListResultDto, PagedResultDto } from '../../../lib/api/httpClient'
+import { request, query } from '@/lib/api/httpClient'
+import type { ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 
-export { ApiError } from '../../../lib/api/httpClient'
-export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '../../../lib/api/httpClient'
+export { ApiError } from '@/lib/api/httpClient'
+export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 
 /** Shared shape for the paged/searchable list endpoints (Buildings/Floors/Spaces).
  * `sorting` is left out on purpose — none of the list pages expose sortable columns yet, so

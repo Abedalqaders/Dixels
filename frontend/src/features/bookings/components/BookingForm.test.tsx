@@ -2,12 +2,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ApiError, createBooking, previewBooking } from '../api/bookingsApi'
-import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingPreviewDto } from '../api/bookingsApi'
+import { ApiError, createBooking, previewBooking } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingPreviewDto } from '@/features/bookings/api/bookingsApi'
 import { BookingForm } from './BookingForm'
 
-vi.mock('../api/bookingsApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../api/bookingsApi')>()
+vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
   return { ...actual, previewBooking: vi.fn(), createBooking: vi.fn() }
 })
 
@@ -108,6 +108,22 @@ describe('BookingForm', () => {
     await user.click(screen.getByRole('button', { name: 'Book' }))
 
     expect(await screen.findByText('This space is already booked for part of that time.')).toBeInTheDocument()
+    await waitFor(() => expect(previewBooking).toHaveBeenCalledTimes(2))
+  })
+
+  it("re-checks when the room's rules changed since the preview", async () => {
+    vi.mocked(previewBooking).mockResolvedValue(valid)
+    // A rule rejection is a plain BusinessException — ABP's default 403, not the 409 above.
+    vi.mocked(createBooking).mockRejectedValue(
+      new ApiError(403, { error: { code: 'Dixels:Bookings:Rejected', message: 'This space is closed at that time.' } }),
+    )
+    const user = userEvent.setup()
+    renderForm()
+
+    await screen.findByText('Available')
+    await user.click(screen.getByRole('button', { name: 'Book' }))
+
+    expect(await screen.findByText('This space is closed at that time.')).toBeInTheDocument()
     await waitFor(() => expect(previewBooking).toHaveBeenCalledTimes(2))
   })
 })

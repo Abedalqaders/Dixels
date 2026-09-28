@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { RequireAuth } from './RequireAuth'
-import { EMPLOYEE_LANDING_PATH, useAuthRole } from './useAuthRole'
+import { EMPLOYEE_LANDING_PATH, useAuthRole } from '@/features/auth/hooks/useAuthRole'
 
 // Wrap an admin-only route with <RequireAdmin>. Builds on <RequireAuth> for
 // the sign-in redirect, then sends a signed-in non-admin to their own

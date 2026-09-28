@@ -1,10 +1,10 @@
-import { OperatingDays } from '../domain/operatingDays'
-import { OperatingWindow } from '../domain/operatingWindow'
+import { OperatingDays } from '@/features/space-management/operatingDays'
+import { OperatingWindow } from '@/features/space-management/operatingWindow'
 import { DayChipPicker } from './DayChipPicker'
 import { HoursRangeInput } from './HoursRangeInput'
 import { DurationPicker, minutesToHours, hoursToMinutes } from './DurationPicker'
-import type { OwnOverlapPolicy } from '../api/spaceManagementApi'
-import { OWN_OVERLAP_OPTIONS } from '../domain/ownOverlapPolicy'
+import type { OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
+import { OWN_OVERLAP_OPTIONS } from '@/features/space-management/ownOverlapPolicy'
 
 // Building is the base layer — no Inherit/Override switches here, every value is
 // required (see CONSTRAINTS.md). Port of the mock's #buildingLevelBlock — minus Timezone,

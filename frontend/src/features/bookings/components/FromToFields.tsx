@@ -1,6 +1,6 @@
 import { Label } from '@/components/ui/label'
-import { fromMinutes, toMinutes } from '../../../lib/time/buildingTime'
-import type { HhMm } from '../../../lib/time/buildingTime'
+import { fromMinutes, toMinutes } from '@/lib/time/buildingTime'
+import type { HhMm } from '@/lib/time/buildingTime'
 import { TimePicker } from './TimePicker'
 
 const DAY_MINUTES = 24 * 60

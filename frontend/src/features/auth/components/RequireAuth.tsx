@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { AuthStatusScreen } from './AuthStatusScreen'
 
 // Wrap any route that needs a signed-in user with <RequireAuth>.
 // There's no in-app login form: "signing in" means redirecting the whole
@@ -16,11 +18,17 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [auth])
 
   if (auth.isLoading || (!auth.isAuthenticated && !auth.error)) {
-    return <p>Redirecting to sign in…</p>
+    return <AuthStatusScreen state="busy" title="Taking you to sign in…" detail="You'll come straight back here afterwards." />
   }
 
   if (auth.error) {
-    return <p>Authentication error: {auth.error.message}</p>
+    return (
+      <AuthStatusScreen state="error" title="Couldn't check your sign-in" detail={auth.error.message}>
+        <Link className="btn" to="/">
+          Back to sign in
+        </Link>
+      </AuthStatusScreen>
+    )
   }
 
   return <>{children}</>

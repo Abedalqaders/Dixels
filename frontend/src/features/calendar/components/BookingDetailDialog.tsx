@@ -4,8 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { dateOf, formatDate, timeOf } from '../../../lib/time/buildingTime'
-import type { BookingDto } from '../../bookings/api/bookingsApi'
+import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
+import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 
 export type BookingPhase = 'upcoming' | 'in-progress' | 'done'
 

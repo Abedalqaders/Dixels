@@ -10,9 +10,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { dateOf, formatDate, timeOf } from '../../../lib/time/buildingTime'
-import { ApiError, cancelBooking } from '../../bookings/api/bookingsApi'
-import type { BookingDto } from '../../bookings/api/bookingsApi'
+import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
+import { ApiError, cancelBooking } from '@/features/bookings/api/bookingsApi'
+import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 
 // Mirrors BookingConsts.MaxCancelReasonLength on the server.
 const MAX_REASON_LENGTH = 512

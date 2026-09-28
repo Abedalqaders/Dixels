@@ -1,6 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { fromMinutes, nextSlot } from '../../../lib/time/buildingTime'
-import type { HhMm } from '../../../lib/time/buildingTime'
+import { fromMinutes, nextSlot } from '@/lib/time/buildingTime'
+import type { HhMm } from '@/lib/time/buildingTime'
 
 interface TimePickerProps {
   id: string

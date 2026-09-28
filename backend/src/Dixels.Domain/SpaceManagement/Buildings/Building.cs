@@ -79,14 +79,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
 
     public void SetBuildingNumber(string? buildingNumber)
     {
-        if (buildingNumber is not null && buildingNumber.Length > BuildingConsts.MaxBuildingNumberLength)
-        {
-            throw new ArgumentException(
-                $"Building number can't be longer than {BuildingConsts.MaxBuildingNumberLength} characters.",
-                nameof(buildingNumber));
-        }
-
-        BuildingNumber = buildingNumber;
+        BuildingNumber = Check.Length(buildingNumber, nameof(buildingNumber), BuildingConsts.MaxBuildingNumberLength);
     }
 
     /// <summary>

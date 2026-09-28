@@ -15,6 +15,8 @@ namespace Dixels.Bookings;
 public partial class BookingsObjectMapping :
     IAbpMapperlyMapper<Booking, BookingDto>,
     IAbpMapperlyMapper<Space, BookableSpaceDto>,
+    IAbpMapperlyMapper<Building, BookableBuildingDto>,
+    IAbpMapperlyMapper<Floor, BookableFloorDto>,
     ITransientDependency
 {
     [MapperIgnoreSource(nameof(Booking.UserId))]
@@ -119,6 +121,95 @@ public partial class BookingsObjectMapping :
     }
 
     public void AfterMap(Space source, BookableSpaceDto destination)
+    {
+    }
+
+    // Only the building's own booking rules are copied. SlotMinutes is install config
+    // (BookingOptions), and Floors is the filtered, ordered list the app service builds.
+    [MapperIgnoreSource(nameof(Building.BuildingNumber))]
+    [MapperIgnoreSource(nameof(Building.Days))]
+    [MapperIgnoreSource(nameof(Building.Hours))]
+    [MapperIgnoreSource(nameof(Building.MaxDurationMinutes))]
+    [MapperIgnoreSource(nameof(Building.DeletionBatchId))]
+    [MapperIgnoreSource(nameof(Building.ExtraProperties))]
+    [MapperIgnoreSource(nameof(Building.ConcurrencyStamp))]
+    [MapperIgnoreSource(nameof(Building.CreationTime))]
+    [MapperIgnoreSource(nameof(Building.CreatorId))]
+    [MapperIgnoreSource(nameof(Building.LastModificationTime))]
+    [MapperIgnoreSource(nameof(Building.LastModifierId))]
+    [MapperIgnoreSource(nameof(Building.IsDeleted))]
+    [MapperIgnoreSource(nameof(Building.DeleterId))]
+    [MapperIgnoreSource(nameof(Building.DeletionTime))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.SlotMinutes))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Floors))]
+    public partial BookableBuildingDto Map(Building source);
+
+    [MapperIgnoreSource(nameof(Building.BuildingNumber))]
+    [MapperIgnoreSource(nameof(Building.Days))]
+    [MapperIgnoreSource(nameof(Building.Hours))]
+    [MapperIgnoreSource(nameof(Building.MaxDurationMinutes))]
+    [MapperIgnoreSource(nameof(Building.DeletionBatchId))]
+    [MapperIgnoreSource(nameof(Building.ExtraProperties))]
+    [MapperIgnoreSource(nameof(Building.ConcurrencyStamp))]
+    [MapperIgnoreSource(nameof(Building.CreationTime))]
+    [MapperIgnoreSource(nameof(Building.CreatorId))]
+    [MapperIgnoreSource(nameof(Building.LastModificationTime))]
+    [MapperIgnoreSource(nameof(Building.LastModifierId))]
+    [MapperIgnoreSource(nameof(Building.IsDeleted))]
+    [MapperIgnoreSource(nameof(Building.DeleterId))]
+    [MapperIgnoreSource(nameof(Building.DeletionTime))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.SlotMinutes))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Floors))]
+    public partial void Map(Building source, BookableBuildingDto destination);
+
+    public void BeforeMap(Building source)
+    {
+    }
+
+    public void AfterMap(Building source, BookableBuildingDto destination)
+    {
+    }
+
+    // Spaces is filled by the app service: each one needs its resolved rules.
+    [MapperIgnoreSource(nameof(Floor.BuildingId))]
+    [MapperIgnoreSource(nameof(Floor.Days))]
+    [MapperIgnoreSource(nameof(Floor.Hours))]
+    [MapperIgnoreSource(nameof(Floor.MaxDurationMinutes))]
+    [MapperIgnoreSource(nameof(Floor.DeletionBatchId))]
+    [MapperIgnoreSource(nameof(Floor.ExtraProperties))]
+    [MapperIgnoreSource(nameof(Floor.ConcurrencyStamp))]
+    [MapperIgnoreSource(nameof(Floor.CreationTime))]
+    [MapperIgnoreSource(nameof(Floor.CreatorId))]
+    [MapperIgnoreSource(nameof(Floor.LastModificationTime))]
+    [MapperIgnoreSource(nameof(Floor.LastModifierId))]
+    [MapperIgnoreSource(nameof(Floor.IsDeleted))]
+    [MapperIgnoreSource(nameof(Floor.DeleterId))]
+    [MapperIgnoreSource(nameof(Floor.DeletionTime))]
+    [MapperIgnoreTarget(nameof(BookableFloorDto.Spaces))]
+    public partial BookableFloorDto Map(Floor source);
+
+    [MapperIgnoreSource(nameof(Floor.BuildingId))]
+    [MapperIgnoreSource(nameof(Floor.Days))]
+    [MapperIgnoreSource(nameof(Floor.Hours))]
+    [MapperIgnoreSource(nameof(Floor.MaxDurationMinutes))]
+    [MapperIgnoreSource(nameof(Floor.DeletionBatchId))]
+    [MapperIgnoreSource(nameof(Floor.ExtraProperties))]
+    [MapperIgnoreSource(nameof(Floor.ConcurrencyStamp))]
+    [MapperIgnoreSource(nameof(Floor.CreationTime))]
+    [MapperIgnoreSource(nameof(Floor.CreatorId))]
+    [MapperIgnoreSource(nameof(Floor.LastModificationTime))]
+    [MapperIgnoreSource(nameof(Floor.LastModifierId))]
+    [MapperIgnoreSource(nameof(Floor.IsDeleted))]
+    [MapperIgnoreSource(nameof(Floor.DeleterId))]
+    [MapperIgnoreSource(nameof(Floor.DeletionTime))]
+    [MapperIgnoreTarget(nameof(BookableFloorDto.Spaces))]
+    public partial void Map(Floor source, BookableFloorDto destination);
+
+    public void BeforeMap(Floor source)
+    {
+    }
+
+    public void AfterMap(Floor source, BookableFloorDto destination)
     {
     }
 }
