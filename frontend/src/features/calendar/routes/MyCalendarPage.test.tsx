@@ -142,7 +142,7 @@ describe('MyCalendarPage', () => {
   it('cancels a booking with a reason and says the room is free again', async () => {
     const user = userEvent.setup()
     const b = booking('b1', 'Design review', '10:00', '11:00')
-    vi.mocked(cancelBooking).mockResolvedValue({ ...b, status: 'Cancelled' })
+    vi.mocked(cancelBooking).mockResolvedValue([{ ...b, status: 'Cancelled' }])
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: /Design review, 10:00–11:00/ }))
@@ -154,7 +154,7 @@ describe('MyCalendarPage', () => {
     await user.type(within(confirm).getByLabelText(/Reason/), 'Moved online')
     await user.click(within(confirm).getByRole('button', { name: 'Cancel booking' }))
 
-    expect(cancelBooking).toHaveBeenCalledWith('t', 'b1', 'Moved online')
+    expect(cancelBooking).toHaveBeenCalledWith('t', 'b1', 'Moved online', 0)
     expect(await screen.findByText('Cancelled — Meeting Room 301 is free again for 10:00–11:00')).toBeInTheDocument()
     // Everything cached is dropped and what's on screen is fetched again.
     await waitFor(() => expect(callsFor(gridMonthFor('week', tomorrow))).toBe(2))
@@ -298,6 +298,34 @@ describe('MyCalendarPage', () => {
         'Heads-up: you already have Desk 7 booked Wed 30 Sep 10:00–12:00.',
       ),
     ).toBeInTheDocument()
+  })
+
+  it('marks a series booking, says how it repeats, and cancels this and the following ones', async () => {
+    const user = userEvent.setup()
+    const series = {
+      ...booking('b1', 'Stand-up', '09:00', '09:15'),
+      seriesId: 's1',
+      recurrence: { frequency: 1, interval: 1, weekdays: [0, 1, 2, 3, 4], monthlyRepeat: 0, endDate: '2026-12-31' },
+    }
+    vi.mocked(getMyBookings).mockResolvedValue([series])
+    vi.mocked(cancelBooking).mockResolvedValue([series, { ...series, id: 'b2' }, { ...series, id: 'b3' }])
+    renderPage()
+
+    const block = await screen.findByRole('button', { name: /Stand-up, 09:00–09:15/ })
+    expect(within(block).getByLabelText('Repeats')).toBeInTheDocument()
+    await user.click(block)
+
+    const detail = screen.getByRole('dialog')
+    expect(within(detail).getByText(/^Occurs every Sunday, Monday, Tuesday, Wednesday and Thursday until Thu 31 Dec/)).toBeInTheDocument()
+    await user.click(within(detail).getByRole('button', { name: 'Cancel booking' }))
+
+    const confirm = screen.getByRole('alertdialog', { name: 'Cancel recurring booking?' })
+    expect(within(confirm).getByLabelText('This event')).toBeChecked()
+    await user.click(within(confirm).getByLabelText('This and all following events'))
+    await user.click(within(confirm).getByRole('button', { name: 'Cancel booking' }))
+
+    expect(cancelBooking).toHaveBeenCalledWith('t', 'b1', '', 1)
+    expect(await screen.findByText('Cancelled 3 bookings of “Stand-up” — Meeting Room 301 is free again then')).toBeInTheDocument()
   })
 
   it('says so when the employee has no building', async () => {

@@ -136,10 +136,12 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   // Someone else's booking, or an admin's rule change, while this tab was in the background.
   useRefetchOnFocus(results.refetch)
 
-  function handleBooked(created: BookingDto) {
+  function handleBooked(created: BookingDto, count = 1) {
     setBooking(null)
     showToast(
-      `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
+      count > 1
+        ? `Booked ${created.spaceName} on ${count} dates from ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`
+        : `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
     )
   }
 

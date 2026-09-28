@@ -1,3 +1,4 @@
+import { Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addDays, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
@@ -82,6 +83,7 @@ export function MonthGrid({ date, bookings, today, onOpenBooking, onOpenDay }: M
                   <span className="size-1.5 flex-none rounded-full bg-brand" aria-hidden="true" />
                   <span className="font-mono text-[11px] text-muted-foreground">{timeOf(b.localStart)}</span>
                   <span className="truncate font-medium">{b.title}</span>
+                  {b.seriesId && <Repeat className="size-3 flex-none text-muted-foreground" aria-label="Repeats" />}
                 </button>
               ))}
               {hidden > 0 && (

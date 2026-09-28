@@ -1,36 +1,19 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Repeat } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
 import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { dayOfMonth, shortWeekday } from '@/features/calendar/calendarDates'
-import { bookingMinutes, layoutDay } from '@/features/calendar/dayLayout'
+import { bookingMinutes, bookingsByDay, HOUR_PX, layoutDay } from '@/features/calendar/dayLayout'
 import { dragHint } from '@/features/calendar/durationLimits'
 import type { DurationLimits } from '@/features/calendar/durationLimits'
-
-// One hour of the grid, in pixels. 15 minutes = 12px — big enough to aim a drag at.
-export const HOUR_PX = 48
 
 // Movement below this many pixels is a click, not a drag.
 const DRAG_THRESHOLD_PX = 4
 
 const NO_BOOKINGS: BookingDto[] = []
-
-/**
- * Each day's bookings, for the columns. A booking belongs to every day it covers part of —
- * but one ending exactly at midnight ("until closing" in a 24h room ends 00:00 next day)
- * doesn't reach into the next day at all.
- */
-export function bookingsByDay(bookings: BookingDto[], days: IsoDate[]): Map<IsoDate, BookingDto[]> {
-  const byDay = new Map<IsoDate, BookingDto[]>()
-  for (const d of days) {
-    const midnight = `${d}T00:00:00`
-    const list = bookings.filter((b) => b.localStart.startsWith(d) || (b.localStart < d && b.localEnd > midnight))
-    if (list.length) byDay.set(d, list)
-  }
-  return byDay
-}
 
 export interface PickedRange {
   date: IsoDate
@@ -402,7 +385,10 @@ const DayColumn = memo(function DayColumn({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => onOpenBooking(b)}
           >
-            <span className="truncate font-semibold">{b.title}</span>
+            <span className="flex min-w-0 items-center gap-1 font-semibold">
+              {b.seriesId && <Repeat className="size-3 flex-none text-brand" aria-label="Repeats" />}
+              <span className="truncate">{b.title}</span>
+            </span>
             {tall ? (
               <>
                 <span className="truncate font-mono text-[11px] text-muted-foreground">

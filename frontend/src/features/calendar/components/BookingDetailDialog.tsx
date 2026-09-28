@@ -1,4 +1,4 @@
-import { Building2, Clock, Search, Users } from 'lucide-react'
+import { Building2, Clock, Repeat, Search, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,15 +6,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from '@/lib/utils'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
-
-export type BookingPhase = 'upcoming' | 'in-progress' | 'done'
-
-/** Where a booking is in its life right now — from the UTC instants, so no timezone math. */
-export function bookingPhase(booking: Pick<BookingDto, 'startsAt' | 'endsAt'>, now = new Date()): BookingPhase {
-  if (new Date(booking.endsAt) <= now) return 'done'
-  if (new Date(booking.startsAt) <= now) return 'in-progress'
-  return 'upcoming'
-}
+import { describeRecurrence } from '@/features/bookings/recurrence'
+import { bookingPhase } from '@/features/calendar/bookingPhase'
+import type { BookingPhase } from '@/features/calendar/bookingPhase'
 
 const PHASE_LABEL: Record<BookingPhase, string> = { upcoming: 'Upcoming', 'in-progress': 'In progress', done: 'Done' }
 
@@ -81,6 +75,15 @@ export function BookingDetailDialog({ booking, onClose, onCancel }: BookingDetai
               </dd>
             </div>
           </div>
+          {booking.recurrence && (
+            <div className="flex items-start gap-3">
+              <Repeat className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
+              <div>
+                <dt className="sr-only">Repeats</dt>
+                <dd>{describeRecurrence(booking.recurrence, date)}</dd>
+              </div>
+            </div>
+          )}
         </dl>
 
         {phase !== 'upcoming' && (

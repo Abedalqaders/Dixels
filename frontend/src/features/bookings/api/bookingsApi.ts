@@ -32,6 +32,8 @@ export interface BookableBuildingDto {
   name: string
   timezone: string
   maxHorizonDays: number
+  /** How far ahead a recurring booking's end date may be. */
+  maxSeriesHorizonDays?: number
   minLeadMinutes: number
   /** Whether one person may hold two bookings at once here (0 Allow, 1 Warn, 2 Block). */
   ownOverlapPolicy?: number
@@ -88,6 +90,9 @@ export interface BookingDto {
   attendees: number
   title: string
   status: string
+  /** Set when this booking is one date of a recurring series, with how the series repeats. */
+  seriesId?: string | null
+  recurrence?: RecurrenceDto | null
 }
 
 /** A stretch of the searched day, in minutes from the building's local midnight (0–1440). */
@@ -181,9 +186,86 @@ export async function getMyBookings(token: string, from: IsoDate, to: IsoDate): 
 }
 
 /** Cancels one of my own bookings before it starts; the slot is free the moment this returns. */
-export function cancelBooking(token: string, id: string, reason?: string): Promise<BookingDto> {
-  return request<BookingDto>(`/api/app/bookings/${id}/cancel`, token, {
+/** Which bookings of a series a cancel covers (CancelScope on the server). */
+export const CancelScope = { This: 0, ThisAndFollowing: 1, Series: 2 } as const
+export type CancelScope = (typeof CancelScope)[keyof typeof CancelScope]
+
+/**
+ * Cancels one of my own bookings before it starts — or, for a series, this and the following
+ * ones, or every upcoming one. Returns every booking cancelled; their slots are free the
+ * moment this returns.
+ */
+export async function cancelBooking(
+  token: string,
+  id: string,
+  reason?: string,
+  scope: CancelScope = CancelScope.This,
+): Promise<BookingDto[]> {
+  const result = await request<{ items: BookingDto[] }>(`/api/app/bookings/${id}/cancel`, token, {
     method: 'POST',
-    body: JSON.stringify({ reason: reason?.trim() || null }),
+    body: JSON.stringify({ reason: reason?.trim() || null, scope }),
+  })
+  return result.items
+}
+
+// ---- Recurring bookings ----
+
+/** How a booking repeats (RecurrenceDto on the server). */
+export interface RecurrenceDto {
+  /** 0 daily, 1 weekly, 2 monthly. */
+  frequency: number
+  interval: number
+  /** Weekly only: 0 = Sunday … 6 = Saturday. */
+  weekdays: number[]
+  /** Monthly only: 0 on the same date, 1 on the same weekday position ("2nd Tuesday"). */
+  monthlyRepeat: number
+  /** Last date an occurrence may fall on, "YYYY-MM-DD". */
+  endDate: IsoDate
+}
+
+export interface SeriesRequestDto extends BookingRequestDto {
+  recurrence: RecurrenceDto
+}
+
+export interface CreateSeriesDto extends SeriesRequestDto {
+  skipDates: IsoDate[]
+  idempotencyKey: string
+}
+
+export interface OccurrencePreviewDto {
+  date: IsoDate
+  localStart: string
+  localEnd: string
+  isValid: boolean
+  violations: BookingViolationDto[]
+  warnings: BookingViolationDto[]
+}
+
+export interface SeriesPreviewDto {
+  /** Problems every date shares (too many people, too long) — nothing can be booked until they're fixed. */
+  seriesViolations: BookingViolationDto[]
+  occurrences: OccurrencePreviewDto[]
+  bookableCount: number
+  timezone: string
+}
+
+export interface SeriesCreatedDto {
+  seriesId: string
+  bookings: BookingDto[]
+}
+
+/** Every date of a recurring booking checked against every rule, nothing reserved. */
+export function previewSeries(token: string, input: SeriesRequestDto): Promise<SeriesPreviewDto> {
+  return request<SeriesPreviewDto>('/api/app/bookings/series/preview', token, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+/** Books a series' dates, minus `skipDates`, all at once — or none if one was taken meanwhile. */
+export function createSeries(token: string, input: CreateSeriesDto): Promise<SeriesCreatedDto> {
+  return request<SeriesCreatedDto>('/api/app/bookings/series', token, {
+    method: 'POST',
+    body: JSON.stringify(input),
   })
 }

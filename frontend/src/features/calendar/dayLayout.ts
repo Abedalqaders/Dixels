@@ -81,3 +81,21 @@ export function hourSpan(
   if (!Number.isFinite(from)) return { from: 8, to: 18 }
   return { from: Math.floor(from / 60), to: Math.min(24, Math.ceil(to / 60)) }
 }
+
+// One hour of the grid, in pixels. 15 minutes = 12px — big enough to aim a drag at.
+export const HOUR_PX = 48
+
+/**
+ * Each day's bookings, for the columns. A booking belongs to every day it covers part of —
+ * but one ending exactly at midnight ("until closing" in a 24h room ends 00:00 next day)
+ * doesn't reach into the next day at all.
+ */
+export function bookingsByDay(bookings: BookingDto[], days: IsoDate[]): Map<IsoDate, BookingDto[]> {
+  const byDay = new Map<IsoDate, BookingDto[]>()
+  for (const d of days) {
+    const midnight = `${d}T00:00:00`
+    const list = bookings.filter((b) => b.localStart.startsWith(d) || (b.localStart < d && b.localEnd > midnight))
+    if (list.length) byDay.set(d, list)
+  }
+  return byDay
+}

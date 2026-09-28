@@ -2,7 +2,8 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { buildDurationLimits } from '@/features/calendar/durationLimits'
-import { bookingsByDay, HOUR_PX, TimeGrid } from './TimeGrid'
+import { bookingsByDay, HOUR_PX } from '@/features/calendar/dayLayout'
+import { TimeGrid } from './TimeGrid'
 
 // jsdom has no layout: every column starts at y = 0, so a minute's y is just its offset.
 beforeAll(() => {

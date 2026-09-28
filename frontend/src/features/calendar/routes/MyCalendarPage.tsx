@@ -185,19 +185,28 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     setQuickBook({ date: w.date, start: toMinutes(w.start), end: toMinutes(w.end) })
   }
 
-  function handleBooked(created: BookingDto) {
+  function handleBooked(created: BookingDto, count = 1) {
     setForm(null)
-    showToast(`Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`)
+    showToast(
+      count > 1
+        ? `Booked ${created.spaceName} on ${count} dates from ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`
+        : `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
+    )
     // Jump to the new booking if it's off screen.
     const day = dateOf(created.localStart)
     if (day < range.from || day >= range.to) go({ date: day })
   }
 
-  function handleCancelled(cancelled: BookingDto) {
+  function handleCancelled(all: BookingDto[]) {
+    const cancelled = all[0]
     setCancelling(null)
     setDetail(null)
     emitBookingsChanged()
-    showToast(`Cancelled — ${cancelled.spaceName} is free again for ${timeOf(cancelled.localStart)}–${timeOf(cancelled.localEnd)}`)
+    showToast(
+      all.length > 1
+        ? `Cancelled ${all.length} bookings of “${cancelled.title}” — ${cancelled.spaceName} is free again then`
+        : `Cancelled — ${cancelled.spaceName} is free again for ${timeOf(cancelled.localStart)}–${timeOf(cancelled.localEnd)}`,
+    )
   }
 
   return (
