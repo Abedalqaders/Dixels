@@ -6,6 +6,7 @@ import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { getBuilding, getBuildings, getFloors } from '../api/spaceManagementApi'
 import { useHierarchyChanged } from '../hierarchyEvents'
 import { ICONS } from './spaceTypeIcons'
+import { TreeSkeleton } from '../../../components/LoadingSkeletons'
 
 const BUILDING_PAGE = 30
 const FLOOR_PAGE = 50
@@ -322,7 +323,8 @@ export function SpaceExplorer() {
         })}
       </ul>
 
-      {buildings.loading && <p className="xnote">Loading…</p>}
+      {buildings.loading && buildings.items.length === 0 && <TreeSkeleton label="Loading buildings…" rows={4} />}
+      {buildings.loading && buildings.items.length > 0 && <p className="xnote">Loading…</p>}
       {buildings.error && (
         <p className="xnote">
           Couldn't load buildings.{' '}

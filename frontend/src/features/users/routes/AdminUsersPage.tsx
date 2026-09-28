@@ -17,6 +17,7 @@ import { BuildingPicker } from '../../space-management/components/BuildingPicker
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
+import { TableSkeleton } from '../../../components/LoadingSkeletons'
 
 const UNASSIGNED = ''
 
@@ -133,7 +134,7 @@ export function AdminUsersPage() {
             </CardHeader>
 
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <p className="treeempty">Loading users…</p>}
+              {status === 'loading' && <TableSkeleton label="Loading users…" columns={4} />}
               {status === 'error' && <p className="treeempty">Couldn't load users: {error.message}</p>}
               {status === 'success' && data.rows.length === 0 && (
                 <p className="treeempty">

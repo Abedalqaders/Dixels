@@ -46,6 +46,7 @@ import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
+import { FormSkeleton } from '../../../components/LoadingSkeletons'
 
 type Level = 'building' | 'floor' | 'space'
 
@@ -446,7 +447,7 @@ export function AdminConstraintsPage() {
           </div>
 
           {!validLevel && <p className="treeempty">Invalid constraints level.</p>}
-          {validLevel && status === 'loading' && <p className="treeempty">Loading constraints…</p>}
+          {validLevel && status === 'loading' && <FormSkeleton label="Loading constraints…" />}
           {validLevel && status === 'error' && <p className="treeempty">Couldn't load constraints: {error.message}</p>}
 
           {validLevel && status === 'success' && data && (

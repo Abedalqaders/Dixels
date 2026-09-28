@@ -20,6 +20,7 @@ import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
+import { TreeSkeleton } from '../../../components/LoadingSkeletons'
 
 export function BuildingsListPage() {
   const auth = useAuth()
@@ -101,7 +102,7 @@ export function BuildingsListPage() {
             </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <p className="treeempty">Loading buildings…</p>}
+              {status === 'loading' && <TreeSkeleton label="Loading buildings…" />}
               {status === 'error' && <p className="treeempty">Couldn't load buildings: {error.message}</p>}
 
               {status === 'success' && data.buildings.length === 0 && (

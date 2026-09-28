@@ -28,6 +28,7 @@ import { ICON_OPTIONS, ICONS, iconKeyToIconName } from '../components/spaceTypeI
 import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
+import { TableSkeleton } from '../../../components/LoadingSkeletons'
 
 // Space types aren't part of the Building → Floor hierarchy, so this page sits outside
 // SpaceManagementLayout — no explorer tree beside it, just the app nav.
@@ -119,7 +120,7 @@ export function SpaceTypesPage() {
             </CardHeader>
 
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <p className="treeempty">Loading space types…</p>}
+              {status === 'loading' && <TableSkeleton label="Loading space types…" columns={3} />}
               {status === 'error' && <p className="treeempty">Couldn't load space types: {error.message}</p>}
               {status === 'success' && filtered.length === 0 && (
                 <p className="treeempty">

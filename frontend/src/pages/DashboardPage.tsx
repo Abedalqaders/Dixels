@@ -7,6 +7,7 @@ import { getMyBuilding } from '../features/users/api/usersApi'
 import '../styles/tokens.css'
 import '../styles/base.css'
 import '../styles/dashboard.css'
+import { TextSkeleton } from '../components/LoadingSkeletons'
 
 // Static sample data for now - no backend yet, this is the visual design
 // only. Shapes loosely mirror what the real BookingsAppService will return.
@@ -54,7 +55,7 @@ export function DashboardPage() {
                 ? (myBuilding?.name ?? "You haven't been assigned a building yet — ask your admin.")
                 : buildingStatus === 'error'
                   ? "Couldn't load your building."
-                  : 'Loading…'}
+                  : <TextSkeleton label="Loading your building…" />}
             </span>
           </span>
         </div>

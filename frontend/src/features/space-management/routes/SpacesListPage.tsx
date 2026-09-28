@@ -20,6 +20,7 @@ import '../../../styles/tokens.css'
 import '../../../styles/base.css'
 import '../../../styles/admin.css'
 import '../../../styles/login.css'
+import { TreeSkeleton } from '../../../components/LoadingSkeletons'
 
 export function SpacesListPage() {
   const { buildingId = '', floorId = '' } = useParams()
@@ -125,7 +126,7 @@ export function SpacesListPage() {
 
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <p className="treeempty">Loading spaces…</p>}
+              {status === 'loading' && <TreeSkeleton label="Loading spaces…" />}
               {status === 'error' && <p className="treeempty">Couldn't load spaces: {error.message}</p>}
 
               {status === 'success' && data.spaces.length === 0 && (
