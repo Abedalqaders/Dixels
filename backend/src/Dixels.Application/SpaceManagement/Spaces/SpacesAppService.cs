@@ -132,13 +132,52 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
 
+        var broken = input.CancelAffectedBookings
+            ? await FindBookingsOverCapacityAsync(space, input.Capacity)
+            : Array.Empty<BookingImpact>();
+
         space.SetName(input.Name);
         space.SetSpaceType(input.SpaceTypeId);
         space.SetCapacity(input.Capacity);
 
-        await _spaceRepository.UpdateAsync(space);
+        await _spaceRepository.UpdateAsync(space, autoSave: true);
+        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
         return MapToDto(space);
+    }
+
+    [Authorize(DixelsPermissions.Spaces.Edit)]
+    public async Task<BookingImpactDto> GetUpdateImpactAsync(Guid id, UpdateSpaceDto input)
+    {
+        var space = await _spaceRepository.GetAsync(id);
+        await EnsureCanManageBuildingAsync(space.FloorId);
+        var floor = await _floorRepository.GetAsync(space.FloorId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        return await _bookingImpact.DescribeAsync(building, await FindBookingsOverCapacityAsync(space, input.Capacity));
+    }
+
+    // Only the capacity can break a booking among the details; checked on an untracked copy
+    // carrying the room's own rules, so nothing here saves.
+    private async Task<IReadOnlyList<BookingImpact>> FindBookingsOverCapacityAsync(Space space, int capacity)
+    {
+        if (capacity >= space.Capacity)
+        {
+            return Array.Empty<BookingImpact>();
+        }
+
+        var floor = await _floorRepository.GetAsync(space.FloorId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        var parent = _constraintResolver.Resolve(building, floor);
+
+        var proposed = new Space(space.Id, space.FloorId, space.Name, space.SpaceTypeId, space.Capacity);
+        proposed.SetOwnOperatingDays(space.Days, parent.Days.Value);
+        proposed.SetOwnOperatingHours(space.Hours, parent.Hours.Value);
+        proposed.SetOwnMaxDuration(space.MaxDurationMinutes);
+        proposed.SetMinAttendees(space.MinAttendees);
+        proposed.SetCapacity(capacity);
+
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+            building, new[] { (space, floor) }, (_, _) => _constraintResolver.Resolve(building, floor, proposed));
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]

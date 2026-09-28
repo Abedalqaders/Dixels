@@ -17,4 +17,7 @@ public class UpdateSpaceDto
 
     [Required]
     public int Capacity { get; set; }
+
+    /// <summary>Also cancel the upcoming bookings for more people than the new capacity (default: keep them).</summary>
+    public bool CancelAffectedBookings { get; set; }
 }

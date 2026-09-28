@@ -32,6 +32,8 @@ export interface BookableBuildingDto {
   name: string
   timezone: string
   maxHorizonDays: number
+  /** The employee's building was deleted: shown with its name, nothing to book. */
+  isRemoved?: boolean
   /** How far ahead a recurring booking's end date may be. */
   maxSeriesHorizonDays?: number
   minLeadMinutes: number

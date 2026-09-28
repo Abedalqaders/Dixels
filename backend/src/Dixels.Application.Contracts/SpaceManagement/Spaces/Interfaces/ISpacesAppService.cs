@@ -24,6 +24,9 @@ public interface ISpacesAppService : IApplicationService
     /// <summary>The upcoming bookings these proposed rules would no longer allow — nothing is saved.</summary>
     Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateSpaceConstraintsDto input);
 
+    /// <summary>The upcoming bookings a details change (a lower capacity) would no longer allow — nothing is saved.</summary>
+    Task<BookingImpactDto> GetUpdateImpactAsync(Guid id, UpdateSpaceDto input);
+
     /// <summary>The upcoming bookings a delete would cancel.</summary>
     Task<BookingImpactDto> GetDeleteImpactAsync(Guid id);
 

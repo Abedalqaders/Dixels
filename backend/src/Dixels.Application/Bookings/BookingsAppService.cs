@@ -103,7 +103,16 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         // more) still sees what they booked — on UTC days, the one neutral choice left.
         var userId = CurrentUser.GetId();
         var buildingId = await _accessChecker.FindBookableBuildingIdAsync(userId);
-        var building = buildingId is null ? null : await _buildingRepository.FindAsync(buildingId.Value);
+        Building? building = null;
+        if (buildingId is not null)
+        {
+            // Deleted included: an employee whose building was removed still sees their
+            // (cancelled) bookings on that building's clock.
+            using (_dataFilter.Disable<ISoftDelete>())
+            {
+                building = await _buildingRepository.FindAsync(buildingId.Value);
+            }
+        }
         var clock = new BuildingClock(building?.Timezone ?? "UTC");
 
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);

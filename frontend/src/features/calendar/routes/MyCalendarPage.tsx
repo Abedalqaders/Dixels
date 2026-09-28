@@ -16,6 +16,7 @@ import { ApiError, getMyBookableBuilding } from '@/features/bookings/api/booking
 import type { BookableBuildingDto, BookingDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { emitBookingsChanged, useBookingsChanged } from '@/features/bookings/bookingEvents'
 import { BookingForm } from '@/features/bookings/components/BookingForm'
+import { BuildingRemovedNotice } from '@/features/bookings/components/BuildingRemovedNotice'
 import { readLastDuration } from '@/features/bookings/preferences'
 import { suggestWindow } from '@/features/bookings/suggestSlot'
 import { daysBetween, gridMonthFor, isValidIsoDate, rangeLabel, shiftDate, startOfMonth, visibleRange } from '@/features/calendar/calendarDates'
@@ -98,6 +99,8 @@ export function MyCalendarPage() {
           </Card>
         )}
 
+        {status === 'success' && building?.isRemoved && <BuildingRemovedNotice buildingName={building.name} onCalendar />}
+
         {status === 'success' && building && <Calendar token={token} building={building} />}
       </div>
     </>
@@ -105,6 +108,8 @@ export function MyCalendarPage() {
 }
 
 function Calendar({ token, building }: { token: string; building: BookableBuildingDto }) {
+  // The building was deleted: bookings are still shown (past and cancelled ones), but there's nothing to book.
+  const readOnly = Boolean(building.isRemoved)
   const { toast, showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const now = useZonedNow(building.timezone)
@@ -212,9 +217,11 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
   return (
     <>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button onClick={newBooking}>
-          <Plus /> New booking
-        </Button>
+        {!readOnly && (
+          <Button onClick={newBooking}>
+            <Plus /> New booking
+          </Button>
+        )}
         <Button variant="outline" onClick={() => go({ date: now.date })} title="Today (T)">
           Today
         </Button>
@@ -301,6 +308,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
               limits={limits}
               onOpenBooking={setDetail}
               onPickRange={setQuickBook}
+              readOnly={readOnly}
               onOpenDay={view === 'week' ? (d) => go({ view: 'day', date: d }) : undefined}
             />
           )}
@@ -308,9 +316,11 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           {bookings.status === 'success' && items.length === 0 && (
             <p className="mt-3 text-center text-sm text-muted-foreground">
               Nothing booked {view === 'day' ? 'this day' : view === 'week' ? 'this week' : 'this month'}.{' '}
-              <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={newBooking}>
-                Book a room
-              </button>
+              {!readOnly && (
+                <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={newBooking}>
+                  Book a room
+                </button>
+              )}
             </p>
           )}
         </section>

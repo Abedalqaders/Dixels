@@ -19,6 +19,7 @@ import { BookingForm } from '@/features/bookings/components/BookingForm'
 import { DayBar } from '@/features/bookings/components/DayBar'
 import { FloorFilter } from '@/features/bookings/components/FloorFilter'
 import { OwnClashNotice } from '@/features/bookings/components/OwnClashNotice'
+import { BuildingRemovedNotice } from '@/features/bookings/components/BuildingRemovedNotice'
 import { SearchBar } from '@/features/bookings/components/SearchBar'
 import type { SearchValues } from '@/features/bookings/components/SearchBar'
 import { dayAxis } from '@/features/bookings/dayAxis'
@@ -71,7 +72,9 @@ export function FindSpacePage() {
           </Card>
         )}
 
-        {status === 'success' && building && <SpaceSearch token={token} building={building} />}
+        {status === 'success' && building?.isRemoved && <BuildingRemovedNotice buildingName={building.name} />}
+
+        {status === 'success' && building && !building.isRemoved && <SpaceSearch token={token} building={building} />}
       </div>
     </TooltipProvider>
   )

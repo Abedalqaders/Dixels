@@ -75,12 +75,15 @@ export function FloorsListPage() {
       showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
       return
     }
-    if (affected.count === 0) {
+    if (affected.count === 0 && !affected.assignedEmployees) {
       confirmAndRun(confirmMessage, remove, `${name} deleted.`)
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
-    runAction(remove, `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.`)
+    runAction(
+      remove,
+      affected.count > 0 ? `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.` : `${name} deleted.`,
+    )
   }
 
   function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {

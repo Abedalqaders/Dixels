@@ -42,6 +42,8 @@ interface TimeGridProps {
   onPickRange: (range: PickedRange) => void
   /** Week view: clicking a day's heading opens that day. */
   onOpenDay?: (date: IsoDate) => void
+  /** Nothing can be booked (the building was removed): empty time doesn't respond. */
+  readOnly?: boolean
 }
 
 /**
@@ -64,6 +66,7 @@ export function TimeGrid({
   onOpenBooking,
   onPickRange,
   onOpenDay,
+  readOnly = false,
 }: TimeGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const top = useCallback((minute: number) => ((minute - hours.from * 60) / 60) * HOUR_PX, [hours.from])
@@ -161,6 +164,7 @@ export function TimeGrid({
               // 30-second clock tick re-renders one column, not the whole week.
               nowMinute={d === today ? nowMinute : 0}
               firstBookableMinute={d === today ? firstBookableMinute : d < today ? Infinity : 0}
+              readOnly={readOnly}
               leadMinutes={leadMinutes}
               slotMinutes={slotMinutes}
               defaultLength={defaultLength}
@@ -191,6 +195,7 @@ interface DayColumnProps {
   top: (minute: number) => number
   onOpenBooking: (booking: BookingDto) => void
   onPickRange: (range: PickedRange) => void
+  readOnly: boolean
 }
 
 const DayColumn = memo(function DayColumn({
@@ -208,6 +213,7 @@ const DayColumn = memo(function DayColumn({
   top,
   onOpenBooking,
   onPickRange,
+  readOnly,
 }: DayColumnProps) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<{ anchor: number; startY: number; moved: boolean } | null>(null)
@@ -257,7 +263,7 @@ const DayColumn = memo(function DayColumn({
   }
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0 || e.target !== e.currentTarget) return
+    if (readOnly || e.button !== 0 || e.target !== e.currentTarget) return
     const minute = snap(minuteAt(e.clientY))
     if (minute >= dayEnd) return
     if (isBlocked(minute)) {
@@ -275,6 +281,7 @@ const DayColumn = memo(function DayColumn({
   function handlePointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
     if (!d) {
+      if (readOnly) return
       // Not dragging: preview what a click here would pick. Only re-renders when the
       // pointer crosses into another slot, not on every pixel.
       if (e.pointerType === 'touch' || e.target !== e.currentTarget) {
@@ -312,7 +319,7 @@ const DayColumn = memo(function DayColumn({
   return (
     <div
       ref={ref}
-      className={cn('relative touch-pan-y border-l select-none', hover === 'blocked' ? 'cursor-not-allowed' : 'cursor-pointer')}
+      className={cn('relative touch-pan-y border-l select-none', readOnly ? 'cursor-default' : hover === 'blocked' ? 'cursor-not-allowed' : 'cursor-pointer')}
       style={{
         // Hour lines, with a fainter half-hour line between them.
         backgroundImage: `repeating-linear-gradient(to bottom, var(--border-subtle) 0 1px, transparent 1px ${HOUR_PX / 2}px, color-mix(in srgb, var(--border-subtle) 45%, transparent) ${HOUR_PX / 2}px ${HOUR_PX / 2 + 1}px, transparent ${HOUR_PX / 2 + 1}px ${HOUR_PX}px)`,

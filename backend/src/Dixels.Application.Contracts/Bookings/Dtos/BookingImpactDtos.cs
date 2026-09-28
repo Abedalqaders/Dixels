@@ -31,4 +31,7 @@ public class BookingImpactDto
 {
     public int Count { get; set; }
     public List<AffectedBookingDto> Bookings { get; set; } = new();
+
+    /// <summary>Deleting a building: how many employees are assigned to it (they can't book until reassigned).</summary>
+    public int AssignedEmployees { get; set; }
 }

@@ -11,7 +11,7 @@ import { useAsync } from '@/hooks/useAsync'
 import { useListParams } from '@/hooks/useListParams'
 import { ApiError, EMPLOYEE_ROLE, assignUserBuilding, buildingIdOf, getUsers } from '@/features/users/api/usersApi'
 import type { IdentityUserDto } from '@/features/users/api/usersApi'
-import { getBuilding } from '@/features/space-management/api/spaceManagementApi'
+import { getBuilding, getBuildings } from '@/features/space-management/api/spaceManagementApi'
 import { BuildingPicker } from '@/features/space-management/components/BuildingPicker'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -38,6 +38,8 @@ interface UserRow {
   user: IdentityUserDto
   buildingId: string | null
   buildingName: string | null
+  /** The building they were assigned to was deleted: its name, so the admin can see who to reassign. */
+  removedBuildingName: string | null
 }
 
 // Search, the building filter and paging all run on the server (ABP's GET /api/identity/users)
@@ -64,16 +66,25 @@ export function AdminUsersPage() {
 
       const buildingIds = [...new Set(usersResult.items.map(buildingIdOf).filter((id): id is string => id !== null))]
       const buildingNames = await Promise.all(
-        // A building deleted since it was assigned reads back as "not found" — show it as
-        // unassigned rather than failing the whole page.
+        // A building deleted since it was assigned reads back as "not found": the picker
+        // shows them as not assigned, with the deleted building's name next to it.
         buildingIds.map((id) => getBuilding(token, id).then((b) => [id, b.name] as const, () => [id, null] as const)),
       )
       const nameById = new Map(buildingNames)
 
+      // Names of those deleted buildings — one list call, only when there are any.
+      const missing = buildingIds.filter((id) => !nameById.get(id))
+      const removedNames = new Map<string, string>()
+      if (missing.length > 0) {
+        const all = await getBuildings(token, { includeDeleted: true, maxResultCount: 1000 }).catch(() => null)
+        for (const b of all?.items ?? []) if (missing.includes(b.id)) removedNames.set(b.id, b.name)
+      }
+
       const rows: UserRow[] = usersResult.items.map((user) => {
         const buildingId = buildingIdOf(user)
         const buildingName = buildingId ? (nameById.get(buildingId) ?? null) : null
-        return { user, buildingId: buildingName ? buildingId : null, buildingName }
+        const removedBuildingName = buildingId && !buildingName ? (removedNames.get(buildingId) ?? 'A deleted building') : null
+        return { user, buildingId: buildingName ? buildingId : null, buildingName, removedBuildingName }
       })
       return { rows, totalCount: usersResult.totalCount }
     },
@@ -148,7 +159,7 @@ export function AdminUsersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.rows.map(({ user, buildingId, buildingName }) => {
+                    {data.rows.map(({ user, buildingId, buildingName, removedBuildingName }) => {
                       const label = labelFor(user)
                       return (
                         <TableRow key={user.id}>
@@ -174,6 +185,11 @@ export function AdminUsersPage() {
                               className="w-full sm:w-56"
                               onChange={(id) => handleAssign(user.id, label, id)}
                             />
+                            {removedBuildingName && (
+                              <p className="mt-1 text-xs text-[var(--state-expired-ink)]">
+                                {removedBuildingName} (deleted) — pick another building
+                              </p>
+                            )}
                           </TableCell>
                         </TableRow>
                       )

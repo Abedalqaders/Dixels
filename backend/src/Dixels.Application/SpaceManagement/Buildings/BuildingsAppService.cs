@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
 using Dixels.Permissions;
+using Dixels.Users;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -24,6 +25,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly IUserDirectoryRepository _userDirectory;
 
     public BuildingsAppService(
         IRepository<Building, Guid> buildingRepository,
@@ -32,7 +34,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        IUserDirectoryRepository userDirectory)
     {
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
@@ -41,6 +44,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _userDirectory = userDirectory;
     }
 
     public async Task<BuildingDto> GetAsync(Guid id)
@@ -177,10 +181,14 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     {
         await EnsureCanManageBuildingAsync(id);
         var building = await _buildingRepository.GetAsync(id);
-        return await _bookingImpact.DescribeAsync(
+        var impact = await _bookingImpact.DescribeAsync(
             building,
             await _bookingImpact.UpcomingAsync(await RoomsAsync(id)),
             _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
+
+        // They keep the assignment (a restore brings everything back), but can't book meanwhile.
+        impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null);
+        return impact;
     }
 
     // The proposed building is a fresh, untracked copy — checking it can never save anything.

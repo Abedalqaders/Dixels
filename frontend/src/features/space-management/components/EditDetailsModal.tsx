@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { ApiError, updateBuilding, updateFloor, updateSpace } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, updateBuilding, updateFloor, updateSpace, getSpaceUpdateImpact } from '@/features/space-management/api/spaceManagementApi'
 import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
+import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 
 // The identity-fields counterpart to AddNodeModal — Name/BuildingNumber/Timezone (Building),
 // Name/FloorNumber (Floor), Name/SpaceType/Capacity (Space). Deliberately separate from the
@@ -34,6 +35,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   const [capacity, setCapacity] = useState(state.kind === 'space' ? String(state.capacity) : '')
   const [validationError, setValidationError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
 
   const titles = { building: 'Edit building details', floor: 'Edit floor details', space: 'Edit space details' }
 
@@ -64,7 +66,19 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
           setSubmitting(false)
           return
         }
-        await updateSpace(token, state.id, { name: name.trim(), spaceTypeId, capacity: parsedCapacity })
+        const input = { name: name.trim(), spaceTypeId, capacity: parsedCapacity }
+        // A lower capacity can leave bookings for more people behind: ask first.
+        const impact = await getSpaceUpdateImpact(token, state.id, input)
+        let cancelAffectedBookings = false
+        if (impact.count > 0) {
+          const choice = await askImpact({ mode: 'change', impact })
+          if (!choice) {
+            setSubmitting(false)
+            return
+          }
+          cancelAffectedBookings = choice === 'cancel'
+        }
+        await updateSpace(token, state.id, { ...input, cancelAffectedBookings })
       }
 
       onSaved()
@@ -78,6 +92,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
 
   return (
     <div className="overlay show">
+      {impactPrompt}
       <form className="modal" onSubmit={handleSubmit}>
         <h3>{titles[state.kind]}</h3>
         <div className="row2">

@@ -23,6 +23,7 @@ namespace Dixels.EntityFrameworkCore.Bookings;
 public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFrameworkCoreTestModule>
 {
     private readonly IBookingsAppService _bookings;
+    private readonly IAvailabilityAppService _availability;
     private readonly IBuildingsAppService _buildings;
     private readonly IFloorsAppService _floors;
     private readonly ISpacesAppService _spaces;
@@ -36,6 +37,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
     public BookingImpactTests()
     {
         _bookings = GetRequiredService<IBookingsAppService>();
+        _availability = GetRequiredService<IAvailabilityAppService>();
         _buildings = GetRequiredService<IBuildingsAppService>();
         _floors = GetRequiredService<IFloorsAppService>();
         _spaces = GetRequiredService<ISpacesAppService>();
@@ -292,5 +294,68 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await _buildings.DeleteAsync(s.Building.Id);
 
         (await StoredAsync(booking.Id)).CancelReason.ShouldBe("The building was removed");
+    }
+
+    [Fact]
+    public async Task After_the_building_is_deleted_the_employee_is_told_and_still_sees_their_calendar()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+        using (ActAs(Admin))
+        {
+            var impact = await _buildings.GetDeleteImpactAsync(s.Building.Id);
+            impact.AssignedEmployees.ShouldBe(1);
+            await _buildings.DeleteAsync(s.Building.Id);
+        }
+
+        using var _ = ActAs(s.UserId);
+        var mine = await _availability.GetMyBuildingAsync();
+        mine.ShouldNotBeNull();
+        mine.IsRemoved.ShouldBeTrue();
+        mine.Name.ShouldBe(s.Building.Name);
+        mine.Timezone.ShouldBe("UTC");
+        mine.Floors.ShouldBeEmpty();
+
+        var calendar = await _bookings.GetMineAsync(new GetMyBookingsInput { From = Tomorrow, To = Tomorrow.AddDays(1) });
+        var shown = calendar.Items.ShouldHaveSingleItem();
+        shown.Id.ShouldBe(booking.Id);
+        shown.CancelReason.ShouldBe("The building was removed");
+    }
+
+    [Fact]
+    public async Task Restoring_the_building_gives_the_employee_it_back()
+    {
+        var s = await CreateScenarioAsync();
+        using (ActAs(Admin))
+        {
+            await _buildings.DeleteAsync(s.Building.Id);
+            await _buildings.RestoreAsync(s.Building.Id);
+        }
+
+        using var _ = ActAs(s.UserId);
+        var mine = await _availability.GetMyBuildingAsync();
+        mine.ShouldNotBeNull().IsRemoved.ShouldBeFalse();
+        mine.Floors.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task Lowering_a_room_capacity_lists_the_bigger_bookings_and_can_cancel_them()
+    {
+        var s = await CreateScenarioAsync();
+        var big = await BookAsync(s, 9, 10, attendees: 6);
+        var small = await BookAsync(s, 11, 12, attendees: 3);
+        var space = await _spaces.GetAsync(s.Space.Id);
+        var input = new UpdateSpaceDto { Name = space.Name, SpaceTypeId = space.SpaceTypeId, Capacity = 4 };
+
+        using var _ = ActAs(Admin);
+        var impact = await _spaces.GetUpdateImpactAsync(s.Space.Id, input);
+        impact.Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(big.Id);
+        impact.Bookings[0].Reasons.ShouldBe(new[] { "Seats 4 — you need 6" });
+
+        input.CancelAffectedBookings = true;
+        await _spaces.UpdateAsync(s.Space.Id, input);
+
+        (await StoredAsync(big.Id)).CancelReason.ShouldBe("Rules changed: Seats 4 — you need 6");
+        (await StoredAsync(small.Id)).Status.ShouldBe(BookingStatus.Confirmed);
     }
 }

@@ -52,7 +52,9 @@ export function DashboardPage() {
           <span className="pick">
             <span className="picklbl">
               {buildingStatus === 'success'
-                ? (myBuilding?.name ?? "You haven't been assigned a building yet — ask your admin.")
+                ? myBuilding?.isDeleted
+                  ? `${myBuilding.name} was removed — ask your admin to assign you to another building.`
+                  : (myBuilding?.name ?? "You haven't been assigned a building yet — ask your admin.")
                 : buildingStatus === 'error'
                   ? "Couldn't load your building."
                   : <TextSkeleton label="Loading your building…" />}

@@ -35,9 +35,12 @@ const plural = (n: number) => `${n} upcoming ${n === 1 ? 'booking' : 'bookings'}
  */
 export function BookingImpactDialog({ mode, impact, subject, onChoose }: BookingImpactDialogProps) {
   const n = impact.count
+  const people = impact.assignedEmployees ?? 0
   const title =
     mode === 'delete'
-      ? `Deleting “${subject}” cancels ${plural(n)}`
+      ? n > 0
+        ? `Deleting “${subject}” cancels ${plural(n)}`
+        : `Delete “${subject}”?`
       : mode === 'closure'
         ? `This closure falls on ${plural(n)}`
         : `This change affects ${plural(n)}`
@@ -50,11 +53,23 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
             {mode === 'delete'
-              ? "They'll be cancelled, and whoever booked them will see why on their calendar. Restoring later won't bring them back."
+              ? n > 0
+                ? "They'll be cancelled, and whoever booked them will see why on their calendar. Restoring later won't bring them back."
+                : 'It can be restored later.'
               : 'They were booked under the current rules. Keep them as they are, or cancel them — whoever booked them will see why on their calendar.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
+        {people > 0 && (
+          <p role="note" className="rounded-md bg-[var(--state-expired-soft)] px-3 py-2 text-sm text-[var(--state-expired-ink)]">
+            <strong>
+              {people} {people === 1 ? 'employee is' : 'employees are'} assigned to {subject}.
+            </strong>{' '}
+            They won't be able to book until you assign them to another building — or restore this one.
+          </p>
+        )}
+
+        {n > 0 && (
         <ul className="grid max-h-64 gap-1.5 overflow-y-auto rounded-md border p-1.5" aria-label="Affected bookings">
           {impact.bookings.map((b) => (
             <li key={b.bookingId} className="grid gap-0.5 rounded px-2 py-1.5 text-sm odd:bg-muted/50">
@@ -76,6 +91,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
             </li>
           ))}
         </ul>
+        )}
 
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel>Go back</AlertDialogCancel>
@@ -85,7 +101,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
             </Button>
           )}
           <Button variant="destructive" onClick={() => onChoose('cancel')}>
-            {mode === 'delete' ? `Delete and cancel ${n}` : `Cancel ${n} and ${action}`}
+            {mode === 'delete' ? (n > 0 ? `Delete and cancel ${n}` : 'Delete') : `Cancel ${n} and ${action}`}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

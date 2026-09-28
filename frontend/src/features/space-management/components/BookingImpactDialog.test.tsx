@@ -70,4 +70,17 @@ describe('BookingImpactDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Go back' }))
     expect(onChoose).toHaveBeenLastCalledWith(null)
   })
+
+  it('warns that assigned employees will be left without a building, even with no bookings', async () => {
+    const user = userEvent.setup()
+    const onChoose = vi.fn()
+    render(<BookingImpactDialog mode="delete" subject="Riverside HQ" impact={{ count: 0, bookings: [], assignedEmployees: 8 }} onChoose={onChoose} />)
+
+    expect(screen.getByRole('alertdialog', { name: 'Delete “Riverside HQ”?' })).toBeInTheDocument()
+    expect(screen.getByRole('note')).toHaveTextContent("8 employees are assigned to Riverside HQ. They won't be able to book")
+    expect(screen.queryByRole('list', { name: 'Affected bookings' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+    expect(onChoose).toHaveBeenLastCalledWith('cancel')
+  })
 })

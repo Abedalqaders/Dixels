@@ -349,4 +349,16 @@ describe('MyCalendarPage', () => {
 
     expect(await screen.findByText(/haven't been assigned to a building/)).toBeInTheDocument()
   })
+
+  it('still shows the calendar, read-only, when the building was removed', async () => {
+    vi.mocked(getMyBookableBuilding).mockResolvedValue({ ...building, isRemoved: true, floors: [] })
+    vi.mocked(getMyBookings).mockResolvedValue([
+      { ...booking('b1', 'Design review', '10:00', '11:00'), status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'The building was removed' },
+    ])
+    renderPage()
+
+    expect(await screen.findByText('Riverside HQ is no longer available.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Cancelled: Design review/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'New booking' })).not.toBeInTheDocument()
+  })
 })

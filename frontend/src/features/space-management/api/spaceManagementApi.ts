@@ -60,6 +60,8 @@ export interface AffectedBookingDto {
 export interface BookingImpactDto {
   count: number
   bookings: AffectedBookingDto[]
+  /** Deleting a building: employees assigned to it — they can't book until reassigned. */
+  assignedEmployees?: number
 }
 
 export interface FieldValueDto<T> {
@@ -297,6 +299,8 @@ export interface UpdateSpaceDto {
   name: string
   spaceTypeId: string
   capacity: number
+  /** Also cancel upcoming bookings for more people than the new capacity (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export interface UpdateSpaceConstraintsDto {
@@ -343,6 +347,11 @@ export function updateSpaceConstraints(token: string, id: string, input: UpdateS
 
 export function getSpaceConstraintsImpact(token: string, id: string, input: UpdateSpaceConstraintsDto) {
   return request<BookingImpactDto>(`/api/app/spaces/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** The upcoming bookings a room details change (a lower capacity) would break — nothing is saved. */
+export function getSpaceUpdateImpact(token: string, id: string, input: UpdateSpaceDto) {
+  return request<BookingImpactDto>(`/api/app/spaces/${id}/impact`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
 export function getSpaceDeleteImpact(token: string, id: string) {

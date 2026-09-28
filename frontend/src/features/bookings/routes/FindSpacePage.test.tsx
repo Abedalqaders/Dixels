@@ -221,4 +221,14 @@ describe('FindSpacePage', () => {
       expect(screen.queryByRole('combobox', { name: 'Floor' })).not.toBeInTheDocument()
     })
   })
+
+  it("tells the employee their building was removed, instead of offering a search", async () => {
+    vi.mocked(getMyBookableBuilding).mockResolvedValue({ ...building, isRemoved: true, floors: [] })
+    renderPage()
+
+    expect(await screen.findByText('Riverside HQ is no longer available.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'My calendar' })).toHaveAttribute('href', '/my-calendar')
+    expect(screen.queryByRole('search')).not.toBeInTheDocument()
+    expect(searchAvailability).not.toHaveBeenCalled()
+  })
 })

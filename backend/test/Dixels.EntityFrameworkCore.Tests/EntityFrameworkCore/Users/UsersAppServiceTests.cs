@@ -215,13 +215,16 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
     }
 
     [Fact]
-    public async Task My_building_is_null_once_the_building_is_soft_deleted()
+    public async Task My_building_says_it_was_removed_once_the_building_is_soft_deleted()
     {
         var building = await CreateBuildingAsync();
         var user = await CreateUserAsync(building.Id);
         await WithUnitOfWorkAsync(() => _buildingRepository.DeleteAsync(building.Id));
         using var _ = ActAs(user.Id);
 
-        (await _usersAppService.GetMyBuildingAsync()).ShouldBeNull();
+        // Not "not assigned": the employee is told their building was removed.
+        var mine = (await _usersAppService.GetMyBuildingAsync()).ShouldNotBeNull();
+        mine.Id.ShouldBe(building.Id);
+        mine.IsDeleted.ShouldBeTrue();
     }
 }

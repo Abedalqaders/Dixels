@@ -6,6 +6,8 @@ using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
@@ -28,6 +30,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
     private readonly BookingOptions _bookingOptions;
     private readonly BookingManager _bookingManager;
     private readonly BookingViolationLocalizer _violationLocalizer;
+    private readonly IDataFilter _dataFilter;
 
     public AvailabilityAppService(
         BookingAccessChecker accessChecker,
@@ -38,7 +41,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         IRepository<SpaceType, Guid> spaceTypeRepository,
         IOptions<BookingOptions> bookingOptions,
         BookingManager bookingManager,
-        BookingViolationLocalizer violationLocalizer)
+        BookingViolationLocalizer violationLocalizer,
+        IDataFilter dataFilter)
     {
         _accessChecker = accessChecker;
         _constraintResolver = constraintResolver;
@@ -49,6 +53,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         _bookingOptions = bookingOptions.Value;
         _bookingManager = bookingManager;
         _violationLocalizer = violationLocalizer;
+        _dataFilter = dataFilter;
     }
 
     public async Task<BookableBuildingDto?> GetMyBuildingAsync()
@@ -59,12 +64,26 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
             return null;
         }
 
-        // Null when the assigned building was soft-deleted — the same "not assigned" answer
-        // UsersAppService.GetMyBuildingAsync gives, rather than a broken reference.
-        var building = await _buildingRepository.FindAsync(buildingId.Value);
+        // A building an admin deleted comes back marked IsRemoved, with nothing in it: the
+        // employee is told their building went (not "you were never assigned"), and their
+        // calendar still shows past and cancelled bookings on that building's clock.
+        Building? building;
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            building = await _buildingRepository.FindAsync(buildingId.Value);
+        }
+
         if (building is null)
         {
             return null;
+        }
+
+        if (building.IsDeleted)
+        {
+            var removed = ObjectMapper.Map<Building, BookableBuildingDto>(building);
+            removed.IsRemoved = true;
+            removed.SlotMinutes = _bookingOptions.SlotMinutes;
+            return removed;
         }
 
         var floors = await _floorRepository.GetListAsync(f => f.BuildingId == building.Id);

@@ -14,6 +14,12 @@ public class BookableBuildingDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Timezone { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The employee's building was deleted by an admin: name and timezone are still here (to
+    /// explain, and to show past bookings on the right clock), but there's nothing to book.
+    /// </summary>
+    public bool IsRemoved { get; set; }
     public int MaxHorizonDays { get; set; }
 
     /// <summary>How far ahead a recurring booking's end date may be.</summary>

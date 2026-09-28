@@ -38,6 +38,10 @@ public class SpacesController : DixelsController, ISpacesAppService
     public virtual Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateSpaceConstraintsDto input) =>
         _spacesAppService.GetConstraintsImpactAsync(id, input);
 
+    [HttpPost("{id}/impact")]
+    public virtual Task<BookingImpactDto> GetUpdateImpactAsync(Guid id, [FromBody] UpdateSpaceDto input) =>
+        _spacesAppService.GetUpdateImpactAsync(id, input);
+
     [HttpGet("{id}/delete-impact")]
     public virtual Task<BookingImpactDto> GetDeleteImpactAsync(Guid id) => _spacesAppService.GetDeleteImpactAsync(id);
 
