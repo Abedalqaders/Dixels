@@ -19,6 +19,9 @@ public class Building : FullAuditedAggregateRoot<Guid>
     public OperatingWindow Hours { get; private set; } = null!;
     public int MaxDurationMinutes { get; private set; }
     public int MaxHorizonDays { get; private set; }
+
+    /// <summary>How far ahead a recurring booking's dates may run — never shorter than <see cref="MaxHorizonDays"/>.</summary>
+    public int MaxSeriesHorizonDays { get; private set; }
     public int MinLeadMinutes { get; private set; }
 
     /// <summary>Whether one person may hold two bookings at the same time here.</summary>
@@ -58,7 +61,8 @@ public class Building : FullAuditedAggregateRoot<Guid>
         int maxDurationMinutes,
         int maxHorizonDays,
         int minLeadMinutes,
-        OwnOverlapPolicy ownOverlapPolicy = OwnOverlapPolicy.Warn)
+        OwnOverlapPolicy ownOverlapPolicy = OwnOverlapPolicy.Warn,
+        int? maxSeriesHorizonDays = null)
         : base(id)
     {
         SetName(name);
@@ -68,6 +72,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
         Hours = Check.NotNull(hours, nameof(hours));
         SetMaxDurationMinutes(maxDurationMinutes);
         SetMaxHorizonDays(maxHorizonDays);
+        SetMaxSeriesHorizonDays(maxSeriesHorizonDays ?? Math.Max(DefaultMaxSeriesHorizonDays, maxHorizonDays));
         SetMinLeadMinutes(minLeadMinutes);
         SetOwnOverlapPolicy(ownOverlapPolicy);
     }
@@ -127,6 +132,26 @@ public class Building : FullAuditedAggregateRoot<Guid>
         }
 
         MaxHorizonDays = maxHorizonDays;
+
+        // The series horizon can never be shorter: moving the normal one past it pulls it along.
+        if (MaxSeriesHorizonDays < maxHorizonDays)
+        {
+            MaxSeriesHorizonDays = maxHorizonDays;
+        }
+    }
+
+    /// <summary>Used when a building is created without its own series horizon.</summary>
+    public const int DefaultMaxSeriesHorizonDays = 90;
+
+    public void SetMaxSeriesHorizonDays(int maxSeriesHorizonDays)
+    {
+        if (maxSeriesHorizonDays < MaxHorizonDays)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.MaxSeriesHorizonTooShort)
+                .WithData("horizonDays", MaxHorizonDays);
+        }
+
+        MaxSeriesHorizonDays = maxSeriesHorizonDays;
     }
 
     public void SetMinLeadMinutes(int minLeadMinutes)

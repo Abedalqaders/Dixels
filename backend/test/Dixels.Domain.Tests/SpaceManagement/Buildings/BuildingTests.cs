@@ -95,4 +95,32 @@ public class BuildingTests
 
         exception.Code.ShouldBe(DixelsDomainErrorCodes.InvalidOwnOverlapPolicy);
     }
+
+    [Fact]
+    public void Recurring_bookings_default_to_90_days_or_the_normal_horizon_if_longer()
+    {
+        CreateValidBuilding().MaxSeriesHorizonDays.ShouldBe(90);
+        new Building(Guid.NewGuid(), "B", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
+            maxDurationMinutes: 60, maxHorizonDays: 120, minLeadMinutes: 0).MaxSeriesHorizonDays.ShouldBe(120);
+    }
+
+    [Fact]
+    public void The_series_horizon_cannot_be_shorter_than_the_normal_one()
+    {
+        var building = CreateValidBuilding(); // 14-day horizon
+
+        var ex = Should.Throw<BusinessException>(() => building.SetMaxSeriesHorizonDays(7));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.MaxSeriesHorizonTooShort);
+    }
+
+    [Fact]
+    public void Lengthening_the_normal_horizon_past_the_series_one_pulls_it_along()
+    {
+        var building = CreateValidBuilding();
+
+        building.SetMaxHorizonDays(200);
+
+        building.MaxSeriesHorizonDays.ShouldBe(200);
+    }
 }

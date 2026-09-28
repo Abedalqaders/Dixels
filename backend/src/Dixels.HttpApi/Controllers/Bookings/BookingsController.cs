@@ -31,6 +31,14 @@ public class BookingsController : DixelsController, IBookingsAppService
         _bookingsAppService.GetMineAsync(input);
 
     [HttpPost("{id}/cancel")]
-    public virtual Task<BookingDto> CancelAsync(Guid id, [FromBody] CancelBookingDto input) =>
+    public virtual Task<ListResultDto<BookingDto>> CancelAsync(Guid id, [FromBody] CancelBookingDto input) =>
         _bookingsAppService.CancelAsync(id, input);
+
+    [HttpPost("series/preview")]
+    public virtual Task<SeriesPreviewDto> PreviewSeriesAsync([FromBody] SeriesRequestDto input) =>
+        _bookingsAppService.PreviewSeriesAsync(input);
+
+    [HttpPost("series")]
+    public virtual Task<SeriesCreatedDto> CreateSeriesAsync([FromBody] CreateSeriesDto input) =>
+        _bookingsAppService.CreateSeriesAsync(input);
 }

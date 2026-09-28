@@ -10,6 +10,15 @@ public static class BookingConsts
     public const int MaxIdempotencyKeyLength = 64;
     public const int MaxCancelReasonLength = 512;
 
+    /// <summary>
+    /// The most dates one series may have. Keeps a preview (every date checked against
+    /// every rule) quick, and a series of this size is already three months of workdays.
+    /// </summary>
+    public const int MaxSeriesOccurrences = 100;
+
+    /// <summary>Shorter than a booking's key: each occurrence's key is the series key plus ":yyyyMMdd".</summary>
+    public const int MaxSeriesIdempotencyKeyLength = 50;
+
     /// <summary>Used when the employee leaves the title blank — the title is optional.</summary>
     public const string DefaultTitle = "Booking";
 }

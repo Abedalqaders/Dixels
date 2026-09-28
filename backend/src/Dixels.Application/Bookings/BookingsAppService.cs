@@ -24,6 +24,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IBookingRepository _bookingRepository;
     private readonly BookingAccessChecker _accessChecker;
     private readonly IDataFilter _dataFilter;
+    private readonly IRepository<BookingSeries, Guid> _seriesRepository;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -33,7 +34,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         BookingViolationLocalizer violationLocalizer,
         IBookingRepository bookingRepository,
         BookingAccessChecker accessChecker,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IRepository<BookingSeries, Guid> seriesRepository)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -43,6 +45,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _bookingRepository = bookingRepository;
         _accessChecker = accessChecker;
         _dataFilter = dataFilter;
+        _seriesRepository = seriesRepository;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -108,11 +111,71 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     }
 
     [Authorize(DixelsPermissions.Bookings.Cancel)]
-    public async Task<BookingDto> CancelAsync(Guid id, CancelBookingDto input)
+    public async Task<ListResultDto<BookingDto>> CancelAsync(Guid id, CancelBookingDto input)
     {
-        var booking = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason);
-        return (await MapToDtosAsync(new[] { booking })).Single();
+        var cancelled = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason, input.Scope);
+        return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));
     }
+
+    public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
+    {
+        var evaluation = await _bookingManager.EvaluateSeriesAsync(
+            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToRule(input.Recurrence));
+
+        var seriesWide = evaluation.SeriesViolations.Count > 0;
+        return new SeriesPreviewDto
+        {
+            SeriesViolations = evaluation.SeriesViolations.Select(_violationLocalizer.ToDto).ToList(),
+            Occurrences = evaluation.Occurrences.Select(o => new OccurrencePreviewDto
+            {
+                Date = o.Date,
+                LocalStart = o.LocalStart,
+                LocalEnd = o.LocalEnd,
+                IsValid = !seriesWide && o.IsValid,
+                Violations = o.Violations.Select(_violationLocalizer.ToDto).ToList(),
+                Warnings = o.Warnings.Select(_violationLocalizer.ToDto).ToList(),
+            }).ToList(),
+            BookableCount = evaluation.BookableCount,
+            Timezone = evaluation.Building.Timezone,
+        };
+    }
+
+    [Authorize(DixelsPermissions.Bookings.Create)]
+    public async Task<SeriesCreatedDto> CreateSeriesAsync(CreateSeriesDto input)
+    {
+        try
+        {
+            var (series, bookings, _) = await _bookingManager.CreateSeriesAsync(
+                CurrentUser.GetId(),
+                input.SpaceId,
+                input.LocalStart,
+                input.LocalEnd,
+                input.Attendees,
+                input.Title,
+                ToRule(input.Recurrence),
+                input.SkipDates,
+                input.IdempotencyKey);
+
+            return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList()) };
+        }
+        catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
+        {
+            ex.WithData("level", _violationLocalizer.LevelName(level));
+            throw;
+        }
+    }
+
+    private static RecurrenceRule ToRule(RecurrenceDto dto) =>
+        new(dto.Frequency, dto.Interval, dto.Weekdays.Select(d => (DayOfWeek)d), dto.MonthlyRepeat, dto.EndDate);
+
+    private static RecurrenceDto ToDto(RecurrenceRule rule) => new()
+    {
+        Frequency = rule.Frequency,
+        Interval = rule.Interval,
+        Weekdays = rule.Weekdays.Select(d => (int)d).ToArray(),
+        MonthlyRepeat = rule.MonthlyRepeat,
+        EndDate = rule.EndDate,
+    };
 
     /// <summary>
     /// Builds DTOs for a batch of bookings with one query per table (not one per booking) —
@@ -133,6 +196,11 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var buildingIds = floors.Values.Select(f => f.BuildingId).Distinct().ToList();
         var buildings = (await _buildingRepository.GetListAsync(b => buildingIds.Contains(b.Id))).ToDictionary(b => b.Id);
 
+        var seriesIds = bookings.Where(b => b.SeriesId != null).Select(b => b.SeriesId!.Value).Distinct().ToList();
+        var seriesById = seriesIds.Count == 0
+            ? new Dictionary<Guid, BookingSeries>()
+            : (await _seriesRepository.GetListAsync(s => seriesIds.Contains(s.Id))).ToDictionary(s => s.Id);
+
         return bookings.Select(booking =>
         {
             var space = spaces[booking.SpaceId];
@@ -147,6 +215,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             dto.Timezone = building.Timezone;
             dto.LocalStart = clock.ToLocal(booking.StartsAt);
             dto.LocalEnd = clock.ToLocal(booking.EndsAt);
+            dto.Recurrence = booking.SeriesId is { } seriesId && seriesById.TryGetValue(seriesId, out var series)
+                ? ToDto(series.Rule)
+                : null;
             return dto;
         }).ToList();
     }

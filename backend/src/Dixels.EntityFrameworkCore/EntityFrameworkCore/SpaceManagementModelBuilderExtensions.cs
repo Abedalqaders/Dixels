@@ -50,7 +50,10 @@ public static class SpaceManagementModelBuilderExtensions
         builder.Entity<Building>(b =>
         {
             b.ToTable(DixelsConsts.DbTablePrefix + "Buildings", DixelsConsts.DbSchema, tb =>
-                tb.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0"));
+            {
+                tb.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0");
+                tb.HasCheckConstraint("CK_AppBuildings_SeriesHorizonAtLeastHorizon", "\"MaxSeriesHorizonDays\" >= \"MaxHorizonDays\"");
+            });
             b.ConfigureByConvention();
 
             b.Property(x => x.Name).HasMaxLength(BuildingConsts.MaxNameLength).IsRequired();

@@ -33,6 +33,7 @@ public class DixelsDbContext :
     public DbSet<Space> Spaces { get; set; }
     public DbSet<AvailabilityOverride> AvailabilityOverrides { get; set; }
     public DbSet<Booking> Bookings { get; set; }
+    public DbSet<BookingSeries> BookingSeries { get; set; }
 
     #region Entities from the modules
 

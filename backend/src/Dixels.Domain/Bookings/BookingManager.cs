@@ -17,13 +17,14 @@ namespace Dixels.Bookings;
 /// → load closures → validate. Preview and create sharing this means the UI can never be
 /// told "free" for a slot the server would then reject.
 /// </summary>
-public class BookingManager : DomainService
+public partial class BookingManager : DomainService
 {
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IRepository<AvailabilityOverride, Guid> _overrideRepository;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly BookingPolicyValidator _validator;
     private readonly BookingAccessChecker _accessChecker;
@@ -36,6 +37,7 @@ public class BookingManager : DomainService
         IRepository<Building, Guid> buildingRepository,
         IRepository<AvailabilityOverride, Guid> overrideRepository,
         IBookingRepository bookingRepository,
+        IRepository<BookingSeries, Guid> seriesRepository,
         ConstraintResolver constraintResolver,
         BookingPolicyValidator validator,
         BookingAccessChecker accessChecker,
@@ -47,6 +49,7 @@ public class BookingManager : DomainService
         _buildingRepository = buildingRepository;
         _overrideRepository = overrideRepository;
         _bookingRepository = bookingRepository;
+        _seriesRepository = seriesRepository;
         _constraintResolver = constraintResolver;
         _validator = validator;
         _accessChecker = accessChecker;
@@ -380,13 +383,7 @@ public class BookingManager : DomainService
         var spaceName = (await _spaceRepository.FindAsync(clash.SpaceId))?.Name ?? "another room";
         var blocks = building.OwnOverlapPolicy == OwnOverlapPolicy.Block;
 
-        var violation = new BookingViolation(
-            blocks ? DixelsDomainErrorCodes.BookingOwnOverlap : DixelsDomainErrorCodes.BookingOwnOverlapWarning,
-            ConstraintSource.Building,
-            BookingFormat.Data(
-                ("spaceName", spaceName),
-                ("from", BookingFormat.DateTime(clock.ToLocal(clash.StartsAt))),
-                ("until", clock.ToLocal(clash.EndsAt).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))));
+        var violation = OwnClashViolation(clash, spaceName, clock, blocks);
 
         return new OwnClash(violation, clash.SpaceId, blocks);
     }

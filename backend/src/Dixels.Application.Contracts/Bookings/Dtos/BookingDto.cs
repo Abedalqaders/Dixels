@@ -26,4 +26,8 @@ public class BookingDto : EntityDto<Guid>
     public int Attendees { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>Set for a booking that's one date of a recurring series, with how the series repeats.</summary>
+    public Guid? SeriesId { get; set; }
+    public RecurrenceDto? Recurrence { get; set; }
 }

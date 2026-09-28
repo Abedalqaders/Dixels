@@ -147,6 +147,45 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
     }
 
     [PostgresFact]
+    public async Task Two_series_racing_for_the_same_room_never_leave_a_half_booked_one()
+    {
+        var s = await CreateScenarioAsync(OwnOverlapPolicy.Allow);
+        using var _ = ActAs(s.UserId);
+
+        // Both want 10:00–11:00 every day this week in the same room, released at once.
+        Task<SeriesCreatedDto> Attempt() => WithUnitOfWorkAsync(new AbpUnitOfWorkOptions(isTransactional: true), () =>
+            _bookingsAppService.CreateSeriesAsync(new CreateSeriesDto
+            {
+                SpaceId = s.SpaceId,
+                LocalStart = Tomorrow.AddHours(10),
+                LocalEnd = Tomorrow.AddHours(11),
+                Attendees = 1,
+                Recurrence = new RecurrenceDto
+                {
+                    Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(4)),
+                },
+                IdempotencyKey = Guid.NewGuid().ToString(),
+            }));
+
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
+        {
+            try
+            {
+                return (Won: true, Code: (string?)null, Count: (await Attempt()).Bookings.Count);
+            }
+            catch (BusinessException ex)
+            {
+                return (Won: false, Code: ex.Code, Count: 0);
+            }
+        })));
+
+        outcomes.Count(o => o.Won).ShouldBe(1);
+        outcomes.Single(o => o.Won).Count.ShouldBe(5);
+        outcomes.Single(o => !o.Won).Code.ShouldBeOneOf(DixelsDomainErrorCodes.SeriesDateUnavailable, DixelsDomainErrorCodes.BookingOverlap);
+        (await CountConfirmedAsync(s.SpaceId)).ShouldBe(5);
+    }
+
+    [PostgresFact]
     public async Task The_database_refuses_an_overlap_even_when_the_application_check_is_bypassed()
     {
         var s = await CreateScenarioAsync();

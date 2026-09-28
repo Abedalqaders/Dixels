@@ -53,6 +53,34 @@ public static class BookingsModelBuilderExtensions
 
             b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict).IsRequired();
+
+            // A series' bookings are found by it (cancel "this and following", the repeat
+            // icon). Restrict: a series row is never deleted, like the bookings themselves.
+            b.HasOne<BookingSeries>().WithMany().HasForeignKey(x => x.SeriesId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(x => x.SeriesId);
+        });
+
+        builder.Entity<BookingSeries>(b =>
+        {
+            b.ToTable(DixelsConsts.DbTablePrefix + "BookingSeries", DixelsConsts.DbSchema, tb =>
+            {
+                tb.HasCheckConstraint("CK_AppBookingSeries_IntervalPositive", "\"Interval\" > 0");
+                tb.HasCheckConstraint("CK_AppBookingSeries_DurationPositive", "\"DurationMinutes\" > 0");
+            });
+            b.ConfigureByConvention();
+
+            b.Property(x => x.Title).HasMaxLength(BookingConsts.MaxTitleLength).IsRequired();
+            b.Property(x => x.Frequency).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.Property(x => x.MonthlyRepeat).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.Property(x => x.IdempotencyKey).HasMaxLength(BookingConsts.MaxSeriesIdempotencyKeyLength).IsRequired();
+
+            b.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique();
+
+            b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId)
+                .OnDelete(DeleteBehavior.Restrict).IsRequired();
+            b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict).IsRequired();
         });
     }
 }

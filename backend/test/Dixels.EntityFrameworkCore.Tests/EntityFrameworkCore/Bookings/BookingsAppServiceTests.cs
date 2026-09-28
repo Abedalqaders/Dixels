@@ -495,6 +495,202 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         result.Spaces.Single(r => r.Space.Id == desk.Id).Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
     }
 
+    // ---- Recurring bookings ----
+
+    private static DateOnly Day(int offset) => DateOnly.FromDateTime(Tomorrow.AddDays(offset));
+
+    /// <summary>Daily 10:00–11:00 from tomorrow for <paramref name="days"/> days.</summary>
+    private static CreateSeriesDto Daily(Guid spaceId, int days, int attendees = 2, params int[] skip) => new()
+    {
+        SpaceId = spaceId,
+        LocalStart = Tomorrow.AddHours(10),
+        LocalEnd = Tomorrow.AddHours(11),
+        Attendees = attendees,
+        Title = "Stand-up",
+        Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = Day(days - 1) },
+        SkipDates = skip.Select(Day).ToList(),
+        IdempotencyKey = Guid.NewGuid().ToString(),
+    };
+
+    [Fact]
+    public async Task Series_preview_checks_every_date_and_marks_the_ones_that_fail()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        // Day 2 at 10:00 is already booked.
+        await _bookingsAppService.CreateAsync(new CreateBookingDto
+        {
+            SpaceId = s.Space.Id, LocalStart = Tomorrow.AddDays(2).AddHours(10), LocalEnd = Tomorrow.AddDays(2).AddHours(11),
+            Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 5));
+
+        preview.SeriesViolations.ShouldBeEmpty();
+        preview.Occurrences.Select(o => o.Date).ShouldBe(Enumerable.Range(0, 5).Select(Day));
+        preview.Occurrences.Select(o => o.IsValid).ShouldBe(new[] { true, true, false, true, true });
+        preview.Occurrences[2].Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
+        preview.Occurrences[3].LocalStart.ShouldBe(Tomorrow.AddDays(3).AddHours(10));
+        preview.BookableCount.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task A_rule_every_date_breaks_alike_is_reported_once_for_the_series()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 5, attendees: 9));
+
+        preview.SeriesViolations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverCapacity);
+        preview.Occurrences.ShouldAllBe(o => !o.IsValid && o.Violations.Count == 0);
+        preview.BookableCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_series_can_run_past_the_normal_horizon_up_to_the_series_one()
+    {
+        var s = await CreateScenarioAsync(); // 30-day horizon, 90-day series horizon
+        using var _ = ActAs(s.UserId);
+        var weekly = Daily(s.Space.Id, 1);
+        weekly.Recurrence = new RecurrenceDto
+        {
+            Frequency = RecurrenceFrequency.Weekly, Interval = 1,
+            Weekdays = new[] { (int)Tomorrow.DayOfWeek }, EndDate = Day(80),
+        };
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(weekly);
+        preview.Occurrences.Last().Date.ShouldBeGreaterThan(Day(30));
+        preview.Occurrences.ShouldAllBe(o => o.IsValid);
+
+        weekly.Recurrence.EndDate = Day(95);
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.PreviewSeriesAsync(weekly));
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.SeriesBeyondHorizon);
+    }
+
+    [Fact]
+    public async Task Creating_books_every_ticked_date_as_one_series()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var created = await _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 5, skip: 2));
+
+        created.Bookings.Count.ShouldBe(4);
+        created.Bookings.ShouldAllBe(b => b.SeriesId == created.SeriesId && b.Title == "Stand-up");
+        created.Bookings.Select(b => DateOnly.FromDateTime(b.LocalStart)).ShouldBe(new[] { Day(0), Day(1), Day(3), Day(4) });
+
+        var mine = await _bookingsAppService.GetMineAsync(Days(0, 5));
+        mine.Items.Count.ShouldBe(4);
+        mine.Items[0].Recurrence.ShouldNotBeNull().Frequency.ShouldBe(RecurrenceFrequency.Daily);
+        mine.Items[0].Recurrence!.EndDate.ShouldBe(Day(4));
+    }
+
+    [Fact]
+    public async Task If_a_ticked_date_was_taken_since_the_preview_nothing_is_booked()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(new CreateBookingDto
+        {
+            SpaceId = s.Space.Id, LocalStart = Tomorrow.AddDays(3).AddHours(10), LocalEnd = Tomorrow.AddDays(3).AddHours(11),
+            Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+        var before = await CountBookingsAsync();
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 5)));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.SeriesDateUnavailable);
+        (await CountBookingsAsync()).ShouldBe(before);
+    }
+
+    [Fact]
+    public async Task Unticking_every_date_books_nothing()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 2, skip: new[] { 0, 1 })));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.SeriesNothingToBook);
+    }
+
+    [Fact]
+    public async Task Retrying_a_series_with_the_same_key_returns_it_instead_of_booking_twice()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var request = Daily(s.Space.Id, 3);
+
+        var first = await _bookingsAppService.CreateSeriesAsync(request);
+        var again = await _bookingsAppService.CreateSeriesAsync(request);
+
+        again.SeriesId.ShouldBe(first.SeriesId);
+        again.Bookings.Select(b => b.Id).ShouldBe(first.Bookings.Select(b => b.Id));
+        (await CountBookingsAsync()).ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Under_block_a_date_I_am_booked_elsewhere_fails_on_its_own()
+    {
+        var s = await CreateScenarioAsync();
+        await SetPolicyAsync(s, OwnOverlapPolicy.Block);
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(new CreateBookingDto
+        {
+            SpaceId = desk.Id, LocalStart = Tomorrow.AddDays(1).AddHours(10), LocalEnd = Tomorrow.AddDays(1).AddHours(11),
+            Attendees = 1, IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 3));
+
+        preview.Occurrences.Select(o => o.IsValid).ShouldBe(new[] { true, false, true });
+        preview.Occurrences[1].Violations.ShouldHaveSingleItem().ShortMessage.ShouldBe("You're in Desk 7 then");
+    }
+
+    [Fact]
+    public async Task Weekly_with_no_day_picked_is_refused()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var request = Daily(s.Space.Id, 7);
+        request.Recurrence.Frequency = RecurrenceFrequency.Weekly;
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.PreviewSeriesAsync(request));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.SeriesNoWeekdays);
+    }
+
+    [Fact]
+    public async Task Cancelling_this_and_following_leaves_the_earlier_dates()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var created = await _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 5));
+
+        var cancelled = await _bookingsAppService.CancelAsync(
+            created.Bookings[2].Id, new CancelBookingDto { Scope = CancelScope.ThisAndFollowing, Reason = "Project ended" });
+
+        cancelled.Items.Select(b => b.Id).ShouldBe(created.Bookings.Skip(2).Select(b => b.Id));
+        var left = await _bookingsAppService.GetMineAsync(Days(0, 5));
+        left.Items.Select(b => b.Id).ShouldBe(created.Bookings.Take(2).Select(b => b.Id));
+    }
+
+    [Fact]
+    public async Task Cancelling_the_series_cancels_every_upcoming_date_and_just_this_cancels_one()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var created = await _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 4));
+
+        (await _bookingsAppService.CancelAsync(created.Bookings[1].Id, new CancelBookingDto())).Items.Count.ShouldBe(1);
+        var rest = await _bookingsAppService.CancelAsync(created.Bookings[3].Id, new CancelBookingDto { Scope = CancelScope.Series });
+
+        rest.Items.Select(b => b.Id).ShouldBe(new[] { created.Bookings[0].Id, created.Bookings[2].Id, created.Bookings[3].Id });
+        (await _bookingsAppService.GetMineAsync(Days(0, 4))).Items.ShouldBeEmpty();
+    }
+
     private static GetMyBookingsInput Days(int fromOffset, int toOffset) => new()
     {
         From = Tomorrow.AddDays(fromOffset),
@@ -570,7 +766,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         var result = await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto { Reason = "  Meeting moved  " });
 
-        result.Status.ShouldBe(nameof(BookingStatus.Cancelled));
+        result.Items.ShouldHaveSingleItem().Status.ShouldBe(nameof(BookingStatus.Cancelled));
         var stored = await _bookingRepository.GetAsync(booking.Id);
         stored.CancelledById.ShouldBe(s.UserId);
         stored.CancelReason.ShouldBe("Meeting moved");

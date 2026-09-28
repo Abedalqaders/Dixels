@@ -86,7 +86,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             input.MaxDurationMinutes,
             input.MaxHorizonDays,
             input.MinLeadMinutes,
-            input.OwnOverlapPolicy);
+            input.OwnOverlapPolicy,
+            input.MaxSeriesHorizonDays);
 
         await _buildingRepository.InsertAsync(building);
 
@@ -130,6 +131,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         building.SetMaxHorizonDays(input.MaxHorizonDays);
         building.SetMinLeadMinutes(input.MinLeadMinutes);
         building.SetOwnOverlapPolicy(input.OwnOverlapPolicy);
+        if (input.MaxSeriesHorizonDays is { } seriesHorizon)
+        {
+            building.SetMaxSeriesHorizonDays(seriesHorizon);
+        }
 
         await _buildingRepository.UpdateAsync(building);
 

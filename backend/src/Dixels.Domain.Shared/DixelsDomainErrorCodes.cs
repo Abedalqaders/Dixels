@@ -9,6 +9,7 @@ public static class DixelsDomainErrorCodes
     public const string MaxHorizonDaysMustBePositive = Prefix + "MaxHorizonDaysMustBePositive";
     public const string MinLeadMinutesMustNotBeNegative = Prefix + "MinLeadMinutesMustNotBeNegative";
     public const string InvalidOwnOverlapPolicy = Prefix + "InvalidOwnOverlapPolicy";
+    public const string MaxSeriesHorizonTooShort = Prefix + "MaxSeriesHorizonTooShort";
     public const string CapacityMustBePositive = Prefix + "CapacityMustBePositive";
     public const string CapacityBelowMinAttendees = Prefix + "CapacityBelowMinAttendees";
     public const string MinAttendeesMustBePositive = Prefix + "MinAttendeesMustBePositive";
@@ -52,4 +53,14 @@ public static class DixelsDomainErrorCodes
     // rule under Block, a heads-up under Warn.
     public const string BookingOwnOverlap = BookingsPrefix + "OwnOverlap";
     public const string BookingOwnOverlapWarning = BookingsPrefix + "OwnOverlapWarning";
+
+    // Recurring bookings: a rule that can't be expanded, and what can go wrong creating one.
+    public const string SeriesInvalidRule = BookingsPrefix + "SeriesInvalidRule";
+    public const string SeriesInvalidInterval = BookingsPrefix + "SeriesInvalidInterval";
+    public const string SeriesNoWeekdays = BookingsPrefix + "SeriesNoWeekdays";
+    public const string SeriesEndBeforeStart = BookingsPrefix + "SeriesEndBeforeStart";
+    public const string SeriesTooManyOccurrences = BookingsPrefix + "SeriesTooManyOccurrences";
+    public const string SeriesBeyondHorizon = BookingsPrefix + "SeriesBeyondHorizon";
+    public const string SeriesNothingToBook = BookingsPrefix + "SeriesNothingToBook";
+    public const string SeriesDateUnavailable = BookingsPrefix + "SeriesDateUnavailable";
 }

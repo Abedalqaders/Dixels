@@ -15,6 +15,9 @@ public class BookableBuildingDto
     public string Name { get; set; } = string.Empty;
     public string Timezone { get; set; } = string.Empty;
     public int MaxHorizonDays { get; set; }
+
+    /// <summary>How far ahead a recurring booking's end date may be.</summary>
+    public int MaxSeriesHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
 
     /// <summary>Whether one person may hold two bookings at once here.</summary>

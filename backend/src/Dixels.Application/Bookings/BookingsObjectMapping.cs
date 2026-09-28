@@ -22,7 +22,6 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreSource(nameof(Booking.UserId))]
     [MapperIgnoreSource(nameof(Booking.ResolvedConstraintsJson))]
     [MapperIgnoreSource(nameof(Booking.IdempotencyKey))]
-    [MapperIgnoreSource(nameof(Booking.SeriesId))]
     [MapperIgnoreSource(nameof(Booking.CancelledById))]
     [MapperIgnoreSource(nameof(Booking.CancelledAt))]
     [MapperIgnoreSource(nameof(Booking.CancelReason))]
@@ -39,12 +38,12 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.Timezone))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalStart))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalEnd))]
+    [MapperIgnoreTarget(nameof(BookingDto.Recurrence))]
     public partial BookingDto Map(Booking source);
 
     [MapperIgnoreSource(nameof(Booking.UserId))]
     [MapperIgnoreSource(nameof(Booking.ResolvedConstraintsJson))]
     [MapperIgnoreSource(nameof(Booking.IdempotencyKey))]
-    [MapperIgnoreSource(nameof(Booking.SeriesId))]
     [MapperIgnoreSource(nameof(Booking.CancelledById))]
     [MapperIgnoreSource(nameof(Booking.CancelledAt))]
     [MapperIgnoreSource(nameof(Booking.CancelReason))]
@@ -61,6 +60,7 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.Timezone))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalStart))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalEnd))]
+    [MapperIgnoreTarget(nameof(BookingDto.Recurrence))]
     public partial void Map(Booking source, BookingDto destination);
 
     public void BeforeMap(Booking source)
