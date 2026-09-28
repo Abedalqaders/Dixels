@@ -12,10 +12,12 @@ import type { ModalState } from '@/features/space-management/components/AddNodeM
 import { EditDetailsModal } from '@/features/space-management/components/EditDetailsModal'
 import type { EditDetailsState } from '@/features/space-management/components/EditDetailsModal'
 import { Toast, useToast } from '@/components/Toast'
+import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 import { useAsync } from '@/hooks/useAsync'
 import { useListParams } from '@/hooks/useListParams'
 import { notifyHierarchyChanged } from '@/features/space-management/hierarchyEvents'
-import { ApiError, getBuilding, getFloors, deleteFloor, restoreFloor } from '@/features/space-management/api/spaceManagementApi'
+import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, getBuilding, getFloors, deleteFloor, getFloorDeleteImpact, restoreFloor } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
@@ -32,6 +34,7 @@ export function FloorsListPage() {
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
   const { toast, showToast } = useToast()
+  const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
 
   const { status, data, error, isRefreshing, refetch } = useAsync(
     async () => {
@@ -60,6 +63,24 @@ export function FloorsListPage() {
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
     }
+  }
+
+  // A delete also cancels the upcoming bookings in what's deleted: when there are any, say
+  // which (and whose) before going ahead; otherwise the plain confirm is enough.
+  async function confirmDelete(name: string, confirmMessage: string, impact: () => Promise<BookingImpactDto>, remove: () => Promise<unknown>) {
+    let affected: BookingImpactDto
+    try {
+      affected = await impact()
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      return
+    }
+    if (affected.count === 0) {
+      confirmAndRun(confirmMessage, remove, `${name} deleted.`)
+      return
+    }
+    if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
+    runAction(remove, `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.`)
   }
 
   function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
@@ -168,10 +189,11 @@ export function FloorsListPage() {
                                 icon: <TrashIcon />,
                                 destructive: true,
                                 onClick: () =>
-                                  confirmAndRun(
+                                  confirmDelete(
+                                    floor.name,
                                     `Delete "${floor.name}"? This also deletes its spaces — they can all be restored together later.`,
+                                    () => getFloorDeleteImpact(token, floor.id),
                                     () => deleteFloor(token, floor.id),
-                                    `${floor.name} deleted.`,
                                   ),
                               },
                             ]}
@@ -224,6 +246,7 @@ export function FloorsListPage() {
           onError={(message) => showToast(message, 'error')}
         />
       )}
+      {impactPrompt}
       <Toast toast={toast} />
     </>
   )

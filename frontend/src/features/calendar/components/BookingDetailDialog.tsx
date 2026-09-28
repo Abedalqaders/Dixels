@@ -10,7 +10,12 @@ import { describeRecurrence } from '@/features/bookings/recurrence'
 import { bookingPhase } from '@/features/calendar/bookingPhase'
 import type { BookingPhase } from '@/features/calendar/bookingPhase'
 
-const PHASE_LABEL: Record<BookingPhase, string> = { upcoming: 'Upcoming', 'in-progress': 'In progress', done: 'Done' }
+const PHASE_LABEL: Record<BookingPhase, string> = {
+  upcoming: 'Upcoming',
+  'in-progress': 'In progress',
+  done: 'Done',
+  cancelled: 'Cancelled by admin',
+}
 
 interface BookingDetailDialogProps {
   booking: BookingDto
@@ -37,6 +42,7 @@ export function BookingDetailDialog({ booking, onClose, onCancel }: BookingDetai
               className={cn(
                 phase === 'upcoming' && 'bg-slot-open text-brand',
                 phase === 'in-progress' && 'bg-[var(--state-confirmed-soft)] text-[var(--state-confirmed-ink)]',
+                phase === 'cancelled' && 'bg-slot-closed text-slot-closed-ink',
               )}
             >
               {PHASE_LABEL[phase]}
@@ -86,12 +92,19 @@ export function BookingDetailDialog({ booking, onClose, onCancel }: BookingDetai
           )}
         </dl>
 
-        {phase !== 'upcoming' && (
-          <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-            {phase === 'in-progress'
-              ? "This booking has already started, so it can't be cancelled."
-              : 'This booking is over.'}
+        {phase === 'cancelled' ? (
+          <p role="status" className="rounded-md bg-slot-closed px-3 py-2 text-sm text-slot-closed-ink">
+            An administrator cancelled this booking{booking.cancelReason ? ` — ${booking.cancelReason}` : ''}. The room is no
+            longer held for you; pick another time or room.
           </p>
+        ) : (
+          phase !== 'upcoming' && (
+            <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+              {phase === 'in-progress'
+                ? "This booking has already started, so it can't be cancelled."
+                : 'This booking is over.'}
+            </p>
+          )
         )}
 
         <DialogFooter className="gap-2 sm:justify-between">

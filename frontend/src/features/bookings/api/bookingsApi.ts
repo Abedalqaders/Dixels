@@ -93,6 +93,9 @@ export interface BookingDto {
   /** Set when this booking is one date of a recurring series, with how the series repeats. */
   seriesId?: string | null
   recurrence?: RecurrenceDto | null
+  /** An admin cancelled it (a rule change, a closure, a removed room) — shown struck through until it would have ended. */
+  cancelledByAdmin?: boolean
+  cancelReason?: string | null
 }
 
 /** A stretch of the searched day, in minutes from the building's local midnight (0–1440). */

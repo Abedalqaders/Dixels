@@ -328,6 +328,21 @@ describe('MyCalendarPage', () => {
     expect(await screen.findByText('Cancelled 3 bookings of “Stand-up” — Meeting Room 301 is free again then')).toBeInTheDocument()
   })
 
+  it('shows a booking an admin cancelled, struck through, with why', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getMyBookings).mockResolvedValue([
+      { ...booking('b1', 'Design review', '10:00', '11:00'), status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'Rules changed: Open 09:00–10:00 only' },
+    ])
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /^Cancelled: Design review, 10:00–11:00/ }))
+
+    const detail = screen.getByRole('dialog')
+    expect(within(detail).getByText('Cancelled by admin')).toBeInTheDocument()
+    expect(within(detail).getByRole('status')).toHaveTextContent('An administrator cancelled this booking — Rules changed: Open 09:00–10:00 only.')
+    expect(within(detail).queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
   it('says so when the employee has no building', async () => {
     vi.mocked(getMyBookableBuilding).mockResolvedValue(null)
     renderPage()

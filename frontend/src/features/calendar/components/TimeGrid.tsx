@@ -7,6 +7,7 @@ import type { IsoDate } from '@/lib/time/buildingTime'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { dayOfMonth, shortWeekday } from '@/features/calendar/calendarDates'
 import { bookingMinutes, bookingsByDay, HOUR_PX, layoutDay } from '@/features/calendar/dayLayout'
+import { isCancelled } from '@/features/calendar/bookingPhase'
 import { dragHint } from '@/features/calendar/durationLimits'
 import type { DurationLimits } from '@/features/calendar/durationLimits'
 
@@ -365,6 +366,7 @@ const DayColumn = memo(function DayColumn({
       {placed.map(({ item: b, start, end, lane, lanes }) => {
         const tall = end - start >= 45
         const done = past || (isToday && end <= nowMinute)
+        const cancelled = isCancelled(b)
         return (
           <button
             key={b.id}
@@ -374,6 +376,8 @@ const DayColumn = memo(function DayColumn({
               'transition-colors hover:bg-[color-mix(in_srgb,var(--focus-ring)_26%,var(--surface-raised))]',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
               done && 'opacity-60',
+              // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
+              cancelled && 'border-dashed border-muted-foreground bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
             )}
             style={{
               top: top(start) + 1,
@@ -381,7 +385,7 @@ const DayColumn = memo(function DayColumn({
               left: `calc(${(lane / lanes) * 100}% + 2px)`,
               width: `calc(${100 / lanes}% - 4px)`,
             }}
-            aria-label={`${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.spaceName}`}
+            aria-label={`${cancelled ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.spaceName}`}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => onOpenBooking(b)}
           >

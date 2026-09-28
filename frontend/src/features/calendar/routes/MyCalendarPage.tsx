@@ -263,7 +263,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
             selected={date}
             month={miniMonth}
             today={now.date}
-            bookedDays={[...new Set((miniBookings.data ?? []).map((b) => dateOf(b.localStart)))]}
+            bookedDays={[...new Set((miniBookings.data ?? []).filter((b) => b.status !== 'Cancelled').map((b) => dateOf(b.localStart)))]}
             onSelect={(d) => go({ date: d })}
             onMonthChange={setMiniMonth}
           />

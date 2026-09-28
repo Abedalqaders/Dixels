@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { Sidebar } from '@/components/Sidebar'
 import { useAsync } from '@/hooks/useAsync'
+import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 import { useUnsavedChangesWarning } from '@/features/space-management/hooks/useUnsavedChangesWarning'
 import { Toast, useToast } from '@/components/Toast'
 import { EffectiveValueStrip } from '@/features/space-management/components/EffectiveValueStrip'
@@ -33,6 +34,10 @@ import {
   createOverride,
   deleteOverride,
   updateBuildingConstraints,
+  getBuildingConstraintsImpact,
+  getFloorConstraintsImpact,
+  getSpaceConstraintsImpact,
+  getOverrideImpact,
   updateFloorConstraints,
   updateSpaceConstraints,
   OverrideScope,
@@ -129,6 +134,7 @@ export function AdminConstraintsPage() {
   const navigate = useNavigate()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
+  const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
   const { toast, showToast } = useToast()
   const [warnings, setWarnings] = useState<string[]>([])
 
@@ -353,41 +359,75 @@ export function AdminConstraintsPage() {
     showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
   }
 
+  // The save for whichever level this page edits, and the matching "which bookings would
+  // this break?" check — same payload, so the check is exactly what the save would do.
+  function saveCalls() {
+    if (!data) return null
+    if (data.level === 'building' && buildingDraft) {
+      const input = {
+        days: operatingDaysToApi(buildingDraft.days),
+        hours: operatingWindowToApi(buildingDraft.hours),
+        maxDurationMinutes: buildingDraft.maxDurationMinutes,
+        maxHorizonDays: buildingDraft.maxHorizonDays,
+        minLeadMinutes: buildingDraft.minLeadMinutes,
+        maxSeriesHorizonDays: buildingDraft.maxSeriesHorizonDays,
+        ownOverlapPolicy: buildingDraft.ownOverlapPolicy,
+        concurrencyStamp: data.concurrencyStamp,
+      }
+      return {
+        impact: () => getBuildingConstraintsImpact(token, id, input),
+        save: (cancelAffectedBookings: boolean) => updateBuildingConstraints(token, id, { ...input, cancelAffectedBookings }),
+      }
+    }
+    if (data.level === 'floor' && floorDraft) {
+      const input = {
+        days: floorDraft.days ? operatingDaysToApi(floorDraft.days) : null,
+        hours: floorDraft.hours ? operatingWindowToApi(floorDraft.hours) : null,
+        maxDurationMinutes: floorDraft.maxDurationMinutes,
+        concurrencyStamp: data.concurrencyStamp,
+      }
+      return {
+        impact: () => getFloorConstraintsImpact(token, id, input),
+        save: (cancelAffectedBookings: boolean) => updateFloorConstraints(token, id, { ...input, cancelAffectedBookings }),
+      }
+    }
+    if (data.level === 'space' && spaceDraft) {
+      const input = {
+        days: spaceDraft.days ? operatingDaysToApi(spaceDraft.days) : null,
+        hours: spaceDraft.hours ? operatingWindowToApi(spaceDraft.hours) : null,
+        maxDurationMinutes: spaceDraft.maxDurationMinutes,
+        minAttendees: spaceDraft.minAttendees,
+        concurrencyStamp: data.concurrencyStamp,
+      }
+      return {
+        impact: () => getSpaceConstraintsImpact(token, id, input),
+        save: (cancelAffectedBookings: boolean) => updateSpaceConstraints(token, id, { ...input, cancelAffectedBookings }),
+      }
+    }
+    return null
+  }
+
   async function handleSave() {
-    if (!data) return
+    const calls = saveCalls()
+    if (!calls) return
     setSaving(true)
     try {
-      if (data.level === 'building' && buildingDraft) {
-        const result = await updateBuildingConstraints(token, id, {
-          days: operatingDaysToApi(buildingDraft.days),
-          hours: operatingWindowToApi(buildingDraft.hours),
-          maxDurationMinutes: buildingDraft.maxDurationMinutes,
-          maxHorizonDays: buildingDraft.maxHorizonDays,
-          minLeadMinutes: buildingDraft.minLeadMinutes,
-          maxSeriesHorizonDays: buildingDraft.maxSeriesHorizonDays,
-          ownOverlapPolicy: buildingDraft.ownOverlapPolicy,
-          concurrencyStamp: data.concurrencyStamp,
-        })
-        setWarnings(result.warnings)
-      } else if (data.level === 'floor' && floorDraft) {
-        const result = await updateFloorConstraints(token, id, {
-          days: floorDraft.days ? operatingDaysToApi(floorDraft.days) : null,
-          hours: floorDraft.hours ? operatingWindowToApi(floorDraft.hours) : null,
-          maxDurationMinutes: floorDraft.maxDurationMinutes,
-          concurrencyStamp: data.concurrencyStamp,
-        })
-        setWarnings(result.warnings)
-      } else if (data.level === 'space' && spaceDraft) {
-        const result = await updateSpaceConstraints(token, id, {
-          days: spaceDraft.days ? operatingDaysToApi(spaceDraft.days) : null,
-          hours: spaceDraft.hours ? operatingWindowToApi(spaceDraft.hours) : null,
-          maxDurationMinutes: spaceDraft.maxDurationMinutes,
-          minAttendees: spaceDraft.minAttendees,
-          concurrencyStamp: data.concurrencyStamp,
-        })
-        setWarnings(result.warnings)
+      // Bookings the new rules would break: the admin decides before anything is saved.
+      const impact = await calls.impact()
+      let cancel = false
+      if (impact.count > 0) {
+        const choice = await askImpact({ mode: 'change', impact })
+        if (!choice) return
+        cancel = choice === 'cancel'
       }
-      showToast('Constraints saved.')
+
+      const result = await calls.save(cancel)
+      setWarnings(result.warnings)
+      showToast(
+        result.cancelledBookings
+          ? `Constraints saved · ${result.cancelledBookings} ${result.cancelledBookings === 1 ? 'booking' : 'bookings'} cancelled.`
+          : 'Constraints saved.',
+      )
       refetch()
     } catch (err) {
       handleSaveError(err)
@@ -412,8 +452,16 @@ export function AdminConstraintsPage() {
 
   async function handleCreateOverride(input: CreateAvailabilityOverrideDto) {
     try {
-      await createOverride(token, input)
-      showToast('Closure added.')
+      const impact = await getOverrideImpact(token, input)
+      let cancel = false
+      if (impact.count > 0) {
+        const choice = await askImpact({ mode: 'closure', impact })
+        if (!choice) return
+        cancel = choice === 'cancel'
+      }
+
+      await createOverride(token, { ...input, cancelAffectedBookings: cancel })
+      showToast(cancel ? `Closure added · ${impact.count} ${impact.count === 1 ? 'booking' : 'bookings'} cancelled.` : 'Closure added.')
       refetch()
     } catch (err) {
       handleSaveError(err)
@@ -536,6 +584,7 @@ export function AdminConstraintsPage() {
           )}
         </div>
       </div>
+      {impactPrompt}
       <Toast toast={toast} />
     </div>
   )

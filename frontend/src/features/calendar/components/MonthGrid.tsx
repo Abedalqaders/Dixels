@@ -73,8 +73,9 @@ export function MonthGrid({ date, bookings, today, onOpenBooking, onOpenDay }: M
                   className={cn(
                     'flex min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-xs hover:bg-slot-open',
                     d < today && 'opacity-60',
+                    b.status === 'Cancelled' && 'text-muted-foreground line-through',
                   )}
-                  aria-label={`${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.spaceName}`}
+                  aria-label={`${b.status === 'Cancelled' ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.spaceName}`}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOpenBooking(b)
