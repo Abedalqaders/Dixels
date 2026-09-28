@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -12,6 +13,9 @@ public interface IAvailabilityOverridesAppService : IApplicationService
     Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync(OverrideScope scope, Guid scopeId);
 
     Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input);
+
+    /// <summary>The upcoming bookings this closure would fall on — nothing is saved.</summary>
+    Task<BookingImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input);
 
     Task DeleteAsync(Guid id);
 }

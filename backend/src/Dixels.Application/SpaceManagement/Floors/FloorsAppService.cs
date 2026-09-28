@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
@@ -21,6 +23,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
+    private readonly BookingImpactService _bookingImpact;
 
     public FloorsAppService(
         IRepository<Floor, Guid> floorRepository,
@@ -28,7 +31,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        BookingImpactService bookingImpact)
     {
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
@@ -36,6 +40,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
+        _bookingImpact = bookingImpact;
     }
 
     public async Task<FloorDto> GetAsync(Guid id)
@@ -139,6 +144,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // informational for the admin to go fix the named Spaces afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
+        var broken = input.CancelAffectedBookings
+            ? await FindBrokenBookingsAsync(building, floor, input)
+            : Array.Empty<BookingImpact>();
+
         // Validated against the Building's raw values directly — Building has no parent of
         // its own, so its own fields already are the "resolved" value.
         floor.SetOwnOperatingDays(proposedDays, building.Days);
@@ -147,13 +156,51 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
         await _floorRepository.UpdateAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
+        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = floor.ConcurrencyStamp,
             Warnings = warnings,
+            CancelledBookings = broken.Count,
         };
     }
+
+    [Authorize(DixelsPermissions.Floors.Edit)]
+    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input)
+    {
+        var floor = await _floorRepository.GetAsync(id);
+        await EnsureCanManageBuildingAsync(floor.BuildingId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, floor, input));
+    }
+
+    [Authorize(DixelsPermissions.Floors.Delete)]
+    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    {
+        var floor = await _floorRepository.GetAsync(id);
+        await EnsureCanManageBuildingAsync(floor.BuildingId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        return await _bookingImpact.DescribeAsync(
+            building,
+            await _bookingImpact.UpcomingAsync(await RoomsAsync(floor)),
+            _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
+    }
+
+    // The proposed floor is a fresh, untracked copy — checking it can never save anything.
+    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
+    {
+        var proposed = new Floor(floor.Id, floor.BuildingId, floor.Name, floor.FloorNumber);
+        proposed.SetOwnOperatingDays(ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days), building.Days);
+        proposed.SetOwnOperatingHours(ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours), building.Hours);
+        proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
+
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+            building, await RoomsAsync(floor), (space, _) => _constraintResolver.Resolve(building, proposed, space));
+    }
+
+    private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Floor floor) =>
+        (await _spaceRepository.GetListAsync(s => s.FloorId == floor.Id)).Select(s => (s, floor)).ToList();
 
     public async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id)
     {
@@ -196,6 +243,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await EnsureCanManageBuildingAsync(floor.BuildingId);
 
         var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == id);
+        var upcoming = await _bookingImpact.UpcomingAsync(spaces.Select(s => (s, floor)).ToList());
 
         var batchId = GuidGenerator.Create();
         _spaceHierarchyManager.MarkForSoftDelete(batchId, floor, spaces);
@@ -219,6 +267,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
         await _floorRepository.DeleteAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
+
+        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]

@@ -94,6 +94,24 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<List<Booking>> GetCalendarForUserAsync(
+        Guid userId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        DateTimeOffset now,
+        CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        return await bookings
+            .Where(b => b.UserId == userId
+                        && b.StartsAt < end
+                        && b.EndsAt > start
+                        && (b.Status == BookingStatus.Confirmed
+                            || (b.Status == BookingStatus.Cancelled && b.CancelledByAdmin && b.EndsAt > now)))
+            .OrderBy(b => b.StartsAt)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
     public async Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)
     {
         var bookings = await GetQueryableAsync();

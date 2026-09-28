@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -26,6 +27,10 @@ public class AvailabilityOverridesController : DixelsController, IAvailabilityOv
     [HttpPost]
     public virtual Task<AvailabilityOverrideDto> CreateAsync([FromBody] CreateAvailabilityOverrideDto input) =>
         _overridesAppService.CreateAsync(input);
+
+    [HttpPost("impact")]
+    public virtual Task<BookingImpactDto> GetCreateImpactAsync([FromBody] CreateAvailabilityOverrideDto input) =>
+        _overridesAppService.GetCreateImpactAsync(input);
 
     [HttpDelete("{id}")]
     public virtual Task DeleteAsync(Guid id) => _overridesAppService.DeleteAsync(id);

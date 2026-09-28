@@ -29,5 +29,9 @@ public class BookingDto : EntityDto<Guid>
 
     /// <summary>Set for a booking that's one date of a recurring series, with how the series repeats.</summary>
     public Guid? SeriesId { get; set; }
+
+    /// <summary>For a booking an admin cancelled (a rule change, a closure, a removed room): shown struck through, with why.</summary>
+    public bool CancelledByAdmin { get; set; }
+    public string? CancelReason { get; set; }
     public RecurrenceDto? Recurrence { get; set; }
 }

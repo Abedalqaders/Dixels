@@ -106,7 +106,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var building = buildingId is null ? null : await _buildingRepository.FindAsync(buildingId.Value);
         var clock = new BuildingClock(building?.Timezone ?? "UTC");
 
-        var bookings = await _bookingRepository.GetConfirmedForUserAsync(userId, clock.ToUtc(from), clock.ToUtc(to));
+        var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
+        var bookings = await _bookingRepository.GetCalendarForUserAsync(userId, clock.ToUtc(from), clock.ToUtc(to), now);
         return new ListResultDto<BookingDto>(await MapToDtosAsync(bookings));
     }
 

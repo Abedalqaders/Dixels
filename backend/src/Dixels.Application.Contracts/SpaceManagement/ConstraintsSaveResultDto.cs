@@ -13,4 +13,7 @@ public class ConstraintsSaveResultDto
 {
     public string ConcurrencyStamp { get; set; } = string.Empty;
     public List<string> Warnings { get; set; } = new();
+
+    /// <summary>How many upcoming bookings were cancelled because the admin chose to.</summary>
+    public int CancelledBookings { get; set; }
 }

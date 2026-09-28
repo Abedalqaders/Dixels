@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
@@ -21,6 +23,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
+    private readonly BookingImpactService _bookingImpact;
 
     public BuildingsAppService(
         IRepository<Building, Guid> buildingRepository,
@@ -28,7 +31,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        BookingImpactService bookingImpact)
     {
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
@@ -36,6 +40,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
+        _bookingImpact = bookingImpact;
     }
 
     public async Task<BuildingDto> GetAsync(Guid id)
@@ -125,6 +130,12 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // admin to go fix the named descendants afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
+        // Which upcoming bookings the new rules break — worked out on an unsaved copy before
+        // the real building changes, and cancelled after the save only if the admin chose to.
+        var broken = input.CancelAffectedBookings
+            ? await FindBrokenBookingsAsync(building, input)
+            : Array.Empty<BookingImpact>();
+
         building.SetOperatingDays(proposedDays);
         building.SetOperatingHours(proposedHours);
         building.SetMaxDurationMinutes(input.MaxDurationMinutes);
@@ -143,12 +154,61 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // but we need the freshly-generated ConcurrencyStamp back *now*, in this same
         // response, so flush explicitly instead of returning whatever's still in memory.
         await CurrentUnitOfWork!.SaveChangesAsync();
+        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = building.ConcurrencyStamp,
             Warnings = warnings,
+            CancelledBookings = broken.Count,
         };
+    }
+
+    [Authorize(DixelsPermissions.Buildings.Edit)]
+    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input)
+    {
+        await EnsureCanManageBuildingAsync(id);
+        var building = await _buildingRepository.GetAsync(id);
+        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, input));
+    }
+
+    [Authorize(DixelsPermissions.Buildings.Delete)]
+    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    {
+        await EnsureCanManageBuildingAsync(id);
+        var building = await _buildingRepository.GetAsync(id);
+        return await _bookingImpact.DescribeAsync(
+            building,
+            await _bookingImpact.UpcomingAsync(await RoomsAsync(id)),
+            _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
+    }
+
+    // The proposed building is a fresh, untracked copy — checking it can never save anything.
+    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, UpdateBuildingConstraintsDto input)
+    {
+        var proposed = new Building(
+            building.Id,
+            building.Name,
+            building.BuildingNumber,
+            building.Timezone,
+            ConstraintDtoConversions.ToOperatingDays(input.Days),
+            ConstraintDtoConversions.ToOperatingWindow(input.Hours),
+            input.MaxDurationMinutes,
+            input.MaxHorizonDays,
+            input.MinLeadMinutes,
+            input.OwnOverlapPolicy,
+            Math.Max(input.MaxSeriesHorizonDays ?? building.MaxSeriesHorizonDays, input.MaxHorizonDays));
+
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+            building, await RoomsAsync(building.Id), (space, floor) => _constraintResolver.Resolve(proposed, floor, space));
+    }
+
+    private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Guid buildingId)
+    {
+        var floors = (await _floorRepository.GetListAsync(f => f.BuildingId == buildingId)).ToDictionary(f => f.Id);
+        var floorIds = floors.Keys.ToList();
+        var spaces = floorIds.Count == 0 ? new List<Space>() : await _spaceRepository.GetListAsync(s => floorIds.Contains(s.FloorId));
+        return spaces.Select(s => (s, floors[s.FloorId])).ToList();
     }
 
     [Authorize(DixelsPermissions.Buildings.Delete)]
@@ -157,6 +217,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await EnsureCanManageBuildingAsync(id);
 
         var building = await _buildingRepository.GetAsync(id);
+
+        // Its upcoming bookings go with it — found before the rooms disappear from queries.
+        var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
+
         var floors = await _floorRepository.GetListAsync(f => f.BuildingId == id);
         var floorIds = floors.Select(f => f.Id).ToList();
         var spaces = floorIds.Count == 0
@@ -199,6 +263,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 
         await _buildingRepository.DeleteAsync(building);
         await CurrentUnitOfWork!.SaveChangesAsync();
+
+        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
