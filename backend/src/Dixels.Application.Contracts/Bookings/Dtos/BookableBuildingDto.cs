@@ -1,4 +1,5 @@
 using System;
+using Dixels.SpaceManagement;
 using System.Collections.Generic;
 
 namespace Dixels.Bookings;
@@ -15,6 +16,9 @@ public class BookableBuildingDto
     public string Timezone { get; set; } = string.Empty;
     public int MaxHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
+
+    /// <summary>Whether one person may hold two bookings at once here.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; set; }
 
     /// <summary>The booking time grid (install config) — the UI offers start/end times on it.</summary>
     public int SlotMinutes { get; set; }

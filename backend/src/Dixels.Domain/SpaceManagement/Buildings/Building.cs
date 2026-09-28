@@ -21,6 +21,9 @@ public class Building : FullAuditedAggregateRoot<Guid>
     public int MaxHorizonDays { get; private set; }
     public int MinLeadMinutes { get; private set; }
 
+    /// <summary>Whether one person may hold two bookings at the same time here.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; private set; }
+
     /// <summary>
     /// Set when this building is soft-deleted as part of a cascading delete, so a later
     /// restore can be scoped to exactly what was deleted together — see
@@ -54,7 +57,8 @@ public class Building : FullAuditedAggregateRoot<Guid>
         OperatingWindow hours,
         int maxDurationMinutes,
         int maxHorizonDays,
-        int minLeadMinutes)
+        int minLeadMinutes,
+        OwnOverlapPolicy ownOverlapPolicy = OwnOverlapPolicy.Warn)
         : base(id)
     {
         SetName(name);
@@ -65,6 +69,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
         SetMaxDurationMinutes(maxDurationMinutes);
         SetMaxHorizonDays(maxHorizonDays);
         SetMinLeadMinutes(minLeadMinutes);
+        SetOwnOverlapPolicy(ownOverlapPolicy);
     }
 
     public void SetName(string name)
@@ -139,6 +144,16 @@ public class Building : FullAuditedAggregateRoot<Guid>
         }
 
         MinLeadMinutes = minLeadMinutes;
+    }
+
+    public void SetOwnOverlapPolicy(OwnOverlapPolicy policy)
+    {
+        if (!Enum.IsDefined(policy))
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.InvalidOwnOverlapPolicy);
+        }
+
+        OwnOverlapPolicy = policy;
     }
 
     private static bool IsValidIanaTimezone(string timezone)

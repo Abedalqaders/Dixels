@@ -263,6 +263,11 @@ namespace Dixels.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<string>("OwnOverlapPolicy")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<string>("Timezone")
                         .IsRequired()
                         .HasMaxLength(64)

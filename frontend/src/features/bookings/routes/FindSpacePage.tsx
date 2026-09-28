@@ -17,12 +17,14 @@ import type { BookableBuildingDto, BookingDto, SearchAvailabilityInput, SpaceAva
 import { BookingForm } from '../components/BookingForm'
 import { DayBar } from '../components/DayBar'
 import { FloorFilter } from '../components/FloorFilter'
+import { OwnClashNotice } from '../components/OwnClashNotice'
 import { SearchBar } from '../components/SearchBar'
 import type { SearchValues } from '../components/SearchBar'
 import { dayAxis } from '../dayAxis'
 import { suggestWindow } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { readLastDuration } from '../preferences'
+import { useBookingsChanged } from '../bookingEvents'
 import type { DayBarPick } from '../components/DayBar'
 import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '../../../components/LoadingSkeletons'
 
@@ -123,12 +125,14 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
     { keepPreviousData: true },
   )
 
+  // Made here or cancelled on My calendar: either way the day bars are out of date.
+  useBookingsChanged(results.refetch)
+
   function handleBooked(created: BookingDto) {
     setBooking(null)
     showToast(
       `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
     )
-    results.refetch()
   }
 
   function tryTime(start: string) {
@@ -193,6 +197,9 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
         {results.status === 'success' && results.data && (
           <>
+            <div className="mb-4 empty:hidden">
+              <OwnClashNotice warnings={results.data.warnings} />
+            </div>
             {building.floors.length > 1 && (
               <FloorFilter
                 floors={building.floors}

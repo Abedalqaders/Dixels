@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
 namespace Dixels.Bookings;
@@ -13,4 +15,10 @@ public interface IBookingsAppService : IApplicationService
     /// slot was taken). Retrying with the same idempotency key returns the original booking.
     /// </summary>
     Task<BookingDto> CreateAsync(CreateBookingDto input);
+
+    /// <summary>The current user's confirmed bookings in a range of building-local days, earliest first.</summary>
+    Task<ListResultDto<BookingDto>> GetMineAsync(GetMyBookingsInput input);
+
+    /// <summary>Cancels one of the current user's own bookings before it starts, freeing the slot.</summary>
+    Task<BookingDto> CancelAsync(Guid id, CancelBookingDto input);
 }

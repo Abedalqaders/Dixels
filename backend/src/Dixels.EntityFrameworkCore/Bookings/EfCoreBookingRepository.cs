@@ -17,6 +17,8 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
     private static readonly string LockSpaceSql =
         $"SELECT 1 FROM \"{DixelsConsts.DbTablePrefix}Spaces\" WHERE \"Id\" = {{0}} FOR UPDATE";
 
+    private const string LockUserSql = "SELECT 1 FROM \"AbpUsers\" WHERE \"Id\" = {0} FOR UPDATE";
+
     public EfCoreBookingRepository(IDbContextProvider<DixelsDbContext> dbContextProvider)
         : base(dbContextProvider)
     {
@@ -33,6 +35,17 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         if (dbContext.Database.IsNpgsql())
         {
             await dbContext.Database.ExecuteSqlRawAsync(LockSpaceSql, new object[] { spaceId }, GetCancellationToken(cancellationToken));
+        }
+    }
+
+    public async Task LockUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // Postgres only, like LockSpaceAsync — SQLite serialises writers by itself.
+        if (dbContext.Database.IsNpgsql())
+        {
+            await dbContext.Database.ExecuteSqlRawAsync(LockUserSql, new object[] { userId }, GetCancellationToken(cancellationToken));
         }
     }
 
@@ -62,6 +75,22 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
                         && b.Status == BookingStatus.Confirmed
                         && b.StartsAt < end
                         && b.EndsAt > start)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<List<Booking>> GetConfirmedForUserAsync(
+        Guid userId,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        return await bookings
+            .Where(b => b.UserId == userId
+                        && b.Status == BookingStatus.Confirmed
+                        && b.StartsAt < end
+                        && b.EndsAt > start)
+            .OrderBy(b => b.StartsAt)
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 

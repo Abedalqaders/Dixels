@@ -17,6 +17,7 @@ public class BuildingDto : EntityDto<Guid>
     public int MaxDurationMinutes { get; set; }
     public int MaxHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
+    public OwnOverlapPolicy OwnOverlapPolicy { get; set; }
 
     public bool IsDeleted { get; set; }
 

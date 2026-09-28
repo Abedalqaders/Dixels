@@ -25,4 +25,7 @@ public class CreateBuildingDto
     public int MaxDurationMinutes { get; set; }
     public int MaxHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
+
+    /// <summary>Whether one person may hold two bookings at once in this building. Warn when left out.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; set; } = OwnOverlapPolicy.Warn;
 }

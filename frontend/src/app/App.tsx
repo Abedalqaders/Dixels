@@ -13,6 +13,7 @@ import { AdminUsersPage } from '../features/users/routes/AdminUsersPage'
 import { HomePage } from '../pages/HomePage'
 import { EmployeeLayout } from '../components/EmployeeLayout'
 import { FindSpacePage } from '../features/bookings/routes/FindSpacePage'
+import { MyCalendarPage } from '../features/calendar/routes/MyCalendarPage'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           </RequireAuth>
         }
       >
+        <Route path="/my-calendar" element={<MyCalendarPage />} />
         <Route path="/find-space" element={<FindSpacePage />} />
       </Route>
       <Route

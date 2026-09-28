@@ -85,7 +85,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             ConstraintDtoConversions.ToOperatingWindow(input.Hours),
             input.MaxDurationMinutes,
             input.MaxHorizonDays,
-            input.MinLeadMinutes);
+            input.MinLeadMinutes,
+            input.OwnOverlapPolicy);
 
         await _buildingRepository.InsertAsync(building);
 
@@ -128,6 +129,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         building.SetMaxDurationMinutes(input.MaxDurationMinutes);
         building.SetMaxHorizonDays(input.MaxHorizonDays);
         building.SetMinLeadMinutes(input.MinLeadMinutes);
+        building.SetOwnOverlapPolicy(input.OwnOverlapPolicy);
 
         await _buildingRepository.UpdateAsync(building);
 

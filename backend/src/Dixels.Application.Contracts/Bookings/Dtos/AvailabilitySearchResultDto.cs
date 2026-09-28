@@ -16,6 +16,9 @@ public class AvailabilitySearchResultDto
     [DisableDateTimeNormalization]
     public DateTime LocalEnd { get; set; }
 
+    /// <summary>About the search as a whole, not one room — e.g. you already have another booking then.</summary>
+    public List<BookingViolationDto> Warnings { get; set; } = new();
+
     /// <summary>Available spaces first (floor, then name), then the unavailable ones.</summary>
     public List<SpaceAvailabilityDto> Spaces { get; set; } = new();
 }

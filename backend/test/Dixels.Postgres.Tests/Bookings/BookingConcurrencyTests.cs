@@ -35,16 +35,16 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
         _bookingRepository = GetRequiredService<IBookingRepository>();
     }
 
-    private sealed record Scenario(Guid UserId, Guid SpaceId);
+    private sealed record Scenario(Guid UserId, Guid SpaceId, Guid FloorId);
 
     // Every test makes its own building, space and employee: the container's database is
     // shared by all tests in the run.
-    private Task<Scenario> CreateScenarioAsync() => WithUnitOfWorkAsync(async () =>
+    private Task<Scenario> CreateScenarioAsync(OwnOverlapPolicy policy = OwnOverlapPolicy.Warn) => WithUnitOfWorkAsync(async () =>
     {
         var building = await GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(
             Guid.NewGuid(), "PG HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
             new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
-            maxDurationMinutes: 240, maxHorizonDays: 30, minLeadMinutes: 0));
+            maxDurationMinutes: 240, maxHorizonDays: 30, minLeadMinutes: 0, ownOverlapPolicy: policy));
 
         var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
         var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
@@ -54,7 +54,13 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
         user.SetBuildingId(building.Id);
         (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
 
-        return new Scenario(user.Id, space.Id);
+        return new Scenario(user.Id, space.Id, floor.Id);
+    });
+
+    private Task<Guid> AddSpaceAsync(Scenario s, string name) => WithUnitOfWorkAsync(async () =>
+    {
+        var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
+        return (await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), s.FloorId, name, spaceType.Id, 8))).Id;
     });
 
     private IDisposable ActAs(Guid userId) =>
@@ -112,6 +118,32 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
 
         // The losers rolled back completely — no partial rows.
         (await CountConfirmedAsync(s.SpaceId)).ShouldBe(1);
+    }
+
+    [PostgresFact]
+    public async Task One_booking_at_a_time_holds_across_rooms_even_when_requests_race()
+    {
+        var s = await CreateScenarioAsync(OwnOverlapPolicy.Block);
+        var rooms = new[] { s.SpaceId, await AddSpaceAsync(s, "Room B"), await AddSpaceAsync(s, "Room C"), await AddSpaceAsync(s, "Room D") };
+        using var _ = ActAs(s.UserId);
+
+        // The same person, four tabs, four different rooms, the same hour — released at once.
+        // No room clashes with another, so only the per-person lock can keep this to one.
+        var outcomes = await Task.WhenAll(rooms.Select(room => Task.Run(async () =>
+        {
+            try
+            {
+                await BookInOwnTransactionAsync(room, 10, 11);
+                return (Won: true, Code: (string?)null);
+            }
+            catch (BusinessException ex)
+            {
+                return (Won: false, Code: ex.Code);
+            }
+        })));
+
+        outcomes.Count(o => o.Won).ShouldBe(1);
+        outcomes.Where(o => !o.Won).ShouldAllBe(o => o.Code == DixelsDomainErrorCodes.BookingOwnOverlap);
     }
 
     [PostgresFact]

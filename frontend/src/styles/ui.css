@@ -52,6 +52,7 @@
   --color-slot-busy: color-mix(in srgb, var(--ink-secondary) 55%, var(--surface-raised));
   --color-slot-mine: var(--focus-ring);
   --color-slot-closed: var(--state-blocked-soft);
+  --color-slot-closed-ink: var(--state-blocked-ink);
 
 }
 

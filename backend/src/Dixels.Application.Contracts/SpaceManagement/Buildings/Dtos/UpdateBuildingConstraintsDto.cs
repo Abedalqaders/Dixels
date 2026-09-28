@@ -20,6 +20,9 @@ public class UpdateBuildingConstraintsDto
     public int MaxHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
 
+    /// <summary>Whether one person may hold two bookings at once in this building. Warn when left out.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; set; } = OwnOverlapPolicy.Warn;
+
     [Required]
     public string ConcurrencyStamp { get; set; } = string.Empty;
 }

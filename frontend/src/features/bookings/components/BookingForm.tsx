@@ -16,6 +16,7 @@ import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingRequestD
 import { formatDays, formatDuration, formatHours } from '../format'
 import { useBookingPreview } from '../hooks/useBookingPreview'
 import { closingMinute, rememberDuration } from '../preferences'
+import { emitBookingsChanged } from '../bookingEvents'
 import { suggestSlot } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { DatePicker } from './DatePicker'
@@ -87,6 +88,7 @@ export function BookingForm({
     try {
       const booking = await createBooking(token, { ...request, title: title.trim() || null, idempotencyKey })
       rememberDuration(toMinutes(end) - toMinutes(start))
+      emitBookingsChanged()
       onBooked(booking)
     } catch (err) {
       if (err instanceof ApiError) {

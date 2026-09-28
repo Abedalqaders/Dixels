@@ -13,7 +13,8 @@ public sealed record BookingEvaluation(
     ResolvedConstraints Rules,
     DateTimeOffset StartUtc,
     DateTimeOffset EndUtc,
-    IReadOnlyList<BookingViolation> Violations)
+    IReadOnlyList<BookingViolation> Violations,
+    IReadOnlyList<BookingViolation> Warnings)
 {
     public bool IsValid => Violations.Count == 0;
 }

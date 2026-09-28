@@ -8,6 +8,7 @@ import { Toast, useToast } from '../../../components/Toast'
 import { EffectiveValueStrip } from '../components/EffectiveValueStrip'
 import type { EffectiveItem, EffectiveSource } from '../components/EffectiveValueStrip'
 import { BuildingLevelFields } from '../components/BuildingLevelFields'
+import { OWN_OVERLAP_OPTIONS } from '../domain/ownOverlapPolicy'
 import type { BuildingDraft } from '../components/BuildingLevelFields'
 import { FloorLevelFields } from '../components/FloorLevelFields'
 import type { FloorDraft } from '../components/FloorLevelFields'
@@ -153,6 +154,11 @@ export function AdminConstraintsPage() {
           { label: 'Maximum duration', value: `${minutesToHours(building.maxDurationMinutes)}h`, source: 'Building' },
           { label: 'Booking horizon', value: `${building.maxHorizonDays} days`, source: 'Building' },
           { label: 'Minimum lead time', value: `${building.minLeadMinutes} min`, source: 'Building' },
+          {
+            label: 'Overlapping bookings',
+            value: OWN_OVERLAP_OPTIONS.find((o) => o.value === building.ownOverlapPolicy)?.label ?? '',
+            source: 'Building',
+          },
         ],
         ownOverrides,
         ancestorOverrides: [],
@@ -167,6 +173,7 @@ export function AdminConstraintsPage() {
             maxDurationMinutes: building.maxDurationMinutes,
             maxHorizonDays: building.maxHorizonDays,
             minLeadMinutes: building.minLeadMinutes,
+            ownOverlapPolicy: building.ownOverlapPolicy,
           },
         },
       }
@@ -355,6 +362,7 @@ export function AdminConstraintsPage() {
           maxDurationMinutes: buildingDraft.maxDurationMinutes,
           maxHorizonDays: buildingDraft.maxHorizonDays,
           minLeadMinutes: buildingDraft.minLeadMinutes,
+          ownOverlapPolicy: buildingDraft.ownOverlapPolicy,
           concurrencyStamp: data.concurrencyStamp,
         })
         setWarnings(result.warnings)

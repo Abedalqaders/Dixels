@@ -1,5 +1,6 @@
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react'
 import type { PreviewState } from '../hooks/useBookingPreview'
+import { OwnClashNotice } from './OwnClashNotice'
 
 interface VerdictPanelProps {
   state: PreviewState
@@ -43,11 +44,14 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
 
   if (preview.isValid) {
     return (
-      <div className={`${BOX} bg-slot-open`} role="status" aria-live="polite">
-        <CircleCheck className="text-brand" />
-        <span>
-          <strong>Available</strong> — {slotLabel} ({timezone})
-        </span>
+      <div className="grid gap-2">
+        <div className={`${BOX} bg-slot-open`} role="status" aria-live="polite">
+          <CircleCheck className="text-brand" />
+          <span>
+            <strong>Available</strong> — {slotLabel} ({timezone})
+          </span>
+        </div>
+        <OwnClashNotice warnings={preview.warnings} />
       </div>
     )
   }

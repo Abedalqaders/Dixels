@@ -79,4 +79,20 @@ public class BuildingTests
 
         exception.Code.ShouldBe(DixelsDomainErrorCodes.MaxDurationMustBePositive);
     }
+
+    [Fact]
+    public void A_new_building_warns_about_overlapping_bookings_by_default()
+    {
+        CreateValidBuilding().OwnOverlapPolicy.ShouldBe(OwnOverlapPolicy.Warn);
+    }
+
+    [Fact]
+    public void SetOwnOverlapPolicy_rejects_an_unknown_value()
+    {
+        var building = CreateValidBuilding();
+
+        var exception = Should.Throw<BusinessException>(() => building.SetOwnOverlapPolicy((OwnOverlapPolicy)42));
+
+        exception.Code.ShouldBe(DixelsDomainErrorCodes.InvalidOwnOverlapPolicy);
+    }
 }

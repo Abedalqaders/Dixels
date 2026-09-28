@@ -377,6 +377,253 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         {
             DixelsPermissions.Bookings.Default,
             DixelsPermissions.Bookings.Create,
+            DixelsPermissions.Bookings.Cancel,
         });
+    }
+
+    // ---- One person, two bookings at once (the building's OwnOverlapPolicy) ----
+
+    private Task<Space> AddSpaceAsync(Scenario s, string name) => WithUnitOfWorkAsync(async () =>
+    {
+        var spaceType = await _spaceTypeRepository.FirstAsync();
+        return await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), s.Floor.Id, name, spaceType.Id, capacity: 8));
+    });
+
+    private Task SetPolicyAsync(Scenario s, OwnOverlapPolicy policy) => WithUnitOfWorkAsync(async () =>
+    {
+        var building = await _buildingRepository.GetAsync(s.Building.Id);
+        building.SetOwnOverlapPolicy(policy);
+        await _buildingRepository.UpdateAsync(building);
+    });
+
+    [Fact]
+    public async Task A_new_building_warns_about_a_second_booking_at_the_same_time()
+    {
+        var s = await CreateScenarioAsync();
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 12));
+
+        var preview = await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 11, 12));
+
+        preview.IsValid.ShouldBeTrue();
+        var warning = preview.Warnings.ShouldHaveSingleItem();
+        warning.Code.ShouldBe(DixelsDomainErrorCodes.BookingOwnOverlapWarning);
+        warning.Message.ShouldStartWith("Heads-up: you already have Desk 7 booked ");
+        warning.Message.ShouldEndWith("10:00–12:00.");
+
+        (await _bookingsAppService.CreateAsync(Request(s.Space.Id, 11, 12))).Status.ShouldBe(nameof(BookingStatus.Confirmed));
+    }
+
+    [Fact]
+    public async Task Allow_says_nothing_about_a_second_booking()
+    {
+        var s = await CreateScenarioAsync();
+        await SetPolicyAsync(s, OwnOverlapPolicy.Allow);
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 12));
+
+        var preview = await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 11, 12));
+
+        preview.IsValid.ShouldBeTrue();
+        preview.Warnings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Block_refuses_a_second_booking_at_the_same_time_but_allows_back_to_back()
+    {
+        var s = await CreateScenarioAsync();
+        await SetPolicyAsync(s, OwnOverlapPolicy.Block);
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 12));
+
+        var preview = await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 11, 12));
+        preview.IsValid.ShouldBeFalse();
+        preview.Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOwnOverlap);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CreateAsync(Request(s.Space.Id, 11, 12)));
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingOwnOverlap);
+
+        (await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13))).Status.ShouldBe(nameof(BookingStatus.Confirmed));
+    }
+
+    [Fact]
+    public async Task A_cancelled_booking_is_no_clash()
+    {
+        var s = await CreateScenarioAsync();
+        await SetPolicyAsync(s, OwnOverlapPolicy.Block);
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        var first = await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 12));
+        await _bookingsAppService.CancelAsync(first.Id, new CancelBookingDto());
+
+        (await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 10, 12))).IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Search_warns_once_for_the_whole_search_under_warn()
+    {
+        var s = await CreateScenarioAsync();
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 11));
+
+        var result = await _availabilityAppService.SearchAsync(Search(10, 11));
+
+        result.Warnings.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOwnOverlapWarning);
+        result.Spaces.Single(r => r.Space.Id == s.Space.Id).IsAvailable.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Search_rules_out_every_other_room_under_block()
+    {
+        var s = await CreateScenarioAsync();
+        await SetPolicyAsync(s, OwnOverlapPolicy.Block);
+        var desk = await AddSpaceAsync(s, "Desk 7");
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(desk.Id, 10, 11));
+
+        var result = await _availabilityAppService.SearchAsync(Search(10, 11));
+
+        result.Warnings.ShouldBeEmpty();
+        var room = result.Spaces.Single(r => r.Space.Id == s.Space.Id);
+        room.IsAvailable.ShouldBeFalse();
+        room.Violations.ShouldHaveSingleItem().ShortMessage.ShouldBe("You're in Desk 7 then");
+        // The desk itself just says it's booked — not "you're in Desk 7" on top.
+        result.Spaces.Single(r => r.Space.Id == desk.Id).Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
+    }
+
+    private static GetMyBookingsInput Days(int fromOffset, int toOffset) => new()
+    {
+        From = Tomorrow.AddDays(fromOffset),
+        To = Tomorrow.AddDays(toOffset),
+    };
+
+    [Fact]
+    public async Task Mine_lists_only_my_confirmed_bookings_in_the_range_earliest_first()
+    {
+        var s = await CreateScenarioAsync();
+        var other = await CreateScenarioAsync();
+        using (ActAs(other.UserId))
+        {
+            await _bookingsAppService.CreateAsync(Request(other.Space.Id, 9, 10));
+        }
+
+        using var _ = ActAs(s.UserId);
+        var late = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 15, 16));
+        var early = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 9, 10));
+        var cancelled = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13));
+        await _bookingsAppService.CancelAsync(cancelled.Id, new CancelBookingDto());
+        var dayAfter = await _bookingsAppService.CreateAsync(new CreateBookingDto
+        {
+            SpaceId = s.Space.Id,
+            LocalStart = Tomorrow.AddDays(1).AddHours(9),
+            LocalEnd = Tomorrow.AddDays(1).AddHours(10),
+            Attendees = 2,
+            IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+
+        var tomorrowOnly = await _bookingsAppService.GetMineAsync(Days(0, 1));
+        tomorrowOnly.Items.Select(b => b.Id).ShouldBe(new[] { early.Id, late.Id });
+        tomorrowOnly.Items[0].SpaceName.ShouldBe("Room 1");
+        tomorrowOnly.Items[0].LocalStart.ShouldBe(Tomorrow.AddHours(9));
+
+        var twoDays = await _bookingsAppService.GetMineAsync(Days(0, 2));
+        twoDays.Items.Select(b => b.Id).ShouldBe(new[] { early.Id, late.Id, dayAfter.Id });
+    }
+
+    [Fact]
+    public async Task Mine_still_names_a_booking_whose_room_was_deleted()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        await _spaceRepository.DeleteAsync(s.Space.Id);
+
+        var mine = await _bookingsAppService.GetMineAsync(Days(0, 1));
+
+        mine.Items.ShouldHaveSingleItem().SpaceName.ShouldBe("Room 1");
+    }
+
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(2, 1)]
+    [InlineData(0, 63)]
+    public async Task Mine_rejects_an_empty_backwards_or_too_long_range(int from, int to)
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.GetMineAsync(Days(from, to)));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingInvalidDateRange);
+    }
+
+    [Fact]
+    public async Task Cancelling_frees_the_slot_and_keeps_who_and_why()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+
+        var result = await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto { Reason = "  Meeting moved  " });
+
+        result.Status.ShouldBe(nameof(BookingStatus.Cancelled));
+        var stored = await _bookingRepository.GetAsync(booking.Id);
+        stored.CancelledById.ShouldBe(s.UserId);
+        stored.CancelReason.ShouldBe("Meeting moved");
+        stored.CancelledByAdmin.ShouldBeFalse();
+
+        var again = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        again.Status.ShouldBe(nameof(BookingStatus.Confirmed));
+    }
+
+    [Fact]
+    public async Task Someone_else_cannot_cancel_my_booking()
+    {
+        var s = await CreateScenarioAsync();
+        var other = await CreateScenarioAsync();
+        BookingDto booking;
+        using (ActAs(s.UserId))
+        {
+            booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        }
+
+        using var _ = ActAs(other.UserId);
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingNotYours);
+        (await _bookingRepository.GetAsync(booking.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    [Fact]
+    public async Task A_booking_cannot_be_cancelled_twice()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto());
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingNotCancellable);
+    }
+
+    [Fact]
+    public async Task A_booking_that_has_started_cannot_be_cancelled()
+    {
+        var s = await CreateScenarioAsync();
+        // Written straight to the table — the app service rightly refuses to book the past.
+        var started = await WithUnitOfWorkAsync(() => _bookingRepository.InsertAsync(new Booking(
+            Guid.NewGuid(), s.Space.Id, s.UserId,
+            DateTimeOffset.UtcNow.AddMinutes(-30), DateTimeOffset.UtcNow.AddMinutes(30),
+            attendees: 2, title: "Stand-up", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString())));
+        using var _ = ActAs(s.UserId);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CancelAsync(started.Id, new CancelBookingDto()));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingAlreadyStarted);
     }
 }

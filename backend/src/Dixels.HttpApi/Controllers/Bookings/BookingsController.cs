@@ -1,7 +1,9 @@
+using System;
 using System.Threading.Tasks;
 using Dixels.Bookings;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 
 namespace Dixels.Controllers.Bookings;
 
@@ -23,4 +25,12 @@ public class BookingsController : DixelsController, IBookingsAppService
 
     [HttpPost]
     public virtual Task<BookingDto> CreateAsync([FromBody] CreateBookingDto input) => _bookingsAppService.CreateAsync(input);
+
+    [HttpGet("mine")]
+    public virtual Task<ListResultDto<BookingDto>> GetMineAsync([FromQuery] GetMyBookingsInput input) =>
+        _bookingsAppService.GetMineAsync(input);
+
+    [HttpPost("{id}/cancel")]
+    public virtual Task<BookingDto> CancelAsync(Guid id, [FromBody] CancelBookingDto input) =>
+        _bookingsAppService.CancelAsync(id, input);
 }

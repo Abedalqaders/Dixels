@@ -33,4 +33,5 @@ public sealed record AvailabilitySearch(
     DateTimeOffset StartUtc,
     DateTimeOffset EndUtc,
     TimeRange Day,
-    IReadOnlyList<SpaceAvailability> Spaces);
+    IReadOnlyList<SpaceAvailability> Spaces,
+    IReadOnlyList<BookingViolation> Warnings);

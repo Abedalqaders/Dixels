@@ -87,8 +87,7 @@ export function Sidebar() {
         <>
           <NavItem
             to="/my-calendar"
-            active={false}
-            disabled
+            active={location.pathname === '/my-calendar'}
             onNavigate={closeMobile}
             icon={<CalendarLinesIcon />}
           >

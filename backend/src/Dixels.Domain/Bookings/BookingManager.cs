@@ -61,7 +61,7 @@ public class BookingManager : DomainService
     public async Task<BookingEvaluation> EvaluateAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)
     {
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
-        return await ValidateAsync(context, attendees);
+        return await ValidateAsync(context, attendees, userId);
     }
 
     /// <summary>
@@ -86,6 +86,13 @@ public class BookingManager : DomainService
 
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
 
+        // One booking at a time per person: hold the person too, so two of their own
+        // requests for different rooms can't both pass the clash check at once.
+        if (context.Building.OwnOverlapPolicy == OwnOverlapPolicy.Block)
+        {
+            await _bookingRepository.LockUserAsync(userId);
+        }
+
         var existing = await _bookingRepository.FindByIdempotencyKeyAsync(userId, idempotencyKey);
         if (existing is not null)
         {
@@ -97,7 +104,7 @@ public class BookingManager : DomainService
             return (existing, true);
         }
 
-        var evaluation = await ValidateAsync(context, attendees);
+        var evaluation = await ValidateAsync(context, attendees, userId);
         if (!evaluation.IsValid)
         {
             throw new BookingRejectedException(evaluation.Violations);
@@ -115,6 +122,29 @@ public class BookingManager : DomainService
             idempotencyKey);
 
         return (await _bookingRepository.InsertConfirmedAsync(booking), false);
+    }
+
+    /// <summary>
+    /// The owner cancelling their own booking, which frees the slot straight away. Only
+    /// before it starts: once a booking is under way (or over) it's part of the record.
+    /// </summary>
+    public async Task<Booking> CancelOwnAsync(Guid userId, Guid bookingId, string? reason)
+    {
+        var booking = await _bookingRepository.GetAsync(bookingId);
+
+        if (booking.UserId != userId)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingNotYours);
+        }
+
+        var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
+        if (booking.Status == BookingStatus.Confirmed && booking.StartsAt <= now)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAlreadyStarted);
+        }
+
+        booking.Cancel(userId, now, reason, byAdmin: false);
+        return await _bookingRepository.UpdateAsync(booking, autoSave: true);
     }
 
     // A room that's unavailable only because of *when* (booked, closed for maintenance,
@@ -186,6 +216,9 @@ public class BookingManager : DomainService
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
         var request = new BookingRequest(startUtc, endUtc, attendees);
 
+        // Checked once for the whole search: the person's clash doesn't depend on the room.
+        var ownClash = await FindOwnClashAsync(userId, building, clock, startUtc, endUtc, exceptSpaceId: null);
+
         var results = spaces.Select(space =>
         {
             var floor = floorById[space.FloorId];
@@ -211,6 +244,13 @@ public class BookingManager : DomainService
                 busy.Any(b => b.Range.Overlaps(startUtc, endUtc)),
                 now,
                 _options.SlotMinutes);
+
+            // Under Block, the person's other booking rules out every room — except the one
+            // it's in, which already says "already booked" on its own.
+            if (ownClash is { Blocks: true } && ownClash.Value.SpaceId != space.Id)
+            {
+                violations = violations.Append(ownClash.Value.Violation).ToList();
+            }
 
             var open = OpenIntervals.Compute(
                     rules.Days.Value,
@@ -247,7 +287,8 @@ public class BookingManager : DomainService
             return new SpaceAvailability(space, floor, rules, violations, open, closed, busy, freeUntil, nextFreeStart);
         }).ToList();
 
-        return new AvailabilitySearch(building, clock, startUtc, endUtc, day, results);
+        var warnings = ownClash is { Blocks: false } ? new[] { ownClash.Value.Violation } : Array.Empty<BookingViolation>();
+        return new AvailabilitySearch(building, clock, startUtc, endUtc, day, results, warnings);
     }
 
     private async Task<BookingContext> LoadContextAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)
@@ -277,7 +318,7 @@ public class BookingManager : DomainService
         return new BookingContext(space, floor, building, clock, startUtc, endUtc);
     }
 
-    private async Task<BookingEvaluation> ValidateAsync(BookingContext context, int attendees)
+    private async Task<BookingEvaluation> ValidateAsync(BookingContext context, int attendees, Guid userId)
     {
         var rules = _constraintResolver.Resolve(context.Building, context.Floor, context.Space);
         var overrides = await LoadOverlappingOverridesAsync(context);
@@ -292,8 +333,62 @@ public class BookingManager : DomainService
             new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero),
             _options.SlotMinutes);
 
+        // The person's own other booking at that time (a different room — the same room is
+        // already "already booked"): a rule under Block, a heads-up under Warn.
+        var ownClash = await FindOwnClashAsync(
+            userId, context.Building, context.LocalClock, context.StartUtc, context.EndUtc, exceptSpaceId: context.Space.Id);
+        var warnings = new List<BookingViolation>();
+        if (ownClash is { } clash)
+        {
+            if (clash.Blocks)
+            {
+                violations = violations.Append(clash.Violation).ToList();
+            }
+            else
+            {
+                warnings.Add(clash.Violation);
+            }
+        }
+
         return new BookingEvaluation(
-            context.Space, context.Floor, context.Building, context.LocalClock, rules, context.StartUtc, context.EndUtc, violations);
+            context.Space, context.Floor, context.Building, context.LocalClock, rules, context.StartUtc, context.EndUtc, violations, warnings);
+    }
+
+    private readonly record struct OwnClash(BookingViolation Violation, Guid SpaceId, bool Blocks);
+
+    /// <summary>
+    /// The person's earliest other confirmed booking overlapping <c>[start, end)</c> in a
+    /// building that cares (Warn or Block), as the message to show — or null when there's
+    /// none, or the building allows it silently.
+    /// </summary>
+    private async Task<OwnClash?> FindOwnClashAsync(
+        Guid userId, Building building, BuildingClock clock, DateTimeOffset start, DateTimeOffset end, Guid? exceptSpaceId)
+    {
+        if (building.OwnOverlapPolicy == OwnOverlapPolicy.Allow)
+        {
+            return null;
+        }
+
+        var clash = (await _bookingRepository.GetConfirmedForUserAsync(userId, start, end))
+            .FirstOrDefault(b => b.SpaceId != exceptSpaceId);
+        if (clash is null)
+        {
+            return null;
+        }
+
+        // FindAsync, not GetAsync: the other room may have been deleted since — still a clash.
+        var spaceName = (await _spaceRepository.FindAsync(clash.SpaceId))?.Name ?? "another room";
+        var blocks = building.OwnOverlapPolicy == OwnOverlapPolicy.Block;
+
+        var violation = new BookingViolation(
+            blocks ? DixelsDomainErrorCodes.BookingOwnOverlap : DixelsDomainErrorCodes.BookingOwnOverlapWarning,
+            ConstraintSource.Building,
+            BookingFormat.Data(
+                ("spaceName", spaceName),
+                ("from", BookingFormat.DateTime(clock.ToLocal(clash.StartsAt))),
+                ("until", clock.ToLocal(clash.EndsAt).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))));
+
+        return new OwnClash(violation, clash.SpaceId, blocks);
     }
 
     // Closures union across levels, so overrides on the space, its floor and its building

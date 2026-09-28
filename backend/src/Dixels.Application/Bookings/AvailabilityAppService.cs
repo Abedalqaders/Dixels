@@ -84,6 +84,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
             Timezone = building.Timezone,
             MaxHorizonDays = building.MaxHorizonDays,
             MinLeadMinutes = building.MinLeadMinutes,
+            OwnOverlapPolicy = building.OwnOverlapPolicy,
             SlotMinutes = _bookingOptions.SlotMinutes,
             Floors = floors
                 .Where(f => spacesByFloor[f.Id].Any())
@@ -135,6 +136,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
             Timezone = search.Building.Timezone,
             LocalStart = input.LocalStart,
             LocalEnd = input.LocalEnd,
+            Warnings = search.Warnings.Select(_violationLocalizer.ToDto).ToList(),
             Spaces = search.Spaces
                 .OrderByDescending(s => s.IsAvailable)
                 .ThenBy(s => s.Floor.FloorNumber)

@@ -1,5 +1,6 @@
 import { ApiError, query, request } from '../../../lib/api/httpClient'
 import type { FieldValueDto, OperatingWindowDto } from '../../space-management/api/spaceManagementApi'
+import type { IsoDate } from '../../../lib/time/buildingTime'
 
 export { ApiError }
 
@@ -32,6 +33,8 @@ export interface BookableBuildingDto {
   timezone: string
   maxHorizonDays: number
   minLeadMinutes: number
+  /** Whether one person may hold two bookings at once here (0 Allow, 1 Warn, 2 Block). */
+  ownOverlapPolicy?: number
   slotMinutes: number
   floors: BookableFloorDto[]
 }
@@ -64,6 +67,8 @@ export interface BookingViolationDto {
 export interface BookingPreviewDto {
   isValid: boolean
   violations: BookingViolationDto[]
+  /** Worth knowing but doesn't stop the booking — e.g. you already have another room then. */
+  warnings?: BookingViolationDto[]
   startsAt: string
   endsAt: string
   timezone: string
@@ -114,6 +119,8 @@ export interface AvailabilitySearchResultDto {
   timezone: string
   localStart: string
   localEnd: string
+  /** About the search as a whole — e.g. you already have another booking then. */
+  warnings?: BookingViolationDto[]
   /** Available spaces first. */
   spaces: SpaceAvailabilityDto[]
 }
@@ -162,4 +169,21 @@ export function searchAvailability(token: string, input: SearchAvailabilityInput
       }),
     token,
   )
+}
+
+/**
+ * My confirmed bookings on building-local days `from` (inclusive) to `to` (exclusive),
+ * earliest first. At most 62 days per call.
+ */
+export async function getMyBookings(token: string, from: IsoDate, to: IsoDate): Promise<BookingDto[]> {
+  const result = await request<{ items: BookingDto[] }>('/api/app/bookings/mine' + query({ from, to }), token)
+  return result.items
+}
+
+/** Cancels one of my own bookings before it starts; the slot is free the moment this returns. */
+export function cancelBooking(token: string, id: string, reason?: string): Promise<BookingDto> {
+  return request<BookingDto>(`/api/app/bookings/${id}/cancel`, token, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason?.trim() || null }),
+  })
 }

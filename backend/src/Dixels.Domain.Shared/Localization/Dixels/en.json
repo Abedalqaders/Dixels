@@ -10,6 +10,7 @@
     "Dixels:SpaceManagement:MaxDurationMustBePositive": "The longest booking allowed must be greater than zero minutes.",
     "Dixels:SpaceManagement:MaxHorizonDaysMustBePositive": "How far ahead people can book must be greater than zero days.",
     "Dixels:SpaceManagement:MinLeadMinutesMustNotBeNegative": "The minimum notice before a booking can't be negative.",
+    "Dixels:SpaceManagement:InvalidOwnOverlapPolicy": "Pick whether people may hold two bookings at once: allow, warn or block.",
     "Dixels:SpaceManagement:CapacityMustBePositive": "Capacity must be greater than zero.",
     "Dixels:SpaceManagement:CapacityBelowMinAttendees": "Capacity ({capacity}) can't drop below the minimum group size ({minAttendees}) — lower the minimum first.",
     "Dixels:SpaceManagement:MinAttendeesMustBePositive": "The minimum group size must be greater than zero.",
@@ -52,6 +53,13 @@
     "Dixels:Bookings:NotAssignedToBuilding": "You can only book spaces in your assigned building. Ask an administrator to assign you to this building.",
     "Dixels:Bookings:IdempotencyKeyReused": "This request was already submitted with different details. Refresh the page and try again.",
     "Dixels:Bookings:NotCancellable": "This booking can't be cancelled because it is already {status}.",
+    "Dixels:Bookings:NotYours": "You can only cancel your own bookings.",
+    "Dixels:Bookings:AlreadyStarted": "This booking has already started, so it can't be cancelled.",
+    "Dixels:Bookings:InvalidDateRange": "Pick a date range of 1 to {maxDays} days, with the end after the start.",
+    "Dixels:Bookings:OwnOverlap": "You already have {spaceName} booked {from}–{until}, and this building allows one booking at a time. Cancel that booking or pick another time.",
+    "Dixels:Bookings:OwnOverlap:Short": "You're in {spaceName} then",
+    "Dixels:Bookings:OwnOverlapWarning": "Heads-up: you already have {spaceName} booked {from}–{until}.",
+    "Dixels:Bookings:OwnOverlapWarning:Short": "You're in {spaceName} then",
 
     "PermissionGroup:Dixels": "Dixels",
     "Permission:Buildings": "Buildings",
@@ -62,6 +70,7 @@
     "Permission:Bookings": "Bookings",
     "Permission:ManageAllBookings": "Manage everyone's bookings",
     "Permission:Create": "Create",
+    "Permission:Cancel": "Cancel",
     "Permission:Edit": "Edit",
     "Permission:Delete": "Delete"
   }

@@ -19,7 +19,7 @@ public class RoleDataSeedContributor : IDataSeedContributor, ITransientDependenc
 {
     public const string EmployeeRoleName = "employee";
 
-    /* What an employee may do: see availability and book for themselves. Spelled out as
+    /* What an employee may do: see availability, book for themselves and cancel their own bookings. Spelled out as
      * strings because DixelsPermissions lives in Application.Contracts, which the Domain
      * layer can't reference — RoleDataSeedContributorTests pins these to the real
      * constants so a rename there can't silently leave employees without access. */
@@ -27,6 +27,7 @@ public class RoleDataSeedContributor : IDataSeedContributor, ITransientDependenc
     {
         "Dixels.Bookings",
         "Dixels.Bookings.Create",
+        "Dixels.Bookings.Cancel",
     };
 
     private readonly IdentityRoleManager _roleManager;
@@ -43,16 +44,32 @@ public class RoleDataSeedContributor : IDataSeedContributor, ITransientDependenc
         _permissionDataSeeder = permissionDataSeeder;
     }
 
+    // Set on the seed context once this has run. Other contributors call this one first to
+    // be sure the role exists, so it can run several times in one seeding pass — and each
+    // run only sees grants already saved, so without this a new permission was granted once
+    // per call (three duplicate rows the first time Bookings.Cancel was seeded).
+    private const string SeededPropertyName = "Dixels:RolesSeeded";
+
     public async Task SeedAsync(DataSeedContext context)
     {
+        if (context?[SeededPropertyName] is true)
+        {
+            return;
+        }
+
         await CreateRoleIfNotExistsAsync(EmployeeRoleName);
 
-        // Idempotent: grants only what the role doesn't already have.
+        // Idempotent across passes: grants only what the role doesn't already have saved.
         await _permissionDataSeeder.SeedAsync(
             RolePermissionValueProvider.ProviderName,
             EmployeeRoleName,
             EmployeePermissions,
             context?.TenantId);
+
+        if (context is not null)
+        {
+            context[SeededPropertyName] = true;
+        }
     }
 
     private async Task CreateRoleIfNotExistsAsync(string roleName)

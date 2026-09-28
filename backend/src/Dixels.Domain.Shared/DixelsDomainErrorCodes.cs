@@ -8,6 +8,7 @@ public static class DixelsDomainErrorCodes
     public const string MaxDurationMustBePositive = Prefix + "MaxDurationMustBePositive";
     public const string MaxHorizonDaysMustBePositive = Prefix + "MaxHorizonDaysMustBePositive";
     public const string MinLeadMinutesMustNotBeNegative = Prefix + "MinLeadMinutesMustNotBeNegative";
+    public const string InvalidOwnOverlapPolicy = Prefix + "InvalidOwnOverlapPolicy";
     public const string CapacityMustBePositive = Prefix + "CapacityMustBePositive";
     public const string CapacityBelowMinAttendees = Prefix + "CapacityBelowMinAttendees";
     public const string MinAttendeesMustBePositive = Prefix + "MinAttendeesMustBePositive";
@@ -43,4 +44,12 @@ public static class DixelsDomainErrorCodes
     public const string BookingNotAssignedToBuilding = BookingsPrefix + "NotAssignedToBuilding";
     public const string BookingIdempotencyKeyReused = BookingsPrefix + "IdempotencyKeyReused";
     public const string BookingNotCancellable = BookingsPrefix + "NotCancellable";
+    public const string BookingNotYours = BookingsPrefix + "NotYours";
+    public const string BookingAlreadyStarted = BookingsPrefix + "AlreadyStarted";
+    public const string BookingInvalidDateRange = BookingsPrefix + "InvalidDateRange";
+
+    // The person already has a booking at that time (building's OwnOverlapPolicy): a hard
+    // rule under Block, a heads-up under Warn.
+    public const string BookingOwnOverlap = BookingsPrefix + "OwnOverlap";
+    public const string BookingOwnOverlapWarning = BookingsPrefix + "OwnOverlapWarning";
 }

@@ -20,11 +20,25 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task LockSpaceAsync(Guid spaceId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The same kind of lock on the person, for buildings that allow one booking at a time:
+    /// two of their own requests (two tabs) are checked one after the other, so both can't
+    /// read "no clash" at once.
+    /// </summary>
+    Task LockUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
     Task<bool> AnyConfirmedOverlapAsync(Guid spaceId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default);
 
     /// <summary>Every confirmed booking on any of these spaces that overlaps <c>[start, end)</c> — one query for a whole building's day.</summary>
     Task<List<Booking>> GetConfirmedOverlappingAsync(
         IReadOnlyCollection<Guid> spaceIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>The user's confirmed bookings overlapping <c>[start, end)</c>, earliest first.</summary>
+    Task<List<Booking>> GetConfirmedForUserAsync(
+        Guid userId,
         DateTimeOffset start,
         DateTimeOffset end,
         CancellationToken cancellationToken = default);

@@ -3,6 +3,8 @@ import { OperatingWindow } from '../domain/operatingWindow'
 import { DayChipPicker } from './DayChipPicker'
 import { HoursRangeInput } from './HoursRangeInput'
 import { DurationPicker, minutesToHours, hoursToMinutes } from './DurationPicker'
+import type { OwnOverlapPolicy } from '../api/spaceManagementApi'
+import { OWN_OVERLAP_OPTIONS } from '../domain/ownOverlapPolicy'
 
 // Building is the base layer — no Inherit/Override switches here, every value is
 // required (see CONSTRAINTS.md). Port of the mock's #buildingLevelBlock — minus Timezone,
@@ -17,6 +19,7 @@ export interface BuildingDraft {
   maxDurationMinutes: number
   maxHorizonDays: number
   minLeadMinutes: number
+  ownOverlapPolicy: OwnOverlapPolicy
 }
 
 interface BuildingLevelFieldsProps {
@@ -69,6 +72,24 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
             onChange={(hours) => onChange({ ...draft, maxDurationMinutes: hoursToMinutes(hours) })}
           />
         </div>
+      </div>
+      <div className="field stacked">
+        <label className="lbl" htmlFor="own-overlap-policy">
+          Overlapping bookings per person
+        </label>
+        <select
+          id="own-overlap-policy"
+          className="ctrl"
+          value={draft.ownOverlapPolicy}
+          onChange={(e) => onChange({ ...draft, ownOverlapPolicy: Number(e.target.value) as OwnOverlapPolicy })}
+        >
+          {OWN_OVERLAP_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <span className="hint">{OWN_OVERLAP_OPTIONS.find((o) => o.value === draft.ownOverlapPolicy)?.hint}</span>
       </div>
       <div className="field stacked">
         <span className="lbl">Operating days</span>

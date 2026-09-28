@@ -62,6 +62,10 @@ export interface ResolvedConstraintsDto {
 
 // ---- Buildings ------------------------------------------------------------
 
+/** Whether one person may hold two bookings at the same time in a building (OwnOverlapPolicy on the server). */
+export const OwnOverlapPolicy = { Allow: 0, Warn: 1, Block: 2 } as const
+export type OwnOverlapPolicy = (typeof OwnOverlapPolicy)[keyof typeof OwnOverlapPolicy]
+
 export interface BuildingDto {
   id: string
   name: string
@@ -72,6 +76,7 @@ export interface BuildingDto {
   maxDurationMinutes: number
   maxHorizonDays: number
   minLeadMinutes: number
+  ownOverlapPolicy: OwnOverlapPolicy
   isDeleted: boolean
   concurrencyStamp: string
 }
@@ -99,6 +104,7 @@ export interface UpdateBuildingConstraintsDto {
   maxDurationMinutes: number
   maxHorizonDays: number
   minLeadMinutes: number
+  ownOverlapPolicy: OwnOverlapPolicy
   concurrencyStamp: string
 }
 

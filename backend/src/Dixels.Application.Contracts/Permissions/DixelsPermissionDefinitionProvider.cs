@@ -36,6 +36,7 @@ public class DixelsPermissionDefinitionProvider : PermissionDefinitionProvider
 
         var bookings = dixelsGroup.AddPermission(DixelsPermissions.Bookings.Default, L("Permission:Bookings"));
         bookings.AddChild(DixelsPermissions.Bookings.Create, L("Permission:Create"));
+        bookings.AddChild(DixelsPermissions.Bookings.Cancel, L("Permission:Cancel"));
         bookings.AddChild(DixelsPermissions.Bookings.ManageAll, L("Permission:ManageAllBookings"));
     }
 

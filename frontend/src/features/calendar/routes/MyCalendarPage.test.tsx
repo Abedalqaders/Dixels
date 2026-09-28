@@ -1,0 +1,309 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { useAuth } from 'react-oidc-context'
+import { addDays, nowInZone } from '../../../lib/time/buildingTime'
+import { cancelBooking, getMyBookableBuilding, getMyBookings, searchAvailability } from '../../bookings/api/bookingsApi'
+import type { BookableBuildingDto, BookableSpaceDto, BookingDto } from '../../bookings/api/bookingsApi'
+import { addMonths, gridMonthFor, monthGrid, startOfWeek } from '../calendarDates'
+import { MyCalendarPage } from './MyCalendarPage'
+
+vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
+vi.mock('../../bookings/api/bookingsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../bookings/api/bookingsApi')>()
+  return {
+    ...actual,
+    getMyBookableBuilding: vi.fn(),
+    getMyBookings: vi.fn(),
+    cancelBooking: vi.fn(),
+    searchAvailability: vi.fn(),
+    previewBooking: vi.fn(() => new Promise(() => {})),
+  }
+})
+
+const room: BookableSpaceDto = {
+  id: 's1',
+  name: 'Meeting Room 301',
+  spaceTypeId: 't1',
+  spaceTypeName: 'Meeting room',
+  iconKey: 0,
+  capacity: 8,
+  minAttendees: null,
+  days: { value: [0, 1, 2, 3, 4, 5, 6], source: 'Building' },
+  hours: { value: { isOpen24Hours: false, open: '07:00', close: '20:00' }, source: 'Building' },
+  maxDurationMinutes: { value: 120, source: 'Building' },
+}
+
+const building: BookableBuildingDto = {
+  id: 'b1',
+  name: 'Riverside HQ',
+  timezone: 'UTC',
+  maxHorizonDays: 60,
+  minLeadMinutes: 0,
+  slotMinutes: 15,
+  floors: [{ id: 'f3', name: 'Level 3', floorNumber: 3, spaces: [room] }],
+}
+
+// Tomorrow, so every booking below is still ahead (cancellable) whatever time the tests run.
+const tomorrow = addDays(nowInZone('UTC').date, 1)
+
+function booking(id: string, title: string, from: string, to: string, day = tomorrow): BookingDto {
+  return {
+    id,
+    spaceId: 's1',
+    spaceName: 'Meeting Room 301',
+    floorName: 'Level 3',
+    buildingName: 'Riverside HQ',
+    timezone: 'UTC',
+    startsAt: `${day}T${from}:00Z`,
+    endsAt: `${day}T${to}:00Z`,
+    localStart: `${day}T${from}:00`,
+    localEnd: `${day}T${to}:00`,
+    attendees: 4,
+    title,
+    status: 'Confirmed',
+  }
+}
+
+/** The request a month grid makes: its first Sunday to the Saturday after its last day. */
+function gridRange(month: string): [string, string, string] {
+  const { start, weeks } = monthGrid(month)
+  return ['t', start, addDays(start, weeks * 7)]
+}
+
+const callsFor = (month: string) =>
+  vi.mocked(getMyBookings).mock.calls.filter((c) => c[1] === gridRange(month)[1] && c[2] === gridRange(month)[2]).length
+
+function renderPage(url = `/my-calendar?view=week&date=${tomorrow}`) {
+  render(
+    <MemoryRouter initialEntries={[url]}>
+      <MyCalendarPage />
+    </MemoryRouter>,
+  )
+}
+
+describe('MyCalendarPage', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.mocked(useAuth).mockReturnValue({ user: { access_token: 't' } } as unknown as ReturnType<typeof useAuth>)
+    vi.mocked(getMyBookableBuilding).mockResolvedValue(building)
+    vi.mocked(getMyBookings).mockReset()
+    vi.mocked(getMyBookings).mockResolvedValue([booking('b1', 'Design review', '10:00', '11:00')])
+    vi.mocked(cancelBooking).mockReset()
+  })
+
+  it('loads the month grid around the week once, and shows each booking on it', async () => {
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: /Design review, 10:00–11:00, Meeting Room 301/ })).toBeInTheDocument()
+    const month = gridMonthFor('week', tomorrow)
+    // The week and the mini calendar share one request for the month.
+    expect(callsFor(month)).toBe(1)
+    expect(screen.getByText('Riverside HQ · UTC')).toBeInTheDocument()
+  })
+
+  it("prefetches the months either side, so stepping over doesn't wait on the network", async () => {
+    const user = userEvent.setup()
+    renderPage(`/my-calendar?view=month&date=${tomorrow}`)
+    await screen.findByRole('button', { name: /Design review/ })
+
+    const month = gridMonthFor('month', tomorrow)
+    await waitFor(() => expect(callsFor(addMonths(month, 1))).toBe(1))
+    expect(callsFor(addMonths(month, -1))).toBe(1)
+
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    await user.click(screen.getByRole('button', { name: 'Previous' }))
+
+    // Back on the first month: served from memory, not fetched again.
+    expect(callsFor(month)).toBe(1)
+  })
+
+  it('moves a week at a time with the arrows', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByRole('button', { name: /Design review/ })
+
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+
+    const next = addDays(startOfWeek(tomorrow), 7)
+    const label = screen.getByRole('heading', { level: 2 })
+    await waitFor(() => expect(label.textContent).toContain(String(Number(next.slice(8)))))
+    await waitFor(() => expect(callsFor(gridMonthFor('week', next))).toBeGreaterThanOrEqual(1))
+  })
+
+  it('falls back to today for a date in the URL that does not exist', async () => {
+    renderPage('/my-calendar?view=week&date=2026-13-45')
+
+    expect(await screen.findByRole('button', { name: /Design review/ })).toBeInTheDocument()
+  })
+
+  it('cancels a booking with a reason and says the room is free again', async () => {
+    const user = userEvent.setup()
+    const b = booking('b1', 'Design review', '10:00', '11:00')
+    vi.mocked(cancelBooking).mockResolvedValue({ ...b, status: 'Cancelled' })
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /Design review, 10:00–11:00/ }))
+    const detail = screen.getByRole('dialog')
+    expect(within(detail).getByText('Upcoming')).toBeInTheDocument()
+    await user.click(within(detail).getByRole('button', { name: 'Cancel booking' }))
+
+    const confirm = screen.getByRole('alertdialog')
+    await user.type(within(confirm).getByLabelText(/Reason/), 'Moved online')
+    await user.click(within(confirm).getByRole('button', { name: 'Cancel booking' }))
+
+    expect(cancelBooking).toHaveBeenCalledWith('t', 'b1', 'Moved online')
+    expect(await screen.findByText('Cancelled — Meeting Room 301 is free again for 10:00–11:00')).toBeInTheDocument()
+    // Everything cached is dropped and what's on screen is fetched again.
+    await waitFor(() => expect(callsFor(gridMonthFor('week', tomorrow))).toBe(2))
+  })
+
+  it('keeps the cancel dialog open with the reason when the server refuses', async () => {
+    const user = userEvent.setup()
+    const { ApiError } = await import('../../bookings/api/bookingsApi')
+    vi.mocked(cancelBooking).mockRejectedValue(new ApiError(400, { error: { message: "This booking has already started, so it can't be cancelled." } }))
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /Design review/ }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel booking' }))
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel booking' }))
+
+    expect(await within(screen.getByRole('alertdialog')).findByRole('alert')).toHaveTextContent('already started')
+  })
+
+  it('folds a busy day into "+N more" in the month view and opens that day', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getMyBookings).mockResolvedValue([
+      booking('1', 'One', '08:00', '09:00'),
+      booking('2', 'Two', '09:00', '10:00'),
+      booking('3', 'Three', '10:00', '11:00'),
+      booking('4', 'Four', '11:00', '12:00'),
+      booking('5', 'Five', '12:00', '13:00'),
+    ])
+    renderPage(`/my-calendar?view=month&date=${tomorrow}`)
+
+    await user.click(await screen.findByRole('button', { name: '+2 more' }))
+
+    expect(await screen.findByRole('button', { name: /Five, 12:00–13:00/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toMatch(new RegExp(`^\\w+day ${Number(tomorrow.slice(8))} `))
+  })
+
+  it('offers the free rooms for a new booking and opens the form for the one picked', async () => {
+    const user = userEvent.setup()
+    vi.mocked(searchAvailability).mockResolvedValue({
+      buildingId: 'b1',
+      buildingName: 'Riverside HQ',
+      timezone: 'UTC',
+      localStart: '',
+      localEnd: '',
+      spaces: [
+        {
+          space: room,
+          floorId: 'f3',
+          floorName: 'Level 3',
+          isAvailable: true,
+          violations: [],
+          freeUntil: '14:00',
+          nextFreeStart: null,
+          open: [],
+          closed: [],
+          busy: [],
+        },
+      ],
+    })
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'New booking' }))
+    const quick = screen.getByRole('dialog', { name: 'Book a room' })
+    await user.click(await within(quick).findByRole('button', { name: /Meeting Room 301/ }))
+
+    expect(await screen.findByRole('dialog', { name: 'Book Meeting Room 301' })).toBeInTheDocument()
+  })
+
+  it('calls out rooms ruled out only by length and shortens the time to fit them', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('dixels.bookings.lastDurationMinutes', '150') // New booking suggests 2h30
+    const pod: BookableSpaceDto = { ...room, id: 's2', name: 'Focus Pod 3-02', maxDurationMinutes: { value: 60, source: 'Space' } }
+    const result = (isAvailable: boolean, space: BookableSpaceDto, codes: string[]) => ({
+      space,
+      floorId: 'f3',
+      floorName: 'Level 3',
+      isAvailable,
+      violations: codes.map((code) => ({ code, level: 'Space', message: code, shortMessage: code })),
+      freeUntil: null,
+      nextFreeStart: null,
+      open: [],
+      closed: [],
+      busy: [],
+    })
+    vi.mocked(searchAvailability).mockReset()
+    vi.mocked(searchAvailability).mockResolvedValue({
+      buildingId: 'b1',
+      buildingName: 'Riverside HQ',
+      timezone: 'UTC',
+      localStart: '',
+      localEnd: '',
+      spaces: [
+        result(false, room, ['Dixels:Bookings:TooLong']),
+        result(false, pod, ['Dixels:Bookings:TooLong', 'Dixels:Bookings:Overlap']),
+      ],
+    })
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'New booking' }))
+    const quick = screen.getByRole('dialog', { name: 'Book a room' })
+
+    // Only Meeting Room 301 would fit if shorter; the pod is also booked, so it's grouped as booked.
+    expect(await within(quick).findByText('They allow up to 2h — this is 2h 30m.')).toBeInTheDocument()
+    expect(within(quick).getByText('Shorter time limit')).toBeInTheDocument()
+    expect(within(quick).getByText('Already booked')).toBeInTheDocument()
+
+    const before = vi.mocked(searchAvailability).mock.lastCall![1]
+    await user.click(within(quick).getByRole('button', { name: 'Shorten to 2h' }))
+
+    await waitFor(() => {
+      const after = vi.mocked(searchAvailability).mock.lastCall![1]
+      expect(after.localStart).toBe(before.localStart)
+      expect(new Date(after.localEnd).getTime() - new Date(after.localStart).getTime()).toBe(2 * 60 * 60 * 1000)
+    })
+  })
+
+  it('warns in Book a room when I already have another booking then', async () => {
+    const user = userEvent.setup()
+    vi.mocked(searchAvailability).mockReset()
+    vi.mocked(searchAvailability).mockResolvedValue({
+      buildingId: 'b1',
+      buildingName: 'Riverside HQ',
+      timezone: 'UTC',
+      localStart: '',
+      localEnd: '',
+      warnings: [
+        {
+          code: 'Dixels:Bookings:OwnOverlapWarning',
+          level: 'Building',
+          message: 'Heads-up: you already have Desk 7 booked Wed 30 Sep 10:00–12:00.',
+          shortMessage: "You're in Desk 7 then",
+        },
+      ],
+      spaces: [],
+    })
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'New booking' }))
+
+    expect(
+      await within(screen.getByRole('dialog', { name: 'Book a room' })).findByText(
+        'Heads-up: you already have Desk 7 booked Wed 30 Sep 10:00–12:00.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('says so when the employee has no building', async () => {
+    vi.mocked(getMyBookableBuilding).mockResolvedValue(null)
+    renderPage()
+
+    expect(await screen.findByText(/haven't been assigned to a building/)).toBeInTheDocument()
+  })
+})

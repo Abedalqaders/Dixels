@@ -15,6 +15,9 @@ public class BookingPreviewDto
     /// <summary>Every broken rule, most fundamental first.</summary>
     public List<BookingViolationDto> Violations { get; set; } = new();
 
+    /// <summary>Things worth knowing that don't stop the booking — e.g. you already have another room then.</summary>
+    public List<BookingViolationDto> Warnings { get; set; } = new();
+
     public DateTimeOffset StartsAt { get; set; }
     public DateTimeOffset EndsAt { get; set; }
     public string Timezone { get; set; } = string.Empty;

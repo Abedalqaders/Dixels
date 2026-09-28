@@ -47,13 +47,14 @@ public static class DixelsPermissions
     // No Users permissions here: listing users and assigning their building go through ABP's
     // own user service, so ABP's AbpIdentity.Users(.Update) permissions cover them.
 
-    // Employees get Default + Create through the "employee" role (RoleDataSeedContributor).
+    // Employees get Default + Create + Cancel through the "employee" role (RoleDataSeedContributor).
     // ManageAll is for administrators acting on other people's bookings (force cancel) —
     // defined now so that feature is a grant, not a new permission, when it lands.
     public static class Bookings
     {
         public const string Default = GroupName + ".Bookings";
         public const string Create = Default + ".Create";
+        public const string Cancel = Default + ".Cancel";
         public const string ManageAll = Default + ".ManageAll";
     }
 }
