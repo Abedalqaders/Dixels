@@ -103,6 +103,8 @@ public class DixelsDbMigrationService : ITransientDependency
         await _dataSeeder.SeedAsync(new DataSeedContext(tenant?.Id)
             .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName, IdentityDataSeedContributor.AdminEmailDefaultValue)
             .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, IdentityDataSeedContributor.AdminPasswordDefaultValue)
+            // Demo floors, rooms and bookings for local use — only the migrator seeds them.
+            .WithProperty(RiversideDemoDataSeedContributor.EnabledPropertyName, true)
         );
     }
 
