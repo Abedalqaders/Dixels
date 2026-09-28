@@ -13,7 +13,6 @@ export interface SearchValues {
   start: HhMm
   end: HhMm
   people: number
-  floorId: string
   spaceTypeId: string
 }
 
@@ -27,8 +26,8 @@ interface SearchBarProps {
 const ANY = 'any'
 
 /**
- * The question Find a space answers: when, and for how many people. Floor and type are
- * optional narrowing. From only offers times that haven't passed, and To only times after
+ * The question Find a space answers: when, and for how many people. Type is optional
+ * narrowing; the floor is picked with the chips above the results. From only offers times that haven't passed, and To only times after
  * From. Dragging on a room's bar in the results picks any other time. Every control is a real picker on the building's clock and slot
  * grid, so there's nothing to type in a wrong format.
  */
@@ -49,7 +48,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         role="search"
         aria-label="Find a free space"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr_1.2fr]"
+        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
           <Label htmlFor="fs-date">Date</Label>
@@ -100,24 +99,6 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
           </Select>
         </div>
 
-        {building.floors.length > 1 && (
-          <div className="grid gap-2">
-            <Label htmlFor="fs-floor">Floor</Label>
-            <Select value={value.floorId || ANY} onValueChange={(v) => onChange({ floorId: v === ANY ? '' : v })}>
-              <SelectTrigger id="fs-floor" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY}>Any floor</SelectItem>
-                {building.floors.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </form>
     </Card>
   )

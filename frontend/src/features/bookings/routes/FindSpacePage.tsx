@@ -16,6 +16,7 @@ import { ApiError, getMyBookableBuilding, searchAvailability } from '../api/book
 import type { BookableBuildingDto, BookingDto, SearchAvailabilityInput, SpaceAvailabilityDto } from '../api/bookingsApi'
 import { BookingForm } from '../components/BookingForm'
 import { DayBar } from '../components/DayBar'
+import { FloorFilter } from '../components/FloorFilter'
 import { SearchBar } from '../components/SearchBar'
 import type { SearchValues } from '../components/SearchBar'
 import { dayAxis } from '../dayAxis'
@@ -23,6 +24,7 @@ import { suggestWindow } from '../suggestSlot'
 import type { Slot } from '../suggestSlot'
 import { readLastDuration } from '../preferences'
 import type { DayBarPick } from '../components/DayBar'
+import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '../../../components/LoadingSkeletons'
 
 /**
  * Find a space answers one question: "what can I book for this time?". Pick when and for
@@ -39,14 +41,14 @@ export function FindSpacePage() {
     <TooltipProvider>
       <div className="top">
         <span className="pick">
-          <span className="picklbl">{building?.name ?? (status === 'loading' ? 'Loading…' : '')}</span>
+          <span className="picklbl">{status === 'loading' ? <TextSkeleton label="Loading your building…" /> : building?.name}</span>
         </span>
       </div>
 
       <div className="content">
         <h1 className="pagetitle">Find a space</h1>
 
-        {status === 'loading' && <p className="lead">Loading…</p>}
+        {status === 'loading' && <FindSpaceSkeleton />}
 
         {status === 'error' && (
           <p className="lead" role="alert">
@@ -73,33 +75,38 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   const [booking, setBooking] = useState<{ room: SpaceAvailabilityDto; slot: Slot } | null>(null)
   const [defaults] = useState(() => suggestWindow(building))
 
-  // The search lives in the URL (?date=&from=&to=&people=&floor=&type=), so it survives a
+  // The search lives in the URL (?date=&from=&to=&people=&type=&floor=), so it survives a
   // refresh, the back button, and can be shared as a link.
   const values: SearchValues = {
     date: searchParams.get('date') ?? defaults.date,
     start: searchParams.get('from') ?? defaults.start,
     end: searchParams.get('to') ?? defaults.end,
     people: Math.max(1, Number(searchParams.get('people')) || 1),
-    floorId: searchParams.get('floor') ?? '',
     spaceTypeId: searchParams.get('type') ?? '',
   }
+  // The floor narrows the results on the page rather than the search: the whole building
+  // is searched once, so every floor chip can show how many rooms it has free.
+  const requestedFloor = searchParams.get('floor') ?? ''
+  const floorId = building.floors.some((f) => f.id === requestedFloor) ? requestedFloor : ''
 
-  function update(patch: Partial<SearchValues>) {
-    const next = { ...values, ...patch }
+  function writeParams(next: SearchValues, floor: string) {
     const params: Record<string, string> = { date: next.date, from: next.start, to: next.end, people: String(next.people) }
-    if (next.floorId) params.floor = next.floorId
     if (next.spaceTypeId) params.type = next.spaceTypeId
+    if (floor) params.floor = floor
     setSearchParams(params, { replace: true })
   }
 
-  const { date, start, end, people, floorId, spaceTypeId } = values
+  function update(patch: Partial<SearchValues>) {
+    writeParams({ ...values, ...patch }, floorId)
+  }
+
+  const { date, start, end, people, spaceTypeId } = values
   const input: SearchAvailabilityInput | null =
     toMinutes(end) > toMinutes(start)
       ? {
           localStart: toLocalDateTime(date, start),
           localEnd: toLocalDateTime(date, end),
           attendees: people,
-          floorId: floorId || undefined,
           spaceTypeId: spaceTypeId || undefined,
         }
       : null
@@ -157,7 +164,8 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
         }),
     }
   }
-  const spaces = results.data?.spaces ?? []
+  const allSpaces = results.data?.spaces ?? []
+  const spaces = floorId ? allSpaces.filter((s) => s.floorId === floorId) : allSpaces
   const free = spaces.filter((s) => s.isAvailable)
   const taken = spaces.filter((s) => !s.isAvailable)
   const axis = dayAxis(spaces, selection)
@@ -175,7 +183,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
         className={cn('mt-6 transition-opacity', results.isRefreshing && 'opacity-60')}
         aria-busy={results.status === 'loading' || results.isRefreshing}
       >
-        {results.status === 'loading' && <p className="lead">Checking every space…</p>}
+        {results.status === 'loading' && <ResultsSkeleton label="Checking every space…" />}
 
         {results.status === 'error' && (
           <p role="alert" className="rounded-md bg-slot-closed px-4 py-3 text-sm">
@@ -185,6 +193,15 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
         {results.status === 'success' && results.data && (
           <>
+            {building.floors.length > 1 && (
+              <FloorFilter
+                floors={building.floors}
+                spaces={allSpaces}
+                value={floorId}
+                onChange={(floor) => writeParams(values, floor)}
+              />
+            )}
+
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold" aria-live="polite">
                 {free.length > 0

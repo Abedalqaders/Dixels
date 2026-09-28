@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -142,5 +142,83 @@ describe('FindSpacePage', () => {
     expect(within(dialog).getByLabelText('From')).toHaveTextContent('10:00')
     expect(within(dialog).getByLabelText('To')).toHaveTextContent('11:00')
     expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
+  })
+
+  describe('floor filter', () => {
+    const room301 = space('s4', 'Meeting Room 301', 8)
+
+    // Radix Select calls pointer-capture and scrollIntoView, which jsdom doesn't implement.
+    beforeAll(() => {
+      Element.prototype.hasPointerCapture ??= () => false
+      Element.prototype.releasePointerCapture ??= () => {}
+      Element.prototype.scrollIntoView ??= () => {}
+    })
+
+    beforeEach(() => {
+      vi.mocked(getMyBookableBuilding).mockResolvedValue({
+        ...building,
+        floors: [
+          { id: 'f1', name: 'Level 1', floorNumber: 1, spaces: [room201, desk12, podA] },
+          { id: 'f3', name: 'Level 3', floorNumber: 3, spaces: [room301] },
+        ],
+      })
+      vi.mocked(searchAvailability).mockResolvedValue({
+        buildingId: 'b1',
+        buildingName: 'Riverside HQ',
+        timezone: 'UTC',
+        localStart: '2026-10-01T10:00:00',
+        localEnd: '2026-10-01T11:00:00',
+        spaces: [
+          result(room201, { freeUntil: '14:00' }),
+          result(room301, { floorId: 'f3', floorName: 'Level 3', freeUntil: '12:00' }),
+          result(desk12, { isAvailable: false, violations: [violation('Already booked at that time')] }),
+        ],
+      })
+    })
+
+    it('offers every floor with how many rooms it has free', async () => {
+      const user = userEvent.setup()
+      renderPage()
+
+      const floor = await screen.findByRole('combobox', { name: 'Floor' })
+      expect(floor).toHaveTextContent('All floors · 2 free')
+
+      await user.click(floor)
+      expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+        'All floors · 2 free',
+        'Level 1 · 1 free',
+        'Level 3 · 1 free',
+      ])
+    })
+
+    it('narrows the list to the picked floor without searching again', async () => {
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('combobox', { name: 'Floor' }))
+      await user.click(screen.getByRole('option', { name: 'Level 3 · 1 free' }))
+
+      expect(screen.getByRole('combobox', { name: 'Floor' })).toHaveTextContent('Level 3 · 1 free')
+      expect(screen.getByRole('heading', { name: /1 space free/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Book Meeting Room 301' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Book Meeting Room 201' })).not.toBeInTheDocument()
+      expect(searchAvailability).toHaveBeenCalledTimes(1)
+      expect(searchAvailability).toHaveBeenCalledWith('t', expect.not.objectContaining({ floorId: expect.anything() }))
+    })
+
+    it('starts on the floor in the URL', async () => {
+      renderPage('/find-space?date=2026-10-01&from=10:00&to=11:00&people=4&floor=f3')
+
+      expect(await screen.findByRole('combobox', { name: 'Floor' })).toHaveTextContent('Level 3 · 1 free')
+      expect(screen.queryByRole('button', { name: 'Book Meeting Room 201' })).not.toBeInTheDocument()
+    })
+
+    it('is left out for a one-floor building', async () => {
+      vi.mocked(getMyBookableBuilding).mockResolvedValue(building)
+      renderPage()
+
+      await screen.findByRole('button', { name: 'Book Meeting Room 201' })
+      expect(screen.queryByRole('combobox', { name: 'Floor' })).not.toBeInTheDocument()
+    })
   })
 })
