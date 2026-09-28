@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
@@ -12,6 +13,7 @@ using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.Users;
 
 namespace Dixels.Users;
 
@@ -33,6 +35,7 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
 {
     private readonly IUserDirectoryRepository _userDirectoryRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
+    private readonly BookingImpactService _bookingImpact;
 
     public DixelsIdentityUserAppService(
         IdentityUserManager userManager,
@@ -41,11 +44,13 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         IOptions<Microsoft.AspNetCore.Identity.IdentityOptions> identityOptions,
         IPermissionChecker permissionChecker,
         IUserDirectoryRepository userDirectoryRepository,
-        IRepository<Building, Guid> buildingRepository)
+        IRepository<Building, Guid> buildingRepository,
+        BookingImpactService bookingImpact)
         : base(userManager, userRepository, roleRepository, identityOptions, permissionChecker)
     {
         _userDirectoryRepository = userDirectoryRepository;
         _buildingRepository = buildingRepository;
+        _bookingImpact = bookingImpact;
     }
 
     [Authorize(IdentityPermissions.Users.Default)]
@@ -90,7 +95,30 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
     public override async Task<IdentityUserDto> UpdateAsync(Guid id, IdentityUserUpdateDto input)
     {
         await NormalizeAndCheckBuildingAsync(input.ExtraProperties);
-        return await base.UpdateAsync(id, input);
+
+        // Deactivating an account: nobody will turn up for its bookings, so release the rooms.
+        var wasActive = (await UserManager.GetByIdAsync(id)).IsActive;
+        var result = await base.UpdateAsync(id, input);
+        if (wasActive && !input.IsActive)
+        {
+            await CancelUpcomingBookingsAsync(id, "Dixels:Bookings:CancelReason:AccountDeactivated");
+        }
+
+        return result;
+    }
+
+    [Authorize(IdentityPermissions.Users.Delete)]
+    public override async Task DeleteAsync(Guid id)
+    {
+        // A removed account's bookings would hold rooms for no one.
+        await CancelUpcomingBookingsAsync(id, "Dixels:Bookings:CancelReason:AccountRemoved");
+        await base.DeleteAsync(id);
+    }
+
+    private async Task CancelUpcomingBookingsAsync(Guid userId, string reasonKey)
+    {
+        var (_, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId);
+        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text(reasonKey));
     }
 
     /// <summary>

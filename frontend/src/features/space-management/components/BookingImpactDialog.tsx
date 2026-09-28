@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
 
-export type ImpactMode = 'change' | 'closure' | 'delete'
+export type ImpactMode = 'change' | 'closure' | 'delete' | 'reassign'
 export type ImpactChoice = 'keep' | 'cancel' | null
 
 export interface ImpactRequest {
@@ -43,8 +43,10 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
         : `Delete “${subject}”?`
       : mode === 'closure'
         ? `This closure falls on ${plural(n)}`
-        : `This change affects ${plural(n)}`
-  const action = mode === 'closure' ? 'add the closure' : 'save'
+        : mode === 'reassign'
+          ? `${subject} has ${plural(n)} in their current building`
+          : `This change affects ${plural(n)}`
+  const action = mode === 'closure' ? 'add the closure' : mode === 'reassign' ? 'move' : 'save'
 
   return (
     <AlertDialog open onOpenChange={(open) => !open && onChoose(null)}>
@@ -56,7 +58,9 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
               ? n > 0
                 ? "They'll be cancelled, and whoever booked them will see why on their calendar. Restoring later won't bring them back."
                 : 'It can be restored later.'
-              : 'They were booked under the current rules. Keep them as they are, or cancel them — whoever booked them will see why on their calendar.'}
+              : mode === 'reassign'
+                ? 'Moving them doesn\'t cancel these by itself — they can still use them. Keep them, or cancel them now; they\'ll see why on their calendar.'
+                : 'They were booked under the current rules. Keep them as they are, or cancel them — whoever booked them will see why on their calendar.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Dixels.Users;
 using Microsoft.AspNetCore.Mvc;
@@ -22,4 +24,11 @@ public class UsersController : DixelsController, IUsersAppService
 
     [HttpGet("my-building")]
     public virtual Task<BuildingDto?> GetMyBuildingAsync() => _usersAppService.GetMyBuildingAsync();
+
+    [HttpGet("{userId}/reassign-impact")]
+    public virtual Task<BookingImpactDto> GetReassignImpactAsync(Guid userId) => _usersAppService.GetReassignImpactAsync(userId);
+
+    [HttpPut("{userId}/building")]
+    public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>
+        _usersAppService.AssignBuildingAsync(userId, input);
 }

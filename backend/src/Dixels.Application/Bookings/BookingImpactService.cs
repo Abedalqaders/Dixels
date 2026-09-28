@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Microsoft.Extensions.Localization;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 
 namespace Dixels.Bookings;
@@ -22,17 +25,63 @@ public class BookingImpactService : ITransientDependency
     private readonly IIdentityUserRepository _userRepository;
     private readonly BookingViolationLocalizer _violationLocalizer;
     private readonly IStringLocalizer<DixelsResource> _localizer;
+    private readonly IRepository<Space, Guid> _spaceRepository;
+    private readonly IRepository<Floor, Guid> _floorRepository;
+    private readonly IRepository<Building, Guid> _buildingRepository;
+    private readonly IDataFilter _dataFilter;
 
     public BookingImpactService(
         BookingImpactChecker checker,
         IIdentityUserRepository userRepository,
         BookingViolationLocalizer violationLocalizer,
-        IStringLocalizer<DixelsResource> localizer)
+        IStringLocalizer<DixelsResource> localizer,
+        IRepository<Space, Guid> spaceRepository,
+        IRepository<Floor, Guid> floorRepository,
+        IRepository<Building, Guid> buildingRepository,
+        IDataFilter dataFilter)
     {
         _checker = checker;
         _userRepository = userRepository;
         _violationLocalizer = violationLocalizer;
         _localizer = localizer;
+        _spaceRepository = spaceRepository;
+        _floorRepository = floorRepository;
+        _buildingRepository = buildingRepository;
+        _dataFilter = dataFilter;
+    }
+
+    /// <summary>
+    /// A person's upcoming bookings as impacts — all of them, or only those in
+    /// <paramref name="buildingId"/> (moving them elsewhere). Also returns that building, for
+    /// describing them on its clock.
+    /// </summary>
+    public async Task<(Building? Building, IReadOnlyList<BookingImpact> Impacts)> UpcomingForUserAsync(Guid userId, Guid? buildingId = null)
+    {
+        var bookings = await _checker.FindUpcomingForUserAsync(userId);
+        if (bookings.Count == 0)
+        {
+            return (buildingId is null ? null : await _buildingRepository.FindAsync(buildingId.Value), Array.Empty<BookingImpact>());
+        }
+
+        // Deleted rooms included: they're still where the booking is.
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            var spaceIds = bookings.Select(b => b.SpaceId).Distinct().ToList();
+            var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id);
+            var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
+            var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
+
+            var impacts = bookings
+                .Select(b => (Booking: b, Space: spaces[b.SpaceId], Floor: floors[spaces[b.SpaceId].FloorId]))
+                .Where(x => buildingId is null || x.Floor.BuildingId == buildingId)
+                .Select(x => new BookingImpact(x.Booking, x.Space, x.Floor, Array.Empty<BookingViolation>()))
+                .ToList();
+
+            var building = buildingId is not null
+                ? await _buildingRepository.FindAsync(buildingId.Value)
+                : impacts.Count > 0 ? await _buildingRepository.FindAsync(impacts[0].Floor.BuildingId) : null;
+            return (building, impacts);
+        }
     }
 
     public BookingImpactChecker Checker => _checker;

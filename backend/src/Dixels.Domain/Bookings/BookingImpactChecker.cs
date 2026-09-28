@@ -132,6 +132,16 @@ public class BookingImpactChecker : DomainService
             .ToList();
     }
 
+    /// <summary>Every confirmed booking this person has that hasn't started yet, earliest first.</summary>
+    public async Task<List<Booking>> FindUpcomingForUserAsync(Guid userId)
+    {
+        var now = Now();
+        return (await _bookingRepository.GetListAsync(b =>
+                b.UserId == userId && b.Status == BookingStatus.Confirmed && b.StartsAt > now))
+            .OrderBy(b => b.StartsAt)
+            .ToList();
+    }
+
     /// <summary>Cancels bookings on an admin's behalf, with the reason employees will see.</summary>
     public async Task CancelAsAdminAsync(IReadOnlyCollection<Booking> bookings, Guid adminId, Func<Booking, string> reason)
     {

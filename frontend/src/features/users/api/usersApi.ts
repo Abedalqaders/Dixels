@@ -5,7 +5,7 @@
 
 import { request, query } from '@/lib/api/httpClient'
 import type { PagedResultDto } from '@/lib/api/httpClient'
-import type { BuildingDto } from '@/features/space-management/api/spaceManagementApi'
+import type { BookingImpactDto, BuildingDto } from '@/features/space-management/api/spaceManagementApi'
 
 export { ApiError } from '@/lib/api/httpClient'
 
@@ -67,22 +67,20 @@ export function getUsers(token: string, { buildingId, role, ...input }: GetUsers
  * returned it with only the building changed. roleNames is left out, which ABP reads as
  * "keep the current roles"; the concurrency stamp stops it overwriting someone else's edit.
  */
-export async function assignUserBuilding(token: string, userId: string, buildingId: string | null) {
-  const user = await request<IdentityUserDto>(`/api/identity/users/${userId}`, token)
-  return request<IdentityUserDto>(`/api/identity/users/${userId}`, token, {
+/**
+ * Sets (or clears, with null) an employee's building. With `cancelUpcomingBookings`, their
+ * upcoming bookings in the building they're leaving are cancelled in the same step.
+ */
+export function assignUserBuilding(token: string, userId: string, buildingId: string | null, cancelUpcomingBookings = false) {
+  return request<void>(`/api/app/users/${userId}/building`, token, {
     method: 'PUT',
-    body: JSON.stringify({
-      userName: user.userName,
-      email: user.email,
-      name: user.name,
-      surname: user.surname,
-      phoneNumber: user.phoneNumber,
-      isActive: user.isActive,
-      lockoutEnabled: user.lockoutEnabled,
-      concurrencyStamp: user.concurrencyStamp,
-      extraProperties: { ...user.extraProperties, [BUILDING_ID_PROPERTY]: buildingId },
-    }),
+    body: JSON.stringify({ buildingId, cancelUpcomingBookings }),
   })
+}
+
+/** An employee's upcoming bookings in their current building — what moving them would leave behind. */
+export function getReassignImpact(token: string, userId: string) {
+  return request<BookingImpactDto>(`/api/app/users/${userId}/reassign-impact`, token)
 }
 
 /** The current user's own assigned building, or null if they haven't been assigned one

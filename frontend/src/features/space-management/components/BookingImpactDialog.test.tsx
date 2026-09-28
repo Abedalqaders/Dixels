@@ -83,4 +83,14 @@ describe('BookingImpactDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(onChoose).toHaveBeenLastCalledWith('cancel')
   })
+
+  it('when moving someone, asks whether to keep their bookings in the old building', async () => {
+    const user = userEvent.setup()
+    const onChoose = vi.fn()
+    render(<BookingImpactDialog mode="reassign" subject="Jordan Reed" impact={impact} onChoose={onChoose} />)
+
+    expect(screen.getByRole('alertdialog', { name: 'Jordan Reed has 2 upcoming bookings in their current building' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Keep them and move' }))
+    expect(onChoose).toHaveBeenLastCalledWith('keep')
+  })
 })

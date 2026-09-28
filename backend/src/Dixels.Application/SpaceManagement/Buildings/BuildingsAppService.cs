@@ -109,6 +109,18 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await EnsureCanManageBuildingAsync(id);
 
         var building = await _buildingRepository.GetAsync(id);
+
+        // Bookings are stored as instants: a new timezone would move every one of them to a
+        // different local time (10:00 becomes 07:00) — and possibly outside opening hours.
+        if (!string.Equals(input.Timezone, building.Timezone, StringComparison.Ordinal))
+        {
+            var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
+            if (upcoming.Count > 0)
+            {
+                throw new BusinessException(DixelsDomainErrorCodes.TimezoneChangeWithBookings).WithData("count", upcoming.Count);
+            }
+        }
+
         building.SetName(input.Name);
         building.SetBuildingNumber(input.BuildingNumber);
         building.SetTimezone(input.Timezone);

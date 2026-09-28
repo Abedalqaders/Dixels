@@ -10,6 +10,7 @@ public static class DixelsDomainErrorCodes
     public const string MinLeadMinutesMustNotBeNegative = Prefix + "MinLeadMinutesMustNotBeNegative";
     public const string InvalidOwnOverlapPolicy = Prefix + "InvalidOwnOverlapPolicy";
     public const string MaxSeriesHorizonTooShort = Prefix + "MaxSeriesHorizonTooShort";
+    public const string TimezoneChangeWithBookings = Prefix + "TimezoneChangeWithBookings";
     public const string CapacityMustBePositive = Prefix + "CapacityMustBePositive";
     public const string CapacityBelowMinAttendees = Prefix + "CapacityBelowMinAttendees";
     public const string MinAttendeesMustBePositive = Prefix + "MinAttendeesMustBePositive";

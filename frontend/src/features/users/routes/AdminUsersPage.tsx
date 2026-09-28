@@ -9,10 +9,11 @@ import { TablePagination } from '@/components/TablePagination'
 import { Toast, useToast } from '@/components/Toast'
 import { useAsync } from '@/hooks/useAsync'
 import { useListParams } from '@/hooks/useListParams'
-import { ApiError, EMPLOYEE_ROLE, assignUserBuilding, buildingIdOf, getUsers } from '@/features/users/api/usersApi'
+import { ApiError, EMPLOYEE_ROLE, assignUserBuilding, buildingIdOf, getReassignImpact, getUsers } from '@/features/users/api/usersApi'
 import type { IdentityUserDto } from '@/features/users/api/usersApi'
 import { getBuilding, getBuildings } from '@/features/space-management/api/spaceManagementApi'
 import { BuildingPicker } from '@/features/space-management/components/BuildingPicker'
+import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
@@ -50,6 +51,7 @@ export function AdminUsersPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const { toast, showToast } = useToast()
+  const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
 
   const list = useListParams()
   const buildingFilter = list.getFilter('building')
@@ -94,8 +96,18 @@ export function AdminUsersPage() {
 
   async function handleAssign(userId: string, userLabel: string, buildingId: string) {
     try {
-      await assignUserBuilding(token, userId, buildingId === UNASSIGNED ? null : buildingId)
-      showToast(buildingId === UNASSIGNED ? `${userLabel} unassigned.` : `${userLabel} assigned to a building.`)
+      // Upcoming bookings in the building they're leaving: keep or cancel, before moving them.
+      const impact = await getReassignImpact(token, userId)
+      let cancel = false
+      if (impact.count > 0) {
+        const choice = await askImpact({ mode: 'reassign', impact, subject: userLabel })
+        if (!choice) return
+        cancel = choice === 'cancel'
+      }
+
+      await assignUserBuilding(token, userId, buildingId === UNASSIGNED ? null : buildingId, cancel)
+      const cancelled = cancel ? ` · ${impact.count} ${impact.count === 1 ? 'booking' : 'bookings'} cancelled` : ''
+      showToast(buildingId === UNASSIGNED ? `${userLabel} unassigned${cancelled}.` : `${userLabel} assigned to a building${cancelled}.`)
       refetch()
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
@@ -214,6 +226,7 @@ export function AdminUsersPage() {
         </div>
       </div>
 
+      {impactPrompt}
       <Toast toast={toast} />
     </div>
   )
