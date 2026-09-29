@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -18,6 +19,12 @@ public interface IBuildingsAppService : IApplicationService
     Task<BuildingDto> UpdateAsync(Guid id, UpdateBuildingDto input);
 
     Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateBuildingConstraintsDto input);
+
+    /// <summary>The upcoming bookings these proposed rules would no longer allow — nothing is saved.</summary>
+    Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input);
+
+    /// <summary>The upcoming bookings a delete would cancel.</summary>
+    Task<BookingImpactDto> GetDeleteImpactAsync(Guid id);
 
     /// <summary>Soft-deletes the building and cascades to its Floors and Spaces, all sharing
     /// one <c>DeletionBatchId</c> so a later restore is scoped to exactly this operation.</summary>

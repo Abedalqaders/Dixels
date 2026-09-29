@@ -19,7 +19,13 @@ public class Building : FullAuditedAggregateRoot<Guid>
     public OperatingWindow Hours { get; private set; } = null!;
     public int MaxDurationMinutes { get; private set; }
     public int MaxHorizonDays { get; private set; }
+
+    /// <summary>How far ahead a recurring booking's dates may run — never shorter than <see cref="MaxHorizonDays"/>.</summary>
+    public int MaxSeriesHorizonDays { get; private set; }
     public int MinLeadMinutes { get; private set; }
+
+    /// <summary>Whether one person may hold two bookings at the same time here.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; private set; }
 
     /// <summary>
     /// Set when this building is soft-deleted as part of a cascading delete, so a later
@@ -54,7 +60,9 @@ public class Building : FullAuditedAggregateRoot<Guid>
         OperatingWindow hours,
         int maxDurationMinutes,
         int maxHorizonDays,
-        int minLeadMinutes)
+        int minLeadMinutes,
+        OwnOverlapPolicy ownOverlapPolicy = OwnOverlapPolicy.Warn,
+        int? maxSeriesHorizonDays = null)
         : base(id)
     {
         SetName(name);
@@ -64,7 +72,9 @@ public class Building : FullAuditedAggregateRoot<Guid>
         Hours = Check.NotNull(hours, nameof(hours));
         SetMaxDurationMinutes(maxDurationMinutes);
         SetMaxHorizonDays(maxHorizonDays);
+        SetMaxSeriesHorizonDays(maxSeriesHorizonDays ?? Math.Max(DefaultMaxSeriesHorizonDays, maxHorizonDays));
         SetMinLeadMinutes(minLeadMinutes);
+        SetOwnOverlapPolicy(ownOverlapPolicy);
     }
 
     public void SetName(string name)
@@ -74,14 +84,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
 
     public void SetBuildingNumber(string? buildingNumber)
     {
-        if (buildingNumber is not null && buildingNumber.Length > BuildingConsts.MaxBuildingNumberLength)
-        {
-            throw new ArgumentException(
-                $"Building number can't be longer than {BuildingConsts.MaxBuildingNumberLength} characters.",
-                nameof(buildingNumber));
-        }
-
-        BuildingNumber = buildingNumber;
+        BuildingNumber = Check.Length(buildingNumber, nameof(buildingNumber), BuildingConsts.MaxBuildingNumberLength);
     }
 
     /// <summary>
@@ -129,6 +132,26 @@ public class Building : FullAuditedAggregateRoot<Guid>
         }
 
         MaxHorizonDays = maxHorizonDays;
+
+        // The series horizon can never be shorter: moving the normal one past it pulls it along.
+        if (MaxSeriesHorizonDays < maxHorizonDays)
+        {
+            MaxSeriesHorizonDays = maxHorizonDays;
+        }
+    }
+
+    /// <summary>Used when a building is created without its own series horizon.</summary>
+    public const int DefaultMaxSeriesHorizonDays = 90;
+
+    public void SetMaxSeriesHorizonDays(int maxSeriesHorizonDays)
+    {
+        if (maxSeriesHorizonDays < MaxHorizonDays)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.MaxSeriesHorizonTooShort)
+                .WithData("horizonDays", MaxHorizonDays);
+        }
+
+        MaxSeriesHorizonDays = maxSeriesHorizonDays;
     }
 
     public void SetMinLeadMinutes(int minLeadMinutes)
@@ -139,6 +162,16 @@ public class Building : FullAuditedAggregateRoot<Guid>
         }
 
         MinLeadMinutes = minLeadMinutes;
+    }
+
+    public void SetOwnOverlapPolicy(OwnOverlapPolicy policy)
+    {
+        if (!Enum.IsDefined(policy))
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.InvalidOwnOverlapPolicy);
+        }
+
+        OwnOverlapPolicy = policy;
     }
 
     private static bool IsValidIanaTimezone(string timezone)

@@ -8,7 +8,10 @@ using Volo.Abp.Domain.Repositories;
 
 namespace Dixels.SpaceManagement;
 
-[Authorize(DixelsPermissions.SpaceTypes.Default)]
+// Only signed-in users at class level: reads admit several permissions (see
+// DixelsPermissions.Readers), and ABP adds a class-level [Authorize(...)] to every method's own.
+// So every method states what it needs — a new one must too.
+[Authorize]
 public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
 {
     private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
@@ -22,6 +25,7 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
 
     public async Task<ListResultDto<SpaceTypeDto>> GetListAsync()
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.SpaceTypes);
         var spaceTypes = await _spaceTypeRepository.GetListAsync();
 
         return new ListResultDto<SpaceTypeDto>(

@@ -9,13 +9,13 @@
 // there's no generated client here, only the interfaces/DTOs.
 //
 // The request/ApiError/query plumbing itself lives in ../../../lib/api/httpClient — shared
-// with employeesApi.ts, since it's generic HTTP-client code, not space-management-specific.
+// with usersApi.ts, since it's generic HTTP-client code, not space-management-specific.
 
-import { request, query } from '../../../lib/api/httpClient'
-import type { ListResultDto, PagedResultDto } from '../../../lib/api/httpClient'
+import { request, query } from '@/lib/api/httpClient'
+import type { ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 
-export { ApiError } from '../../../lib/api/httpClient'
-export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '../../../lib/api/httpClient'
+export { ApiError } from '@/lib/api/httpClient'
+export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 
 /** Shared shape for the paged/searchable list endpoints (Buildings/Floors/Spaces).
  * `sorting` is left out on purpose — none of the list pages expose sortable columns yet, so
@@ -38,6 +38,30 @@ export interface OperatingWindowDto {
 export interface ConstraintsSaveResultDto {
   concurrencyStamp: string
   warnings: string[]
+  /** How many upcoming bookings were cancelled because the admin chose to. */
+  cancelledBookings?: number
+}
+
+// ---- Bookings a change would affect ---------------------------------------
+
+/** One upcoming booking an admin's change would leave behind. */
+export interface AffectedBookingDto {
+  bookingId: string
+  title: string
+  bookedBy: string
+  spaceName: string
+  floorName: string
+  localStart: string
+  localEnd: string
+  /** Why it no longer fits, a few words each ("Open 09:00–17:00 only"). */
+  reasons: string[]
+}
+
+export interface BookingImpactDto {
+  count: number
+  bookings: AffectedBookingDto[]
+  /** Deleting a building: employees assigned to it — they can't book until reassigned. */
+  assignedEmployees?: number
 }
 
 export interface FieldValueDto<T> {
@@ -62,6 +86,14 @@ export interface ResolvedConstraintsDto {
 
 // ---- Buildings ------------------------------------------------------------
 
+/** The icon a space type shows (IconKey on the server), in C# declaration order. */
+export const IconKey = { MeetingRoom: 0, FocusPod: 1, Desk: 2, Generic: 3 } as const
+export type IconKey = (typeof IconKey)[keyof typeof IconKey]
+
+/** Whether one person may hold two bookings at the same time in a building (OwnOverlapPolicy on the server). */
+export const OwnOverlapPolicy = { Allow: 0, Warn: 1, Block: 2 } as const
+export type OwnOverlapPolicy = (typeof OwnOverlapPolicy)[keyof typeof OwnOverlapPolicy]
+
 export interface BuildingDto {
   id: string
   name: string
@@ -71,7 +103,10 @@ export interface BuildingDto {
   hours: OperatingWindowDto
   maxDurationMinutes: number
   maxHorizonDays: number
+  /** How far ahead recurring bookings may run — never shorter than maxHorizonDays. */
+  maxSeriesHorizonDays: number
   minLeadMinutes: number
+  ownOverlapPolicy: OwnOverlapPolicy
   isDeleted: boolean
   concurrencyStamp: string
 }
@@ -85,6 +120,10 @@ export interface CreateBuildingDto {
   maxDurationMinutes: number
   maxHorizonDays: number
   minLeadMinutes: number
+  /** How far ahead recurring bookings may run; 90 days when left out. */
+  maxSeriesHorizonDays?: number | null
+  /** Whether one person may hold two bookings at once here; Warn when left out. */
+  ownOverlapPolicy?: OwnOverlapPolicy
 }
 
 export interface UpdateBuildingDto {
@@ -98,8 +137,12 @@ export interface UpdateBuildingConstraintsDto {
   hours: OperatingWindowDto
   maxDurationMinutes: number
   maxHorizonDays: number
+  maxSeriesHorizonDays: number
   minLeadMinutes: number
+  ownOverlapPolicy: OwnOverlapPolicy
   concurrencyStamp: string
+  /** Also cancel the upcoming bookings the change would break (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export function getBuildings(token: string, input: PagedListInput = {}) {
@@ -123,6 +166,16 @@ export function updateBuildingConstraints(token: string, id: string, input: Upda
     method: 'PUT',
     body: JSON.stringify(input),
   })
+}
+
+/** The upcoming bookings these proposed building rules would break — nothing is saved. */
+export function getBuildingConstraintsImpact(token: string, id: string, input: UpdateBuildingConstraintsDto) {
+  return request<BookingImpactDto>(`/api/app/buildings/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** The upcoming bookings deleting this building would cancel. */
+export function getBuildingDeleteImpact(token: string, id: string) {
+  return request<BookingImpactDto>(`/api/app/buildings/${id}/delete-impact`, token)
 }
 
 export function deleteBuilding(token: string, id: string) {
@@ -167,6 +220,8 @@ export interface UpdateFloorConstraintsDto {
   hours?: OperatingWindowDto | null
   maxDurationMinutes?: number | null
   concurrencyStamp: string
+  /** Also cancel the upcoming bookings the change would break (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export interface FloorListInput extends PagedListInput {
@@ -198,6 +253,14 @@ export function updateFloorConstraints(token: string, id: string, input: UpdateF
     method: 'PUT',
     body: JSON.stringify(input),
   })
+}
+
+export function getFloorConstraintsImpact(token: string, id: string, input: UpdateFloorConstraintsDto) {
+  return request<BookingImpactDto>(`/api/app/floors/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function getFloorDeleteImpact(token: string, id: string) {
+  return request<BookingImpactDto>(`/api/app/floors/${id}/delete-impact`, token)
 }
 
 export function getFloorResolvedConstraints(token: string, id: string) {
@@ -244,6 +307,8 @@ export interface UpdateSpaceDto {
   name: string
   spaceTypeId: string
   capacity: number
+  /** Also cancel upcoming bookings for more people than the new capacity (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export interface UpdateSpaceConstraintsDto {
@@ -252,6 +317,8 @@ export interface UpdateSpaceConstraintsDto {
   maxDurationMinutes?: number | null
   minAttendees?: number | null
   concurrencyStamp: string
+  /** Also cancel the upcoming bookings the change would break (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export interface SpaceListInput extends PagedListInput {
@@ -286,6 +353,19 @@ export function updateSpaceConstraints(token: string, id: string, input: UpdateS
   })
 }
 
+export function getSpaceConstraintsImpact(token: string, id: string, input: UpdateSpaceConstraintsDto) {
+  return request<BookingImpactDto>(`/api/app/spaces/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** The upcoming bookings a room details change (a lower capacity) would break — nothing is saved. */
+export function getSpaceUpdateImpact(token: string, id: string, input: UpdateSpaceDto) {
+  return request<BookingImpactDto>(`/api/app/spaces/${id}/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function getSpaceDeleteImpact(token: string, id: string) {
+  return request<BookingImpactDto>(`/api/app/spaces/${id}/delete-impact`, token)
+}
+
 export function getSpaceResolvedConstraints(token: string, id: string) {
   return request<ResolvedConstraintsDto>(`/api/app/spaces/${id}/resolved-constraints`, token)
 }
@@ -303,21 +383,17 @@ export function restoreSpace(token: string, id: string) {
 export interface SpaceTypeDto {
   id: string
   name: string
-  // Numeric enum ordinal (MeetingRoom=0, FocusPod=1, Desk=2, Generic=3), matching the
-  // backend's default System.Text.Json enum serialization (no string-enum converter is
-  // configured on the host) — not yet verified against a live server, since the one
-  // running instance available this session predates these endpoints.
-  iconKey: number
+  iconKey: IconKey
 }
 
 export interface CreateSpaceTypeDto {
   name: string
-  iconKey: number
+  iconKey: IconKey
 }
 
 export interface UpdateSpaceTypeDto {
   name: string
-  iconKey: number
+  iconKey: IconKey
 }
 
 export function getSpaceTypes(token: string) {
@@ -368,6 +444,8 @@ export interface CreateAvailabilityOverrideDto {
   effect: OverrideEffect
   reasonCategory: ReasonCategory
   reasonDetail?: string | null
+  /** Also cancel the upcoming bookings the change would break (default: keep them). */
+  cancelAffectedBookings?: boolean
 }
 
 export function getOverrides(token: string, scope: OverrideScope, scopeId: string) {
@@ -382,6 +460,11 @@ export function createOverride(token: string, input: CreateAvailabilityOverrideD
     method: 'POST',
     body: JSON.stringify(input),
   })
+}
+
+/** The upcoming bookings this closure would fall on — nothing is saved. */
+export function getOverrideImpact(token: string, input: CreateAvailabilityOverrideDto) {
+  return request<BookingImpactDto>('/api/app/availability-overrides/impact', token, { method: 'POST', body: JSON.stringify(input) })
 }
 
 export function deleteOverride(token: string, id: string) {

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 
@@ -15,11 +16,13 @@ public class SpaceTypeManager : DomainService
 {
     private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
+    private readonly IDataFilter _dataFilter;
 
-    public SpaceTypeManager(IRepository<SpaceType, Guid> spaceTypeRepository, IRepository<Space, Guid> spaceRepository)
+    public SpaceTypeManager(IRepository<SpaceType, Guid> spaceTypeRepository, IRepository<Space, Guid> spaceRepository, IDataFilter dataFilter)
     {
         _spaceTypeRepository = spaceTypeRepository;
         _spaceRepository = spaceRepository;
+        _dataFilter = dataFilter;
     }
 
     public async Task<SpaceType> CreateAsync(string name, IconKey iconKey)
@@ -40,6 +43,9 @@ public class SpaceTypeManager : DomainService
 
     public async Task EnsureNotInUseAsync(Guid spaceTypeId)
     {
+        // Soft-deleted spaces count too: they can be restored, and a restored space whose type
+        // is gone crashes every lookup of it. The default query filter would hide them.
+        using var _ = _dataFilter.Disable<ISoftDelete>();
         if (await _spaceRepository.AnyAsync(s => s.SpaceTypeId == spaceTypeId))
         {
             throw new BusinessException(DixelsDomainErrorCodes.SpaceTypeInUse);

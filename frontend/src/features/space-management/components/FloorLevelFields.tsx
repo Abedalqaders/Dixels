@@ -1,5 +1,5 @@
-import { OperatingDays } from '../domain/operatingDays'
-import { OperatingWindow } from '../domain/operatingWindow'
+import { OperatingDays } from '@/features/space-management/operatingDays'
+import { OperatingWindow } from '@/features/space-management/operatingWindow'
 import { DayChipPicker } from './DayChipPicker'
 import { HoursRangeInput } from './HoursRangeInput'
 import { DurationPicker, minutesToHours, hoursToMinutes } from './DurationPicker'

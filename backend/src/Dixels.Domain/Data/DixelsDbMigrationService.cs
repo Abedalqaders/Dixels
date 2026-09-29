@@ -5,13 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Identity;
-using Volo.Abp.MultiTenancy;
-using Volo.Abp.TenantManagement;
 
 namespace Dixels.Data;
 
@@ -21,19 +20,16 @@ public class DixelsDbMigrationService : ITransientDependency
 
     private readonly IDataSeeder _dataSeeder;
     private readonly IEnumerable<IDixelsDbSchemaMigrator> _dbSchemaMigrators;
-    private readonly ITenantRepository _tenantRepository;
-    private readonly ICurrentTenant _currentTenant;
+    private readonly IConfiguration _configuration;
 
     public DixelsDbMigrationService(
         IDataSeeder dataSeeder,
         IEnumerable<IDixelsDbSchemaMigrator> dbSchemaMigrators,
-        ITenantRepository tenantRepository,
-        ICurrentTenant currentTenant)
+        IConfiguration configuration)
     {
         _dataSeeder = dataSeeder;
         _dbSchemaMigrators = dbSchemaMigrators;
-        _tenantRepository = tenantRepository;
-        _currentTenant = currentTenant;
+        _configuration = configuration;
 
         Logger = NullLogger<DixelsDbMigrationService>.Instance;
     }
@@ -52,43 +48,14 @@ public class DixelsDbMigrationService : ITransientDependency
         await MigrateDatabaseSchemaAsync();
         await SeedDataAsync();
 
-        Logger.LogInformation($"Successfully completed host database migrations.");
-
-        var tenants = await _tenantRepository.GetListAsync(includeDetails: true);
-
-        var migratedDatabaseSchemas = new HashSet<string>();
-        foreach (var tenant in tenants)
-        {
-            using (_currentTenant.Change(tenant.Id))
-            {
-                if (tenant.ConnectionStrings.Any())
-                {
-                    var tenantConnectionStrings = tenant.ConnectionStrings
-                        .Select(x => x.Value)
-                        .ToList();
-
-                    if (!migratedDatabaseSchemas.IsSupersetOf(tenantConnectionStrings))
-                    {
-                        await MigrateDatabaseSchemaAsync(tenant);
-
-                        migratedDatabaseSchemas.AddIfNotContains(tenantConnectionStrings);
-                    }
-                }
-
-                await SeedDataAsync(tenant);
-            }
-
-            Logger.LogInformation($"Successfully completed {tenant.Name} tenant database migrations.");
-        }
-
+        // Single-tenant product: there are no tenant databases to migrate.
         Logger.LogInformation("Successfully completed all database migrations.");
         Logger.LogInformation("You can safely end this process...");
     }
 
-    private async Task MigrateDatabaseSchemaAsync(Tenant? tenant = null)
+    private async Task MigrateDatabaseSchemaAsync()
     {
-        Logger.LogInformation(
-            $"Migrating schema for {(tenant == null ? "host" : tenant.Name + " tenant")} database...");
+        Logger.LogInformation("Migrating database schema...");
 
         foreach (var migrator in _dbSchemaMigrators)
         {
@@ -96,13 +63,27 @@ public class DixelsDbMigrationService : ITransientDependency
         }
     }
 
-    private async Task SeedDataAsync(Tenant? tenant = null)
+    private async Task SeedDataAsync()
     {
-        Logger.LogInformation($"Executing {(tenant == null ? "host" : tenant.Name + " tenant")} database seed...");
+        Logger.LogInformation("Executing database seed...");
 
-        await _dataSeeder.SeedAsync(new DataSeedContext(tenant?.Id)
-            .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName, IdentityDataSeedContributor.AdminEmailDefaultValue)
-            .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, IdentityDataSeedContributor.AdminPasswordDefaultValue)
+        // The first admin account is created once, from configuration. ABP's well-known default
+        // password is only a fallback for local use and is logged loudly when it's used.
+        var adminEmail = _configuration["Dixels:AdminEmail"] ?? IdentityDataSeedContributor.AdminEmailDefaultValue;
+        var adminPassword = _configuration["Dixels:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(adminPassword))
+        {
+            adminPassword = IdentityDataSeedContributor.AdminPasswordDefaultValue;
+            Logger.LogWarning("Dixels:AdminPassword is not set; the admin account (if created now) uses ABP's default password. Set it before running against a real environment.");
+        }
+
+        // Demo floors, rooms, bookings and employee accounts are opt-in (Dixels__DemoData=true).
+        var demoData = _configuration.GetValue<bool>(RiversideDemoDataSeedContributor.EnabledPropertyName);
+
+        await _dataSeeder.SeedAsync(new DataSeedContext()
+            .WithProperty(IdentityDataSeedContributor.AdminEmailPropertyName, adminEmail)
+            .WithProperty(IdentityDataSeedContributor.AdminPasswordPropertyName, adminPassword)
+            .WithProperty(RiversideDemoDataSeedContributor.EnabledPropertyName, demoData)
         );
     }
 

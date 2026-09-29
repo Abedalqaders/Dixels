@@ -1,5 +1,5 @@
-import { OperatingDays } from '../domain/operatingDays'
-import { OperatingWindow } from '../domain/operatingWindow'
+import { OperatingDays } from '@/features/space-management/operatingDays'
+import { OperatingWindow } from '@/features/space-management/operatingWindow'
 import type { BuildingDraft } from './BuildingLevelFields'
 import type { FloorDraft } from './FloorLevelFields'
 import type { SpaceDraft } from './SpaceLevelFields'
@@ -27,7 +27,9 @@ export function buildingDraftEquals(a: BuildingDraft, b: BuildingDraft): boolean
     hoursEquals(a.hours, b.hours) &&
     a.maxDurationMinutes === b.maxDurationMinutes &&
     a.maxHorizonDays === b.maxHorizonDays &&
-    a.minLeadMinutes === b.minLeadMinutes
+    a.maxSeriesHorizonDays === b.maxSeriesHorizonDays &&
+    a.minLeadMinutes === b.minLeadMinutes &&
+    a.ownOverlapPolicy === b.ownOverlapPolicy
   )
 }
 

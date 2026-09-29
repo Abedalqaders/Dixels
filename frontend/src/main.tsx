@@ -1,15 +1,21 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './app/App.tsx'
-import { AuthProvider } from './auth/AuthProvider.tsx'
+import '@/styles/ui.css'
+import App from '@/app/App.tsx'
+import { AppErrorBoundary } from '@/components/AppErrorBoundary'
+import { AppQueryProvider } from '@/components/AppQueryProvider'
+import { Toaster } from '@/components/Toast'
+import { AuthProvider } from '@/features/auth/components/AuthProvider.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <AppErrorBoundary scope="app">
       <AuthProvider>
-        <App />
+        <AppQueryProvider>
+          <App />
+          <Toaster />
+        </AppQueryProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </AppErrorBoundary>
   </StrictMode>,
 )

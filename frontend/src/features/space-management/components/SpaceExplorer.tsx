@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { SearchIcon } from '../../../components/icons'
-import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
-import { getBuilding, getBuildings, getFloors } from '../api/spaceManagementApi'
-import { useHierarchyChanged } from '../hierarchyEvents'
+import { SearchIcon } from '@/components/icons'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { up } from '@/lib/breakpoints'
+import { getBuilding, getBuildings, getFloors } from '@/features/space-management/api/spaceManagementApi'
+import { useHierarchyChanged } from '@/features/space-management/hierarchyEvents'
+import { HierarchyViewers } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ICONS } from './spaceTypeIcons'
+import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 const BUILDING_PAGE = 30
 const FLOOR_PAGE = 50
@@ -50,18 +55,19 @@ function PanelIcon() {
   )
 }
 
-function readCollapsed() {
+/** The admin's own choice (collapsed or not), or null when they never made one. */
+function readCollapsed(): boolean | null {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1'
+    const stored = localStorage.getItem(COLLAPSED_KEY)
+    return stored === '1' ? true : stored === '0' ? false : null
   } catch {
-    return false
+    return null
   }
 }
 
 function writeCollapsed(value: boolean) {
   try {
-    if (value) localStorage.setItem(COLLAPSED_KEY, '1')
-    else localStorage.removeItem(COLLAPSED_KEY)
+    localStorage.setItem(COLLAPSED_KEY, value ? '1' : '0')
   } catch {
     // Private window / blocked storage — the panel still toggles, it just won't be remembered.
   }
@@ -74,9 +80,7 @@ function writeCollapsed(value: boolean) {
 // never go in the tree at all (a floor can hold hundreds of desks, so they stay in the
 // paged list on the right).
 //
-// It has two modes, picked by the page beside it. On the Buildings drill-down pages a click
-// navigates (building → its floors, floor → its spaces). On All spaces it filters instead,
-// writing ?building= / ?floor= into that page's URL and keeping its other filters.
+// A click navigates: building → its floors, floor → its spaces.
 //
 // Lives in SpaceManagementLayout, so it stays mounted (and keeps what it loaded) while the
 // admin moves between pages.
@@ -84,34 +88,29 @@ export function SpaceExplorer() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const location = useLocation()
+  // Someone who may only see buildings gets a flat list: no unfolding into floors the API
+  // would refuse, and a search that looks for buildings only.
+  const canSeeFloors = usePermission(HierarchyViewers.Floors)
 
-  const spacesMode = location.pathname === '/admin/spaces'
-  const searchParams = new URLSearchParams(location.search)
   // The layout sits above the page routes, so useParams() here wouldn't see :buildingId —
-  // read the selection straight off the path (or the query string, on All spaces) instead.
+  // read the selection straight off the path instead.
   const floorMatch = matchPath('/admin/buildings/:buildingId/floors/:floorId/*', location.pathname)
   const buildingMatch = matchPath('/admin/buildings/:buildingId/*', location.pathname)
-  const activeBuildingId = spacesMode ? (searchParams.get('building') ?? '') : (buildingMatch?.params.buildingId ?? '')
-  const activeFloorId = spacesMode ? (searchParams.get('floor') ?? '') : (floorMatch?.params.floorId ?? '')
-  const rootIsCurrent = spacesMode ? !activeBuildingId && !activeFloorId : location.pathname === '/admin/buildings'
+  const activeBuildingId = buildingMatch?.params.buildingId ?? ''
+  const activeFloorId = floorMatch?.params.floorId ?? ''
+  const rootIsCurrent = location.pathname === '/admin/buildings'
 
   function scopeLink(buildingId?: string, floorId?: string) {
-    if (!spacesMode) {
-      if (buildingId && floorId) return `/admin/buildings/${buildingId}/floors/${floorId}/spaces`
-      if (buildingId) return `/admin/buildings/${buildingId}/floors`
-      return '/admin/buildings'
-    }
-    const next = new URLSearchParams(location.search)
-    next.delete('page')
-    next.delete('building')
-    next.delete('floor')
-    if (buildingId) next.set('building', buildingId)
-    if (floorId) next.set('floor', floorId)
-    const qs = next.toString()
-    return `/admin/spaces${qs ? `?${qs}` : ''}`
+    if (buildingId && floorId) return `/admin/buildings/${buildingId}/floors/${floorId}/spaces`
+    if (buildingId) return `/admin/buildings/${buildingId}/floors`
+    return '/admin/buildings'
   }
 
-  const [collapsed, setCollapsed] = useState(readCollapsed)
+  // Without a choice of their own, the panel starts folded on phones (it would push the list
+  // below the fold) and open from md up, where it sits beside the list.
+  const roomForPanel = useMediaQuery(up('md'))
+  const [chosenCollapsed, setCollapsed] = useState(readCollapsed)
+  const collapsed = chosenCollapsed ?? !roomForPanel
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebouncedValue(query, 250).trim()
   const [buildings, setBuildings] = useState<Branch>(EMPTY_BRANCH)
@@ -145,7 +144,7 @@ export function SpaceExplorer() {
     // In a tall tower the floor is what the admin remembers ("Sky Lobby", "L42"), so a search
     // also looks for floors — by their own name only, since building-name matches are
     // already listed above.
-    if (debouncedQuery) {
+    if (debouncedQuery && canSeeFloors) {
       getFloors(token, { filter: debouncedQuery, floorNameOnly: true, maxResultCount: FLOOR_HIT_LIMIT })
         .then((r) => {
           if (requestId !== buildingsRequest.current) return
@@ -156,7 +155,7 @@ export function SpaceExplorer() {
         })
         .catch(() => requestId === buildingsRequest.current && setFloorHits({ items: [], totalCount: 0 }))
     }
-  }, [token, debouncedQuery, reloadKey])
+  }, [token, debouncedQuery, reloadKey, canSeeFloors])
 
   function loadMoreBuildings() {
     const requestId = ++buildingsRequest.current
@@ -186,20 +185,25 @@ export function SpaceExplorer() {
       .catch(() => setFloors((f) => ({ ...f, [buildingId]: { ...(f[buildingId] ?? EMPTY_BRANCH), loading: false, error: true } })))
   }
 
-  function expand(id: string) {
-    setExpanded((e) => (e.has(id) ? e : new Set(e).add(id)))
-  }
+  // Stable identity so the effects below can list it as a dependency honestly.
+  const expand = useCallback(
+    (id: string) => {
+      if (!canSeeFloors) return
+      setExpanded((e) => (e.has(id) ? e : new Set(e).add(id)))
+    },
+    [canSeeFloors],
+  )
 
   // Opening a building's page from anywhere (a list row, a link, Back) unfolds it here too.
   useEffect(() => {
     if (activeBuildingId) expand(activeBuildingId)
-  }, [activeBuildingId])
+  }, [activeBuildingId, expand])
 
   // A customer with a single building shouldn't have to click it open to see anything.
   const onlyBuildingId = !debouncedQuery && buildings.totalCount === 1 ? buildings.items[0]?.id : undefined
   useEffect(() => {
     if (onlyBuildingId) expand(onlyBuildingId)
-  }, [onlyBuildingId])
+  }, [onlyBuildingId, expand])
 
   // Every expanded building without cached floors gets fetched — covers a fresh expand and
   // the reload after a hierarchy change (which clears the cache) with one rule.
@@ -221,6 +225,7 @@ export function SpaceExplorer() {
   }, [token, activeBuildingId, activeIsListed, buildings.loading, pinned])
 
   function toggle(id: string) {
+    if (!canSeeFloors) return
     setExpanded((e) => {
       const next = new Set(e)
       if (next.has(id)) next.delete(id)
@@ -256,9 +261,9 @@ export function SpaceExplorer() {
           <SearchIcon />
           <input
             type="text"
-            placeholder="Find a building or floor…"
+            placeholder={canSeeFloors ? 'Find a building or floor…' : 'Find a building…'}
             autoComplete="off"
-            aria-label="Find a building or floor"
+            aria-label={canSeeFloors ? 'Find a building or floor' : 'Find a building'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -274,7 +279,7 @@ export function SpaceExplorer() {
         {!buildings.loading && !debouncedQuery && <span className="xcount">{buildings.totalCount}</span>}
       </Link>
 
-      {debouncedQuery && <p className="xsection">Buildings</p>}
+      {debouncedQuery && canSeeFloors && <p className="xsection">Buildings</p>}
       <ul className="xtree" aria-busy={buildings.loading}>
         {visibleBuildings.map((building) => {
           const isOpen = expanded.has(building.id)
@@ -283,18 +288,28 @@ export function SpaceExplorer() {
           return (
             <li key={building.id}>
               <div className={`xrow${isCurrent ? ' on' : ''}`}>
-                <button
-                  type="button"
-                  className={`xtoggle${isOpen ? ' open' : ''}`}
-                  aria-expanded={isOpen}
-                  aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${building.name}`}
-                  onClick={() => toggle(building.id)}
-                >
-                  <Chevron />
-                </button>
-                <Link to={scopeLink(building.id)} className="xlbl" title={building.name} aria-current={isCurrent ? 'page' : undefined}>
-                  {building.name}
-                </Link>
+                {canSeeFloors ? (
+                  <button
+                    type="button"
+                    className={`xtoggle${isOpen ? ' open' : ''}`}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${building.name}`}
+                    onClick={() => toggle(building.id)}
+                  >
+                    <Chevron />
+                  </button>
+                ) : (
+                  <span className="xtoggle" aria-hidden="true" />
+                )}
+                {canSeeFloors ? (
+                  <Link to={scopeLink(building.id)} className="xlbl" title={building.name} aria-current={isCurrent ? 'page' : undefined}>
+                    {building.name}
+                  </Link>
+                ) : (
+                  <span className="xlbl" title={building.name}>
+                    {building.name}
+                  </span>
+                )}
               </div>
 
               {isOpen && (
@@ -336,7 +351,8 @@ export function SpaceExplorer() {
         })}
       </ul>
 
-      {buildings.loading && <p className="xnote">Loading…</p>}
+      {buildings.loading && buildings.items.length === 0 && <TreeSkeleton label="Loading buildings…" rows={4} />}
+      {buildings.loading && buildings.items.length > 0 && <p className="xnote">Loading…</p>}
       {buildings.error && (
         <p className="xnote">
           Couldn't load buildings.{' '}
@@ -354,7 +370,7 @@ export function SpaceExplorer() {
         </button>
       )}
 
-      {debouncedQuery && (
+      {debouncedQuery && canSeeFloors && (
         <>
           <p className="xsection">Floors</p>
           {floorHits === null && <p className="xnote">Searching…</p>}

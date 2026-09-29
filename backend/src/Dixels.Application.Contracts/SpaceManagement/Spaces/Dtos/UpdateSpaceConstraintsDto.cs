@@ -16,4 +16,11 @@ public class UpdateSpaceConstraintsDto
 
     [Required]
     public string ConcurrencyStamp { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Also cancel the upcoming bookings these rules would no longer allow (see the
+    /// constraints impact endpoint). Left false, they stay — grandfathered under the rules
+    /// they were booked with.
+    /// </summary>
+    public bool CancelAffectedBookings { get; set; }
 }

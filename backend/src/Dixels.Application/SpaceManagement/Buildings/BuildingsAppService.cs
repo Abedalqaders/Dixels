@@ -2,18 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.Permissions;
+using Dixels.Users;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
-[Authorize(DixelsPermissions.Buildings.Default)]
+// Only signed-in users at class level: reads admit several permissions (see
+// DixelsPermissions.Readers), and ABP adds a class-level [Authorize(...)] to every method's own.
+// So every method states what it needs — a new one must too.
+[Authorize]
 public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 {
     private readonly IRepository<Building, Guid> _buildingRepository;
@@ -22,6 +27,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
+    private readonly BookingImpactService _bookingImpact;
+    private readonly IUserDirectoryRepository _userDirectory;
 
     public BuildingsAppService(
         IRepository<Building, Guid> buildingRepository,
@@ -29,7 +36,9 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        BookingImpactService bookingImpact,
+        IUserDirectoryRepository userDirectory)
     {
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
@@ -37,16 +46,21 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
+        _bookingImpact = bookingImpact;
+        _userDirectory = userDirectory;
     }
 
     public async Task<BuildingDto> GetAsync(Guid id)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
         var building = await _buildingRepository.GetAsync(id);
         return MapToDto(building);
     }
 
     public async Task<PagedResultDto<BuildingDto>> GetListAsync(GetBuildingsInput input)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
+
         async Task<PagedResultDto<BuildingDto>> QueryAsync()
         {
             var queryable = await _buildingRepository.GetQueryableAsync();
@@ -86,7 +100,9 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             ConstraintDtoConversions.ToOperatingWindow(input.Hours),
             input.MaxDurationMinutes,
             input.MaxHorizonDays,
-            input.MinLeadMinutes);
+            input.MinLeadMinutes,
+            input.OwnOverlapPolicy,
+            input.MaxSeriesHorizonDays);
 
         await _buildingRepository.InsertAsync(building);
 
@@ -99,6 +115,18 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await EnsureCanManageBuildingAsync(id);
 
         var building = await _buildingRepository.GetAsync(id);
+
+        // Bookings are stored as instants: a new timezone would move every one of them to a
+        // different local time (10:00 becomes 07:00) — and possibly outside opening hours.
+        if (!string.Equals(input.Timezone, building.Timezone, StringComparison.Ordinal))
+        {
+            var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
+            if (upcoming.Count > 0)
+            {
+                throw new BusinessException(DixelsDomainErrorCodes.TimezoneChangeWithBookings).WithData("count", upcoming.Count);
+            }
+        }
+
         building.SetName(input.Name);
         building.SetBuildingNumber(input.BuildingNumber);
         building.SetTimezone(input.Timezone);
@@ -108,8 +136,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return MapToDto(building);
     }
 
-    // Fully-qualified route, same reasoning as GetTreeAsync above.
-    [HttpPut("api/app/buildings/{id}/constraints")]
     [Authorize(DixelsPermissions.Buildings.Edit)]
     public async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateBuildingConstraintsDto input)
     {
@@ -126,11 +152,22 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // admin to go fix the named descendants afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
+        // Which upcoming bookings the new rules break — worked out on an unsaved copy before
+        // the real building changes, and cancelled after the save only if the admin chose to.
+        var broken = input.CancelAffectedBookings
+            ? await FindBrokenBookingsAsync(building, input)
+            : Array.Empty<BookingImpact>();
+
         building.SetOperatingDays(proposedDays);
         building.SetOperatingHours(proposedHours);
         building.SetMaxDurationMinutes(input.MaxDurationMinutes);
         building.SetMaxHorizonDays(input.MaxHorizonDays);
         building.SetMinLeadMinutes(input.MinLeadMinutes);
+        building.SetOwnOverlapPolicy(input.OwnOverlapPolicy);
+        if (input.MaxSeriesHorizonDays is { } seriesHorizon)
+        {
+            building.SetMaxSeriesHorizonDays(seriesHorizon);
+        }
 
         await _buildingRepository.UpdateAsync(building);
 
@@ -139,12 +176,65 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // but we need the freshly-generated ConcurrencyStamp back *now*, in this same
         // response, so flush explicitly instead of returning whatever's still in memory.
         await CurrentUnitOfWork!.SaveChangesAsync();
+        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = building.ConcurrencyStamp,
             Warnings = warnings,
+            CancelledBookings = broken.Count,
         };
+    }
+
+    [Authorize(DixelsPermissions.Buildings.Edit)]
+    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input)
+    {
+        await EnsureCanManageBuildingAsync(id);
+        var building = await _buildingRepository.GetAsync(id);
+        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, input));
+    }
+
+    [Authorize(DixelsPermissions.Buildings.Delete)]
+    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    {
+        await EnsureCanManageBuildingAsync(id);
+        var building = await _buildingRepository.GetAsync(id);
+        var impact = await _bookingImpact.DescribeAsync(
+            building,
+            await _bookingImpact.UpcomingAsync(await RoomsAsync(id)),
+            _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
+
+        // They keep the assignment (a restore brings everything back), but can't book meanwhile.
+        impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null, grantedPermission: null);
+        return impact;
+    }
+
+    // The proposed building is a fresh, untracked copy — checking it can never save anything.
+    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, UpdateBuildingConstraintsDto input)
+    {
+        var proposed = new Building(
+            building.Id,
+            building.Name,
+            building.BuildingNumber,
+            building.Timezone,
+            ConstraintDtoConversions.ToOperatingDays(input.Days),
+            ConstraintDtoConversions.ToOperatingWindow(input.Hours),
+            input.MaxDurationMinutes,
+            input.MaxHorizonDays,
+            input.MinLeadMinutes,
+            input.OwnOverlapPolicy,
+            Math.Max(input.MaxSeriesHorizonDays ?? building.MaxSeriesHorizonDays, input.MaxHorizonDays));
+
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+            building, await RoomsAsync(building.Id), (space, floor) => _constraintResolver.Resolve(proposed, floor, space));
+    }
+
+    private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Guid buildingId)
+    {
+        var floors = (await _floorRepository.GetListAsync(f => f.BuildingId == buildingId)).ToDictionary(f => f.Id);
+        var floorIds = floors.Keys.ToList();
+        var spaces = floorIds.Count == 0 ? new List<Space>() : await _spaceRepository.GetListAsync(s => floorIds.Contains(s.FloorId));
+        return spaces.Select(s => (s, floors[s.FloorId])).ToList();
     }
 
     [Authorize(DixelsPermissions.Buildings.Delete)]
@@ -153,6 +243,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await EnsureCanManageBuildingAsync(id);
 
         var building = await _buildingRepository.GetAsync(id);
+
+        // Its upcoming bookings go with it — found before the rooms disappear from queries.
+        var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
+
         var floors = await _floorRepository.GetListAsync(f => f.BuildingId == id);
         var floorIds = floors.Select(f => f.Id).ToList();
         var spaces = floorIds.Count == 0
@@ -195,10 +289,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 
         await _buildingRepository.DeleteAsync(building);
         await CurrentUnitOfWork!.SaveChangesAsync();
+
+        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
     }
 
-    // Fully-qualified route, same reasoning as GetTreeAsync above.
-    [HttpPost("api/app/buildings/{id}/restore")]
     [Authorize(DixelsPermissions.Buildings.Edit)]
     public async Task RestoreAsync(Guid id)
     {
@@ -257,14 +351,14 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
 
-    private async Task EnsureCanManageBuildingAsync(Guid buildingId)
+    private static Task EnsureCanManageBuildingAsync(Guid buildingId)
     {
-        // Extensibility hook for future per-building-admin scoping: today this just
-        // re-checks the flat permission (already enforced by [Authorize] too, so this is
-        // currently redundant). Floor/Space's own equivalent checks — and any future
-        // building-scoped permission — plug in here without touching call sites.
+        // Extensibility hook for future per-building-admin scoping. Floor/Space's equivalents
+        // and any building-scoped permission plug in here without touching call sites. It
+        // deliberately checks nothing today: each method's [Authorize] names what it needs,
+        // and re-checking Edit here refused roles that only had Create or Delete.
         _ = buildingId;
-        await AuthorizationService.CheckAsync(DixelsPermissions.Buildings.Edit);
+        return Task.CompletedTask;
     }
 
     private BuildingDto MapToDto(Building building)

@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -19,6 +20,15 @@ public interface ISpacesAppService : IApplicationService
     Task<SpaceDto> UpdateAsync(Guid id, UpdateSpaceDto input);
 
     Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateSpaceConstraintsDto input);
+
+    /// <summary>The upcoming bookings these proposed rules would no longer allow — nothing is saved.</summary>
+    Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateSpaceConstraintsDto input);
+
+    /// <summary>The upcoming bookings a details change (a lower capacity) would no longer allow — nothing is saved.</summary>
+    Task<BookingImpactDto> GetUpdateImpactAsync(Guid id, UpdateSpaceDto input);
+
+    /// <summary>The upcoming bookings a delete would cancel.</summary>
+    Task<BookingImpactDto> GetDeleteImpactAsync(Guid id);
 
     /// <summary>Resolved values (space→floor→building) plus the Building+Floor ancestor
     /// trail, in one round trip.</summary>

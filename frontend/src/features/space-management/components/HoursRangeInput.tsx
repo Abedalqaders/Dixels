@@ -1,4 +1,4 @@
-import { allowedHoursRange, OperatingWindow } from '../domain/operatingWindow'
+import { allowedHoursRange, OperatingWindow } from '@/features/space-management/operatingWindow'
 
 // Building has no HoursRangeInput of its own in the mock (it's the one level with no
 // parent to narrow against), but Floor/Space both need this. Proactive constraint via

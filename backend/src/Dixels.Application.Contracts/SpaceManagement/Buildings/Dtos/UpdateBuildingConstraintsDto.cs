@@ -18,8 +18,21 @@ public class UpdateBuildingConstraintsDto
 
     public int MaxDurationMinutes { get; set; }
     public int MaxHorizonDays { get; set; }
+
+    /// <summary>How far ahead recurring bookings may run (at least <see cref="MaxHorizonDays"/>). Left out: unchanged, or 90 for a new building.</summary>
+    public int? MaxSeriesHorizonDays { get; set; }
     public int MinLeadMinutes { get; set; }
+
+    /// <summary>Whether one person may hold two bookings at once in this building. Warn when left out.</summary>
+    public OwnOverlapPolicy OwnOverlapPolicy { get; set; } = OwnOverlapPolicy.Warn;
 
     [Required]
     public string ConcurrencyStamp { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Also cancel the upcoming bookings these rules would no longer allow (see the
+    /// constraints impact endpoint). Left false, they stay — grandfathered under the rules
+    /// they were booked with.
+    /// </summary>
+    public bool CancelAffectedBookings { get; set; }
 }

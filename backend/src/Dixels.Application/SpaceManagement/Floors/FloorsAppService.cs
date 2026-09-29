@@ -2,18 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Bookings;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
-[Authorize(DixelsPermissions.Floors.Default)]
+// Only signed-in users at class level: reads admit several permissions (see
+// DixelsPermissions.Readers), and ABP adds a class-level [Authorize(...)] to every method's own.
+// So every method states what it needs — a new one must too.
+[Authorize]
 public class FloorsAppService : DixelsAppService, IFloorsAppService
 {
     private readonly IRepository<Floor, Guid> _floorRepository;
@@ -22,6 +26,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
+    private readonly BookingImpactService _bookingImpact;
 
     public FloorsAppService(
         IRepository<Floor, Guid> floorRepository,
@@ -29,7 +34,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        BookingImpactService bookingImpact)
     {
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
@@ -37,16 +43,20 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
+        _bookingImpact = bookingImpact;
     }
 
     public async Task<FloorDto> GetAsync(Guid id)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Floors);
         var floor = await _floorRepository.GetAsync(id);
         return MapToDto(floor);
     }
 
     public async Task<PagedResultDto<FloorDto>> GetListAsync(GetFloorsInput input)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Floors);
+
         // Floor has no EF navigation to Building (separate aggregate roots, FK-only), so
         // BuildingName is resolved with an explicit join — one SQL query, not one lookup per
         // row. Joining unconditionally (even when BuildingId scopes to one building) keeps a
@@ -104,6 +114,9 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     {
         await EnsureCanManageBuildingAsync(input.BuildingId);
 
+        // 404 for an unknown or deleted building, instead of a foreign-key failure (500).
+        await _buildingRepository.GetAsync(input.BuildingId);
+
         var floor = new Floor(GuidGenerator.Create(), input.BuildingId, input.Name, input.FloorNumber);
         await _floorRepository.InsertAsync(floor);
 
@@ -124,12 +137,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         return MapToDto(floor);
     }
 
-    // Fully-qualified route: ABP's conventional-controller routing doesn't auto-prepend the
-    // "api/app/floors" controller prefix once an action carries its own explicit Http*
-    // attribute, so a bare "constraints" would collide with Buildings'/Spaces' own actions
-    // of the same name at the application root (confirmed via a real SwaggerGeneratorException
-    // before this fix).
-    [HttpPut("api/app/floors/{id}/constraints")]
     [Authorize(DixelsPermissions.Floors.Edit)]
     public async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateFloorConstraintsDto input)
     {
@@ -146,6 +153,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // informational for the admin to go fix the named Spaces afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
+        var broken = input.CancelAffectedBookings
+            ? await FindBrokenBookingsAsync(building, floor, input)
+            : Array.Empty<BookingImpact>();
+
         // Validated against the Building's raw values directly — Building has no parent of
         // its own, so its own fields already are the "resolved" value.
         floor.SetOwnOperatingDays(proposedDays, building.Days);
@@ -154,16 +165,53 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
         await _floorRepository.UpdateAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
+        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = floor.ConcurrencyStamp,
             Warnings = warnings,
+            CancelledBookings = broken.Count,
         };
     }
 
-    // Fully-qualified route, same reasoning as UpdateConstraintsAsync above.
-    [HttpGet("api/app/floors/{id}/resolved-constraints")]
+    [Authorize(DixelsPermissions.Floors.Edit)]
+    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input)
+    {
+        var floor = await _floorRepository.GetAsync(id);
+        await EnsureCanManageBuildingAsync(floor.BuildingId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, floor, input));
+    }
+
+    [Authorize(DixelsPermissions.Floors.Delete)]
+    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    {
+        var floor = await _floorRepository.GetAsync(id);
+        await EnsureCanManageBuildingAsync(floor.BuildingId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId);
+        return await _bookingImpact.DescribeAsync(
+            building,
+            await _bookingImpact.UpcomingAsync(await RoomsAsync(floor)),
+            _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
+    }
+
+    // The proposed floor is a fresh, untracked copy — checking it can never save anything.
+    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
+    {
+        var proposed = new Floor(floor.Id, floor.BuildingId, floor.Name, floor.FloorNumber);
+        proposed.SetOwnOperatingDays(ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days), building.Days);
+        proposed.SetOwnOperatingHours(ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours), building.Hours);
+        proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
+
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+            building, await RoomsAsync(floor), (space, _) => _constraintResolver.Resolve(building, proposed, space));
+    }
+
+    private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Floor floor) =>
+        (await _spaceRepository.GetListAsync(s => s.FloorId == floor.Id)).Select(s => (s, floor)).ToList();
+
+    [Authorize(DixelsPermissions.Floors.Default)]
     public async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id)
     {
         var floor = await _floorRepository.GetAsync(id);
@@ -205,6 +253,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await EnsureCanManageBuildingAsync(floor.BuildingId);
 
         var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == id);
+        var upcoming = await _bookingImpact.UpcomingAsync(spaces.Select(s => (s, floor)).ToList());
 
         var batchId = GuidGenerator.Create();
         _spaceHierarchyManager.MarkForSoftDelete(batchId, floor, spaces);
@@ -228,10 +277,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
         await _floorRepository.DeleteAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
+
+        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
     }
 
-    // Fully-qualified route, same reasoning as UpdateConstraintsAsync above.
-    [HttpPost("api/app/floors/{id}/restore")]
     [Authorize(DixelsPermissions.Floors.Edit)]
     public async Task RestoreAsync(Guid id)
     {
@@ -239,6 +288,14 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         {
             var floor = await _floorRepository.GetAsync(id);
             await EnsureCanManageBuildingAsync(floor.BuildingId);
+
+            // Restoring a floor under a building that is still deleted would leave it reachable
+            // by id but invisible in every list — restore the building first.
+            var building = await _buildingRepository.GetAsync(floor.BuildingId);
+            if (building.IsDeleted)
+            {
+                throw new BusinessException(DixelsDomainErrorCodes.ParentIsDeleted).WithData("parent", "building");
+            }
 
             var batchId = floor.DeletionBatchId;
 
@@ -278,13 +335,14 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
 
-    private async Task EnsureCanManageBuildingAsync(Guid buildingId)
+    private static Task EnsureCanManageBuildingAsync(Guid buildingId)
     {
-        // Same extensibility hook as BuildingsAppService's — today just re-checks the flat
-        // permission, but is where a future per-building-admin scoping check plugs in,
-        // using buildingId rather than the floor's own id.
+        // Same extensibility hook as BuildingsAppService's: where a future per-building-admin
+        // scoping check plugs in, using buildingId rather than the floor's own id. It must
+        // not re-check a flat permission — each method's [Authorize] already names what it
+        // needs, and requiring Edit here refused roles that only had Create or Delete.
         _ = buildingId;
-        await AuthorizationService.CheckAsync(DixelsPermissions.Floors.Edit);
+        return Task.CompletedTask;
     }
 
     private FloorDto MapToDto(Floor floor)

@@ -44,7 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="5.4.0-preview*" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="5.6.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,7 +56,6 @@
     <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.Identity.Web" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="10.6.1" />
-    <PackageReference Include="Volo.Abp.TenantManagement.Web" Version="10.6.1" />
     <PackageReference Include="Volo.Abp.SettingManagement.Web" Version="10.6.1" />
   </ItemGroup>
 

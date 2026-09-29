@@ -1,39 +1,52 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { SearchIcon } from '../../../components/icons'
-import { ICONS, iconKeyToIconName } from '../components/spaceTypeIcons'
-import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '../components/actionIcons'
-import { RowActionsMenu } from '../components/RowActionsMenu'
-import { SpaceTypeChips } from '../components/SpaceTypeChips'
-import { HighlightedText } from '../components/HighlightedText'
-import { Pager } from '../../../components/Pager'
-import { AddNodeModal } from '../components/AddNodeModal'
-import type { ModalState } from '../components/AddNodeModal'
-import { EditDetailsModal } from '../components/EditDetailsModal'
-import type { EditDetailsState } from '../components/EditDetailsModal'
-import { Toast, useToast } from '../../../components/Toast'
-import { useAsync } from '../../../hooks/useAsync'
-import { useListParams } from '../../../hooks/useListParams'
-import { ApiError, getFloor, getSpaces, getSpaceTypes, deleteSpace, restoreSpace } from '../api/spaceManagementApi'
-import '../../../styles/tokens.css'
-import '../../../styles/base.css'
-import '../../../styles/admin.css'
-import '../../../styles/login.css'
+import { PlusIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { SearchIcon } from '@/components/icons'
+import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
+import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
+import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
+import { Can } from '@/features/auth/components/Can'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { SpaceTypeFilter } from '@/features/space-management/components/SpaceTypeFilter'
+import { HighlightedText } from '@/features/space-management/components/HighlightedText'
+import { Pager } from '@/components/Pager'
+import { AddNodeModal } from '@/features/space-management/components/AddNodeModal'
+import type { ModalState } from '@/features/space-management/components/AddNodeModal'
+import { EditDetailsModal } from '@/features/space-management/components/EditDetailsModal'
+import type { EditDetailsState } from '@/features/space-management/components/EditDetailsModal'
+import { useToast } from '@/components/Toast'
+import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
+import { useCanEditRules } from '@/features/space-management/hooks/useCanEditRules'
+import { useConfirm } from '@/components/ConfirmDialog'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
+import { useListParams } from '@/hooks/useListParams'
+import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, getFloor, getSpaces, getSpaceTypes, deleteSpace, getSpaceDeleteImpact, restoreSpace } from '@/features/space-management/api/spaceManagementApi'
+import '@/styles/tokens.css'
+import '@/styles/base.css'
+import '@/styles/admin.css'
+import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 export function SpacesListPage() {
   const { buildingId = '', floorId = '' } = useParams()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
+  const canEditRules = useCanEditRules('space')
   const navigate = useNavigate()
 
   const list = useListParams()
   const spaceTypeId = list.getFilter('type')
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
+  const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
-  const { status, data, error, isRefreshing, refetch } = useAsync(
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(
+    queryKeys.hierarchy.spaces(floorId, { search: list.search, spaceTypeId, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
     async () => {
       const [floor, spaceTypesResult, spacesResult] = await Promise.all([
         getFloor(token, floorId),
@@ -49,7 +62,6 @@ export function SpacesListPage() {
       ])
       return { floor, spaceTypes: spaceTypesResult.items, spaces: spacesResult.items, totalCount: spacesResult.totalCount }
     },
-    [token, floorId, list.search, spaceTypeId, list.showDeleted, list.page, list.pageSize],
     { keepPreviousData: true },
   )
 
@@ -69,8 +81,29 @@ export function SpacesListPage() {
     }
   }
 
-  function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!window.confirm(confirmMessage)) return
+  // A delete also cancels the upcoming bookings in what's deleted: when there are any, say
+  // which (and whose) before going ahead; otherwise the plain confirm is enough.
+  async function confirmDelete(name: string, confirmMessage: string, impact: () => Promise<BookingImpactDto>, remove: () => Promise<unknown>) {
+    let affected: BookingImpactDto
+    try {
+      affected = await impact()
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      return
+    }
+    if (affected.count === 0 && !affected.assignedEmployees) {
+      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
+      return
+    }
+    if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
+    runAction(
+      remove,
+      affected.count > 0 ? `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.` : `${name} deleted.`,
+    )
+  }
+
+  async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
+    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -78,15 +111,25 @@ export function SpacesListPage() {
     <>
       <div className="main">
         <div className="content">
-          <div>
-            <p className="breadcrumb">
-              <Link to={`/admin/buildings/${buildingId}/floors`}>‹ Floors</Link>
-            </p>
-            <h1 className="pagetitle">{status === 'success' ? data.floor.name : 'Spaces'}</h1>
-            <p className="lead">
-              {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'}. ` : ''}
-              Bookable spaces on this floor.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="breadcrumb">
+                <Link to={`/admin/buildings/${buildingId}/floors`}>‹ Floors</Link>
+              </p>
+              <h1 className="pagetitle">{status === 'success' ? data.floor.name : 'Spaces'}</h1>
+              <p className="lead">
+                {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'}. ` : ''}
+                Bookable spaces on this floor.
+              </p>
+            </div>
+            <Can permission={Permissions.Spaces.Create}>
+              <Button
+                disabled={status !== 'success'}
+                onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
+              >
+                <PlusIcon /> Add space
+              </Button>
+            </Can>
           </div>
 
           <section className="card" id="spaces">
@@ -104,6 +147,7 @@ export function SpacesListPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
+                <SpaceTypeFilter spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
                 <label className="chk">
                   <input
                     type="checkbox"
@@ -112,22 +156,12 @@ export function SpacesListPage() {
                   />
                   Show deleted
                 </label>
-                <button
-                  className="btn sm sec"
-                  disabled={status !== 'success'}
-                  onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
-                >
-                  + Space
-                </button>
               </div>
             </div>
 
-            <div className="typebar">
-              <SpaceTypeChips spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
-            </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <p className="treeempty">Loading spaces…</p>}
+              {status === 'loading' && <TreeSkeleton label="Loading spaces…" />}
               {status === 'error' && <p className="treeempty">Couldn't load spaces: {error.message}</p>}
 
               {status === 'success' && data.spaces.length === 0 && (
@@ -153,20 +187,23 @@ export function SpacesListPage() {
                     {space.isDeleted && <span className="badge cancelled">Deleted</span>}
                     <span className="actions">
                       {space.isDeleted ? (
-                        <button
-                          className="rowbtn"
-                          title={`Restore ${space.name}`}
-                          aria-label={`Restore ${space.name}`}
-                          onClick={() => runAction(() => restoreSpace(token, space.id), `${space.name} restored.`)}
-                        >
-                          <RestoreIcon />
-                        </button>
+                        <Can permission={Permissions.Spaces.Edit}>
+                          <button
+                            className="rowbtn"
+                            title={`Restore ${space.name}`}
+                            aria-label={`Restore ${space.name}`}
+                            onClick={() => runAction(() => restoreSpace(token, space.id), `${space.name} restored.`)}
+                          >
+                            <RestoreIcon />
+                          </button>
+                        </Can>
                       ) : (
                         <RowActionsMenu
                           label={space.name}
                           actions={[
                             {
                               label: 'Edit details',
+                              permission: Permissions.Spaces.Edit,
                               icon: <DetailsIcon />,
                               onClick: () =>
                                 setEditState({
@@ -178,15 +215,23 @@ export function SpacesListPage() {
                                 }),
                             },
                             {
-                              label: 'Edit constraints',
+                              label: canEditRules ? 'Edit constraints' : 'View constraints',
+                              permission: Permissions.Spaces.Default,
                               icon: <PencilIcon />,
                               onClick: () => navigate(`/admin/constraints/space/${space.id}`),
                             },
                             {
                               label: 'Delete',
+                              permission: Permissions.Spaces.Delete,
                               icon: <TrashIcon />,
                               destructive: true,
-                              onClick: () => confirmAndRun(`Delete "${space.name}"?`, () => deleteSpace(token, space.id), `${space.name} deleted.`),
+                              onClick: () =>
+                                confirmDelete(
+                                  space.name,
+                                  `Delete "${space.name}"?`,
+                                  () => getSpaceDeleteImpact(token, space.id),
+                                  () => deleteSpace(token, space.id),
+                                ),
                             },
                           ]}
                         />
@@ -235,7 +280,8 @@ export function SpacesListPage() {
           onError={(message) => showToast(message, 'error')}
         />
       )}
-      <Toast toast={toast} />
+      {impactPrompt}
+      {confirmDialog}
     </>
   )
 }

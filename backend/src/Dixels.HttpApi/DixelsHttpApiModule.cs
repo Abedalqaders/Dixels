@@ -1,13 +1,14 @@
-﻿using Localization.Resources.AbpUi;
+﻿using System.Net;
+using Localization.Resources.AbpUi;
 using Dixels.Localization;
 using Volo.Abp.Account;
+using Volo.Abp.AspNetCore.ExceptionHandling;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement.HttpApi;
 using Volo.Abp.SettingManagement;
-using Volo.Abp.TenantManagement;
 
 namespace Dixels;
 
@@ -16,7 +17,6 @@ namespace Dixels;
     typeof(AbpAccountHttpApiModule),
     typeof(AbpIdentityHttpApiModule),
     typeof(AbpPermissionManagementHttpApiModule),
-    typeof(AbpTenantManagementHttpApiModule),
     typeof(AbpFeatureManagementHttpApiModule),
     typeof(AbpSettingManagementHttpApiModule)
     )]
@@ -25,6 +25,19 @@ public class DixelsHttpApiModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
+        ConfigureHttpStatusCodes();
+    }
+
+    // ABP answers every BusinessException with 403 unless told otherwise. A slot someone
+    // else just took, or an idempotency key reused for a different request, is a conflict
+    // with the current state of the server — 409, which the BRS asks for explicitly.
+    private void ConfigureHttpStatusCodes()
+    {
+        Configure<AbpExceptionHttpStatusCodeOptions>(options =>
+        {
+            options.Map(DixelsDomainErrorCodes.BookingOverlap, HttpStatusCode.Conflict);
+            options.Map(DixelsDomainErrorCodes.BookingIdempotencyKeyReused, HttpStatusCode.Conflict);
+        });
     }
 
     private void ConfigureLocalization()

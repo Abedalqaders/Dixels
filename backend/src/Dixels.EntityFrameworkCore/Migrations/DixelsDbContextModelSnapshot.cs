@@ -24,12 +24,25 @@ namespace Dixels.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Dixels.Employees.EmployeeBuildingAssignment", b =>
+            modelBuilder.Entity("Dixels.Bookings.Booking", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("BuildingId")
+                    b.Property<int>("Attendees")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("CancelledByAdmin")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("CancelledById")
                         .HasColumnType("uuid");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -47,13 +60,18 @@ namespace Dixels.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("CreatorId");
 
-                    b.Property<Guid>("EmployeeUserId")
-                        .HasColumnType("uuid");
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ExtraProperties")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("ExtraProperties");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime?>("LastModificationTime")
                         .HasColumnType("timestamp without time zone")
@@ -63,14 +81,144 @@ namespace Dixels.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<string>("ResolvedConstraintsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("BuildingId");
+                    b.HasIndex("SeriesId");
 
-                    b.HasIndex("EmployeeUserId")
+                    b.HasIndex("UserId", "IdempotencyKey")
                         .IsUnique();
 
-                    b.ToTable("AppEmployeeBuildingAssignments", (string)null);
+                    b.HasIndex("UserId", "StartsAt");
+
+                    b.HasIndex("SpaceId", "StartsAt", "EndsAt");
+
+                    b.ToTable("AppBookings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppBookings_AttendeesPositive", "\"Attendees\" > 0");
+
+                            t.HasCheckConstraint("CK_AppBookings_EndsAfterStarts", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("Dixels.Bookings.BookingSeries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attendees")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("ConcurrencyStamp");
+
+                    b.Property<DateTime>("CreationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("CreationTime");
+
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("CreatorId");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ExtraProperties")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("ExtraProperties");
+
+                    b.Property<DateOnly>("FirstDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Interval")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastModificationTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("LastModificationTime");
+
+                    b.Property<Guid?>("LastModifierId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("LastModifierId");
+
+                    b.Property<string>("MonthlyRepeat")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<Guid>("SpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("WeekdaysMask")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpaceId");
+
+                    b.HasIndex("UserId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("AppBookingSeries", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AppBookingSeries_DurationPositive", "\"DurationMinutes\" > 0");
+
+                            t.HasCheckConstraint("CK_AppBookingSeries_IntervalPositive", "\"Interval\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("Dixels.SpaceManagement.AvailabilityOverride", b =>
@@ -204,6 +352,9 @@ namespace Dixels.Migrations
                     b.Property<int>("MaxHorizonDays")
                         .HasColumnType("integer");
 
+                    b.Property<int>("MaxSeriesHorizonDays")
+                        .HasColumnType("integer");
+
                     b.Property<int>("MinLeadMinutes")
                         .HasColumnType("integer");
 
@@ -211,6 +362,11 @@ namespace Dixels.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("OwnOverlapPolicy")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("Timezone")
                         .IsRequired()
@@ -222,6 +378,8 @@ namespace Dixels.Migrations
                     b.ToTable("AppBuildings", null, t =>
                         {
                             t.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0");
+
+                            t.HasCheckConstraint("CK_AppBuildings_SeriesHorizonAtLeastHorizon", "\"MaxSeriesHorizonDays\" >= \"MaxHorizonDays\"");
                         });
                 });
 
@@ -1234,6 +1392,9 @@ namespace Dixels.Migrations
                         .HasDefaultValue(0)
                         .HasColumnName("AccessFailedCount");
 
+                    b.Property<Guid?>("BuildingId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1386,6 +1547,8 @@ namespace Dixels.Migrations
                         .HasColumnName("UserName");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BuildingId");
 
                     b.HasIndex("Email");
 
@@ -2333,18 +2496,38 @@ namespace Dixels.Migrations
                     b.ToTable("AbpTenantConnectionStrings", (string)null);
                 });
 
-            modelBuilder.Entity("Dixels.Employees.EmployeeBuildingAssignment", b =>
+            modelBuilder.Entity("Dixels.Bookings.Booking", b =>
                 {
-                    b.HasOne("Dixels.SpaceManagement.Building", null)
+                    b.HasOne("Dixels.Bookings.BookingSeries", null)
                         .WithMany()
-                        .HasForeignKey("BuildingId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Dixels.SpaceManagement.Space", null)
+                        .WithMany()
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Volo.Abp.Identity.IdentityUser", null)
                         .WithMany()
-                        .HasForeignKey("EmployeeUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.Bookings.BookingSeries", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Space", null)
+                        .WithMany()
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Volo.Abp.Identity.IdentityUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

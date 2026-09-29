@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HoursRangeInput } from './HoursRangeInput'
-import { OperatingWindow } from '../domain/operatingWindow'
+import { OperatingWindow } from '@/features/space-management/operatingWindow'
 
 describe('HoursRangeInput', () => {
   it('disables the "Open 24 hours" checkbox when the parent is not open 24 hours', () => {

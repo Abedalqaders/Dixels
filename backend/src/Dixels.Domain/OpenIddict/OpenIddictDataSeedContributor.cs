@@ -92,7 +92,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 type: OpenIddictConstants.ClientTypes.Confidential,
                 consentType: OpenIddictConstants.ConsentTypes.Implicit,
                 displayName: "Web Application",
-                secret: configurationSection["Dixels_Web:ClientSecret"] ?? "1q2w3e*",
+                secret: configurationSection["Dixels_Web:ClientSecret"]
+                    ?? throw new AbpException("OpenIddict:Applications:Dixels_Web:ClientSecret is required when the Dixels_Web client is configured."),
                 grantTypes: new List<string> //Hybrid flow
                 {
                     OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.Implicit

@@ -50,12 +50,16 @@ public static class SpaceManagementModelBuilderExtensions
         builder.Entity<Building>(b =>
         {
             b.ToTable(DixelsConsts.DbTablePrefix + "Buildings", DixelsConsts.DbSchema, tb =>
-                tb.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0"));
+            {
+                tb.HasCheckConstraint("CK_AppBuildings_MaxHorizonDaysPositive", "\"MaxHorizonDays\" > 0");
+                tb.HasCheckConstraint("CK_AppBuildings_SeriesHorizonAtLeastHorizon", "\"MaxSeriesHorizonDays\" >= \"MaxHorizonDays\"");
+            });
             b.ConfigureByConvention();
 
             b.Property(x => x.Name).HasMaxLength(BuildingConsts.MaxNameLength).IsRequired();
             b.Property(x => x.BuildingNumber).HasMaxLength(BuildingConsts.MaxBuildingNumberLength);
             b.Property(x => x.Timezone).HasMaxLength(BuildingConsts.MaxTimezoneLength).IsRequired();
+            b.Property(x => x.OwnOverlapPolicy).HasConversion<string>().HasMaxLength(16).IsRequired();
 
             // Flattened to a single "Days" int column (the plan's "plain int bitmask column"),
             // rather than EF's default "Days_Mask" owned-column name.

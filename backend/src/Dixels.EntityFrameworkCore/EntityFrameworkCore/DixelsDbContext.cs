@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Dixels.Employees;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
@@ -30,7 +32,8 @@ public class DixelsDbContext :
     public DbSet<Floor> Floors { get; set; }
     public DbSet<Space> Spaces { get; set; }
     public DbSet<AvailabilityOverride> AvailabilityOverrides { get; set; }
-    public DbSet<EmployeeBuildingAssignment> EmployeeBuildingAssignments { get; set; }
+    public DbSet<Booking> Bookings { get; set; }
+    public DbSet<BookingSeries> BookingSeries { get; set; }
 
     #region Entities from the modules
 
@@ -66,6 +69,32 @@ public class DixelsDbContext :
 
     }
 
+    private const string SqliteProviderName = "Microsoft.EntityFrameworkCore.Sqlite";
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+
+        // SQLite (the unit-test database only) stores DateTimeOffset as text and can't compare
+        // it in SQL, so "bookings/closures overlapping this window" queries fail to translate.
+        // There, store it as UTC ticks — a plain integer that sorts and compares correctly.
+        // Postgres keeps its native timestamptz. Every DateTimeOffset in this app is a UTC
+        // instant, so dropping the offset loses nothing.
+        if (Database.ProviderName == SqliteProviderName)
+        {
+            configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcTicksConverter>();
+            configurationBuilder.Properties<DateTimeOffset?>().HaveConversion<UtcTicksConverter>();
+        }
+    }
+
+    private sealed class UtcTicksConverter : ValueConverter<DateTimeOffset, long>
+    {
+        public UtcTicksConverter()
+            : base(v => v.UtcTicks, v => new DateTimeOffset(v, TimeSpan.Zero))
+        {
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -84,6 +113,6 @@ public class DixelsDbContext :
         /* Configure your own tables/entities inside here */
 
         builder.ConfigureSpaceManagement();
-        builder.ConfigureEmployees();
+        builder.ConfigureBookings();
     }
 }
