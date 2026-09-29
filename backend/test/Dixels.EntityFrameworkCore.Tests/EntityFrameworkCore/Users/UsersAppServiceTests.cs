@@ -1,15 +1,21 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Identity;
+using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
 using Shouldly;
+using Volo.Abp.Application.Dtos;
+using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.PermissionManagement;
 using Volo.Abp.Security.Claims;
 using Xunit;
 
@@ -29,9 +35,13 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IdentityUserManager _userManager;
     private readonly ICurrentPrincipalAccessor _principalAccessor;
+    private readonly IdentityRoleManager _roleManager;
+    private readonly IPermissionManager _permissionManager;
 
     public UsersAppServiceTests()
     {
+        _roleManager = GetRequiredService<IdentityRoleManager>();
+        _permissionManager = GetRequiredService<IPermissionManager>();
         _identityUserAppService = GetRequiredService<IIdentityUserAppService>();
         _usersAppService = GetRequiredService<IUsersAppService>();
         _buildingRepository = GetRequiredService<IRepository<Building, Guid>>();
@@ -159,6 +169,83 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
         (await _identityUserAppService.GetListAsync(input)).TotalCount.ShouldBe(0);
     }
 
+    // ---- Filtering by a permission (the Users page: everyone who can book) ----
+
+    private Task<string> CreateRoleAsync(params string[] grants) => WithUnitOfWorkAsync(async () =>
+    {
+        var name = "role" + Guid.NewGuid().ToString("N")[..8];
+        (await _roleManager.CreateAsync(new IdentityRole(Guid.NewGuid(), name))).Succeeded.ShouldBeTrue();
+        foreach (var grant in grants)
+        {
+            await _permissionManager.SetAsync(grant, RolePermissionValueProvider.ProviderName, name, true);
+        }
+
+        return name;
+    });
+
+    private Task<PagedResultDto<IdentityUserDto>> ListHoldingAsync(string permission, string filter)
+    {
+        var input = new GetIdentityUsersInput { Filter = filter };
+        input.ExtraProperties[DixelsUserConsts.PermissionFilterKey] = permission;
+        return _identityUserAppService.GetListAsync(input);
+    }
+
+    [Fact]
+    public async Task List_filters_by_a_permission_granted_through_any_role()
+    {
+        var bookerRole = await CreateRoleAsync(DixelsPermissions.Bookings.Default, DixelsPermissions.Bookings.Create);
+        var viewerRole = await CreateRoleAsync(DixelsPermissions.Bookings.Default);
+        var booker = await CreateUserAsync(role: bookerRole);
+        var employee = await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
+        var viewer = await CreateUserAsync(role: viewerRole);
+        var noRole = await CreateUserAsync();
+
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, booker.Surname!)).Items.ShouldHaveSingleItem().Id.ShouldBe(booker.Id);
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, employee.Surname!)).Items.ShouldHaveSingleItem().Id.ShouldBe(employee.Id);
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, viewer.Surname!)).TotalCount.ShouldBe(0);
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, noRole.Surname!)).TotalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task List_by_permission_includes_admins_while_their_role_can_book()
+    {
+        // ABP's seed grants the admin role every permission, booking included.
+        var admin = await CreateUserAsync(role: "admin");
+
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, admin.Surname!)).Items.ShouldHaveSingleItem().Id.ShouldBe(admin.Id);
+    }
+
+    [Fact]
+    public async Task List_by_permission_includes_a_direct_grant_and_drops_it_once_revoked()
+    {
+        var user = await CreateUserAsync();
+        await WithUnitOfWorkAsync(() =>
+            _permissionManager.SetAsync(DixelsPermissions.Bookings.Create, UserPermissionValueProvider.ProviderName, user.Id.ToString(), true));
+
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, user.Surname!)).Items.ShouldHaveSingleItem().Id.ShouldBe(user.Id);
+
+        await WithUnitOfWorkAsync(() =>
+            _permissionManager.SetAsync(DixelsPermissions.Bookings.Create, UserPermissionValueProvider.ProviderName, user.Id.ToString(), false));
+
+        (await ListHoldingAsync(DixelsPermissions.Bookings.Create, user.Surname!)).TotalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task List_by_permission_and_building_together()
+    {
+        var building = await CreateBuildingAsync();
+        var here = await CreateUserAsync(building.Id, RoleDataSeedContributor.EmployeeRoleName);
+        var elsewhere = await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
+
+        var input = new GetIdentityUsersInput();
+        input.ExtraProperties[DixelsUserConsts.PermissionFilterKey] = DixelsPermissions.Bookings.Create;
+        input.ExtraProperties[BuildingIdKey] = building.Id.ToString();
+        var result = await _identityUserAppService.GetListAsync(input);
+
+        result.Items.ShouldHaveSingleItem().Id.ShouldBe(here.Id);
+        result.Items.ShouldNotContain(u => u.Id == elsewhere.Id);
+    }
+
     [Fact]
     public async Task List_without_a_building_filter_is_abps_own()
     {
@@ -226,5 +313,39 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
         var mine = (await _usersAppService.GetMyBuildingAsync()).ShouldNotBeNull();
         mine.Id.ShouldBe(building.Id);
         mine.IsDeleted.ShouldBeTrue();
+    }
+
+    // ---- Roles for the Users page (batch, not one call per row) ----
+
+    [Fact]
+    public async Task Roles_for_users_returns_each_ones_role_names_in_one_call()
+    {
+        var employee = await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
+        var noRole = await CreateUserAsync();
+
+        var result = await _usersAppService.GetRolesForUsersAsync(new List<Guid> { employee.Id, noRole.Id });
+
+        result.Single(r => r.UserId == employee.Id).Roles.ShouldContain(RoleDataSeedContributor.EmployeeRoleName);
+        result.Single(r => r.UserId == noRole.Id).Roles.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Roles_for_users_skips_an_id_that_no_longer_exists()
+    {
+        var result = await _usersAppService.GetRolesForUsersAsync(new List<Guid> { Guid.NewGuid() });
+
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Role_names_lists_every_role_including_the_seeded_ones()
+    {
+        var customRole = await CreateRoleAsync();
+
+        var names = await _usersAppService.GetRoleNamesAsync();
+
+        names.ShouldContain(RoleDataSeedContributor.EmployeeRoleName);
+        names.ShouldContain("admin");
+        names.ShouldContain(customRole);
     }
 }

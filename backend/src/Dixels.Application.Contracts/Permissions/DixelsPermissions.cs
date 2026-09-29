@@ -47,6 +47,40 @@ public static class DixelsPermissions
     // No Users permissions here: listing users and assigning their building go through ABP's
     // own user service, so ABP's AbpIdentity.Users(.Update) permissions cover them.
 
+    /// <summary>
+    /// Who may <em>read</em> a level, beyond its own Default: "see the path, act only where
+    /// granted". The hierarchy is a tree, so someone given floors (or spaces) must be able to
+    /// list the buildings (and floors) above to reach them — read-only; creating, editing and
+    /// deleting still need that level's own permission. The frontend mirrors these lists.
+    /// </summary>
+    public static class Readers
+    {
+        /// <summary>Listing/getting buildings: their own viewers, anyone below them in the tree,
+        /// and user admins (the Users page's building picker).</summary>
+        public static readonly string[] Buildings =
+        {
+            DixelsPermissions.Buildings.Default,
+            DixelsPermissions.Floors.Default,
+            DixelsPermissions.Spaces.Default,
+            "AbpIdentity.Users",
+        };
+
+        /// <summary>Listing/getting floors: their own viewers and space viewers below them.</summary>
+        public static readonly string[] Floors =
+        {
+            DixelsPermissions.Floors.Default,
+            DixelsPermissions.Spaces.Default,
+        };
+
+        /// <summary>Listing space types: their own viewers, and space viewers — every space has one,
+        /// and adding or filtering spaces picks from the list.</summary>
+        public static readonly string[] SpaceTypes =
+        {
+            DixelsPermissions.SpaceTypes.Default,
+            DixelsPermissions.Spaces.Default,
+        };
+    }
+
     // Employees get Default + Create + Cancel through the "employee" role (RoleDataSeedContributor).
     // ManageAll is for administrators acting on other people's bookings (force cancel) —
     // defined now so that feature is a grant, not a new permission, when it lands.

@@ -15,7 +15,10 @@ using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
-[Authorize(DixelsPermissions.Buildings.Default)]
+// Only signed-in users at class level: reads admit several permissions (see
+// DixelsPermissions.Readers), and ABP adds a class-level [Authorize(...)] to every method's own.
+// So every method states what it needs — a new one must too.
+[Authorize]
 public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 {
     private readonly IRepository<Building, Guid> _buildingRepository;
@@ -49,12 +52,15 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 
     public async Task<BuildingDto> GetAsync(Guid id)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
         var building = await _buildingRepository.GetAsync(id);
         return MapToDto(building);
     }
 
     public async Task<PagedResultDto<BuildingDto>> GetListAsync(GetBuildingsInput input)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
+
         async Task<PagedResultDto<BuildingDto>> QueryAsync()
         {
             var queryable = await _buildingRepository.GetQueryableAsync();
@@ -199,7 +205,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
 
         // They keep the assignment (a restore brings everything back), but can't book meanwhile.
-        impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null);
+        impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null, grantedPermission: null);
         return impact;
     }
 

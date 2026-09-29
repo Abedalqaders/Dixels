@@ -14,7 +14,10 @@ using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
 
-[Authorize(DixelsPermissions.Floors.Default)]
+// Only signed-in users at class level: reads admit several permissions (see
+// DixelsPermissions.Readers), and ABP adds a class-level [Authorize(...)] to every method's own.
+// So every method states what it needs — a new one must too.
+[Authorize]
 public class FloorsAppService : DixelsAppService, IFloorsAppService
 {
     private readonly IRepository<Floor, Guid> _floorRepository;
@@ -45,12 +48,15 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
     public async Task<FloorDto> GetAsync(Guid id)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Floors);
         var floor = await _floorRepository.GetAsync(id);
         return MapToDto(floor);
     }
 
     public async Task<PagedResultDto<FloorDto>> GetListAsync(GetFloorsInput input)
     {
+        await CheckAnyPermissionAsync(DixelsPermissions.Readers.Floors);
+
         // Floor has no EF navigation to Building (separate aggregate roots, FK-only), so
         // BuildingName is resolved with an explicit join — one SQL query, not one lookup per
         // row. Joining unconditionally (even when BuildingId scopes to one building) keeps a
@@ -202,6 +208,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Floor floor) =>
         (await _spaceRepository.GetListAsync(s => s.FloorId == floor.Id)).Select(s => (s, floor)).ToList();
 
+    [Authorize(DixelsPermissions.Floors.Default)]
     public async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id)
     {
         var floor = await _floorRepository.GetAsync(id);

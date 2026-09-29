@@ -16,4 +16,10 @@ public static class DixelsUserConsts
     /// properties (<c>?ExtraProperties[Role]=employee</c>) to return only one role's members.
     /// ABP's own list has no role filter.</summary>
     public const string RoleFilterKey = "Role";
+
+    /// <summary>Not a stored property: the key the user list reads to return only the users
+    /// holding one permission, through any of their roles or granted to them directly
+    /// (<c>?ExtraProperties[Permission]=Dixels.Bookings.Create</c> — everyone who can book,
+    /// admins included when their role grants it). Follows the grants, not role names.</summary>
+    public const string PermissionFilterKey = "Permission";
 }

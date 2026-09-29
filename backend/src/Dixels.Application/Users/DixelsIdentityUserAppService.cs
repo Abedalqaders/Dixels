@@ -22,7 +22,9 @@ namespace Dixels.Users;
 /// the <see cref="DixelsUserConsts.BuildingIdPropertyName"/> extra property:
 /// <list type="bullet">
 /// <item>the list can be filtered by it: <c>?ExtraProperties[BuildingId]={id}</c>, and by
-/// role: <c>?ExtraProperties[Role]=employee</c> (the Users page lists employees only);</item>
+/// role: <c>?ExtraProperties[Role]=employee</c>, and by a permission its users hold:
+/// <c>?ExtraProperties[Permission]=Dixels.Bookings.Create</c> (the Users page lists everyone who
+/// can book, since that's who needs a building);</item>
 /// <item>create/update check that the building it names exists.</item>
 /// </list>
 /// Everything else is ABP's behaviour, unchanged. Reading and writing the value itself needs
@@ -58,7 +60,8 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
     {
         var (_, buildingId) = ReadBuildingId(input.ExtraProperties);
         var roleName = ReadString(input.ExtraProperties, DixelsUserConsts.RoleFilterKey);
-        if (buildingId is null && roleName is null)
+        var permissionName = ReadString(input.ExtraProperties, DixelsUserConsts.PermissionFilterKey);
+        if (buildingId is null && roleName is null && permissionName is null)
         {
             return await base.GetListAsync(input);
         }
@@ -77,9 +80,10 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         }
 
         // ABP's IIdentityUserRepository can filter by neither an extra-property column nor a
-        // role, so a filtered list goes through our own query (same text filter semantics).
-        var count = await _userDirectoryRepository.GetCountAsync(input.Filter, buildingId, roleId);
-        var users = await _userDirectoryRepository.GetListAsync(input.Filter, buildingId, roleId, input.SkipCount, input.MaxResultCount);
+        // role or permission, so a filtered list goes through our own query (same text filter semantics).
+        var count = await _userDirectoryRepository.GetCountAsync(input.Filter, buildingId, roleId, permissionName);
+        var users = await _userDirectoryRepository.GetListAsync(
+            input.Filter, buildingId, roleId, permissionName, input.SkipCount, input.MaxResultCount);
 
         return new PagedResultDto<IdentityUserDto>(count, ObjectMapper.Map<List<IdentityUser>, List<IdentityUserDto>>(users));
     }
@@ -97,11 +101,20 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         await NormalizeAndCheckBuildingAsync(input.ExtraProperties);
 
         // Deactivating an account: nobody will turn up for its bookings, so release the rooms.
-        var wasActive = (await UserManager.GetByIdAsync(id)).IsActive;
+        var before = await UserManager.GetByIdAsync(id);
+        var wasActive = before.IsActive;
+        var oldBuildingId = before.GetBuildingId();
+        var (buildingSent, newBuildingId) = ReadBuildingId(input.ExtraProperties);
+
         var result = await base.UpdateAsync(id, input);
         if (wasActive && !input.IsActive)
         {
             await CancelUpcomingBookingsAsync(id, "Dixels:Bookings:CancelReason:AccountDeactivated");
+        }
+        else if (buildingSent)
+        {
+            // Moved through the account form rather than the Users page: same rule.
+            await _bookingImpact.CancelOnMoveAsync(id, oldBuildingId, newBuildingId, CurrentUser.GetId());
         }
 
         return result;

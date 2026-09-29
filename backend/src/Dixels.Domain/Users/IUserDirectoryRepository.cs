@@ -9,7 +9,8 @@ namespace Dixels.Users;
 /// <summary>
 /// The Users-page queries ABP's own <see cref="IIdentityUserRepository"/> can't express:
 /// filtering by the <see cref="DixelsUserConsts.BuildingIdPropertyName"/> column needs
-/// <c>EF.Property</c>, which only the EF layer can reference, and ABP's list has no role filter.
+/// <c>EF.Property</c>, which only the EF layer can reference, and ABP's list has no role or
+/// permission filter.
 /// </summary>
 /// <remarks>
 /// Deliberately not an <c>IRepository&lt;IdentityUser, Guid&gt;</c>: ABP would then expose
@@ -18,15 +19,21 @@ namespace Dixels.Users;
 public interface IUserDirectoryRepository
 {
     /// <summary>Ordered by user name. <paramref name="filter"/> matches user name, name,
-    /// surname or email (case-insensitive); <paramref name="buildingId"/> and
-    /// <paramref name="roleId"/> null mean any.</summary>
+    /// surname or email (case-insensitive); <paramref name="grantedPermission"/> keeps the users
+    /// holding that permission through a role or a direct grant. Null filters mean any.</summary>
     Task<List<IdentityUser>> GetListAsync(
         string? filter,
         Guid? buildingId,
         Guid? roleId,
+        string? grantedPermission,
         int skipCount,
         int maxResultCount,
         CancellationToken cancellationToken = default);
 
-    Task<long> GetCountAsync(string? filter, Guid? buildingId, Guid? roleId, CancellationToken cancellationToken = default);
+    Task<long> GetCountAsync(
+        string? filter,
+        Guid? buildingId,
+        Guid? roleId,
+        string? grantedPermission,
+        CancellationToken cancellationToken = default);
 }
