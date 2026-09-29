@@ -250,7 +250,9 @@ select.ctrl { appearance: none; cursor: pointer; }
 @media (max-width: 1023px) {
   .content { padding: var(--space-5); }
   .top { padding: var(--space-3) var(--space-5); }
-  .app { flex-direction: column; }
+  /* One band at the top for the fixed menu button, on every page, instead of each page
+     padding itself around it. */
+  .app { padding-top: 56px; }
   .menubtn { display: flex; }
   .side {
     position: fixed; top: 0; bottom: 0; left: 0; width: 260px; max-width: 82vw; z-index: 100;
@@ -260,7 +262,10 @@ select.ctrl { appearance: none; cursor: pointer; }
   }
   .side.open { transform: translateX(0); visibility: visible; box-shadow: var(--shadow-overlay); transition: transform .2s ease; }
   .main { width: 100%; }
-  .top { padding-left: calc(var(--space-3) + 44px); }
-  .content:first-child { padding-top: calc(var(--space-5) + 44px); }
   .modal .row2 { flex-direction: column; }
+}
+
+/* Below md the explorer (where there is one) stacks above the page instead of beside it. */
+@media (max-width: 767px) {
+  .app { flex-direction: column; }
 }

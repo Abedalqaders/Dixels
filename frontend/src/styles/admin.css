@@ -310,10 +310,17 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .linkbtn { background: none; border: none; padding: 0; font: inherit; color: var(--accent-ink); cursor: pointer; }
 .linkbtn:hover { text-decoration: underline; }
 
+/* Tablet: still beside the list, but below the menu button's band. */
+@media (max-width: 1023px) {
+  .explorer { top: 56px; height: calc(100dvh - 56px); }
+}
+
+/* Phone: stacked above the list, capped so the list stays in view. */
 @media (max-width: 767px) {
   .explorer, .explorer.collapsed {
-    position: static; width: 100%; height: auto; max-height: 280px; align-items: stretch;
-    border-right: 0; border-bottom: 1px solid var(--border-subtle); padding-top: calc(var(--space-3) + 44px);
+    position: static; width: 100%; height: auto; max-height: 40vh; align-items: stretch;
+    border-right: 0; border-bottom: 1px solid var(--border-subtle);
   }
+  .explorer.collapsed { padding: var(--space-2) var(--space-3); flex-direction: row; }
 }
 
