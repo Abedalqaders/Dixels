@@ -15,9 +15,8 @@ export const BUILDING_ID_PROPERTY = 'BuildingId'
 /** Filter key for the user list's role filter — matches DixelsUserConsts.RoleFilterKey. */
 const ROLE_FILTER_KEY = 'Role'
 
-/** The role whose members get a building — matches RoleDataSeedContributor.EmployeeRoleName.
- * Admins run the whole system rather than sitting in one building, so they're not listed. */
-export const EMPLOYEE_ROLE = 'employee'
+/** Filter key for the user list's permission filter — matches DixelsUserConsts.PermissionFilterKey. */
+const PERMISSION_FILTER_KEY = 'Permission'
 
 type ExtraProperties = Record<string, unknown>
 
@@ -42,6 +41,8 @@ export interface GetUsersInput {
   buildingId?: string
   /** Only members of this role (by name). Omit for every role. */
   role?: string
+  /** Only users holding this permission, through a role or directly (one of Permissions.*). */
+  permission?: string
   skipCount?: number
   maxResultCount?: number
 }
@@ -51,12 +52,13 @@ export function buildingIdOf(user: IdentityUserDto): string | null {
   return typeof value === 'string' && value ? value : null
 }
 
-export function getUsers(token: string, { buildingId, role, ...input }: GetUsersInput = {}) {
+export function getUsers(token: string, { buildingId, role, permission, ...input }: GetUsersInput = {}) {
   // ABP binds ExtraProperties[Key]=value from the query string into the input's extra properties.
   const params = {
     ...input,
     [`ExtraProperties[${BUILDING_ID_PROPERTY}]`]: buildingId,
     [`ExtraProperties[${ROLE_FILTER_KEY}]`]: role,
+    [`ExtraProperties[${PERMISSION_FILTER_KEY}]`]: permission,
   }
   return request<PagedResultDto<IdentityUserDto>>(`/api/identity/users${query(params)}`, token)
 }
@@ -68,17 +70,17 @@ export function getUsers(token: string, { buildingId, role, ...input }: GetUsers
  * "keep the current roles"; the concurrency stamp stops it overwriting someone else's edit.
  */
 /**
- * Sets (or clears, with null) an employee's building. With `cancelUpcomingBookings`, their
- * upcoming bookings in the building they're leaving are cancelled in the same step.
+ * Sets (or clears, with null) a user's building. Their upcoming bookings in the
+ * building they're leaving are cancelled in the same step — they can only book in one.
  */
-export function assignUserBuilding(token: string, userId: string, buildingId: string | null, cancelUpcomingBookings = false) {
+export function assignUserBuilding(token: string, userId: string, buildingId: string | null) {
   return request<void>(`/api/app/users/${userId}/building`, token, {
     method: 'PUT',
-    body: JSON.stringify({ buildingId, cancelUpcomingBookings }),
+    body: JSON.stringify({ buildingId }),
   })
 }
 
-/** An employee's upcoming bookings in their current building — what moving them would leave behind. */
+/** A user's upcoming bookings in their current building — what moving them would leave behind. */
 export function getReassignImpact(token: string, userId: string) {
   return request<BookingImpactDto>(`/api/app/users/${userId}/reassign-impact`, token)
 }
@@ -87,4 +89,22 @@ export function getReassignImpact(token: string, userId: string) {
  * yet. Scoped to whoever the token belongs to — never the full admin list. */
 export function getMyBuilding(token: string) {
   return request<BuildingDto | null>('/api/app/users/my-building', token)
+}
+
+export interface UserRolesDto {
+  userId: string
+  roles: string[]
+}
+
+/** Each of these users' role names, one call for a page of the Users list — not one per row. */
+export function getUserRoles(token: string, userIds: string[]) {
+  if (userIds.length === 0) return Promise.resolve<UserRolesDto[]>([])
+  const params = new URLSearchParams()
+  for (const id of userIds) params.append('userIds', id)
+  return request<UserRolesDto[]>(`/api/app/users/roles?${params}`, token)
+}
+
+/** Every role name in the system, for the Users page's role filter. */
+export function getRoleNames(token: string) {
+  return request<string[]>('/api/app/users/role-names', token)
 }

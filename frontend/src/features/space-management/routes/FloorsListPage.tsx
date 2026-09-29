@@ -5,6 +5,9 @@ import { SearchIcon } from '@/components/icons'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
+import { Can } from '@/features/auth/components/Can'
+import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { HighlightedText } from '@/features/space-management/components/HighlightedText'
 import { Pager } from '@/components/Pager'
 import { AddNodeModal } from '@/features/space-management/components/AddNodeModal'
@@ -28,6 +31,11 @@ export function FloorsListPage() {
   const { buildingId = '' } = useParams()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
+  // The rules page saves with Edit and changes closures with the Overrides permissions; with
+  // none of them it opens read-only, so the menu says so.
+  const canEditRules = usePermission([Permissions.Floors.Edit, Permissions.Overrides.Create, Permissions.Overrides.Delete])
+  // A floor opens into its spaces — a link only for someone who may see them.
+  const canOpenSpaces = usePermission(HierarchyViewers.Spaces)
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -129,15 +137,17 @@ export function FloorsListPage() {
                   />
                   Show deleted
                 </label>
-                <button
-                  className="btn sm sec"
-                  disabled={status !== 'success'}
-                  onClick={() =>
-                    status === 'success' && setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })
-                  }
-                >
-                  + Floor
-                </button>
+                <Can permission={Permissions.Floors.Create}>
+                  <button
+                    className="btn sm sec"
+                    disabled={status !== 'success'}
+                    onClick={() =>
+                      status === 'success' && setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })
+                    }
+                  >
+                    + Floor
+                  </button>
+                </Can>
               </div>
             </div>
 
@@ -156,39 +166,50 @@ export function FloorsListPage() {
                   <div key={floor.id} style={floor.isDeleted ? { opacity: 0.55 } : undefined}>
                     <div className="node l1" data-level="floor">
                       {ICONS.floor}
-                      <Link to={`/admin/buildings/${buildingId}/floors/${floor.id}/spaces`} className="lbl2">
-                        <HighlightedText text={floor.name} query={list.search} />
-                      </Link>
+                      {canOpenSpaces ? (
+                        <Link to={`/admin/buildings/${buildingId}/floors/${floor.id}/spaces`} className="lbl2">
+                          <HighlightedText text={floor.name} query={list.search} />
+                        </Link>
+                      ) : (
+                        <span className="lbl2">
+                          <HighlightedText text={floor.name} query={list.search} />
+                        </span>
+                      )}
                       {floor.floorNumber !== null && <span className="m">Floor {floor.floorNumber}</span>}
                       {floor.hasOverrides && <span className="badge completed">Custom</span>}
                       {floor.isDeleted && <span className="badge cancelled">Deleted</span>}
                       <span className="actions">
                         {floor.isDeleted ? (
-                          <button
-                            className="rowbtn"
-                            title={`Restore ${floor.name}`}
-                            aria-label={`Restore ${floor.name}`}
-                            onClick={() => runAction(() => restoreFloor(token, floor.id), `${floor.name} restored.`)}
-                          >
-                            <RestoreIcon />
-                          </button>
+                          <Can permission={Permissions.Floors.Edit}>
+                            <button
+                              className="rowbtn"
+                              title={`Restore ${floor.name}`}
+                              aria-label={`Restore ${floor.name}`}
+                              onClick={() => runAction(() => restoreFloor(token, floor.id), `${floor.name} restored.`)}
+                            >
+                              <RestoreIcon />
+                            </button>
+                          </Can>
                         ) : (
                           <RowActionsMenu
                             label={floor.name}
                             actions={[
                               {
                                 label: 'Edit details',
+                                permission: Permissions.Floors.Edit,
                                 icon: <DetailsIcon />,
                                 onClick: () =>
                                   setEditState({ kind: 'floor', id: floor.id, name: floor.name, floorNumber: floor.floorNumber }),
                               },
                               {
-                                label: 'Edit constraints',
+                                label: canEditRules ? 'Edit constraints' : 'View constraints',
+                                permission: Permissions.Floors.Default,
                                 icon: <PencilIcon />,
                                 onClick: () => navigate(`/admin/constraints/floor/${floor.id}`),
                               },
                               {
                                 label: 'Delete',
+                                permission: Permissions.Floors.Delete,
                                 icon: <TrashIcon />,
                                 destructive: true,
                                 onClick: () =>

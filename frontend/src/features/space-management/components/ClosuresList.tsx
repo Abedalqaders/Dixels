@@ -1,8 +1,79 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { format } from 'date-fns'
+import { ChevronDownIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OverrideEffect, ReasonCategory } from '@/features/space-management/api/spaceManagementApi'
 import type { AvailabilityOverrideDto, CreateAvailabilityOverrideDto, OverrideScope } from '@/features/space-management/api/spaceManagementApi'
 import { ChevronIcon, TrashIcon } from './actionIcons'
+
+/** A calendar popover for the date, plus a plain time input — closures aren't bound to a
+ * booking horizon or a slot grid, so there's no min/max or slotMinutes to honour here. */
+function DateTimeField({
+  id,
+  label,
+  date,
+  time,
+  onDateChange,
+  onTimeChange,
+}: {
+  id: string
+  label: string
+  date: Date | undefined
+  time: string
+  onDateChange: (date: Date | undefined) => void
+  onTimeChange: (time: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex gap-2">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button id={id} type="button" variant="outline" className="flex-1 justify-between font-normal">
+              {date ? format(date, 'PPP') : 'Pick a date'}
+              <ChevronDownIcon className="text-muted-foreground" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              defaultMonth={date}
+              onSelect={(next) => {
+                onDateChange(next)
+                setOpen(false)
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+        <Input
+          type="time"
+          className="w-28 font-mono"
+          aria-label={`${label} time`}
+          value={time}
+          onChange={(e) => onTimeChange(e.target.value)}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Midnight unless a time was picked — the common case is a whole-day closure. */
+function combine(date: Date | undefined, time: string): Date | null {
+  if (!date) return null
+  const [hours, minutes] = time ? time.split(':').map(Number) : [0, 0]
+  const combined = new Date(date)
+  combined.setHours(hours || 0, minutes || 0, 0, 0)
+  return combined
+}
 
 // Dated closures (or special openings) — a real, repeatable list per scope, not the
 // mock's single hardcoded oosFrom/oosUntil/oosReason field. Closures union rather than
@@ -64,6 +135,10 @@ interface ClosuresListProps {
   isCurrentlyClosed: boolean
   onCreate: (input: CreateAvailabilityOverrideDto) => void | Promise<void>
   onDelete: (id: string) => void | Promise<void>
+  /** Offer "+ Add closure" — only with Overrides.Create. */
+  canCreate: boolean
+  /** Offer deleting this level's own closures — only with Overrides.Delete. */
+  canDelete: boolean
 }
 
 export function ClosuresList({
@@ -74,6 +149,8 @@ export function ClosuresList({
   isCurrentlyClosed,
   onCreate,
   onDelete,
+  canCreate,
+  canDelete,
 }: ClosuresListProps) {
   const hasAnyClosures = ownOverrides.length > 0 || ancestorOverrides.length > 0
   const [sectionOpen, setSectionOpen] = useState(hasAnyClosures)
@@ -81,10 +158,15 @@ export function ClosuresList({
 
   const [effect, setEffect] = useState<OverrideEffect>(OverrideEffect.Closed)
   const [reasonCategory, setReasonCategory] = useState<ReasonCategory>(ReasonCategory.Maintenance)
-  const [startsAt, setStartsAt] = useState('')
-  const [endsAt, setEndsAt] = useState('')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [startTime, setStartTime] = useState('')
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const [endTime, setEndTime] = useState('')
   const [reasonDetail, setReasonDetail] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const startsAt = combine(startDate, startTime)
+  const endsAt = combine(endDate, endTime)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -95,14 +177,16 @@ export function ClosuresList({
       await onCreate({
         scope,
         scopeId,
-        startsAt: new Date(startsAt).toISOString(),
-        endsAt: new Date(endsAt).toISOString(),
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
         effect,
         reasonCategory,
         reasonDetail: reasonDetail.trim() || null,
       })
-      setStartsAt('')
-      setEndsAt('')
+      setStartDate(undefined)
+      setStartTime('')
+      setEndDate(undefined)
+      setEndTime('')
       setReasonDetail('')
       setFormOpen(false)
     } finally {
@@ -139,9 +223,11 @@ export function ClosuresList({
                   {EFFECT_LABELS[o.effect]} — {REASON_LABELS[o.reasonCategory]} · {formatWhen(o.startsAt, o.endsAt)}
                   {detail ? ` — ${detail}` : ''}
                 </span>
-                <button type="button" className="rowbtn" title="Delete closure" aria-label="Delete closure" onClick={() => onDelete(o.id)}>
-                  <TrashIcon />
-                </button>
+                {canDelete && (
+                  <button type="button" className="rowbtn" title="Delete closure" aria-label="Delete closure" onClick={() => onDelete(o.id)}>
+                    <TrashIcon />
+                  </button>
+                )}
               </div>
             )
           })}
@@ -156,53 +242,53 @@ export function ClosuresList({
             </div>
           ))}
 
-          {!formOpen && (
+          {canCreate && !formOpen && (
             <button type="button" className="btn sm sec" style={{ marginTop: 'var(--space-3)' }} onClick={() => setFormOpen(true)}>
               + Add closure
             </button>
           )}
 
-          {formOpen && (
+          {canCreate && formOpen && (
             <form className="fields" onSubmit={handleSubmit} style={{ marginTop: 'var(--space-3)' }}>
-              <div className="field">
-                <span className="lbl">Effect</span>
-                <select className="ctrl" value={effect} onChange={(e) => setEffect(Number(e.target.value) as OverrideEffect)}>
-                  <option value={OverrideEffect.Closed}>Closed</option>
-                  <option value={OverrideEffect.Open}>Open (special opening)</option>
-                </select>
+              <div className="grid gap-2">
+                <Label htmlFor="closure-effect">Effect</Label>
+                <Select value={String(effect)} onValueChange={(v) => setEffect(Number(v) as OverrideEffect)}>
+                  <SelectTrigger id="closure-effect" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={String(OverrideEffect.Closed)}>Closed</SelectItem>
+                    <SelectItem value={String(OverrideEffect.Open)}>Open (special opening)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="field">
-                <span className="lbl">Reason</span>
-                <select
-                  className="ctrl"
-                  value={reasonCategory}
-                  onChange={(e) => setReasonCategory(Number(e.target.value) as ReasonCategory)}
-                >
-                  <option value={ReasonCategory.Maintenance}>Maintenance</option>
-                  <option value={ReasonCategory.Holiday}>Holiday</option>
-                  <option value={ReasonCategory.Event}>Event</option>
-                  <option value={ReasonCategory.Other}>Other</option>
-                </select>
+              <div className="grid gap-2">
+                <Label htmlFor="closure-reason">Reason</Label>
+                <Select value={String(reasonCategory)} onValueChange={(v) => setReasonCategory(Number(v) as ReasonCategory)}>
+                  <SelectTrigger id="closure-reason" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={String(ReasonCategory.Maintenance)}>Maintenance</SelectItem>
+                    <SelectItem value={String(ReasonCategory.Holiday)}>Holiday</SelectItem>
+                    <SelectItem value={String(ReasonCategory.Event)}>Event</SelectItem>
+                    <SelectItem value={String(ReasonCategory.Other)}>Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="field">
-                <span className="lbl">Starts</span>
-                <input className="ctrl mono" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
-              </div>
-              <div className="field">
-                <span className="lbl">Ends</span>
-                <input className="ctrl mono" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
-              </div>
-              <div className="field stacked">
-                <span className="lbl">Reason detail (shown to staff)</span>
-                <input className="ctrl" value={reasonDetail} onChange={(e) => setReasonDetail(e.target.value)} />
+              <DateTimeField id="closure-starts" label="Starts" date={startDate} time={startTime} onDateChange={setStartDate} onTimeChange={setStartTime} />
+              <DateTimeField id="closure-ends" label="Ends" date={endDate} time={endTime} onDateChange={setEndDate} onTimeChange={setEndTime} />
+              <div className="grid gap-2 field stacked">
+                <Label htmlFor="closure-detail">Reason detail (shown to staff)</Label>
+                <Input id="closure-detail" value={reasonDetail} onChange={(e) => setReasonDetail(e.target.value)} />
               </div>
               <div className="modalfoot" style={{ justifyContent: 'flex-start' }}>
-                <button type="button" className="btn sec" onClick={() => setFormOpen(false)} disabled={submitting}>
+                <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>
                   Cancel
-                </button>
-                <button type="submit" className="btn sec" disabled={submitting || !startsAt || !endsAt}>
+                </Button>
+                <Button type="submit" variant="outline" disabled={submitting || !startsAt || !endsAt}>
                   {submitting ? 'Adding…' : 'Save closure'}
-                </button>
+                </Button>
               </div>
             </form>
           )}

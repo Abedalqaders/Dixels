@@ -16,6 +16,8 @@ import type { FloorDraft } from '@/features/space-management/components/FloorLev
 import { SpaceLevelFields } from '@/features/space-management/components/SpaceLevelFields'
 import type { SpaceDraft } from '@/features/space-management/components/SpaceLevelFields'
 import { ClosuresList } from '@/features/space-management/components/ClosuresList'
+import { hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ResetToParentButton } from '@/features/space-management/components/ResetToParentButton'
 import { buildingDraftEquals, floorDraftEquals, spaceDraftEquals } from '@/features/space-management/components/draftEquality'
 import { minutesToHours } from '@/features/space-management/components/DurationPicker'
@@ -142,12 +144,23 @@ export function AdminConstraintsPage() {
   const id = params.id ?? ''
   const validLevel = level === 'building' || level === 'floor' || level === 'space'
 
+  // What this user may do here, from their ABP grants: change the rules only with the level's
+  // Edit (otherwise the page is read-only), and see, add or remove closures only with the
+  // Overrides permissions.
+  const canEditRules = usePermission(hierarchyPermissions(validLevel ? level : 'building').Edit)
+  const canViewClosures = usePermission(Permissions.Overrides.Default)
+  const canAddClosure = usePermission(Permissions.Overrides.Create)
+  const canDeleteClosure = usePermission(Permissions.Overrides.Delete)
+  // Without Overrides.Default the closures API refuses: load none rather than fail the whole page.
+  const listOverrides = (scope: OverrideScope, scopeId: string) =>
+    canViewClosures ? getOverrides(token, scope, scopeId) : Promise.resolve({ items: [] as AvailabilityOverrideDto[] })
+
   const { status, data, error, refetch } = useAsync(async (): Promise<PageData> => {
     if (level === 'building') {
       const building = await getBuilding(token, id)
       const days = operatingDaysFromApi(building.days)
       const hours = operatingWindowFromApi(building.hours)
-      const [ownOverridesResult] = await Promise.all([getOverrides(token, OverrideScope.Building, id)])
+      const [ownOverridesResult] = await Promise.all([listOverrides(OverrideScope.Building, id)])
       const ownOverrides = ownOverridesResult.items
 
       return {
@@ -192,8 +205,8 @@ export function AdminConstraintsPage() {
       const [building, resolved, ownOverridesResult, buildingOverridesResult] = await Promise.all([
         getBuilding(token, floor.buildingId),
         getFloorResolvedConstraints(token, id),
-        getOverrides(token, OverrideScope.Floor, id),
-        getOverrides(token, OverrideScope.Building, floor.buildingId),
+        listOverrides(OverrideScope.Floor, id),
+        listOverrides(OverrideScope.Building, floor.buildingId),
       ])
 
       const parentDays = operatingDaysFromApi(building.days)
@@ -253,9 +266,9 @@ export function AdminConstraintsPage() {
     // its own field IS the resolved value; when it doesn't, the Building's is.
     const [resolved, ownOverridesResult, floorOverridesResult, buildingOverridesResult, building] = await Promise.all([
       getSpaceResolvedConstraints(token, id),
-      getOverrides(token, OverrideScope.Space, id),
-      getOverrides(token, OverrideScope.Floor, space.floorId),
-      getOverrides(token, OverrideScope.Building, floor.buildingId),
+      listOverrides(OverrideScope.Space, id),
+      listOverrides(OverrideScope.Floor, space.floorId),
+      listOverrides(OverrideScope.Building, floor.buildingId),
       getBuilding(token, floor.buildingId),
     ])
 
@@ -328,7 +341,7 @@ export function AdminConstraintsPage() {
         parentMaxDurationSource: floorOwnMaxDuration ? 'Floor' : 'Building',
       },
     }
-  }, [level, id, token])
+  }, [level, id, token, canViewClosures])
 
   const [buildingDraft, setBuildingDraft] = useState<BuildingDraft | null>(null)
   const [floorDraft, setFloorDraft] = useState<FloorDraft | null>(null)
@@ -436,15 +449,6 @@ export function AdminConstraintsPage() {
     }
   }
 
-  function handleDiscard() {
-    if (!data) return
-    setBuildingDraft(data.building?.draft ?? null)
-    setFloorDraft(data.floor?.draft ?? null)
-    setSpaceDraft(data.space?.draft ?? null)
-    setWarnings([])
-    showToast('Changes discarded')
-  }
-
   function handleResetToParent() {
     if (floorDraft) setFloorDraft({ days: null, hours: null, maxDurationMinutes: null })
     if (spaceDraft) setSpaceDraft({ days: null, hours: null, maxDurationMinutes: null, minAttendees: null })
@@ -513,6 +517,15 @@ export function AdminConstraintsPage() {
             <>
               <EffectiveValueStrip items={data.effectiveItems} />
 
+              {!canEditRules && (
+                <p className="inhnote" role="status">
+                  View only — your account can't change these rules. Ask an administrator if you think it should.
+                </p>
+              )}
+
+              {/* display: contents — only here to disable every field inside at once. */}
+              <fieldset disabled={!canEditRules} style={{ display: 'contents' }}>
+
               {data.level === 'building' && data.building && buildingDraft && (
                 <BuildingLevelFields draft={buildingDraft} buildingName={data.building.name} onChange={setBuildingDraft} />
               )}
@@ -542,16 +555,21 @@ export function AdminConstraintsPage() {
                   onChange={setSpaceDraft}
                 />
               )}
+              </fieldset>
 
-              <ClosuresList
-                scope={data.scope}
-                scopeId={id}
-                ownOverrides={data.ownOverrides}
-                ancestorOverrides={data.ancestorOverrides}
-                isCurrentlyClosed={data.isCurrentlyClosedNow}
-                onCreate={handleCreateOverride}
-                onDelete={handleDeleteOverride}
-              />
+              {canViewClosures && (
+                <ClosuresList
+                  scope={data.scope}
+                  scopeId={id}
+                  ownOverrides={data.ownOverrides}
+                  ancestorOverrides={data.ancestorOverrides}
+                  isCurrentlyClosed={data.isCurrentlyClosedNow}
+                  onCreate={handleCreateOverride}
+                  onDelete={handleDeleteOverride}
+                  canCreate={canAddClosure}
+                  canDelete={canDeleteClosure}
+                />
+              )}
 
               {warnings.length > 0 && (
                 <div className="warn">
@@ -567,17 +585,16 @@ export function AdminConstraintsPage() {
               )}
 
               <div className="saverow">
-                <button type="button" className="btn sec" onClick={handleBack}>
-                  ← Back to Space management
-                </button>
                 <div className="btngroup">
-                  {data.level !== 'building' && <ResetToParentButton onReset={handleResetToParent} disabled={saving} />}
-                  <button className="btn sec" onClick={handleDiscard} disabled={saving}>
-                    Discard
+                  {canEditRules && data.level !== 'building' && <ResetToParentButton onReset={handleResetToParent} disabled={saving} />}
+                  <button type="button" className="btn sec" onClick={handleBack}>
+                    ← Back to Space management
                   </button>
-                  <button className="btn" onClick={handleSave} disabled={saving}>
-                    {saving ? 'Saving…' : 'Save constraints'}
-                  </button>
+                  {canEditRules && (
+                    <button className="btn" onClick={handleSave} disabled={saving}>
+                      {saving ? 'Saving…' : 'Save constraints'}
+                    </button>
+                  )}
                 </div>
               </div>
             </>

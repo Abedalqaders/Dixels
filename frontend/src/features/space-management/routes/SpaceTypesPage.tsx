@@ -24,6 +24,8 @@ import { ApiError, deleteSpaceType, getSpaceTypes } from '@/features/space-manag
 import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { SpaceTypeFormDialog } from '@/features/space-management/components/SpaceTypeFormDialog'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
+import { Can } from '@/features/auth/components/Can'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -97,14 +99,14 @@ export function SpaceTypesPage() {
             </p>
           </div>
 
-          <Card className="gap-0 py-0">
-            <CardHeader className="flex flex-wrap items-center gap-3 border-b px-4 py-3 [.border-b]:pb-3">
+          <Card className="gap-0 rounded-2xl py-0 shadow-md">
+            <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
               <CardTitle>All space types</CardTitle>
               <CardAction className="flex items-center gap-2">
                 <div className="relative">
-                  <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="w-56 pl-8"
+                    className="w-56 rounded-full border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
                     placeholder="Search space types…"
                     aria-label="Search space types"
                     autoComplete="off"
@@ -112,10 +114,12 @@ export function SpaceTypesPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <Button onClick={() => setEditing(null)}>
-                  <PlusIcon />
-                  Add type
-                </Button>
+                <Can permission={Permissions.SpaceTypes.Create}>
+                  <Button onClick={() => setEditing(null)}>
+                    <PlusIcon />
+                    Add type
+                  </Button>
+                </Can>
               </CardAction>
             </CardHeader>
 
@@ -131,29 +135,37 @@ export function SpaceTypesPage() {
               {status === 'success' && filtered.length > 0 && (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-16 pl-4">Icon</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead className="hidden sm:table-cell">Icon style</TableHead>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="w-16 pl-4 font-semibold">Icon</TableHead>
+                      <TableHead className="font-semibold">Name</TableHead>
+                      <TableHead className="hidden font-semibold sm:table-cell">Icon style</TableHead>
                       <TableHead className="w-16 pr-4 text-right"><span className="sr-only">Actions</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pageRows.map((st) => (
                       <TableRow key={st.id}>
-                        <TableCell className="pl-4 text-muted-foreground [&_svg]:size-5">
-                          {ICONS[iconKeyToIconName(st.iconKey)]}
+                        <TableCell className="py-3 pl-4">
+                          <span className="grid size-9 place-items-center rounded-md bg-accent text-accent-foreground [&_svg]:size-5">
+                            {ICONS[iconKeyToIconName(st.iconKey)]}
+                          </span>
                         </TableCell>
-                        <TableCell className="font-medium">{st.name}</TableCell>
-                        <TableCell className="hidden text-muted-foreground sm:table-cell">
+                        <TableCell className="py-3 font-medium">{st.name}</TableCell>
+                        <TableCell className="hidden py-3 text-muted-foreground sm:table-cell">
                           {ICON_OPTIONS.find((o) => o.value === st.iconKey)?.label ?? 'Generic'}
                         </TableCell>
-                        <TableCell className="pr-4 text-right">
+                        <TableCell className="py-3 pr-4 text-right">
                           <RowActionsMenu
                             label={st.name}
                             actions={[
-                              { label: 'Edit', icon: <PencilIcon />, onClick: () => setEditing(st) },
-                              { label: 'Delete', icon: <Trash2Icon />, onClick: () => setDeleting(st), destructive: true },
+                              { label: 'Edit', permission: Permissions.SpaceTypes.Edit, icon: <PencilIcon />, onClick: () => setEditing(st) },
+                              {
+                                label: 'Delete',
+                                permission: Permissions.SpaceTypes.Delete,
+                                icon: <Trash2Icon />,
+                                onClick: () => setDeleting(st),
+                                destructive: true,
+                              },
                             ]}
                           />
                         </TableCell>

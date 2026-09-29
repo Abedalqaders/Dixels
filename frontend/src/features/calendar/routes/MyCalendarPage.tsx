@@ -4,27 +4,44 @@ import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { Toast, useToast } from '@/components/Toast'
 import { TextSkeleton } from '@/components/LoadingSkeletons'
 import { useAsync } from '@/hooks/useAsync'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { dateOf, formatDate, fromMinutes, nextSlot, nowInZone, timeOf, toMinutes } from '@/lib/time/buildingTime'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
+import { addDays, dateOf, formatDate, fromMinutes, nextSlot, nowInZone, timeOf, toMinutes } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import { ApiError, getMyBookableBuilding } from '@/features/bookings/api/bookingsApi'
+import { ApiError, getBooking, getMyBookableBuilding } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookingDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { emitBookingsChanged, useBookingsChanged } from '@/features/bookings/bookingEvents'
 import { BookingForm } from '@/features/bookings/components/BookingForm'
 import { BuildingRemovedNotice } from '@/features/bookings/components/BuildingRemovedNotice'
 import { readLastDuration } from '@/features/bookings/preferences'
-import { suggestWindow } from '@/features/bookings/suggestSlot'
-import { daysBetween, gridMonthFor, isValidIsoDate, rangeLabel, shiftDate, startOfMonth, visibleRange } from '@/features/calendar/calendarDates'
+import { suggestWindow, suggestWindowForDay } from '@/features/bookings/suggestSlot'
+import {
+  dayOfMonth,
+  daysBetween,
+  daysInMonth,
+  gridMonthFor,
+  isValidIsoDate,
+  monthGrid,
+  monthName,
+  rangeLabel,
+  shiftDate,
+  startOfMonth,
+  visibleRange,
+  weekdayName,
+} from '@/features/calendar/calendarDates'
 import { useMonthBookings, useMonthBookingsCache } from '@/features/calendar/hooks/useMonthBookings'
+import type { Prefetch } from '@/features/calendar/hooks/useMonthBookings'
 import type { CalendarView } from '@/features/calendar/calendarDates'
-import { bookingMinutes, hourSpan } from '@/features/calendar/dayLayout'
+import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { buildDurationLimits } from '@/features/calendar/durationLimits'
 import { BookingDetailDialog } from '@/features/calendar/components/BookingDetailDialog'
+import { BookingDetailPanel } from '@/features/calendar/components/BookingDetailPanel'
 import { CancelBookingDialog } from '@/features/calendar/components/CancelBookingDialog'
 import { MiniCalendar } from '@/features/calendar/components/MiniCalendar'
 import { MonthGrid } from '@/features/calendar/components/MonthGrid'
@@ -83,7 +100,7 @@ export function MyCalendarPage() {
         </span>
       </div>
 
-      <div className="content">
+      <div className="content" data-compact-top="">
         <h1 className="pagetitle">My calendar</h1>
 
         {status === 'error' && (
@@ -108,18 +125,25 @@ export function MyCalendarPage() {
 }
 
 function Calendar({ token, building }: { token: string; building: BookableBuildingDto }) {
-  // The building was deleted: bookings are still shown (past and cancelled ones), but there's nothing to book.
-  const readOnly = Boolean(building.isRemoved)
+  // Bookings are still shown, but nothing can be booked from here when the building was deleted
+  // (past and cancelled ones remain) or the user hasn't been granted Bookings.Create.
+  const canCreate = usePermission(Permissions.Bookings.Create)
+  const canCancel = usePermission(Permissions.Bookings.Cancel)
+  const readOnly = Boolean(building.isRemoved) || !canCreate
   const { toast, showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const now = useZonedNow(building.timezone)
   const wide = useMediaQuery('(min-width: 860px)')
+  // Room for the side panel (mini calendar + a booking's details); below it, details open
+  // in a dialog. Falls back to the dialog where there's no matchMedia to ask.
+  const hasPanel = useMediaQuery('(min-width: 1024px)', false)
 
   // ?view=day|week|month&date=YYYY-MM-DD — a refresh or a shared link lands on the same
   // page. The view falls back to the one used last; phones only get the Day view.
   const requestedView = searchParams.get('view')
   const chosenView: CalendarView = VIEWS.includes(requestedView as CalendarView) ? (requestedView as CalendarView) : readView()
-  const view: CalendarView = wide ? chosenView : 'day'
+  // Phones get Day and a compact Month; Week needs the width.
+  const view: CalendarView = wide ? chosenView : chosenView === 'month' ? 'month' : 'day'
   const requestedDate = searchParams.get('date')
   const date: IsoDate = isValidIsoDate(requestedDate) ? requestedDate : now.date
 
@@ -132,18 +156,42 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
   const [miniMonth, setMiniMonth] = useState(date)
   useEffect(() => setMiniMonth(date), [date])
 
-  // One request per month grid, cached, with the months either side prefetched — the
-  // week, day and mini calendar all read from it, so moving around is instant.
+  // One request per month grid, cached — the week, day and mini calendar all read from
+  // it, so moving around is instant. The month next door is fetched ahead only when a
+  // step would reach it: always in Month view, otherwise within a week of the grid's edge.
   const range = visibleRange(view, date)
+  const gridMonth = gridMonthFor(view, date)
+  const grid = monthGrid(gridMonth)
+  const gridEnd = addDays(grid.start, grid.weeks * 7)
+  const nearStart = range.from < addDays(grid.start, 7)
+  const nearEnd = range.to > addDays(gridEnd, -7)
+  const prefetch: Prefetch = view === 'month' || (nearStart && nearEnd) ? 'both' : nearStart ? 'prev' : nearEnd ? 'next' : 'none'
   const { cache, version, refresh } = useMonthBookingsCache(token)
-  const bookings = useMonthBookings(cache, gridMonthFor(view, date), version, true)
+  const bookings = useMonthBookings(cache, gridMonth, version, prefetch)
   const miniBookings = useMonthBookings(cache, startOfMonth(miniMonth), version)
 
   // Made here, made in Find a space, or cancelled: everything cached may be out of date.
   useBookingsChanged(refresh)
 
-  const [detail, setDetail] = useState<BookingDto | null>(null)
+  // The calendar holds only the light list; opening an item fetches the booking in full.
+  const [detail, setDetail] = useState<CalendarItem | null>(null)
+  const detailBooking = useAsync(() => (detail ? getBooking(token, detail.id) : Promise.resolve(null)), [token, detail?.id])
+  const detailError =
+    detailBooking.status === 'error'
+      ? detailBooking.error instanceof ApiError
+        ? detailBooking.error.message
+        : "Couldn't load this booking — please try again."
+      : null
   const [cancelling, setCancelling] = useState<BookingDto | null>(null)
+
+  // The heading: the day itself in Day view, otherwise the month with the exact range under it.
+  const year = date.slice(0, 4)
+  const heading =
+    view === 'day'
+      ? { big: `${monthName(date)} ${dayOfMonth(date)}, ${year}`, small: weekdayName(date) }
+      : view === 'week'
+        ? { big: `${monthName(date)} ${year}`, small: rangeLabel('week', date) }
+        : { big: `${monthName(date)} ${year}`, small: `1 – ${daysInMonth(date)} ${monthName(date).slice(0, 3)} ${year}` }
   const [quickBook, setQuickBook] = useState<QuickBookWindow | null>(null)
   const [form, setForm] = useState<{ room: SpaceAvailabilityDto; window: QuickBookWindow; attendees: number } | null>(null)
   const anyDialog = Boolean(detail || cancelling || quickBook || form)
@@ -159,9 +207,9 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
       if (key === 't') go({ date: now.date })
       else if (e.key === 'ArrowLeft') go({ date: shiftDate(view, date, -1) })
       else if (e.key === 'ArrowRight') go({ date: shiftDate(view, date, 1) })
-      else if (wide && key === 'd') go({ view: 'day' })
+      else if (key === 'd') go({ view: 'day' })
       else if (wide && key === 'w') go({ view: 'week' })
-      else if (wide && key === 'm') go({ view: 'month' })
+      else if (key === 'm') go({ view: 'month' })
       else return
       e.preventDefault()
     }
@@ -175,11 +223,6 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     [bookings.data, range.from, range.to],
   )
   const days = daysBetween(range.from, range.to)
-  // Memoised so the time grid's day columns get the same objects between renders.
-  const hours = useMemo(
-    () => hourSpan(building, items.map((b) => bookingMinutes(b, dateOf(b.localStart)))),
-    [building, items],
-  )
   // Every room's max length, sorted once per building — the drag checks it on each move.
   const limits = useMemo(() => buildDurationLimits(building), [building])
   const defaultLength = Math.min(readLastDuration() ?? 60, limits.longest)
@@ -187,6 +230,11 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
   function newBooking() {
     const w = suggestWindow(building)
+    setQuickBook({ date: w.date, start: toMinutes(w.start), end: toMinutes(w.end) })
+  }
+
+  function quickBookDay(d: IsoDate) {
+    const w = suggestWindowForDay(building, d)
     setQuickBook({ date: w.date, start: toMinutes(w.start), end: toMinutes(w.end) })
   }
 
@@ -216,117 +264,146 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
   return (
     <>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {!readOnly && (
-          <Button onClick={newBooking}>
-            <Plus /> New booking
-          </Button>
-        )}
-        <Button variant="outline" onClick={() => go({ date: now.date })} title="Today (T)">
-          Today
-        </Button>
-        <div className="flex">
-          <Button variant="ghost" size="icon" aria-label="Previous" title="Previous (←)" onClick={() => go({ date: shiftDate(view, date, -1) })}>
-            <ChevronLeft />
-          </Button>
-          <Button variant="ghost" size="icon" aria-label="Next" title="Next (→)" onClick={() => go({ date: shiftDate(view, date, 1) })}>
-            <ChevronRight />
-          </Button>
-        </div>
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold" aria-live="polite">
-          {rangeLabel(view, date)}
-        </h2>
-
-        <span className="flex-1" />
-
-        {wide && (
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            value={view}
-            onValueChange={(v) => v && go({ view: v as CalendarView })}
-            aria-label="View"
+      <Card className="gap-0 overflow-hidden py-0" data-calendar="">
+        {/* Where you are, then the controls: date tile, month + range, ‹ Today ›, the view, New booking. */}
+        <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+          <div
+            className="grid h-12 w-12 flex-none place-items-center rounded-lg border bg-card leading-none shadow-xs"
+            aria-hidden="true"
           >
-            <ToggleGroupItem value="day" title="Day (D)">
-              Day
-            </ToggleGroupItem>
-            <ToggleGroupItem value="week" title="Week (W)">
-              Week
-            </ToggleGroupItem>
-            <ToggleGroupItem value="month" title="Month (M)">
-              Month
-            </ToggleGroupItem>
-          </ToggleGroup>
-        )}
-        <span className="text-sm text-muted-foreground">
-          {building.name} · {building.timezone}
-        </span>
-      </div>
+            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{monthName(date).slice(0, 3)}</span>
+            <span className="text-lg font-semibold">{dayOfMonth(date)}</span>
+          </div>
+          {/* Month on top, the exact range under it — in reading order the range comes first. */}
+          <h2 className="flex flex-col-reverse" aria-live="polite">
+            <span className="text-sm text-muted-foreground">{heading.small}</span>
+            <span className="font-[family-name:var(--font-display)] text-lg leading-tight font-semibold">{heading.big}</span>
+          </h2>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[252px_minmax(0,1fr)]">
-        <aside className="hidden flex-col gap-3 lg:flex">
-          <MiniCalendar
-            selected={date}
-            month={miniMonth}
-            today={now.date}
-            bookedDays={[...new Set((miniBookings.data ?? []).filter((b) => b.status !== 'Cancelled').map((b) => dateOf(b.localStart)))]}
-            onSelect={(d) => go({ date: d })}
-            onMonthChange={setMiniMonth}
-          />
-        </aside>
+          <span className="flex-1" />
 
-        <section
-          className={cn('min-w-0 transition-opacity', bookings.isRefreshing && bookings.status === 'success' && 'opacity-70')}
-          aria-busy={bookings.isRefreshing}
-        >
-          {bookings.status === 'error' && (
-            <p role="alert" className="mb-3 rounded-md bg-slot-closed px-4 py-3 text-sm text-slot-closed-ink">
-              {bookings.error instanceof ApiError ? bookings.error.message : "Couldn't load your bookings — please try again."}
-            </p>
+          <span className="hidden text-sm text-muted-foreground xl:inline">
+            {building.name} · {building.timezone}
+          </span>
+          <div className="flex items-center overflow-hidden rounded-md border">
+            <Button variant="ghost" size="icon" className="rounded-none" aria-label="Previous" title="Previous (←)" onClick={() => go({ date: shiftDate(view, date, -1) })}>
+              <ChevronLeft />
+            </Button>
+            <Button variant="ghost" className="rounded-none border-x px-3" onClick={() => go({ date: now.date })} title="Today (T)">
+              Today
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-none" aria-label="Next" title="Next (→)" onClick={() => go({ date: shiftDate(view, date, 1) })}>
+              <ChevronRight />
+            </Button>
+          </div>
+          <Select value={view} onValueChange={(v) => v && go({ view: v as CalendarView })}>
+            <SelectTrigger className="w-32" aria-label="View">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Day view</SelectItem>
+              {wide && <SelectItem value="week">Week view</SelectItem>}
+              <SelectItem value="month">Month view</SelectItem>
+            </SelectContent>
+          </Select>
+          {!readOnly && (
+            <Button onClick={newBooking}>
+              <Plus /> New booking
+            </Button>
           )}
+        </div>
 
-          {view === 'month' ? (
-            <MonthGrid
-              date={date}
-              bookings={items}
-              today={now.date}
-              onOpenBooking={setDetail}
-              onOpenDay={(d) => go({ view: 'day', date: d })}
-            />
-          ) : (
-            <TimeGrid
-              days={days}
-              bookings={items}
-              hours={hours}
-              today={now.date}
-              nowMinute={now.minutes}
-              firstBookableMinute={firstBookableMinute}
-              leadMinutes={building.minLeadMinutes}
-              slotMinutes={building.slotMinutes}
-              defaultLength={defaultLength}
-              limits={limits}
-              onOpenBooking={setDetail}
-              onPickRange={setQuickBook}
-              readOnly={readOnly}
-              onOpenDay={view === 'week' ? (d) => go({ view: 'day', date: d }) : undefined}
-            />
-          )}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
+          <section
+            className={cn('min-w-0 transition-opacity', bookings.isRefreshing && bookings.status === 'success' && 'opacity-70')}
+            aria-busy={bookings.isRefreshing}
+          >
+            {bookings.status === 'error' && (
+              <p role="alert" className="m-3 rounded-md bg-slot-closed px-4 py-3 text-sm text-slot-closed-ink">
+                {bookings.error instanceof ApiError ? bookings.error.message : "Couldn't load your bookings — please try again."}
+              </p>
+            )}
 
-          {bookings.status === 'success' && items.length === 0 && (
-            <p className="mt-3 text-center text-sm text-muted-foreground">
-              Nothing booked {view === 'day' ? 'this day' : view === 'week' ? 'this week' : 'this month'}.{' '}
-              {!readOnly && (
-                <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={newBooking}>
-                  Book a room
-                </button>
-              )}
-            </p>
-          )}
-        </section>
-      </div>
+            {view === 'month' ? (
+              <MonthGrid
+                date={date}
+                items={items}
+                today={now.date}
+                compact={!wide}
+                onOpenItem={setDetail}
+                onOpenDay={(d) => go({ view: 'day', date: d })}
+                onQuickBook={readOnly ? undefined : quickBookDay}
+              />
+            ) : (
+              <TimeGrid
+                days={days}
+                items={items}
+                openDays={building.days}
+                openHours={building.hours}
+                today={now.date}
+                nowMinute={now.minutes}
+                firstBookableMinute={firstBookableMinute}
+                leadMinutes={building.minLeadMinutes}
+                slotMinutes={building.slotMinutes}
+                defaultLength={defaultLength}
+                limits={limits}
+                onOpenItem={setDetail}
+                onPickRange={setQuickBook}
+                readOnly={readOnly}
+                onOpenDay={view === 'week' ? (d) => go({ view: 'day', date: d }) : undefined}
+              />
+            )}
 
-      {detail && <BookingDetailDialog booking={detail} onClose={() => setDetail(null)} onCancel={setCancelling} />}
+            {bookings.status === 'success' && items.length === 0 && (
+              <p className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
+                Nothing booked {view === 'day' ? 'this day' : view === 'week' ? 'this week' : 'this month'}.{' '}
+                {!readOnly && (
+                  <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={newBooking}>
+                    Book a room
+                  </button>
+                )}
+              </p>
+            )}
+          </section>
+
+          {/* The side panel: a month to jump around, and the booking you clicked underneath. */}
+          <aside className="hidden flex-col border-l lg:flex">
+            <div className="p-3">
+              <MiniCalendar
+                selected={date}
+                month={miniMonth}
+                today={now.date}
+                bookedDays={[...new Set((miniBookings.data ?? []).filter((b) => !b.cancelled).map((b) => dateOf(b.localStart)))]}
+                onSelect={(d) => go({ date: d })}
+                onMonthChange={setMiniMonth}
+              />
+            </div>
+            {detail && hasPanel && (
+              <BookingDetailPanel
+                item={detail}
+                booking={detailBooking.data ?? null}
+                error={detailError}
+                canBook={canCreate}
+                canCancel={canCancel}
+                onClose={() => setDetail(null)}
+                onCancel={setCancelling}
+              />
+            )}
+          </aside>
+        </div>
+      </Card>
+
+      {detail && !hasPanel && (
+        <BookingDetailDialog
+          item={detail}
+          booking={detailBooking.data ?? null}
+          error={detailError}
+          canBook={canCreate}
+          canCancel={canCancel}
+          onClose={() => setDetail(null)}
+          onCancel={setCancelling}
+        />
+      )}
 
       {cancelling && (
         <CancelBookingDialog token={token} booking={cancelling} onClose={() => setCancelling(null)} onCancelled={handleCancelled} />
@@ -336,6 +413,9 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         <QuickBookDialog
           token={token}
           window={quickBook}
+          slotMinutes={building.slotMinutes}
+          today={now.date}
+          firstBookableMinute={firstBookableMinute}
           onClose={() => setQuickBook(null)}
           onPick={(room, attendees, picked) => {
             setForm({ room, window: picked, attendees })

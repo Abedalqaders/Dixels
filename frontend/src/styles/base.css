@@ -28,6 +28,8 @@
   border-right: 1px solid var(--border-subtle);
   padding: var(--space-4);
   display: flex; flex-direction: column; gap: 4px;
+  /* Stays in view while the page scrolls; scrolls on its own if the window is short. */
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
 }
 .brand {
   display: flex; align-items: center;
@@ -70,6 +72,8 @@
   font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
   color: var(--ink-secondary); padding: var(--space-4) var(--space-3) 4px;
 }
+/* The first section label sits under the logo, which already leaves room above it. */
+.brand + .grp { padding-top: 0; }
 .spacer { flex: 1; }
 .acct { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-top: 1px solid var(--border-subtle); }
 .av {
@@ -97,6 +101,9 @@
 .tz { font-size: 13px; color: var(--ink-secondary); }
 .now { margin-left: auto; font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--ink-secondary); }
 .content { padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); }
+/* Pages built around one dense, scrollable thing (a calendar grid, a live search) want
+   headroom for it, not chrome above it — less padding and gap than a typical page. */
+.content[data-compact-top] { padding-top: var(--space-4); gap: var(--space-4); }
 
 /* ---------- Type ---------- */
 h1.pagetitle { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 600; }
@@ -152,6 +159,8 @@ h2.sectiontitle { font-family: var(--font-display); font-size: 20px; line-height
 .ctrl.mono { font-family: var(--font-mono); font-size: 14px; font-weight: 500; }
 .ctrl svg { width: 16px; height: 16px; color: var(--ink-secondary); flex: none; }
 .ctrl:focus, .ctrl:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* A field with a problem (see components/FieldError): red edge, the message sits under it. */
+.ctrl[aria-invalid="true"] { border-color: var(--danger-solid); }
 select.ctrl { appearance: none; cursor: pointer; }
 .pair { display: flex; align-items: center; gap: var(--space-2); }
 .pair .ctrl { flex: 1; }

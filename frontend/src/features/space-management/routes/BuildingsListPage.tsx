@@ -5,6 +5,9 @@ import { SearchIcon } from '@/components/icons'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
+import { Can } from '@/features/auth/components/Can'
+import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { HighlightedText } from '@/features/space-management/components/HighlightedText'
 import { Pager } from '@/components/Pager'
 import { AddNodeModal } from '@/features/space-management/components/AddNodeModal'
@@ -27,6 +30,12 @@ import { TreeSkeleton } from '@/components/LoadingSkeletons'
 export function BuildingsListPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
+  // The rules page saves with Edit and changes closures with the Overrides permissions; with
+  // none of them it opens read-only, so the menu says so.
+  const canEditRules = usePermission([Permissions.Buildings.Edit, Permissions.Overrides.Create, Permissions.Overrides.Delete])
+  // A building opens into its floors — a link only for someone who may see them, otherwise
+  // the name is just a name rather than a click that ends on "you can't see this".
+  const canOpenFloors = usePermission(HierarchyViewers.Floors)
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -121,7 +130,9 @@ export function BuildingsListPage() {
                   />
                   Show deleted
                 </label>
-                <button className="btn sm sec" onClick={() => setModal({ kind: 'building' })}>+ Building</button>
+                <Can permission={Permissions.Buildings.Create}>
+                  <button className="btn sm sec" onClick={() => setModal({ kind: 'building' })}>+ Building</button>
+                </Can>
               </div>
             </div>
 
@@ -140,27 +151,36 @@ export function BuildingsListPage() {
                   <div key={building.id} style={building.isDeleted ? { opacity: 0.55 } : undefined}>
                     <div className="node l1" data-level="building">
                       {ICONS.building}
-                      <Link to={`/admin/buildings/${building.id}/floors`} className="lbl2">
-                        <HighlightedText text={building.name} query={list.search} />
-                      </Link>
+                      {canOpenFloors ? (
+                        <Link to={`/admin/buildings/${building.id}/floors`} className="lbl2">
+                          <HighlightedText text={building.name} query={list.search} />
+                        </Link>
+                      ) : (
+                        <span className="lbl2">
+                          <HighlightedText text={building.name} query={list.search} />
+                        </span>
+                      )}
                       {building.buildingNumber && <span className="m">{building.buildingNumber}</span>}
                       {building.isDeleted && <span className="badge cancelled">Deleted</span>}
                       <span className="actions">
                         {building.isDeleted ? (
-                          <button
-                            className="rowbtn"
-                            title={`Restore ${building.name}`}
-                            aria-label={`Restore ${building.name}`}
-                            onClick={() => runAction(() => restoreBuilding(token, building.id), `${building.name} restored.`)}
-                          >
-                            <RestoreIcon />
-                          </button>
+                          <Can permission={Permissions.Buildings.Edit}>
+                            <button
+                              className="rowbtn"
+                              title={`Restore ${building.name}`}
+                              aria-label={`Restore ${building.name}`}
+                              onClick={() => runAction(() => restoreBuilding(token, building.id), `${building.name} restored.`)}
+                            >
+                              <RestoreIcon />
+                            </button>
+                          </Can>
                         ) : (
                           <RowActionsMenu
                             label={building.name}
                             actions={[
                               {
                                 label: 'Edit details',
+                                permission: Permissions.Buildings.Edit,
                                 icon: <DetailsIcon />,
                                 onClick: () =>
                                   setEditState({
@@ -172,12 +192,14 @@ export function BuildingsListPage() {
                                   }),
                               },
                               {
-                                label: 'Edit constraints',
+                                label: canEditRules ? 'Edit constraints' : 'View constraints',
+                                permission: Permissions.Buildings.Default,
                                 icon: <PencilIcon />,
                                 onClick: () => navigate(`/admin/constraints/building/${building.id}`),
                               },
                               {
                                 label: 'Delete',
+                                permission: Permissions.Buildings.Delete,
                                 icon: <TrashIcon />,
                                 destructive: true,
                                 onClick: () =>

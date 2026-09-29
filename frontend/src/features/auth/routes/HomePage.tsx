@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
-import { clearSignedOut, wasJustSignedOut } from '@/features/auth/signOutNotice'
+import { HOME_PATH } from '@/features/auth/landing'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
 import { CalendarIcon, ClockIcon } from '@/components/icons'
 import logo from '@/assets/logo.png'
@@ -19,19 +18,11 @@ import '@/styles/login.css'
 // same as clicking "Sign in with Google" anywhere else.
 export function HomePage() {
   const auth = useAuth()
-  const { landingPath } = useAuthRole()
-  // Read once, cleared in an effect rather than in the initializer: StrictMode calls the
-  // initializer twice in development, and the second call would find the flag gone.
-  const [signedOut] = useState(wasJustSignedOut)
   const [redirecting, setRedirecting] = useState(false)
-
-  useEffect(() => {
-    if (signedOut) clearSignedOut()
-  }, [signedOut])
 
   // Already signed in (e.g. opened the site again): go straight to their home page.
   if (auth.isAuthenticated) {
-    return <Navigate to={landingPath} replace />
+    return <Navigate to={HOME_PATH} replace />
   }
 
   if (redirecting) {
@@ -68,14 +59,6 @@ export function HomePage() {
 
       <div className="formwrap">
         <div className="logincard">
-          {signedOut && (
-            <p className="signedout" role="status">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12.5 10 17.5 19 7.5" />
-              </svg>
-              You're signed out. Sign in again anytime.
-            </p>
-          )}
           <h1>Sign in</h1>
           <p className="loginsub">Use your Email to continue.</p>
 

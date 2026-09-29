@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '@/features/auth/roles'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
+import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
 import logo from '@/assets/logo.png'
 
@@ -48,6 +50,20 @@ export function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthRole()
+  // Every item follows the user's ABP grants, not their role — the same permission its page
+  // (and API) needs, so taking a grant away takes the item with it.
+  const canViewBookings = usePermission(Permissions.Bookings.Default)
+  const canCreateBookings = usePermission(Permissions.Bookings.Create)
+  // Anyone who can see some level of the tree gets Hierarchy (read-only above their level).
+  const canHierarchy = usePermission(HierarchyViewers.Buildings)
+  const canSpaceTypes = usePermission(Permissions.SpaceTypes.Default)
+  const canUsers = usePermission(Permissions.Identity.Users)
+  const showBookings = canViewBookings || canCreateBookings
+  const showSpaceManagement = canHierarchy || canSpaceTypes
+  const showAdministration = showSpaceManagement || canUsers
+  // Section labels only earn their place when there are two sections to tell apart —
+  // an employee's menu stays a plain list.
+  const labelSections = showBookings && showAdministration
   const displayName = getDisplayName(auth.user)
   // Off-canvas drawer state - only visually relevant below the 860px
   // breakpoint in base.css; harmless (and unused by any visible control) on
@@ -84,28 +100,30 @@ export function Sidebar() {
         <img className="logo-img" src={logo} alt="Dixels" />
       </div>
 
-      {!isAdmin && (
-        <>
-          <NavItem
-            to="/my-calendar"
-            active={location.pathname === '/my-calendar'}
-            onNavigate={closeMobile}
-            icon={<CalendarLinesIcon />}
-          >
-            My calendar
-          </NavItem>
-          <NavItem
-            to="/find-space"
-            active={location.pathname === '/find-space'}
-            onNavigate={closeMobile}
-            icon={<SearchIcon />}
-          >
-            Find a space
-          </NavItem>
-        </>
+      {labelSections && <div className="grp">Bookings</div>}
+      {canViewBookings && (
+        <NavItem
+          to="/my-calendar"
+          active={location.pathname === '/my-calendar'}
+          onNavigate={closeMobile}
+          icon={<CalendarLinesIcon />}
+        >
+          My calendar
+        </NavItem>
+      )}
+      {canCreateBookings && (
+        <NavItem
+          to="/find-space"
+          active={location.pathname === '/find-space'}
+          onNavigate={closeMobile}
+          icon={<SearchIcon />}
+        >
+          Find a space
+        </NavItem>
       )}
 
-      {isAdmin && (
+      {labelSections && showAdministration && <div className="grp">Administration</div>}
+      {showSpaceManagement && (
         <>
           <button
             type="button"
@@ -120,34 +138,40 @@ export function Sidebar() {
           <div className={`navsubwrap${spaceManagementOpen ? ' open' : ''}`}>
             <div className="navsubinner">
               <div className="navsub">
-                <NavItem
-                  to="/admin/buildings"
-                  active={location.pathname === '/admin/buildings' || location.pathname.startsWith('/admin/buildings/')}
-                  onNavigate={closeMobile}
-                  icon={<BuildingDoorIcon />}
-                >
-                  Hierarchy
-                </NavItem>
-                <NavItem
-                  to="/admin/space-types"
-                  active={location.pathname === '/admin/space-types'}
-                  onNavigate={closeMobile}
-                  icon={<TagIcon />}
-                >
-                  Space types
-                </NavItem>
+                {canHierarchy && (
+                  <NavItem
+                    to="/admin/buildings"
+                    active={location.pathname === '/admin/buildings' || location.pathname.startsWith('/admin/buildings/')}
+                    onNavigate={closeMobile}
+                    icon={<BuildingDoorIcon />}
+                  >
+                    Hierarchy
+                  </NavItem>
+                )}
+                {canSpaceTypes && (
+                  <NavItem
+                    to="/admin/space-types"
+                    active={location.pathname === '/admin/space-types'}
+                    onNavigate={closeMobile}
+                    icon={<TagIcon />}
+                  >
+                    Space types
+                  </NavItem>
+                )}
               </div>
             </div>
           </div>
-          <NavItem
-            to="/admin/users"
-            active={location.pathname === '/admin/users'}
-            onNavigate={closeMobile}
-            icon={<PeopleIcon />}
-          >
-            Users
-          </NavItem>
         </>
+      )}
+      {canUsers && (
+        <NavItem
+          to="/admin/users"
+          active={location.pathname === '/admin/users'}
+          onNavigate={closeMobile}
+          icon={<PeopleIcon />}
+        >
+          Users
+        </NavItem>
       )}
 
       <div className="spacer"></div>

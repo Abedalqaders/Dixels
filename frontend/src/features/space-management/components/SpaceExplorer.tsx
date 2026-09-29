@@ -5,6 +5,8 @@ import { SearchIcon } from '@/components/icons'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getBuilding, getBuildings, getFloors } from '@/features/space-management/api/spaceManagementApi'
 import { useHierarchyChanged } from '@/features/space-management/hierarchyEvents'
+import { HierarchyViewers } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ICONS } from './spaceTypeIcons'
 import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
@@ -83,6 +85,9 @@ export function SpaceExplorer() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const location = useLocation()
+  // Someone who may only see buildings gets a flat list: no unfolding into floors the API
+  // would refuse, and a search that looks for buildings only.
+  const canSeeFloors = usePermission(HierarchyViewers.Floors)
 
   // The layout sits above the page routes, so useParams() here wouldn't see :buildingId —
   // read the selection straight off the path instead.
@@ -132,7 +137,7 @@ export function SpaceExplorer() {
     // In a tall tower the floor is what the admin remembers ("Sky Lobby", "L42"), so a search
     // also looks for floors — by their own name only, since building-name matches are
     // already listed above.
-    if (debouncedQuery) {
+    if (debouncedQuery && canSeeFloors) {
       getFloors(token, { filter: debouncedQuery, floorNameOnly: true, maxResultCount: FLOOR_HIT_LIMIT })
         .then((r) => {
           if (requestId !== buildingsRequest.current) return
@@ -143,7 +148,7 @@ export function SpaceExplorer() {
         })
         .catch(() => requestId === buildingsRequest.current && setFloorHits({ items: [], totalCount: 0 }))
     }
-  }, [token, debouncedQuery, reloadKey])
+  }, [token, debouncedQuery, reloadKey, canSeeFloors])
 
   function loadMoreBuildings() {
     const requestId = ++buildingsRequest.current
@@ -174,6 +179,7 @@ export function SpaceExplorer() {
   }
 
   function expand(id: string) {
+    if (!canSeeFloors) return
     setExpanded((e) => (e.has(id) ? e : new Set(e).add(id)))
   }
 
@@ -208,6 +214,7 @@ export function SpaceExplorer() {
   }, [token, activeBuildingId, activeIsListed, buildings.loading, pinned])
 
   function toggle(id: string) {
+    if (!canSeeFloors) return
     setExpanded((e) => {
       const next = new Set(e)
       if (next.has(id)) next.delete(id)
@@ -243,9 +250,9 @@ export function SpaceExplorer() {
           <SearchIcon />
           <input
             type="text"
-            placeholder="Find a building or floor…"
+            placeholder={canSeeFloors ? 'Find a building or floor…' : 'Find a building…'}
             autoComplete="off"
-            aria-label="Find a building or floor"
+            aria-label={canSeeFloors ? 'Find a building or floor' : 'Find a building'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -261,7 +268,7 @@ export function SpaceExplorer() {
         {!buildings.loading && !debouncedQuery && <span className="xcount">{buildings.totalCount}</span>}
       </Link>
 
-      {debouncedQuery && <p className="xsection">Buildings</p>}
+      {debouncedQuery && canSeeFloors && <p className="xsection">Buildings</p>}
       <ul className="xtree" aria-busy={buildings.loading}>
         {visibleBuildings.map((building) => {
           const isOpen = expanded.has(building.id)
@@ -270,18 +277,28 @@ export function SpaceExplorer() {
           return (
             <li key={building.id}>
               <div className={`xrow${isCurrent ? ' on' : ''}`}>
-                <button
-                  type="button"
-                  className={`xtoggle${isOpen ? ' open' : ''}`}
-                  aria-expanded={isOpen}
-                  aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${building.name}`}
-                  onClick={() => toggle(building.id)}
-                >
-                  <Chevron />
-                </button>
-                <Link to={scopeLink(building.id)} className="xlbl" title={building.name} aria-current={isCurrent ? 'page' : undefined}>
-                  {building.name}
-                </Link>
+                {canSeeFloors ? (
+                  <button
+                    type="button"
+                    className={`xtoggle${isOpen ? ' open' : ''}`}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${building.name}`}
+                    onClick={() => toggle(building.id)}
+                  >
+                    <Chevron />
+                  </button>
+                ) : (
+                  <span className="xtoggle" aria-hidden="true" />
+                )}
+                {canSeeFloors ? (
+                  <Link to={scopeLink(building.id)} className="xlbl" title={building.name} aria-current={isCurrent ? 'page' : undefined}>
+                    {building.name}
+                  </Link>
+                ) : (
+                  <span className="xlbl" title={building.name}>
+                    {building.name}
+                  </span>
+                )}
               </div>
 
               {isOpen && (
@@ -342,7 +359,7 @@ export function SpaceExplorer() {
         </button>
       )}
 
-      {debouncedQuery && (
+      {debouncedQuery && canSeeFloors && (
         <>
           <p className="xsection">Floors</p>
           {floorHits === null && <p className="xnote">Searching…</p>}

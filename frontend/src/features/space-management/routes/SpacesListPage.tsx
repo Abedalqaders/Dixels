@@ -5,6 +5,9 @@ import { SearchIcon } from '@/components/icons'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
+import { Can } from '@/features/auth/components/Can'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { SpaceTypeFilter } from '@/features/space-management/components/SpaceTypeFilter'
 import { HighlightedText } from '@/features/space-management/components/HighlightedText'
 import { Pager } from '@/components/Pager'
@@ -28,6 +31,9 @@ export function SpacesListPage() {
   const { buildingId = '', floorId = '' } = useParams()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
+  // The rules page saves with Edit and changes closures with the Overrides permissions; with
+  // none of them it opens read-only, so the menu says so.
+  const canEditRules = usePermission([Permissions.Spaces.Edit, Permissions.Overrides.Create, Permissions.Overrides.Delete])
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -138,13 +144,15 @@ export function SpacesListPage() {
                   />
                   Show deleted
                 </label>
-                <button
-                  className="btn sm sec"
-                  disabled={status !== 'success'}
-                  onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
-                >
-                  + Space
-                </button>
+                <Can permission={Permissions.Spaces.Create}>
+                  <button
+                    className="btn sm sec"
+                    disabled={status !== 'success'}
+                    onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
+                  >
+                    + Space
+                  </button>
+                </Can>
               </div>
             </div>
 
@@ -176,20 +184,23 @@ export function SpacesListPage() {
                     {space.isDeleted && <span className="badge cancelled">Deleted</span>}
                     <span className="actions">
                       {space.isDeleted ? (
-                        <button
-                          className="rowbtn"
-                          title={`Restore ${space.name}`}
-                          aria-label={`Restore ${space.name}`}
-                          onClick={() => runAction(() => restoreSpace(token, space.id), `${space.name} restored.`)}
-                        >
-                          <RestoreIcon />
-                        </button>
+                        <Can permission={Permissions.Spaces.Edit}>
+                          <button
+                            className="rowbtn"
+                            title={`Restore ${space.name}`}
+                            aria-label={`Restore ${space.name}`}
+                            onClick={() => runAction(() => restoreSpace(token, space.id), `${space.name} restored.`)}
+                          >
+                            <RestoreIcon />
+                          </button>
+                        </Can>
                       ) : (
                         <RowActionsMenu
                           label={space.name}
                           actions={[
                             {
                               label: 'Edit details',
+                              permission: Permissions.Spaces.Edit,
                               icon: <DetailsIcon />,
                               onClick: () =>
                                 setEditState({
@@ -201,12 +212,14 @@ export function SpacesListPage() {
                                 }),
                             },
                             {
-                              label: 'Edit constraints',
+                              label: canEditRules ? 'Edit constraints' : 'View constraints',
+                              permission: Permissions.Spaces.Default,
                               icon: <PencilIcon />,
                               onClick: () => navigate(`/admin/constraints/space/${space.id}`),
                             },
                             {
                               label: 'Delete',
+                              permission: Permissions.Spaces.Delete,
                               icon: <TrashIcon />,
                               destructive: true,
                               onClick: () =>

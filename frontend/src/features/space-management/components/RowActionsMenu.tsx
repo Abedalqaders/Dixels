@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { MoreHorizontalIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useCan } from '@/features/auth/permissions/usePermission'
+import type { PermissionRequirement } from '@/features/auth/permissions/usePermission'
 
 // A single three-dots button replacing what used to be 3-4 always-visible row icons —
 // decluttered per row, with the same actions moved into a shadcn dropdown. Radix renders
@@ -13,6 +15,9 @@ export interface RowMenuAction {
   onClick: () => void
   disabled?: boolean
   destructive?: boolean
+  /** What the action's API needs (a list means any of them). Left out of the menu for
+   * someone who hasn't got it; no permission means everyone sees it. */
+  permission?: PermissionRequirement
 }
 
 interface RowActionsMenuProps {
@@ -20,7 +25,12 @@ interface RowActionsMenuProps {
   actions: RowMenuAction[]
 }
 
-export function RowActionsMenu({ label, actions }: RowActionsMenuProps) {
+export function RowActionsMenu({ label, actions: allActions }: RowActionsMenuProps) {
+  const can = useCan()
+  const actions = allActions.filter((a) => can(a.permission))
+  // Nothing this user may do to the row: no empty menu behind a button.
+  if (actions.length === 0) return null
+
   return (
     // modal={false}: most actions open a dialog. A modal menu would still be handing focus
     // back to its trigger as that dialog opens, and the two fight over focus and pointer

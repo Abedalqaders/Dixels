@@ -5,9 +5,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { addDays, nowInZone } from '@/lib/time/buildingTime'
-import { cancelBooking, getMyBookableBuilding, getMyBookings, searchAvailability } from '@/features/bookings/api/bookingsApi'
+import { cancelBooking, getBooking, getMyBookableBuilding, getMyBookings, searchAvailability } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto } from '@/features/bookings/api/bookingsApi'
 import { addMonths, gridMonthFor, monthGrid, startOfWeek } from '@/features/calendar/calendarDates'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
+import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
+import { granted, WithPermissions } from '@/test/permissions'
 import { MyCalendarPage } from './MyCalendarPage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
@@ -17,6 +20,7 @@ vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
     ...actual,
     getMyBookableBuilding: vi.fn(),
     getMyBookings: vi.fn(),
+    getBooking: vi.fn(),
     cancelBooking: vi.fn(),
     searchAvailability: vi.fn(),
     previewBooking: vi.fn(() => new Promise(() => {})),
@@ -43,6 +47,8 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 60,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  days: [0, 1, 2, 3, 4, 5, 6],
+  hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f3', name: 'Level 3', floorNumber: 3, spaces: [room] }],
 }
 
@@ -67,6 +73,12 @@ function booking(id: string, title: string, from: string, to: string, day = tomo
   }
 }
 
+/** What the page gets: the light list for the calendar, and each booking in full once opened. */
+function serve(list: BookingDto[]) {
+  vi.mocked(getMyBookings).mockResolvedValue(list)
+  vi.mocked(getBooking).mockImplementation(async (_token, id) => list.find((b) => b.id === id)!)
+}
+
 /** The request a month grid makes: its first Sunday to the Saturday after its last day. */
 function gridRange(month: string): [string, string, string] {
   const { start, weeks } = monthGrid(month)
@@ -76,11 +88,15 @@ function gridRange(month: string): [string, string, string] {
 const callsFor = (month: string) =>
   vi.mocked(getMyBookings).mock.calls.filter((c) => c[1] === gridRange(month)[1] && c[2] === gridRange(month)[2]).length
 
-function renderPage(url = `/my-calendar?view=week&date=${tomorrow}`) {
+const EMPLOYEE = granted(Permissions.Bookings.Default, Permissions.Bookings.Create, Permissions.Bookings.Cancel)
+
+function renderPage(url = `/my-calendar?view=week&date=${tomorrow}`, permissions: PermissionsValue = EMPLOYEE) {
   render(
-    <MemoryRouter initialEntries={[url]}>
-      <MyCalendarPage />
-    </MemoryRouter>,
+    <WithPermissions value={permissions}>
+      <MemoryRouter initialEntries={[url]}>
+        <MyCalendarPage />
+      </MemoryRouter>
+    </WithPermissions>,
   )
 }
 
@@ -90,7 +106,8 @@ describe('MyCalendarPage', () => {
     vi.mocked(useAuth).mockReturnValue({ user: { access_token: 't' } } as unknown as ReturnType<typeof useAuth>)
     vi.mocked(getMyBookableBuilding).mockResolvedValue(building)
     vi.mocked(getMyBookings).mockReset()
-    vi.mocked(getMyBookings).mockResolvedValue([booking('b1', 'Design review', '10:00', '11:00')])
+    vi.mocked(getBooking).mockReset()
+    serve([booking('b1', 'Design review', '10:00', '11:00')])
     vi.mocked(cancelBooking).mockReset()
   })
 
@@ -147,8 +164,8 @@ describe('MyCalendarPage', () => {
 
     await user.click(await screen.findByRole('button', { name: /Design review, 10:00–11:00/ }))
     const detail = screen.getByRole('dialog')
-    expect(within(detail).getByText('Upcoming')).toBeInTheDocument()
-    await user.click(within(detail).getByRole('button', { name: 'Cancel booking' }))
+    expect(await within(detail).findByText('Upcoming')).toBeInTheDocument()
+    await user.click(await within(detail).findByRole('button', { name: 'Cancel booking' }))
 
     const confirm = screen.getByRole('alertdialog')
     await user.type(within(confirm).getByLabelText(/Reason/), 'Moved online')
@@ -167,7 +184,7 @@ describe('MyCalendarPage', () => {
     renderPage()
 
     await user.click(await screen.findByRole('button', { name: /Design review/ }))
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel booking' }))
+    await user.click(await within(screen.getByRole('dialog')).findByRole('button', { name: 'Cancel booking' }))
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel booking' }))
 
     expect(await within(screen.getByRole('alertdialog')).findByRole('alert')).toHaveTextContent('already started')
@@ -175,7 +192,7 @@ describe('MyCalendarPage', () => {
 
   it('folds a busy day into "+N more" in the month view and opens that day', async () => {
     const user = userEvent.setup()
-    vi.mocked(getMyBookings).mockResolvedValue([
+    serve([
       booking('1', 'One', '08:00', '09:00'),
       booking('2', 'Two', '09:00', '10:00'),
       booking('3', 'Three', '10:00', '11:00'),
@@ -184,10 +201,13 @@ describe('MyCalendarPage', () => {
     ])
     renderPage(`/my-calendar?view=month&date=${tomorrow}`)
 
-    await user.click(await screen.findByRole('button', { name: '+2 more' }))
+    await user.click(await screen.findByRole('button', { name: '2 more…' }))
 
     expect(await screen.findByRole('button', { name: /Five, 12:00–13:00/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toMatch(new RegExp(`^\\w+day ${Number(tomorrow.slice(8))} `))
+    // Day view: the weekday, then "Month D, YYYY".
+    const heading = screen.getByRole('heading', { level: 2 }).textContent ?? ''
+    expect(heading).toMatch(/^\w+day/)
+    expect(heading).toContain(` ${Number(tomorrow.slice(8))}, `)
   })
 
   it('offers the free rooms for a new booking and opens the form for the one picked', async () => {
@@ -302,12 +322,12 @@ describe('MyCalendarPage', () => {
 
   it('marks a series booking, says how it repeats, and cancels this and the following ones', async () => {
     const user = userEvent.setup()
-    const series = {
+    const series: BookingDto = {
       ...booking('b1', 'Stand-up', '09:00', '09:15'),
       seriesId: 's1',
       recurrence: { frequency: 1, interval: 1, weekdays: [0, 1, 2, 3, 4], monthlyRepeat: 0, endDate: '2026-12-31' },
     }
-    vi.mocked(getMyBookings).mockResolvedValue([series])
+    serve([series])
     vi.mocked(cancelBooking).mockResolvedValue([series, { ...series, id: 'b2' }, { ...series, id: 'b3' }])
     renderPage()
 
@@ -316,8 +336,8 @@ describe('MyCalendarPage', () => {
     await user.click(block)
 
     const detail = screen.getByRole('dialog')
-    expect(within(detail).getByText(/^Occurs every Sun–Thu until Thu 31 Dec/)).toBeInTheDocument()
-    await user.click(within(detail).getByRole('button', { name: 'Cancel booking' }))
+    expect(await within(detail).findByText(/^Occurs every Sun–Thu until Thu 31 Dec/)).toBeInTheDocument()
+    await user.click(await within(detail).findByRole('button', { name: 'Cancel booking' }))
 
     const confirm = screen.getByRole('alertdialog', { name: 'Cancel recurring booking?' })
     expect(within(confirm).getByLabelText('This event')).toBeChecked()
@@ -330,7 +350,7 @@ describe('MyCalendarPage', () => {
 
   it('shows a booking an admin cancelled, struck through, with why', async () => {
     const user = userEvent.setup()
-    vi.mocked(getMyBookings).mockResolvedValue([
+    serve([
       { ...booking('b1', 'Design review', '10:00', '11:00'), status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'Rules changed: Open 09:00–10:00 only' },
     ])
     renderPage()
@@ -338,7 +358,7 @@ describe('MyCalendarPage', () => {
     await user.click(await screen.findByRole('button', { name: /^Cancelled: Design review, 10:00–11:00/ }))
 
     const detail = screen.getByRole('dialog')
-    expect(within(detail).getByText('Cancelled by admin')).toBeInTheDocument()
+    expect(await within(detail).findByText('Cancelled by admin')).toBeInTheDocument()
     expect(within(detail).getByRole('status')).toHaveTextContent('An administrator cancelled this booking — Rules changed: Open 09:00–10:00 only.')
     expect(within(detail).queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
   })
@@ -352,13 +372,30 @@ describe('MyCalendarPage', () => {
 
   it('still shows the calendar, read-only, when the building was removed', async () => {
     vi.mocked(getMyBookableBuilding).mockResolvedValue({ ...building, isRemoved: true, floors: [] })
-    vi.mocked(getMyBookings).mockResolvedValue([
+    serve([
       { ...booking('b1', 'Design review', '10:00', '11:00'), status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'The building was removed' },
     ])
     renderPage()
 
     expect(await screen.findByText('Riverside HQ is no longer available.')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /^Cancelled: Design review/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'New booking' })).not.toBeInTheDocument()
+  })
+
+  it('opens a booking without offering Cancel to someone without Bookings.Cancel', async () => {
+    const user = userEvent.setup()
+    renderPage(undefined, granted(Permissions.Bookings.Default, Permissions.Bookings.Create))
+
+    await user.click(await screen.findByRole('button', { name: /Design review, 10:00–11:00/ }))
+    const detail = screen.getByRole('dialog')
+    expect(await within(detail).findByText('Upcoming')).toBeInTheDocument()
+    expect(within(detail).queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
+  it("shows bookings but offers no way to book to someone without Bookings.Create", async () => {
+    renderPage(undefined, granted(Permissions.Bookings.Default, Permissions.Bookings.Cancel))
+
+    expect(await screen.findByRole('button', { name: /Design review, 10:00–11:00, Meeting Room 301/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'New booking' })).not.toBeInTheDocument()
   })
 })
