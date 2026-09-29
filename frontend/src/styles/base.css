@@ -273,3 +273,7 @@ select.ctrl { appearance: none; cursor: pointer; }
 /* A labelled checkbox ("Show deleted", "Remember me"). Used by admin pages and the login
    page alike, so it lives here rather than in login.css. */
 .chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
+
+/* Last guard against sideways scrolling on a phone: an element that is still too wide is
+   clipped instead of widening the page. clip (not hidden) keeps position: sticky working. */
+body { overflow-x: clip; }

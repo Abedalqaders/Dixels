@@ -48,7 +48,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         role="search"
         aria-label="Find a free space"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-2 items-end gap-3 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr]"
+        className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
           <Label htmlFor="fs-date">Date</Label>

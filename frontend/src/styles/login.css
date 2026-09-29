@@ -83,7 +83,7 @@
 }
 .outwrap { min-height: 340px; display: flex; align-items: center; justify-content: center; padding: 48px; }
 .outcard {
-  width: 440px; text-align: center; background: var(--surface-raised);
+  width: 440px; max-width: 100%; text-align: center; background: var(--surface-raised);
   border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card); padding: 40px 32px;
 }

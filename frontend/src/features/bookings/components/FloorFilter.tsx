@@ -30,7 +30,7 @@ export function FloorFilter({ floors, spaces, value, onChange }: FloorFilterProp
         Floor
       </Label>
       <Select value={value || ALL} onValueChange={(v) => onChange(v === ALL ? '' : v)}>
-        <SelectTrigger id="fs-floor" className="w-56">
+        <SelectTrigger id="fs-floor" className="w-full sm:w-56">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

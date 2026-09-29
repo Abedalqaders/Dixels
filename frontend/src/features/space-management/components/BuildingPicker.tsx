@@ -92,13 +92,13 @@ export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabe
           role="combobox"
           aria-expanded={open}
           aria-label={ariaLabel}
-          className={cn('w-56 justify-between font-normal', !value && 'text-muted-foreground', className)}
+          className={cn('w-full justify-between font-normal sm:w-56', !value && 'text-muted-foreground', className)}
         >
           <span className="truncate">{label}</span>
           <ChevronsUpDownIcon className="opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-0" align="start">
+      <PopoverContent className="w-[min(16rem,calc(100vw-2rem))] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search buildings…" value={query} onValueChange={setQuery} />
           <CommandList>
