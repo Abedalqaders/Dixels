@@ -156,7 +156,7 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
       <div
         ref={trackRef}
         className={cn(
-          'relative h-6 overflow-hidden rounded-md',
+          'relative h-6 overflow-hidden rounded-md pointer-coarse:h-9',
           pick && 'cursor-crosshair touch-pan-y outline-none select-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
         )}
         style={OUTSIDE_HOURS}

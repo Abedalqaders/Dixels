@@ -277,3 +277,11 @@ select.ctrl { appearance: none; cursor: pointer; }
 /* Last guard against sideways scrolling on a phone: an element that is still too wide is
    clipped instead of widening the page. clip (not hidden) keeps position: sticky working. */
 body { overflow-x: clip; }
+
+/* Touch screens: every small hand-styled control is at least 44x44, the size a fingertip
+   can hit reliably. (shadcn buttons get the same through pointer-coarse: in button.tsx.) */
+@media (pointer: coarse) {
+  .rowbtn, .xtoggle, .xpanelbtn, .out, .segbtn, .chipset button, .menubtn {
+    min-width: 44px; min-height: 44px;
+  }
+}
