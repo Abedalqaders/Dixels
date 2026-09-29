@@ -1,8 +1,7 @@
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useParams } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { RequirePermission } from '@/features/auth/components/RequirePermission'
-import { Flows, HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
-import type { HierarchyLevel } from '@/features/auth/permissions/permissionNames'
+import { constraintsRequirement, ROUTE_REQUIREMENTS } from './routeRequirements'
 import { HOME_PATH } from '@/features/auth/landing'
 import { CallbackPage } from '@/features/auth/routes/CallbackPage'
 import { LandingPage } from '@/features/auth/routes/LandingPage'
@@ -27,7 +26,7 @@ import { MyCalendarPage } from '@/features/calendar/routes/MyCalendarPage'
 function ConstraintsRoute() {
   const { level } = useParams<{ level: string }>()
   const known = level === 'building' || level === 'floor' || level === 'space'
-  const permission = known ? hierarchyPermissions(level as HierarchyLevel).Default : Permissions.Buildings.Default
+  const permission = constraintsRequirement(level)
   return (
     <RequirePermission
       name={permission}
@@ -60,7 +59,7 @@ export const router = createBrowserRouter(
           path="/my-calendar"
           element={
             <RequirePermission
-              name={Permissions.Bookings.Default}
+              name={ROUTE_REQUIREMENTS['/my-calendar']}
               deniedTitle="You don't have access to My calendar"
               deniedDetail="Your account doesn't have permission to view bookings. Ask an administrator if you think it should."
             >
@@ -72,7 +71,7 @@ export const router = createBrowserRouter(
           path="/find-space"
           element={
             <RequirePermission
-              name={Flows.FindSpace}
+              name={ROUTE_REQUIREMENTS['/find-space']}
               deniedTitle="You can't book spaces"
               deniedDetail="Your account doesn't have permission to create bookings. Ask an administrator if you think it should."
             >
@@ -86,7 +85,7 @@ export const router = createBrowserRouter(
           // Open to anyone who can see some level of the tree: the buildings above are read-only
           // to them, and each button still needs its own permission.
           <RequirePermission
-            name={HierarchyViewers.Buildings}
+            name={ROUTE_REQUIREMENTS['/admin/buildings']}
             frame="shell"
             deniedTitle="You don't have access to the hierarchy"
             deniedDetail="Viewing buildings, floors or spaces is needed to open it. Ask an administrator to add Buildings, Floors or Spaces to your role."
@@ -100,7 +99,7 @@ export const router = createBrowserRouter(
           path="/admin/buildings/:buildingId/floors"
           element={
             <RequirePermission
-              name={HierarchyViewers.Floors}
+              name={ROUTE_REQUIREMENTS['/admin/buildings/:buildingId/floors']}
               frame="main"
               deniedTitle="You can't see this building's floors"
               deniedDetail="Viewing floors (or the spaces on them) is needed to open this page. Ask an administrator to add Floors or Spaces to your role."
@@ -113,7 +112,7 @@ export const router = createBrowserRouter(
           path="/admin/buildings/:buildingId/floors/:floorId/spaces"
           element={
             <RequirePermission
-              name={HierarchyViewers.Spaces}
+              name={ROUTE_REQUIREMENTS['/admin/buildings/:buildingId/floors/:floorId/spaces']}
               frame="main"
               deniedTitle="You can't see this floor's spaces"
               deniedDetail="Viewing spaces is needed to open this page. Ask an administrator to add Spaces to your role."
@@ -130,7 +129,7 @@ export const router = createBrowserRouter(
         path="/admin/space-types"
         element={
           <RequirePermission
-            name={Permissions.SpaceTypes.Default}
+            name={ROUTE_REQUIREMENTS['/admin/space-types']}
             frame="shell"
             deniedTitle="You can't manage space types"
             deniedDetail="Viewing space types is needed to open this page. Ask an administrator to add Space types to your role."
@@ -144,7 +143,7 @@ export const router = createBrowserRouter(
         path="/admin/users"
         element={
           <RequirePermission
-            name={Permissions.Identity.Users}
+            name={ROUTE_REQUIREMENTS['/admin/users']}
             frame="shell"
             deniedTitle="You can't manage users"
             deniedDetail="Viewing users is needed to open this page. Ask an administrator to add Identity management → User management to your role."

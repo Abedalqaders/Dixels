@@ -105,6 +105,16 @@ describe('FindSpacePage', () => {
     })
   })
 
+  it('shows availability but offers no way to book: no Book button, the bars are not pickers', async () => {
+    renderPage(undefined, [Permissions.Bookings.Default])
+
+    expect(await screen.findByRole('heading', { name: /1 space free/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Book Meeting Room 201' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Availability only/)).toBeInTheDocument()
+    // Nothing on the page reacts to a press when booking isn't allowed: no dialog opens.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('searches for the window in the URL and lists the free rooms with how long they stay free', async () => {
     renderPage()
 
@@ -242,17 +252,5 @@ describe('FindSpacePage', () => {
     expect(screen.getByRole('link', { name: 'My calendar' })).toHaveAttribute('href', '/my-calendar')
     expect(screen.queryByRole('search')).not.toBeInTheDocument()
     expect(searchAvailability).not.toHaveBeenCalled()
-  })
-})
-
-describe('FindSpacePage without Bookings.Create', () => {
-  it('shows availability but offers no way to book: no Book button, the bars are not pickers', async () => {
-    renderPage(undefined, [Permissions.Bookings.Default])
-
-    expect(await screen.findByRole('heading', { name: /1 space free/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Book Meeting Room 201' })).not.toBeInTheDocument()
-    expect(screen.getByText(/Availability only/)).toBeInTheDocument()
-    // Nothing on the page reacts to a press when booking isn't allowed: no dialog opens.
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
