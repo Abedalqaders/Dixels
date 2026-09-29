@@ -269,3 +269,7 @@ select.ctrl { appearance: none; cursor: pointer; }
 @media (max-width: 767px) {
   .app { flex-direction: column; }
 }
+
+/* A labelled checkbox ("Show deleted", "Remember me"). Used by admin pages and the login
+   page alike, so it lives here rather than in login.css. */
+.chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
