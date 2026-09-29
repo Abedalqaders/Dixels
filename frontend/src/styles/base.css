@@ -245,12 +245,11 @@ select.ctrl { appearance: none; cursor: pointer; }
 .scrim.show { display: block; }
 
 /* ---------- Layout helpers ---------- */
-@media (max-width: 980px) {
+/* Below lg (src/lib/breakpoints.ts): the sidebar is a drawer and pages get the full width.
+   Tablets included: a docked sidebar plus the explorer left too little room. */
+@media (max-width: 1023px) {
   .content { padding: var(--space-5); }
   .top { padding: var(--space-3) var(--space-5); }
-}
-
-@media (max-width: 860px) {
   .app { flex-direction: column; }
   .menubtn { display: flex; }
   .side {

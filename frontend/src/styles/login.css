@@ -98,7 +98,7 @@
 .outbtns { display: flex; gap: 12px; }
 .outbtns .btn { flex: 1; justify-content: center; }
 
-@media (max-width: 860px) {
+@media (max-width: 1023px) {
   /* minmax(0, …): otherwise the 380px sign-in card sets the column's minimum width and the
      page scrolls sideways on a phone. */
   .page { grid-template-columns: minmax(0, 1fr); }
@@ -107,7 +107,7 @@
   .formwrap { padding: 32px 24px; }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 639px) {
   .brandpanel { padding: 32px 20px; }
   .formwrap { padding: 24px 16px; }
   .logincard { padding: 24px; }

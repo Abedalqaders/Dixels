@@ -11,6 +11,7 @@ import { TextSkeleton } from '@/components/LoadingSkeletons'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { up } from '@/lib/breakpoints'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { addDays, dateOf, formatDate, fromMinutes, nextSlot, nowInZone, timeOf, toMinutes } from '@/lib/time/buildingTime'
@@ -135,10 +136,10 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
   const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const now = useZonedNow(building.timezone)
-  const wide = useMediaQuery('(min-width: 860px)')
+  const wide = useMediaQuery(up('md'))
   // Room for the side panel (mini calendar + a booking's details); below it, details open
   // in a dialog. Falls back to the dialog where there's no matchMedia to ask.
-  const hasPanel = useMediaQuery('(min-width: 1024px)', false)
+  const hasPanel = useMediaQuery(up('lg'), false)
 
   // ?view=day|week|month&date=YYYY-MM-DD — a refresh or a shared link lands on the same
   // page. The view falls back to the one used last; phones only get the Day view.
