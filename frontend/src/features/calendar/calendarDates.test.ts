@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths, clock12, gridMonthFor, isValidIsoDate, monthGrid, rangeLabel, shiftDate, startOfWeek, visibleRange } from './calendarDates'
+import { addMonths, gridMonthFor, isValidIsoDate, monthGrid, rangeLabel, shiftDate, startOfWeek, visibleRange } from './calendarDates'
 
 describe('calendarDates', () => {
   it('starts weeks on Sunday', () => {
@@ -51,15 +51,5 @@ describe('calendarDates', () => {
     expect(rangeLabel('week', '2026-09-30')).toBe('27 Sep – 3 Oct 2026')
     expect(rangeLabel('week', '2026-12-30')).toBe('27 Dec 2026 – 2 Jan 2027')
     expect(rangeLabel('month', '2026-09-29')).toBe('September 2026')
-  })
-})
-
-describe('clock12', () => {
-  it('reads like a wall clock: whole hours without minutes, noon and midnight as 12', () => {
-    expect(clock12('09:00')).toBe('9 AM')
-    expect(clock12('14:20')).toBe('2:20 PM')
-    expect(clock12('12:00')).toBe('12 PM')
-    expect(clock12('00:30')).toBe('12:30 AM')
-    expect(clock12('24:00')).toBe('12 AM')
   })
 })

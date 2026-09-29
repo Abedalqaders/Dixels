@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach } from 'vitest'
 import { cleanup, configure } from '@testing-library/react'
+import { clearToasts } from '@/components/Toast'
 
 // findBy*/waitFor give up after 1s by default. The first test in a page's file pays for
 // the page's imports and first render, which under a full parallel run can take longer
@@ -11,6 +12,8 @@ configure({ asyncUtilTimeout: 4000 })
 // Testing Library's own auto-cleanup — which detects globals — never registers.
 // Do it explicitly instead, once, for every test file: without it, renders (and
 // the effects/listeners they mount) leak across tests within the same file.
+// Toasts live in a module-level store, so they are cleared here too.
 afterEach(() => {
   cleanup()
+  clearToasts()
 })

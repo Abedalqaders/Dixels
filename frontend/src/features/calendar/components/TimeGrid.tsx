@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils'
 import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
-import { clock12, dayOfMonth, shortWeekday, weekday } from '@/features/calendar/calendarDates'
+import { dayOfMonth, shortWeekday, weekday } from '@/features/calendar/calendarDates'
+import { formatClock } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { DAY_MINUTES, HOUR_PX, itemMinutes, itemsByDay, layoutDay, openWindow } from '@/features/calendar/dayLayout'
 import { dragHint } from '@/features/calendar/durationLimits'
@@ -187,7 +188,7 @@ export function TimeGrid({
                 style={{ top: top(h * 60) }}
               >
                 {/* Midnight has no label; an hour the "now" marker sits on top of steps aside. */}
-                {h === 0 || (showsToday && Math.abs(h * 60 - nowMinute) < 20) ? '' : clock12(fromMinutes(h * 60))}
+                {h === 0 || (showsToday && Math.abs(h * 60 - nowMinute) < 20) ? '' : formatClock(fromMinutes(h * 60))}
               </span>
             ))}
             {showsToday && (
@@ -198,7 +199,7 @@ export function TimeGrid({
                 )}
                 style={{ top: top(nowMinute) }}
               >
-                {clock12(fromMinutes(nowMinute))}
+                {formatClock(fromMinutes(nowMinute))}
                 {!dayView && <span className="size-1.5 rounded-full bg-foreground" />}
               </span>
             )}
@@ -495,7 +496,7 @@ const DayColumn = memo(function DayColumn({
             </span>
             {showTime && (
               <span className={cn('truncate text-[11px]', b.cancelled ? 'text-muted-foreground' : 'text-brand/80')}>
-                {clock12(timeOf(b.localStart))}
+                {formatClock(timeOf(b.localStart))}
               </span>
             )}
             {showPlace && <span className="truncate text-[11px] text-muted-foreground">{b.location}</span>}

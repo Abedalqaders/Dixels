@@ -11,16 +11,16 @@ import { formatWhen } from './ClosuresList'
 
 describe('formatWhen', () => {
   it('shows a single date for a same-day midnight-to-midnight closure', () => {
-    expect(formatWhen('2026-12-25T00:00:00', '2026-12-26T00:00:00')).toBe('Dec 25')
+    expect(formatWhen('2026-12-25T00:00:00', '2026-12-26T00:00:00')).toBe('25 Dec')
   })
 
   it('shows a date range for a multi-day midnight-to-midnight closure', () => {
-    expect(formatWhen('2026-12-25T00:00:00', '2026-12-28T00:00:00')).toBe('Dec 25 – Dec 27')
+    expect(formatWhen('2026-12-25T00:00:00', '2026-12-28T00:00:00')).toBe('25 Dec – 27 Dec')
   })
 
   it('falls back to full date+time when the window has real time-of-day precision', () => {
     const result = formatWhen('2026-10-05T09:00:00', '2026-10-05T13:00:00')
-    expect(result).toContain('Oct 5')
+    expect(result).toContain('5 Oct')
     expect(result).toContain('→')
   })
 

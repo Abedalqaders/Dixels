@@ -849,4 +849,39 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingAlreadyStarted);
     }
+
+    // ---- Edge cases added with the referential-integrity pass ----
+
+    [Fact]
+    public async Task A_weekly_rule_that_matches_no_date_is_refused_not_a_crash()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var weekly = Daily(s.Space.Id, 1);
+        // Only the weekday after the start date, but the series ends on the start date itself.
+        weekly.Recurrence = new RecurrenceDto
+        {
+            Frequency = RecurrenceFrequency.Weekly, Interval = 1,
+            Weekdays = new[] { (int)Tomorrow.AddDays(1).DayOfWeek }, EndDate = Day(0),
+        };
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.PreviewSeriesAsync(weekly));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.SeriesNothingToBook);
+    }
+
+    [Fact]
+    public async Task Replaying_a_key_whose_booking_was_cancelled_is_refused()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var key = Guid.NewGuid().ToString();
+        var created = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, key: key));
+        await _bookingsAppService.CancelAsync(created.Id, new CancelBookingDto());
+
+        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, key: key)));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
+        (await CountBookingsAsync()).ShouldBe(1);
+    }
 }

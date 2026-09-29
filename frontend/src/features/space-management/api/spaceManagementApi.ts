@@ -86,6 +86,10 @@ export interface ResolvedConstraintsDto {
 
 // ---- Buildings ------------------------------------------------------------
 
+/** The icon a space type shows (IconKey on the server), in C# declaration order. */
+export const IconKey = { MeetingRoom: 0, FocusPod: 1, Desk: 2, Generic: 3 } as const
+export type IconKey = (typeof IconKey)[keyof typeof IconKey]
+
 /** Whether one person may hold two bookings at the same time in a building (OwnOverlapPolicy on the server). */
 export const OwnOverlapPolicy = { Allow: 0, Warn: 1, Block: 2 } as const
 export type OwnOverlapPolicy = (typeof OwnOverlapPolicy)[keyof typeof OwnOverlapPolicy]
@@ -116,6 +120,10 @@ export interface CreateBuildingDto {
   maxDurationMinutes: number
   maxHorizonDays: number
   minLeadMinutes: number
+  /** How far ahead recurring bookings may run; 90 days when left out. */
+  maxSeriesHorizonDays?: number | null
+  /** Whether one person may hold two bookings at once here; Warn when left out. */
+  ownOverlapPolicy?: OwnOverlapPolicy
 }
 
 export interface UpdateBuildingDto {
@@ -375,21 +383,17 @@ export function restoreSpace(token: string, id: string) {
 export interface SpaceTypeDto {
   id: string
   name: string
-  // Numeric enum ordinal (MeetingRoom=0, FocusPod=1, Desk=2, Generic=3), matching the
-  // backend's default System.Text.Json enum serialization (no string-enum converter is
-  // configured on the host) — not yet verified against a live server, since the one
-  // running instance available this session predates these endpoints.
-  iconKey: number
+  iconKey: IconKey
 }
 
 export interface CreateSpaceTypeDto {
   name: string
-  iconKey: number
+  iconKey: IconKey
 }
 
 export interface UpdateSpaceTypeDto {
   name: string
-  iconKey: number
+  iconKey: IconKey
 }
 
 export function getSpaceTypes(token: string) {

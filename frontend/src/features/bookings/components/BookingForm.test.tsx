@@ -31,6 +31,7 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 30,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  ownOverlapPolicy: 1,
   days: [0, 1, 2, 3, 4, 5, 6],
   hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f-1', name: 'Level 1', floorNumber: 1, spaces: [space] }],

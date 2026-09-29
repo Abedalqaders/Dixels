@@ -4,6 +4,12 @@
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:44334'
 
+// A production bundle must say where its API is; silently talking to localhost is a
+// deployment mistake that would otherwise only show up as "Couldn't reach the server".
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL must be set for a production build (see .env.example).')
+}
+
 export interface ValidationErrorInfo {
   message: string
   members?: string[]
@@ -73,16 +79,31 @@ export class ApiError extends Error {
 }
 
 let onUnauthorized: (() => void) | undefined
+let refreshToken: (() => Promise<string | null>) | undefined
 
 /**
- * What to do when the API answers 401 — the session is gone (token expired or revoked,
- * account removed). The auth layer sets it once; this module still knows nothing about OIDC.
+ * What to do when the API answers 401 and a token renew could not rescue the request — the
+ * session is gone (token revoked, account removed). The auth layer sets it once; this module
+ * still knows nothing about OIDC.
  */
 export function setUnauthorizedHandler(handler: (() => void) | undefined) {
   onUnauthorized = handler
 }
 
-export async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+/**
+ * How to get a fresh access token when the API answers 401 — normally a silent renew
+ * through the OIDC library. Resolves null when that is not possible; the request is then
+ * treated as a dead session (see setUnauthorizedHandler). Set by the auth layer.
+ */
+export function setTokenRefresher(refresher: (() => Promise<string | null>) | undefined) {
+  refreshToken = refresher
+}
+
+export function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
+  return send<T>(path, token, init, false)
+}
+
+async function send<T>(path: string, token: string, init: RequestInit | undefined, retried: boolean): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -100,7 +121,15 @@ export async function request<T>(path: string, token: string, init?: RequestInit
     throw new ApiError(0, null)
   }
 
-  if (response.status === 401) onUnauthorized?.()
+  if (response.status === 401) {
+    // An expired token is the usual reason. Try once to renew it quietly and repeat the
+    // request; only when that fails (or the fresh token is refused too) is the session gone.
+    if (!retried) {
+      const fresh = await refreshToken?.().catch(() => null)
+      if (fresh && fresh !== token) return send<T>(path, fresh, init, true)
+    }
+    onUnauthorized?.()
+  }
 
   if (!response.ok) {
     let body: unknown = null

@@ -21,7 +21,7 @@ describe('MonthGrid', () => {
   it('shows each chip as title and start time, and folds the rest into "N more…"', () => {
     render(<MonthGrid date="2026-10-01" items={four} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} />)
 
-    expect(screen.getByRole('button', { name: /One, 09:00–09:30, Room/ })).toHaveTextContent('One9 AM')
+    expect(screen.getByRole('button', { name: /One, 09:00–09:30, Room/ })).toHaveTextContent('One09:00')
     expect(screen.queryByRole('button', { name: /Four, / })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '1 more…' })).toBeInTheDocument()
   })

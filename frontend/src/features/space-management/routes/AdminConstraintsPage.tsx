@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { Sidebar } from '@/components/Sidebar'
-import { useAsync } from '@/hooks/useAsync'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
+import { ConfirmDialog, useConfirm } from '@/components/ConfirmDialog'
 import { useUnsavedChangesWarning } from '@/features/space-management/hooks/useUnsavedChangesWarning'
-import { Toast, useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { EffectiveValueStrip } from '@/features/space-management/components/EffectiveValueStrip'
 import type { EffectiveItem, EffectiveSource } from '@/features/space-management/components/EffectiveValueStrip'
 import { BuildingLevelFields } from '@/features/space-management/components/BuildingLevelFields'
@@ -53,7 +55,6 @@ import type {
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
-import '@/styles/login.css'
 import { FormSkeleton } from '@/components/LoadingSkeletons'
 
 type Level = 'building' | 'floor' | 'space'
@@ -137,7 +138,8 @@ export function AdminConstraintsPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
-  const { toast, showToast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirm()
+  const { showToast } = useToast()
   const [warnings, setWarnings] = useState<string[]>([])
 
   const level = params.level as Level
@@ -155,7 +157,7 @@ export function AdminConstraintsPage() {
   const listOverrides = (scope: OverrideScope, scopeId: string) =>
     canViewClosures ? getOverrides(token, scope, scopeId) : Promise.resolve({ items: [] as AvailabilityOverrideDto[] })
 
-  const { status, data, error, refetch } = useAsync(async (): Promise<PageData> => {
+  const { status, data, error, refetch } = useApiQuery(queryKeys.hierarchy.constraints(level, id, canViewClosures), async (): Promise<PageData> => {
     if (level === 'building') {
       const building = await getBuilding(token, id)
       const days = operatingDaysFromApi(building.days)
@@ -341,20 +343,26 @@ export function AdminConstraintsPage() {
         parentMaxDurationSource: floorOwnMaxDuration ? 'Floor' : 'Building',
       },
     }
-  }, [level, id, token, canViewClosures])
+  })
 
   const [buildingDraft, setBuildingDraft] = useState<BuildingDraft | null>(null)
   const [floorDraft, setFloorDraft] = useState<FloorDraft | null>(null)
   const [spaceDraft, setSpaceDraft] = useState<SpaceDraft | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (!data) return
+  // Drafts follow the server data: seeded on first load, re-seeded only when `data` itself
+  // changes (another level opened, or someone else saved and the 409 path reloaded). The
+  // cache hands back the same object for an unchanged refetch, so a background refresh or
+  // a silent token renew never touches what is being edited. Done during render rather
+  // than in an effect so the first paint already has the drafts.
+  const [seededFrom, setSeededFrom] = useState<PageData | null>(null)
+  if (data && data !== seededFrom) {
+    setSeededFrom(data)
     setBuildingDraft(data.building?.draft ?? null)
     setFloorDraft(data.floor?.draft ?? null)
     setSpaceDraft(data.space?.draft ?? null)
     setWarnings([])
-  }, [data])
+  }
 
   const isDirty =
     (!!data?.building && !!buildingDraft && !buildingDraftEquals(buildingDraft, data.building.draft)) ||
@@ -362,6 +370,9 @@ export function AdminConstraintsPage() {
     (!!data?.space && !!spaceDraft && !spaceDraftEquals(spaceDraft, data.space.draft))
 
   useUnsavedChangesWarning(isDirty)
+  // In-app navigation (the sidebar, Back, the explorer) while dirty: ask first. The data
+  // router holds the navigation until proceed() or reset() is called.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => isDirty && currentLocation.pathname !== nextLocation.pathname)
 
   function handleSaveError(err: unknown) {
     if (err instanceof ApiError && err.status === 409) {
@@ -473,6 +484,13 @@ export function AdminConstraintsPage() {
   }
 
   async function handleDeleteOverride(overrideId: string) {
+    const yes = await confirm({
+      title: 'Remove this closure?',
+      description: 'The space becomes bookable again for that time.',
+      confirmLabel: 'Remove closure',
+      destructive: true,
+    })
+    if (!yes) return
     try {
       await deleteOverride(token, overrideId)
       showToast('Closure removed.')
@@ -485,9 +503,7 @@ export function AdminConstraintsPage() {
   const displayName = data?.building?.name ?? data?.floor?.name ?? data?.space?.name ?? ''
 
   function handleBack() {
-    if (isDirty && !window.confirm('Discard unsaved changes and go back to Space management?')) {
-      return
-    }
+    // Unsaved edits are caught by the blocker above, whichever way the admin leaves.
     navigate('/admin/buildings#hierarchy')
   }
 
@@ -602,7 +618,17 @@ export function AdminConstraintsPage() {
         </div>
       </div>
       {impactPrompt}
-      <Toast toast={toast} />
+      {confirmDialog}
+      {blocker.state === 'blocked' && (
+        <ConfirmDialog
+          title="Discard unsaved changes?"
+          description="The rules you changed here haven't been saved."
+          confirmLabel="Discard changes"
+          cancelLabel="Keep editing"
+          destructive
+          onAnswer={(discard) => (discard ? blocker.proceed() : blocker.reset())}
+        />
+      )}
     </div>
   )
 }

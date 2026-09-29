@@ -1,0 +1,18 @@
+# Root-level ignores. Each sub-project keeps its own .gitignore too.
+
+# Runtime logs written by the backend (Serilog) wherever it was started from
+Logs/
+logs.txt
+
+# Node
+node_modules/
+
+# Local secrets and certificates (see backend/.env.example)
+.env
+*.pfx
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

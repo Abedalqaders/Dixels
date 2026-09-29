@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Data;
 using Dixels.Identity;
 using Volo.Abp;
 using Volo.Abp.Data;
@@ -44,6 +45,13 @@ public class EmployeeUserDataSeedContributor : IDataSeedContributor, ITransientD
 
     public async Task SeedAsync(DataSeedContext context)
     {
+        // Demo accounts only: ABP runs every IDataSeedContributor, so without this guard a
+        // production migrator run would create three users with a well-known password.
+        if (context?[RiversideDemoDataSeedContributor.EnabledPropertyName] is not true)
+        {
+            return;
+        }
+
         // ABP runs seed contributors in no guaranteed order, and the accounts below need the
         // "employee" role to exist first — so ensure it here. Idempotent, so it doesn't matter
         // that the role seeder also runs on its own.

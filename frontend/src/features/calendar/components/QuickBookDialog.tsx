@@ -4,7 +4,8 @@ import { ChevronRight, Minus, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { useAsync } from '@/hooks/useAsync'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { formatDate, fromMinutes, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
@@ -49,14 +50,14 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
   const start = fromMinutes(w.start)
   const end = fromMinutes(w.end)
 
-  const results = useAsync(
+  const results = useApiQuery(
+    queryKeys.bookings.search({ date: w.date, start, end, people }),
     () =>
       searchAvailability(token, {
         localStart: toLocalDateTime(w.date, start),
         localEnd: toLocalDateTime(w.date, end),
         attendees: people,
       }),
-    [token, w.date, start, end, people],
     { keepPreviousData: true },
   )
 

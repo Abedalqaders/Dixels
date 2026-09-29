@@ -2,14 +2,15 @@ import { useAuth } from 'react-oidc-context'
 import { SearchIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Sidebar } from '@/components/Sidebar'
 import { TablePagination } from '@/components/TablePagination'
-import { Toast, useToast } from '@/components/Toast'
-import { useAsync } from '@/hooks/useAsync'
+import { useToast } from '@/components/Toast'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import {
   ApiError,
@@ -66,7 +67,7 @@ interface UserRow {
 export function AdminUsersPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
   // Assigning a building goes through ABP's user update: without it the list is read-only.
   const canAssign = usePermission(Permissions.Identity.UsersUpdate)
@@ -76,9 +77,10 @@ export function AdminUsersPage() {
   const roleFilter = list.getFilter('role')
 
   // Every role name in the system, for the filter — independent of the page/search/filters below.
-  const roleNames = useAsync(() => getRoleNames(token), [token])
+  const roleNames = useApiQuery(queryKeys.users.roleNames(), () => getRoleNames(token))
 
-  const { status, data, error, isRefreshing, refetch } = useAsync(
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(
+    queryKeys.users.list({ search: list.search, buildingId: buildingFilter, role: roleFilter, page: list.page, pageSize: list.pageSize }),
     async () => {
       const usersResult = await getUsers(token, {
         filter: list.search || undefined,
@@ -127,7 +129,6 @@ export function AdminUsersPage() {
       })
       return { rows, totalCount: usersResult.totalCount }
     },
-    [token, list.search, buildingFilter, roleFilter, list.page, list.pageSize],
     { keepPreviousData: true },
   )
 
@@ -163,7 +164,6 @@ export function AdminUsersPage() {
 
           <Card className="gap-0 rounded-2xl py-0 shadow-md">
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
-              <CardTitle>All users</CardTitle>
               <CardAction className="flex flex-wrap items-center gap-2">
                 <div className="relative">
                   <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -302,7 +302,6 @@ export function AdminUsersPage() {
       </div>
 
       {impactPrompt}
-      <Toast toast={toast} />
     </div>
   )
 }

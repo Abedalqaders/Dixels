@@ -21,6 +21,7 @@ public static class DixelsDomainErrorCodes
     public const string ReasonDetailTooLong = Prefix + "ReasonDetailTooLong";
     public const string SpaceTypeNameAlreadyExists = Prefix + "SpaceTypeNameAlreadyExists";
     public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
+    public const string ParentIsDeleted = Prefix + "ParentIsDeleted";
 
     public const string InvalidBuildingId = "Dixels:Users:InvalidBuildingId";
 

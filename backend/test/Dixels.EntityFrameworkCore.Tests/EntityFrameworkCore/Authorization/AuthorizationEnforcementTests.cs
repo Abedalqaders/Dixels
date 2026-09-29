@@ -179,4 +179,25 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
         refusal.ShouldNotBeNull();
         refusal.Code.ShouldBe(AbpAuthorizationErrorCodes.GivenPolicyHasNotGranted);
     }
+
+    // A role granted only Create (or only Delete) at a level must be able to do exactly that:
+    // the internal "can manage this building" seam must not demand Edit on top.
+    [Fact]
+    public async Task Create_and_delete_need_only_their_own_permission()
+    {
+        ActAs(DixelsPermissions.Spaces.Default, DixelsPermissions.Spaces.Create);
+        await ShouldAllow(() => _spaces.CreateAsync(new CreateSpaceDto { FloorId = Missing, Name = "Desk", SpaceTypeId = Missing, Capacity = 1 }));
+
+        ActAs(DixelsPermissions.Spaces.Default, DixelsPermissions.Spaces.Delete);
+        await ShouldAllow(() => _spaces.DeleteAsync(Missing));
+
+        ActAs(DixelsPermissions.Floors.Create);
+        await ShouldAllow(() => _floors.CreateAsync(new CreateFloorDto { BuildingId = Missing, Name = "Level 1" }));
+
+        ActAs(DixelsPermissions.Floors.Delete);
+        await ShouldAllow(() => _floors.DeleteAsync(Missing));
+
+        ActAs(DixelsPermissions.Buildings.Delete);
+        await ShouldAllow(() => _buildings.DeleteAsync(Missing));
+    }
 }

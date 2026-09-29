@@ -13,7 +13,7 @@ export interface SignInState {
 // There's no in-app login form: "signing in" means redirecting the whole
 // browser tab to the backend's own login page, and coming back once it's
 // done. signinRedirect() is what kicks that redirect off — also when a
-// session ends mid-use (a 401 clears it, see SessionExpiryRedirect).
+// session ends mid-use (a 401 clears it, see SessionGuard).
 export function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const location = useLocation()

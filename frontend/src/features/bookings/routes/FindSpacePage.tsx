@@ -7,9 +7,9 @@ import { Card } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { Toast, useToast } from '@/components/Toast'
-import { useAsync } from '@/hooks/useAsync'
-import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus'
+import { useToast } from '@/components/Toast'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { dateOf, formatDate, fromMinutes, nowInZone, timeOf, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
@@ -26,7 +26,6 @@ import { dayAxis } from '@/features/bookings/dayAxis'
 import { suggestWindow } from '@/features/bookings/suggestSlot'
 import type { Slot } from '@/features/bookings/suggestSlot'
 import { readLastDuration } from '@/features/bookings/preferences'
-import { useBookingsChanged } from '@/features/bookings/bookingEvents'
 import type { DayBarPick } from '@/features/bookings/components/DayBar'
 import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/LoadingSkeletons'
 
@@ -41,10 +40,9 @@ export function FindSpacePage() {
   const token = auth.user?.access_token ?? ''
   // keepPreviousData: a refetch on returning to the tab swaps in the fresh building (rules,
   // floors, spaces) in place, instead of dropping back to the skeleton and losing the search.
-  const { status, data: building, error, refetch } = useAsync(() => getMyBookableBuilding(token), [token], {
+  const { status, data: building, error } = useApiQuery(queryKeys.bookings.myBuilding(), () => getMyBookableBuilding(token), {
     keepPreviousData: true,
   })
-  useRefetchOnFocus(refetch)
 
   return (
     <TooltipProvider>
@@ -81,7 +79,7 @@ export function FindSpacePage() {
 }
 
 function SpaceSearch({ token, building }: { token: string; building: BookableBuildingDto }) {
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [booking, setBooking] = useState<{ room: SpaceAvailabilityDto; slot: Slot } | null>(null)
   const [defaults] = useState(() => suggestWindow(building))
@@ -125,19 +123,13 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   // Debounced as a string key: equal searches compare equal, and typing "12" in People
   // doesn't search for 1 and then 12.
   const searchKey = useDebouncedValue(input ? JSON.stringify(input) : '', 250)
-  const results = useAsync(
-    () =>
-      searchKey
-        ? searchAvailability(token, JSON.parse(searchKey) as SearchAvailabilityInput)
-        : Promise.resolve(null),
-    [token, searchKey],
+  // Keyed by the search itself. A booking made or cancelled anywhere invalidates every
+  // bookings query (so the day bars refresh), and coming back to the tab re-reads a stale one.
+  const results = useApiQuery(
+    queryKeys.bookings.search(searchKey),
+    () => (searchKey ? searchAvailability(token, JSON.parse(searchKey) as SearchAvailabilityInput) : Promise.resolve(null)),
     { keepPreviousData: true },
   )
-
-  // Made here or cancelled on My calendar: either way the day bars are out of date.
-  useBookingsChanged(results.refetch)
-  // Someone else's booking, or an admin's rule change, while this tab was in the background.
-  useRefetchOnFocus(results.refetch)
 
   function handleBooked(created: BookingDto, count = 1) {
     setBooking(null)
@@ -338,7 +330,6 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
         />
       )}
 
-      <Toast toast={toast} />
     </>
   )
 }

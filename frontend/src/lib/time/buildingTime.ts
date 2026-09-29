@@ -1,3 +1,5 @@
+import { formatDay } from './format'
+
 // Wall-clock helpers for a building's timezone. Bookings are always entered and shown in
 // the *building's* local time — never the browser's — so someone in London booking a
 // room in Amman sees Amman's 09:00. The server does the real local→UTC conversion; the
@@ -80,17 +82,9 @@ export function nextSlot(minutes: number, slotMinutes: number): number {
   return Math.ceil(minutes / slotMinutes) * slotMinutes
 }
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-/**
- * "Tue 29 Sep" — a calendar date for display, independent of the browser's zone. Built
- * from fixed names rather than Intl's "short" month, which varies by ICU version
- * ("Sep" vs "Sept") and would drift from the backend's messages.
- */
+/** "Tue 29 Sep" — see lib/time/format for every date style; kept as the short name pages already use. */
 export function formatDate(date: IsoDate): string {
-  const d = new Date(`${date}T00:00:00Z`)
-  return `${DAY_NAMES[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH_NAMES[d.getUTCMonth()]}`
+  return formatDay(date, 'short')
 }
 
 /** "HH:mm" out of the API's offset-free local datetime ("2026-09-29T10:00:00"). */

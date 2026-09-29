@@ -76,35 +76,40 @@ type State =
  * one loads (`isRefreshing`). `version` bumps force a reload after `cache.clear()`.
  */
 export function useMonthBookings(cache: MonthBookingsCache, month: IsoDate, version: number, prefetch: Prefetch = 'none') {
-  const initial = cache.peek(month)
-  const [state, setState] = useState<State>(
-    initial ? { status: 'success', data: initial, error: undefined } : { status: 'loading', data: undefined, error: undefined },
-  )
-  const [isRefreshing, setRefreshing] = useState(!initial)
+  const key = `${month}|${version}`
+  const hit = cache.peek(month)
+  const [shown, setShown] = useState<{ key: string; state: State }>(() => ({
+    key,
+    state: hit ? { status: 'success', data: hit, error: undefined } : { status: 'loading', data: undefined, error: undefined },
+  }))
+
+  // A new month (or a cleared cache), decided during render rather than in an effect:
+  // already loaded → shown at once; otherwise the last month stays on screen while it loads.
+  if (shown.key !== key) {
+    setShown({ key, state: hit ? { status: 'success', data: hit, error: undefined } : shown.state })
+  }
 
   useEffect(() => {
     let alive = true
-    const hit = cache.peek(month)
-    if (hit) {
-      setState({ status: 'success', data: hit, error: undefined })
-      setRefreshing(false)
-    } else {
-      setRefreshing(true)
+    if (!hit) {
       cache
         .get(month)
-        .then((data) => alive && setState({ status: 'success', data, error: undefined }))
+        .then((data) => alive && setShown({ key, state: { status: 'success', data, error: undefined } }))
         .catch((error: unknown) => {
-          if (alive) setState({ status: 'error', data: undefined, error: error instanceof Error ? error : new Error(String(error)) })
+          if (alive) {
+            setShown({ key, state: { status: 'error', data: undefined, error: error instanceof Error ? error : new Error(String(error)) } })
+          }
         })
-        .finally(() => alive && setRefreshing(false))
     }
     cache.prefetchAround(month, prefetch)
     return () => {
       alive = false
     }
-  }, [cache, month, version, prefetch])
+  }, [cache, month, key, hit, prefetch])
 
-  return { ...state, isRefreshing }
+  // A request for this month is in flight (or about to be) — unless it already failed.
+  const isRefreshing = !hit && !(shown.key === key && shown.state.status === 'error')
+  return { ...shown.state, isRefreshing }
 }
 
 /** A cache for this page's lifetime, plus a `refresh()` that empties it and reloads what's on screen. */
@@ -114,6 +119,8 @@ export function useMonthBookingsCache(token: string) {
   // so nothing downstream knows what a booking is.
   const tokenRef = useRef(token)
   const [cache] = useState(
+    // The loader runs later, per request — this is not a render-time read of the ref.
+    // oxlint-disable-next-line react/refs
     () => new MonthBookingsCache((from, to) => getMyBookings(tokenRef.current, from, to).then((list) => list.map(bookingItem))),
   )
   useEffect(() => {

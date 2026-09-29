@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useFieldErrors } from '@/components/FieldError'
+import { TimezonePicker } from '@/components/TimezonePicker'
 import {
   ApiError,
   createBuilding,
@@ -112,7 +113,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
-        <form ref={f.formRef} onSubmit={handleSubmit} noValidate>
+        <form {...f.form} onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>{titles[state.kind]}</DialogTitle>
             {state.kind !== 'building' && <DialogDescription>Added under {state.parentName}.</DialogDescription>}
@@ -152,17 +153,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
                 <Label htmlFor="add-timezone">
                   Timezone<span className="text-destructive">*</span>
                 </Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger id="add-timezone" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Asia/Amman">Asia/Amman</SelectItem>
-                    <SelectItem value="Europe/London">Europe/London</SelectItem>
-                    <SelectItem value="America/New_York">America/New_York</SelectItem>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                  </SelectContent>
-                </Select>
+                <TimezonePicker id="add-timezone" value={timezone} onChange={setTimezone} />
               </div>
             )}
 
