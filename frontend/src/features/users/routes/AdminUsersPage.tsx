@@ -164,11 +164,11 @@ export function AdminUsersPage() {
 
           <Card className="gap-0 rounded-2xl py-0 shadow-md">
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
-              <CardAction className="flex flex-wrap items-center gap-2">
-                <div className="relative">
+              <CardAction className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                <div className="relative w-full sm:w-auto">
                   <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="w-64 rounded-full border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
+                    className="w-full rounded-full sm:w-64 border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
                     placeholder="Search by name, username or email…"
                     aria-label="Search users"
                     autoComplete="off"
@@ -187,7 +187,7 @@ export function AdminUsersPage() {
                   value={roleFilter || ALL_ROLES}
                   onValueChange={(v) => list.setFilter('role', v === ALL_ROLES ? '' : v)}
                 >
-                  <SelectTrigger className="w-40" aria-label="Filter by role">
+                  <SelectTrigger className="w-full sm:w-40" aria-label="Filter by role">
                     <SelectValue placeholder="All roles" />
                   </SelectTrigger>
                   <SelectContent>

@@ -11,6 +11,8 @@ import { useToast } from '@/components/Toast'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { dateOf, formatDate, fromMinutes, nowInZone, timeOf, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { ApiError, getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
@@ -79,6 +81,8 @@ export function FindSpacePage() {
 }
 
 function SpaceSearch({ token, building }: { token: string; building: BookableBuildingDto }) {
+  // The page opens with Bookings.Default; booking from it (Book, drag on a bar) needs Create.
+  const canBook = usePermission(Permissions.Bookings.Create)
   const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [booking, setBooking] = useState<{ room: SpaceAvailabilityDto; slot: Slot } | null>(null)
@@ -224,9 +228,11 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             </div>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              {free.length === 0
-                ? "Try another time — or drag on a room's bar below to book any free time it has."
-                : "Book for this time, or drag on a room's bar to pick a different time."}
+              {!canBook
+                ? "Availability only: your account can't make bookings."
+                : free.length === 0
+                  ? "Try another time — or drag on a room's bar below to book any free time it has."
+                  : "Book for this time, or drag on a room's bar to pick a different time."}
             </p>
 
             {free.length > 0 && (
@@ -241,12 +247,14 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                         busy={room.busy}
                         selection={selection}
                         label={freeLabel(room)}
-                        pick={pickerFor(room)}
+                        pick={canBook ? pickerFor(room) : undefined}
                       />
                       <span className="text-sm font-medium">{freeLabel(room)}</span>
-                      <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => bookSearched(room)}>
-                        Book
-                      </Button>
+                      {canBook && (
+                        <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => bookSearched(room)}>
+                          Book
+                        </Button>
+                      )}
                     </ResultRow>
                   </li>
                 ))}
@@ -273,7 +281,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                             busy={room.busy}
                             selection={selection}
                             label={room.violations[0]?.shortMessage ?? ''}
-                            pick={pickerFor(room)}
+                            pick={canBook ? pickerFor(room) : undefined}
                           />
                           <Tooltip>
                             <TooltipTrigger asChild>

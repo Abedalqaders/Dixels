@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '@/features/auth/roles'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
-import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { up } from '@/lib/breakpoints'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
 import logo from '@/assets/logo.png'
 
@@ -53,23 +55,58 @@ export function Sidebar() {
   // Every item follows the user's ABP grants, not their role — the same permission its page
   // (and API) needs, so taking a grant away takes the item with it.
   const canViewBookings = usePermission(Permissions.Bookings.Default)
-  const canCreateBookings = usePermission(Permissions.Bookings.Create)
+  // Find a space needs both the read and the create grant (see Flows).
+  const canFindSpace = usePermission(Flows.FindSpace)
   // Anyone who can see some level of the tree gets Hierarchy (read-only above their level).
   const canHierarchy = usePermission(HierarchyViewers.Buildings)
   const canSpaceTypes = usePermission(Permissions.SpaceTypes.Default)
   const canUsers = usePermission(Permissions.Identity.Users)
-  const showBookings = canViewBookings || canCreateBookings
+  const showBookings = canViewBookings || canFindSpace
   const showSpaceManagement = canHierarchy || canSpaceTypes
   const showAdministration = showSpaceManagement || canUsers
   // Section labels only earn their place when there are two sections to tell apart —
   // an employee's menu stays a plain list.
   const labelSections = showBookings && showAdministration
   const displayName = getDisplayName(auth.user)
-  // Off-canvas drawer state - only visually relevant below the 860px
-  // breakpoint in base.css; harmless (and unused by any visible control) on
-  // wider screens where the sidebar is always shown.
+  // Below lg (src/lib/breakpoints.ts) the sidebar is a drawer behind the menu button.
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLElement>(null)
+
+  // Closed by any navigation (a link, Back, a redirect) and by widening past lg, where the
+  // sidebar is docked again. Decided during render, not in an effect: nothing to flash.
+  const docked = useMediaQuery(up('lg'), false)
+  const [seenPath, setSeenPath] = useState(location.pathname)
+  if (seenPath !== location.pathname) {
+    setSeenPath(location.pathname)
+    if (mobileOpen) setMobileOpen(false)
+  }
+  if (docked && mobileOpen) setMobileOpen(false)
+
+  // While open it behaves like a dialog: Escape closes it, the page behind doesn't scroll,
+  // focus starts on the first item and goes back to the menu button when it closes.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const drawer = drawerRef.current
+    const menuButton = menuButtonRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    drawer?.querySelector<HTMLElement>('a, button')?.focus()
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      // Only take focus back if it was in the drawer (or lost) — not from a page that
+      // already moved it somewhere on purpose.
+      const active = document.activeElement
+      if (!active || active === document.body || drawer?.contains(active)) menuButton?.focus()
+    }
+  }, [mobileOpen])
 
   // Hierarchy/Space types collapse under one "Space management" toggle. `null` means
   // "not explicitly toggled yet" — it then follows whether the current route is one of the
@@ -91,11 +128,19 @@ export function Sidebar() {
 
   return (
     <>
-      <button className="menubtn" aria-label="Toggle menu" onClick={() => setMobileOpen((v) => !v)}>
+      <button
+        ref={menuButtonRef}
+        type="button"
+        className="menubtn"
+        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={mobileOpen}
+        aria-controls="app-sidebar"
+        onClick={() => setMobileOpen((v) => !v)}
+      >
         <MenuIcon />
       </button>
-      <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} />
-      <nav className={`side${mobileOpen ? ' open' : ''}`}>
+      <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} aria-hidden="true" />
+      <nav id="app-sidebar" ref={drawerRef} aria-label="Main" className={`side${mobileOpen ? ' open' : ''}`}>
       <div className="brand">
         <img className="logo-img" src={logo} alt="Dixels" />
       </div>
@@ -111,7 +156,7 @@ export function Sidebar() {
           My calendar
         </NavItem>
       )}
-      {canCreateBookings && (
+      {canFindSpace && (
         <NavItem
           to="/find-space"
           active={location.pathname === '/find-space'}
@@ -183,8 +228,10 @@ export function Sidebar() {
           <span className="rl">{isAdmin ? 'Administrator' : 'Employee'}</span>
         </span>
         <button
+          type="button"
           className="out"
           title="Sign out"
+          aria-label="Sign out"
           onClick={() => navigate('/signing-out')}
         >
           <SignOutIcon />

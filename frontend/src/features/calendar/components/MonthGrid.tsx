@@ -109,7 +109,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                 {onQuickBook && d >= today && (
                   <button
                     type="button"
-                    className="grid size-6 flex-none place-items-center rounded-full text-muted-foreground opacity-0 hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                    className="grid size-6 flex-none place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100 pointer-coarse:size-9 pointer-coarse:opacity-100"
                     aria-label={`Book a room on ${d}`}
                     onClick={(e) => {
                       e.stopPropagation()

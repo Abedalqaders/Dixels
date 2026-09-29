@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { Sidebar } from './Sidebar'
@@ -29,6 +30,13 @@ function renderAs(permissions: PermissionsValue, role = 'employee') {
 const link = (name: string) => screen.queryByRole('link', { name })
 
 describe('Sidebar', () => {
+  it('hides Find a space from someone who may create bookings but not view them (the page reads first)', () => {
+    renderAs(granted(Permissions.Bookings.Create))
+
+    expect(link('Find a space')).not.toBeInTheDocument()
+    expect(link('My calendar')).not.toBeInTheDocument()
+  })
+
   it('splits someone who can both book and administer into Bookings and Administration', () => {
     renderAs(granted(...BOOKER, ...ADMIN), 'admin')
 
@@ -86,5 +94,52 @@ describe('Sidebar', () => {
 
     expect(link('My calendar')).toBeInTheDocument()
     expect(link('Find a space')).not.toBeInTheDocument()
+  })
+})
+
+describe('Sidebar drawer (below lg)', () => {
+  const menuButton = () => screen.getByRole('button', { name: /menu/ })
+
+  it('says whether it is open, and which element it controls', async () => {
+    renderAs(granted(...BOOKER))
+
+    expect(menuButton()).toHaveAttribute('aria-expanded', 'false')
+    expect(menuButton()).toHaveAttribute('aria-controls', 'app-sidebar')
+    await userEvent.click(menuButton())
+    expect(menuButton()).toHaveAttribute('aria-expanded', 'true')
+    expect(menuButton()).toHaveAccessibleName('Close menu')
+  })
+
+  it('moves focus into the drawer, and Escape closes it and gives focus back to the button', async () => {
+    renderAs(granted(...BOOKER))
+
+    await userEvent.click(menuButton())
+    expect(link('My calendar')).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(menuButton()).toHaveAttribute('aria-expanded', 'false')
+    expect(menuButton()).toHaveFocus()
+  })
+
+  it('stops the page behind it from scrolling, and lets it scroll again once closed', async () => {
+    renderAs(granted(...BOOKER))
+
+    await userEvent.click(menuButton())
+    expect(document.body.style.overflow).toBe('hidden')
+    await userEvent.keyboard('{Escape}')
+    expect(document.body.style.overflow).toBe('')
+  })
+
+  it('closes when a page is picked from it', async () => {
+    renderAs(granted(...BOOKER))
+
+    await userEvent.click(menuButton())
+    await userEvent.click(link('Find a space')!)
+    expect(menuButton()).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('gives the sign-out button a name', () => {
+    renderAs(granted(...BOOKER))
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 })

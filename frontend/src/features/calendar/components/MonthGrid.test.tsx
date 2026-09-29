@@ -39,3 +39,12 @@ describe('MonthGrid', () => {
     expect(onOpenDay).toHaveBeenCalledWith('2026-10-06')
   })
 })
+
+describe('MonthGrid on touch screens', () => {
+  it('shows the "+" to book a day without needing hover, at a finger-sized target', () => {
+    render(<MonthGrid date="2026-10-01" items={[]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} onQuickBook={vi.fn()} />)
+
+    const plus = screen.getByRole('button', { name: 'Book a room on 2026-10-06' })
+    expect(plus).toHaveClass('pointer-coarse:opacity-100', 'pointer-coarse:size-9')
+  })
+})

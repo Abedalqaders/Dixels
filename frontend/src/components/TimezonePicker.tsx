@@ -64,7 +64,7 @@ export function TimezonePicker({ id, value, onChange, ariaLabel = 'Timezone', cl
           <ChevronsUpDownIcon className="opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 sm:min-w-64" align="start">
         <Command>
           <CommandInput placeholder="Search a city or region…" />
           <CommandList>

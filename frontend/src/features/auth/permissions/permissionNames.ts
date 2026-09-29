@@ -69,3 +69,12 @@ export function hierarchyPermissions(level: HierarchyLevel) {
   if (level === 'floor') return Permissions.Floors
   return Permissions.Spaces
 }
+
+/**
+ * Pages whose API needs more than one grant. Find a space reads the building and searches
+ * with Bookings.Default (the availability service's class-level check) and books with
+ * Bookings.Create — someone holding only Create would open the page and get a 403.
+ */
+export const Flows = {
+  FindSpace: { allOf: [Permissions.Bookings.Default, Permissions.Bookings.Create] },
+} as const

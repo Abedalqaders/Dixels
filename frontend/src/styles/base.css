@@ -29,7 +29,7 @@
   padding: var(--space-4);
   display: flex; flex-direction: column; gap: 4px;
   /* Stays in view while the page scrolls; scrolls on its own if the window is short. */
-  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; height: 100dvh; overflow-y: auto;
 }
 .brand {
   display: flex; align-items: center;
@@ -245,13 +245,14 @@ select.ctrl { appearance: none; cursor: pointer; }
 .scrim.show { display: block; }
 
 /* ---------- Layout helpers ---------- */
-@media (max-width: 980px) {
+/* Below lg (src/lib/breakpoints.ts): the sidebar is a drawer and pages get the full width.
+   Tablets included: a docked sidebar plus the explorer left too little room. */
+@media (max-width: 1023px) {
   .content { padding: var(--space-5); }
   .top { padding: var(--space-3) var(--space-5); }
-}
-
-@media (max-width: 860px) {
-  .app { flex-direction: column; }
+  /* One band at the top for the fixed menu button, on every page, instead of each page
+     padding itself around it. */
+  .app { padding-top: 56px; }
   .menubtn { display: flex; }
   .side {
     position: fixed; top: 0; bottom: 0; left: 0; width: 260px; max-width: 82vw; z-index: 100;
@@ -261,7 +262,26 @@ select.ctrl { appearance: none; cursor: pointer; }
   }
   .side.open { transform: translateX(0); visibility: visible; box-shadow: var(--shadow-overlay); transition: transform .2s ease; }
   .main { width: 100%; }
-  .top { padding-left: calc(var(--space-3) + 44px); }
-  .content:first-child { padding-top: calc(var(--space-5) + 44px); }
   .modal .row2 { flex-direction: column; }
+}
+
+/* Below md the explorer (where there is one) stacks above the page instead of beside it. */
+@media (max-width: 767px) {
+  .app { flex-direction: column; }
+}
+
+/* A labelled checkbox ("Show deleted", "Remember me"). Used by admin pages and the login
+   page alike, so it lives here rather than in login.css. */
+.chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
+
+/* Last guard against sideways scrolling on a phone: an element that is still too wide is
+   clipped instead of widening the page. clip (not hidden) keeps position: sticky working. */
+body { overflow-x: clip; }
+
+/* Touch screens: every small hand-styled control is at least 44x44, the size a fingertip
+   can hit reliably. (shadcn buttons get the same through pointer-coarse: in button.tsx.) */
+@media (pointer: coarse) {
+  .rowbtn, .xtoggle, .xpanelbtn, .out, .segbtn, .chipset button, .menubtn {
+    min-width: 44px; min-height: 44px;
+  }
 }

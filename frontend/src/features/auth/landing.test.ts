@@ -23,6 +23,10 @@ describe('landingFor', () => {
     expect(landingFor(grants(Permissions.Spaces.Default))).toBe('/admin/buildings')
   })
 
+  it('needs both booking grants to land on Find a space', () => {
+    expect(landingFor(grants(Permissions.Bookings.Create))).toBeNull()
+  })
+
   it('has nowhere to land someone granted none of the pages', () => {
     expect(landingFor(grants())).toBeNull()
     expect(landingFor(grants(Permissions.Bookings.ManageAll))).toBeNull()

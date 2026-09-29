@@ -7,13 +7,14 @@ import { useAuth } from 'react-oidc-context'
 import { RequirePermission } from './RequirePermission'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
+import type { PermissionRequirement } from '@/features/auth/permissions/usePermission'
 import { HOME_PATH } from '@/features/auth/landing'
 import { granted, WithPermissions } from '@/test/permissions'
 import { ApiError } from '@/lib/api/httpClient'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 
-function renderWith(permissions: PermissionsValue) {
+function renderWith(permissions: PermissionsValue, name: PermissionRequirement = Permissions.Bookings.Create) {
   return render(
     <WithPermissions value={permissions}>
       <MemoryRouter initialEntries={['/find-space']}>
@@ -21,7 +22,7 @@ function renderWith(permissions: PermissionsValue) {
           <Route
             path="/find-space"
             element={
-              <RequirePermission name={Permissions.Bookings.Create} deniedTitle="You can't book spaces">
+              <RequirePermission name={name} deniedTitle="You can't book spaces">
                 <p>Find a space</p>
               </RequirePermission>
             }
@@ -73,6 +74,17 @@ describe('RequirePermission', () => {
     )
 
     expect(screen.getByText('Floors')).toBeInTheDocument()
+  })
+
+  it('needs every permission of an allOf requirement', () => {
+    const both = { allOf: [Permissions.Bookings.Default, Permissions.Bookings.Create] }
+    renderWith(granted(Permissions.Bookings.Create), both)
+    expect(screen.getByRole('alert')).toHaveTextContent("You can't book spaces")
+  })
+
+  it('lets an allOf requirement through once every grant is held', () => {
+    renderWith(granted(Permissions.Bookings.Default, Permissions.Bookings.Create), { allOf: [Permissions.Bookings.Default, Permissions.Bookings.Create] })
+    expect(screen.getByText('Find a space')).toBeInTheDocument()
   })
 
   it("waits while the grants load instead of flashing 'no access'", () => {
