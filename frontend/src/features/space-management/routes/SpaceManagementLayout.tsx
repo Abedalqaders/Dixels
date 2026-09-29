@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from '@/components/Sidebar'
+import { AppErrorBoundary } from '@/components/AppErrorBoundary'
 import { SpaceExplorer } from '@/features/space-management/components/SpaceExplorer'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -14,7 +15,9 @@ export function SpaceManagementLayout() {
     <div className="app">
       <Sidebar />
       <SpaceExplorer />
-      <Outlet />
+      <AppErrorBoundary>
+        <Outlet />
+      </AppErrorBoundary>
     </div>
   )
 }

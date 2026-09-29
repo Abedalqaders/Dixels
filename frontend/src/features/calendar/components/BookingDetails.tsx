@@ -8,7 +8,8 @@ import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { describeRecurrence } from '@/features/bookings/recurrence'
 import { bookingPhase } from '@/features/calendar/bookingPhase'
 import type { BookingPhase } from '@/features/calendar/bookingPhase'
-import { clock12, rangeLabel } from '@/features/calendar/calendarDates'
+import { rangeLabel } from '@/features/calendar/calendarDates'
+import { formatClock } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 
 const PHASE_LABEL: Record<BookingPhase, string> = {
@@ -82,7 +83,7 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
         </Row>
         <Row icon={Clock} label="Time">
           <dd className="font-medium">
-            {clock12(timeOf(item.localStart))} – {clock12(timeOf(item.localEnd))}
+            {formatClock(timeOf(item.localStart))} – {formatClock(timeOf(item.localEnd))}
           </dd>
           {booking ? <dd className="text-muted-foreground">{booking.timezone} time</dd> : <Skeleton className="mt-1 h-4 w-24" />}
         </Row>

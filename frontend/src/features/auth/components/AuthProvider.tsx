@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { AuthProvider as OidcAuthProvider } from 'react-oidc-context'
 import type { AuthProviderProps } from 'react-oidc-context'
-import { SessionExpiryRedirect } from './SessionExpiryRedirect'
+import { SessionGuard } from './SessionGuard'
 import { PermissionsProvider } from '@/features/auth/permissions/PermissionsProvider'
 
 // This config describes our OpenIddict client ("Dixels_App") to the OIDC
@@ -27,8 +27,9 @@ const oidcConfig: AuthProviderProps = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <OidcAuthProvider {...oidcConfig}>
-      <SessionExpiryRedirect />
-      <PermissionsProvider>{children}</PermissionsProvider>
+      <SessionGuard>
+        <PermissionsProvider>{children}</PermissionsProvider>
+      </SessionGuard>
     </OidcAuthProvider>
   )
 }

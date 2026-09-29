@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { PlusIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
@@ -14,9 +16,11 @@ import { AddNodeModal } from '@/features/space-management/components/AddNodeModa
 import type { ModalState } from '@/features/space-management/components/AddNodeModal'
 import { EditDetailsModal } from '@/features/space-management/components/EditDetailsModal'
 import type { EditDetailsState } from '@/features/space-management/components/EditDetailsModal'
-import { Toast, useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
-import { useAsync } from '@/hooks/useAsync'
+import { useConfirm } from '@/components/ConfirmDialog'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import { notifyHierarchyChanged } from '@/features/space-management/hierarchyEvents'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
@@ -24,7 +28,6 @@ import { ApiError, getBuildings, deleteBuilding, getBuildingDeleteImpact, restor
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
-import '@/styles/login.css'
 import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 export function BuildingsListPage() {
@@ -41,10 +44,12 @@ export function BuildingsListPage() {
   const list = useListParams()
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
-  const { status, data, error, isRefreshing, refetch } = useAsync(
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(
+    queryKeys.hierarchy.buildings({ search: list.search, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
     async () => {
       const buildingsResult = await getBuildings(token, {
         filter: list.search || undefined,
@@ -54,7 +59,6 @@ export function BuildingsListPage() {
       })
       return { buildings: buildingsResult.items, totalCount: buildingsResult.totalCount }
     },
-    [token, list.search, list.showDeleted, list.page, list.pageSize],
     { keepPreviousData: true },
   )
 
@@ -80,7 +84,7 @@ export function BuildingsListPage() {
       return
     }
     if (affected.count === 0 && !affected.assignedEmployees) {
-      confirmAndRun(confirmMessage, remove, `${name} deleted.`)
+      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
@@ -90,8 +94,8 @@ export function BuildingsListPage() {
     )
   }
 
-  function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!window.confirm(confirmMessage)) return
+  async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
+    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -99,12 +103,19 @@ export function BuildingsListPage() {
     <>
       <div className="main">
         <div className="content">
-          <div>
-            <h1 className="pagetitle">Space management</h1>
-            <p className="lead">
-              {status === 'success' ? `${data.totalCount} building${data.totalCount === 1 ? '' : 's'}. ` : ''}
-              Open a building to manage its floors and spaces.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="pagetitle">Space management</h1>
+              <p className="lead">
+                {status === 'success' ? `${data.totalCount} building${data.totalCount === 1 ? '' : 's'}. ` : ''}
+                Open a building to manage its floors and spaces.
+              </p>
+            </div>
+            <Can permission={Permissions.Buildings.Create}>
+              <Button onClick={() => setModal({ kind: 'building' })}>
+                <PlusIcon /> Add building
+              </Button>
+            </Can>
           </div>
 
           <section className="card" id="buildings">
@@ -130,9 +141,6 @@ export function BuildingsListPage() {
                   />
                   Show deleted
                 </label>
-                <Can permission={Permissions.Buildings.Create}>
-                  <button className="btn sm sec" onClick={() => setModal({ kind: 'building' })}>+ Building</button>
-                </Can>
               </div>
             </div>
 
@@ -261,7 +269,7 @@ export function BuildingsListPage() {
         />
       )}
       {impactPrompt}
-      <Toast toast={toast} />
+      {confirmDialog}
     </>
   )
 }

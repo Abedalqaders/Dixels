@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { format } from 'date-fns'
 import { ChevronDownIcon } from 'lucide-react'
+import { formatClock, formatDay, localDateToIso } from '@/lib/time/format'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
@@ -38,7 +38,7 @@ function DateTimeField({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button id={id} type="button" variant="outline" className="flex-1 justify-between font-normal">
-              {date ? format(date, 'PPP') : 'Pick a date'}
+              {date ? formatDay(localDateToIso(date), 'long') : 'Pick a date'}
               <ChevronDownIcon className="text-muted-foreground" />
             </Button>
           </PopoverTrigger>
@@ -109,7 +109,7 @@ export function formatWhen(startsAt: string, endsAt: string): string {
   const start = new Date(startsAt)
   const end = new Date(endsAt)
   const isMidnight = (d: Date) => d.getHours() === 0 && d.getMinutes() === 0
-  const dateFmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const dateFmt = (d: Date) => formatDay(localDateToIso(d), 'day-month')
 
   if (isMidnight(start) && isMidnight(end)) {
     // endsAt is exclusive, so the last actual day is the day before it.
@@ -118,7 +118,8 @@ export function formatWhen(startsAt: string, endsAt: string): string {
     return start.toDateString() === lastDay.toDateString() ? dateFmt(start) : `${dateFmt(start)} – ${dateFmt(lastDay)}`
   }
 
-  const dateTimeFmt = (d: Date) => d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const dateTimeFmt = (d: Date) => `${dateFmt(d)} ${formatClock(`${pad(d.getHours())}:${pad(d.getMinutes())}`)}`
   return `${dateTimeFmt(start)} → ${dateTimeFmt(end)}`
 }
 

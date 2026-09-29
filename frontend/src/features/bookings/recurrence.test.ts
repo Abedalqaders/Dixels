@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
 import {
   choiceFor,
   defaultEndDate,
@@ -42,7 +43,7 @@ describe('repeatPresets', () => {
 })
 
 describe('describeRecurrence', () => {
-  const rule = (patch: object) => ({ frequency: Frequency.Weekly, interval: 1, weekdays: [2], monthlyRepeat: 0, endDate: '2026-10-27', ...patch })
+  const rule = (patch: Partial<RecurrenceDto>): RecurrenceDto => ({ frequency: Frequency.Weekly, interval: 1, weekdays: [2], monthlyRepeat: 0, endDate: '2026-10-27', ...patch })
 
   it('reads like Teams', () => {
     expect(describeRecurrence(rule({}), TUE)).toBe('Occurs every Tuesday until Tue 27 Oct')
@@ -86,7 +87,7 @@ describe('defaultEndDate', () => {
 
 describe('choiceFor', () => {
   it('finds the preset a rule matches, whatever its end date, else "custom"', () => {
-    const base = { interval: 1, monthlyRepeat: 0, endDate: '2026-11-15' }
+    const base = { interval: 1, monthlyRepeat: 0, endDate: '2026-11-15' } as const
     expect(choiceFor(null, TUE, SUN_THU)).toBe('none')
     expect(choiceFor({ ...base, frequency: Frequency.Weekly, weekdays: [2] }, TUE, SUN_THU)).toBe('weekly')
     expect(choiceFor({ ...base, frequency: Frequency.Weekly, weekdays: [4, 3, 2, 1, 0] }, TUE, SUN_THU)).toBe('workdays')

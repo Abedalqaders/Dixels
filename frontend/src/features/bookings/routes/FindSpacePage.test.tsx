@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
+import { TestProviders } from '@/test/providers'
 import { FindSpacePage } from './FindSpacePage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
@@ -40,6 +41,7 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 30,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  ownOverlapPolicy: 1,
   days: [0, 1, 2, 3, 4, 5, 6],
   hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f1', name: 'Level 1', floorNumber: 1, spaces: [room201, desk12, podA] }],
@@ -65,9 +67,11 @@ const violation = (shortMessage: string) => ({ code: 'x', level: null, message: 
 
 function renderPage(url = '/find-space?date=2026-10-01&from=10:00&to=11:00&people=4') {
   render(
-    <MemoryRouter initialEntries={[url]}>
-      <FindSpacePage />
-    </MemoryRouter>,
+    <TestProviders>
+      <MemoryRouter initialEntries={[url]}>
+        <FindSpacePage />
+      </MemoryRouter>
+    </TestProviders>,
   )
 }
 

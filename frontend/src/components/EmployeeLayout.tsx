@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
+import { AppErrorBoundary } from './AppErrorBoundary'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 
@@ -13,7 +14,9 @@ export function EmployeeLayout() {
     <div className="app">
       <Sidebar />
       <div className="main">
-        <Outlet />
+        <AppErrorBoundary>
+          <Outlet />
+        </AppErrorBoundary>
       </div>
     </div>
   )

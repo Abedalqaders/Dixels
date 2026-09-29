@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useParams } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { RequirePermission } from '@/features/auth/components/RequirePermission'
 import { HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
@@ -7,7 +7,6 @@ import { HOME_PATH } from '@/features/auth/landing'
 import { CallbackPage } from '@/features/auth/routes/CallbackPage'
 import { LandingPage } from '@/features/auth/routes/LandingPage'
 import { SignOutPage } from '@/features/auth/routes/SignOutPage'
-import { DashboardPage } from '@/features/dashboard/routes/DashboardPage'
 import { BuildingsListPage } from '@/features/space-management/routes/BuildingsListPage'
 import { FloorsListPage } from '@/features/space-management/routes/FloorsListPage'
 import { SpacesListPage } from '@/features/space-management/routes/SpacesListPage'
@@ -41,21 +40,15 @@ function ConstraintsRoute() {
   )
 }
 
-function App() {
-  return (
-    <Routes>
+// A data router (not a plain <BrowserRouter>): pages can hold a navigation with useBlocker
+// to ask about unsaved changes. The routes are the same declarative tree as before.
+export const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
       <Route path="/" element={<HomePage />} />
       <Route path="/callback" element={<CallbackPage />} />
       <Route path="/signing-out" element={<SignOutPage />} />
       <Route path={HOME_PATH} element={<LandingPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <RequireAuth>
-            <DashboardPage />
-          </RequireAuth>
-        }
-      />
       <Route
         element={
           <RequireAuth>
@@ -160,8 +153,12 @@ function App() {
           </RequirePermission>
         }
       />
-    </Routes>
-  )
+    </>,
+  ),
+)
+
+function App() {
+  return <RouterProvider router={router} />
 }
 
 export default App

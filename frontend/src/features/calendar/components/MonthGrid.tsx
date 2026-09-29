@@ -2,7 +2,8 @@ import { Plus, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addDays, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import { clock12, dayOfMonth, monthGrid, startOfMonth } from '@/features/calendar/calendarDates'
+import { dayOfMonth, monthGrid, startOfMonth } from '@/features/calendar/calendarDates'
+import { formatClock } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 
 // More than this per day and the rest fold into "N more…" (chips) or "+N" (dots).
@@ -136,7 +137,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                 >
                   {b.repeats && <Repeat className="size-3 flex-none" aria-label="Repeats" />}
                   <span className="min-w-0 flex-1 truncate font-semibold">{b.title}</span>
-                  <span className="flex-none whitespace-nowrap opacity-70">{clock12(timeOf(b.localStart))}</span>
+                  <span className="flex-none whitespace-nowrap opacity-70">{formatClock(timeOf(b.localStart))}</span>
                 </button>
               ))}
               {hidden > 0 && (

@@ -12,6 +12,8 @@
     <ProjectReference Include="..\..\src\Dixels.EntityFrameworkCore\Dixels.EntityFrameworkCore.csproj" />
     <ProjectReference Include="..\Dixels.Application.Tests\Dixels.Application.Tests.csproj" />
     <PackageReference Include="Volo.Abp.EntityFrameworkCore.Sqlite" Version="10.6.1" />
+    <!-- Lifts the transitive SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q) -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
   </ItemGroup>
 
   <ItemGroup>

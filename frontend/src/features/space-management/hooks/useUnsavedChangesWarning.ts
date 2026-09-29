@@ -2,9 +2,8 @@ import { useEffect } from 'react'
 
 /**
  * Warns before the tab closes, refreshes, or navigates via a typed URL while `isDirty`.
- * Doesn't cover in-app navigation (clicking another link) — that needs a data router's
- * `useBlocker`, which this app doesn't use (see `App.tsx`'s plain `<BrowserRouter>`); the
- * page's own back-link handles that narrower case itself with a plain confirm() instead.
+ * In-app navigation (clicking another link) is the data router's job: the page pairs this
+ * with `useBlocker`, which holds the navigation and asks first.
  */
 export function useUnsavedChangesWarning(isDirty: boolean): void {
   useEffect(() => {

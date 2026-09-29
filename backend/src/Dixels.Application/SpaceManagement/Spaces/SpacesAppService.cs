@@ -20,6 +20,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
+    private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
@@ -28,6 +29,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         IRepository<Space, Guid> spaceRepository,
         IRepository<Floor, Guid> floorRepository,
         IRepository<Building, Guid> buildingRepository,
+        IRepository<SpaceType, Guid> spaceTypeRepository,
         ConstraintResolver constraintResolver,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact)
@@ -35,6 +37,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
+        _spaceTypeRepository = spaceTypeRepository;
         _constraintResolver = constraintResolver;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
@@ -120,6 +123,11 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     {
         await EnsureCanManageBuildingAsync(input.FloorId);
 
+        // GetAsync answers an unknown or soft-deleted id with a 404 — otherwise the missing
+        // parent surfaces as a foreign-key failure from the database, i.e. a 500.
+        await _floorRepository.GetAsync(input.FloorId);
+        await _spaceTypeRepository.GetAsync(input.SpaceTypeId);
+
         var space = new Space(GuidGenerator.Create(), input.FloorId, input.Name, input.SpaceTypeId, input.Capacity);
         await _spaceRepository.InsertAsync(space);
 
@@ -137,6 +145,10 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
             : Array.Empty<BookingImpact>();
 
         space.SetName(input.Name);
+        if (space.SpaceTypeId != input.SpaceTypeId)
+        {
+            await _spaceTypeRepository.GetAsync(input.SpaceTypeId); // 404 for unknown or deleted
+        }
         space.SetSpaceType(input.SpaceTypeId);
         space.SetCapacity(input.Capacity);
 
@@ -319,17 +331,28 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
             var space = await _spaceRepository.GetAsync(id);
             await EnsureCanManageBuildingAsync(space.FloorId);
 
+            // A space only makes sense under a live floor (a floor under a deleted building is
+            // itself deleted by the cascade, so this one check covers both levels).
+            var floor = await _floorRepository.GetAsync(space.FloorId);
+            if (floor.IsDeleted)
+            {
+                throw new BusinessException(DixelsDomainErrorCodes.ParentIsDeleted).WithData("parent", "floor");
+            }
+
             space.IsDeleted = false;
             await _spaceRepository.UpdateAsync(space);
             await CurrentUnitOfWork!.SaveChangesAsync();
         }
     }
 
-    private async Task EnsureCanManageBuildingAsync(Guid floorId)
+    private static Task EnsureCanManageBuildingAsync(Guid floorId)
     {
-        // Same extensibility hook as Buildings/FloorsAppService's.
+        // Same extensibility hook as Buildings/FloorsAppService's: the one place a future
+        // per-building-admin check plugs in. It must not re-check a flat permission — each
+        // method's own [Authorize] already names what it needs, and requiring Edit here
+        // silently refused roles that only had Create or Delete.
         _ = floorId;
-        await AuthorizationService.CheckAsync(DixelsPermissions.Spaces.Edit);
+        return Task.CompletedTask;
     }
 
     private SpaceDto MapToDto(Space space)

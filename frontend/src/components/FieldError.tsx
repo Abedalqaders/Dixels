@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
  * One way to show a problem with a field, for every form: the message sits under the
@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
  * (a time against a room's rules, a clash) don't belong here — they get a panel.
  *
  *   const f = useFieldErrors<'name' | 'capacity'>('add')
- *   <form ref={f.formRef} onSubmit={…}>
+ *   <form {...f.form} onSubmit={…}>
  *     <label htmlFor={f.id('name')}>Name</label>
  *     <input {...f.field('name')} />
  *     {f.error('name')}
@@ -16,21 +16,22 @@ import { useEffect, useRef, useState } from 'react'
  */
 export function useFieldErrors<Name extends string>(prefix: string) {
   const [errors, setErrors] = useState<Partial<Record<Name, string>>>({})
-  const formRef = useRef<HTMLFormElement>(null)
+  const formId = `${prefix}-form`
 
   // After a failed submit, land on the first field with a message — reading order, which
   // is the order the fields appear in the form.
   useEffect(() => {
     if (Object.keys(errors).length === 0) return
-    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-  }, [errors])
+    document.getElementById(formId)?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [errors, formId])
 
   const id = (name: Name) => `${prefix}-${name}`
   const errorId = (name: Name) => `${prefix}-${name}-error`
 
   return {
     errors,
-    formRef,
+    /** Spread onto the <form>: how the hook finds it when focus has to move. */
+    form: { id: formId },
     hasErrors: Object.keys(errors).length > 0,
     setErrors,
     clear: () => setErrors({}),

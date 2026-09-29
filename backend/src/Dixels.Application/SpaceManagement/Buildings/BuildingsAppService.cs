@@ -351,14 +351,14 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
 
-    private async Task EnsureCanManageBuildingAsync(Guid buildingId)
+    private static Task EnsureCanManageBuildingAsync(Guid buildingId)
     {
-        // Extensibility hook for future per-building-admin scoping: today this just
-        // re-checks the flat permission (already enforced by [Authorize] too, so this is
-        // currently redundant). Floor/Space's own equivalent checks — and any future
-        // building-scoped permission — plug in here without touching call sites.
+        // Extensibility hook for future per-building-admin scoping. Floor/Space's equivalents
+        // and any building-scoped permission plug in here without touching call sites. It
+        // deliberately checks nothing today: each method's [Authorize] names what it needs,
+        // and re-checking Edit here refused roles that only had Create or Delete.
         _ = buildingId;
-        await AuthorizationService.CheckAsync(DixelsPermissions.Buildings.Edit);
+        return Task.CompletedTask;
     }
 
     private BuildingDto MapToDto(Building building)

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
+import type { RecurrenceDto, RecurrenceFrequency } from '@/features/bookings/api/bookingsApi'
 import { describeRecurrence, Frequency, MonthlyRepeat, weekdayOf, weekdayPosition } from '@/features/bookings/recurrence'
 import { DatePicker } from './DatePicker'
 
@@ -73,7 +73,7 @@ export function CustomRecurrenceDialog({ date, lastDate, initial, openDays, onSa
                 onChange={(e) => setRule({ ...rule, interval: e.target.valueAsNumber })}
                 aria-invalid={badInterval}
               />
-              <Select value={String(rule.frequency)} onValueChange={(v) => setRule({ ...rule, frequency: Number(v) })}>
+              <Select value={String(rule.frequency)} onValueChange={(v) => setRule({ ...rule, frequency: Number(v) as RecurrenceFrequency })}>
                 <SelectTrigger className="w-36" aria-label="Unit">
                   <SelectValue />
                 </SelectTrigger>

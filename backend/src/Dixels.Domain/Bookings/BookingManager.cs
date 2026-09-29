@@ -99,7 +99,10 @@ public partial class BookingManager : DomainService
         var existing = await _bookingRepository.FindByIdempotencyKeyAsync(userId, idempotencyKey);
         if (existing is not null)
         {
-            if (!existing.MatchesRequest(spaceId, context.StartUtc, context.EndUtc, attendees))
+            // A replay must match what the key was first used for. A booking that has since been
+            // cancelled is not "already created" either: the caller needs a fresh key (and a
+            // fresh check) rather than a cancelled record handed back as a success.
+            if (existing.Status == BookingStatus.Cancelled || !existing.MatchesRequest(spaceId, context.StartUtc, context.EndUtc, attendees))
             {
                 throw new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
             }

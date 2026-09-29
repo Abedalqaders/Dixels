@@ -12,13 +12,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Sidebar } from '@/components/Sidebar'
 import { TablePagination } from '@/components/TablePagination'
-import { Toast, useToast } from '@/components/Toast'
-import { useAsync } from '@/hooks/useAsync'
+import { useToast } from '@/components/Toast'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import { ApiError, deleteSpaceType, getSpaceTypes } from '@/features/space-management/api/spaceManagementApi'
 import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
@@ -41,7 +42,7 @@ import { TableSkeleton } from '@/components/LoadingSkeletons'
 export function SpaceTypesPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const list = useListParams()
 
   // undefined = closed, null = adding, a type = editing that type.
@@ -49,11 +50,9 @@ export function SpaceTypesPage() {
   const [deleting, setDeleting] = useState<SpaceTypeDto | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
 
-  const { status, data, error, isRefreshing, refetch } = useAsync(
-    async () => (await getSpaceTypes(token)).items,
-    [token],
-    { keepPreviousData: true },
-  )
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(queryKeys.spaceTypes.list(), async () => (await getSpaceTypes(token)).items, {
+    keepPreviousData: true,
+  })
 
   const filtered = useMemo(() => {
     const term = list.search.toLowerCase()
@@ -92,16 +91,23 @@ export function SpaceTypesPage() {
       <Sidebar />
       <div className="main">
         <div className="content">
-          <div>
-            <h1 className="pagetitle">Space types</h1>
-            <p className="lead">
-              Shared across every building — renaming or re-icon-ing a type updates it everywhere it's used.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="pagetitle">Space types</h1>
+              <p className="lead">
+                Shared across every building — renaming or re-icon-ing a type updates it everywhere it's used.
+              </p>
+            </div>
+            <Can permission={Permissions.SpaceTypes.Create}>
+              <Button onClick={() => setEditing(null)}>
+                <PlusIcon />
+                Add type
+              </Button>
+            </Can>
           </div>
 
           <Card className="gap-0 rounded-2xl py-0 shadow-md">
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
-              <CardTitle>All space types</CardTitle>
               <CardAction className="flex items-center gap-2">
                 <div className="relative">
                   <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -114,12 +120,6 @@ export function SpaceTypesPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <Can permission={Permissions.SpaceTypes.Create}>
-                  <Button onClick={() => setEditing(null)}>
-                    <PlusIcon />
-                    Add type
-                  </Button>
-                </Can>
               </CardAction>
             </CardHeader>
 
@@ -220,7 +220,6 @@ export function SpaceTypesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Toast toast={toast} />
     </div>
   )
 }

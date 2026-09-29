@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { PlusIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
@@ -15,16 +17,17 @@ import { AddNodeModal } from '@/features/space-management/components/AddNodeModa
 import type { ModalState } from '@/features/space-management/components/AddNodeModal'
 import { EditDetailsModal } from '@/features/space-management/components/EditDetailsModal'
 import type { EditDetailsState } from '@/features/space-management/components/EditDetailsModal'
-import { Toast, useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
-import { useAsync } from '@/hooks/useAsync'
+import { useConfirm } from '@/components/ConfirmDialog'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
 import { ApiError, getFloor, getSpaces, getSpaceTypes, deleteSpace, getSpaceDeleteImpact, restoreSpace } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
-import '@/styles/login.css'
 import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 export function SpacesListPage() {
@@ -40,10 +43,12 @@ export function SpacesListPage() {
   const spaceTypeId = list.getFilter('type')
   const [modal, setModal] = useState<ModalState>(null)
   const [editState, setEditState] = useState<EditDetailsState>(null)
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
+  const { confirm, dialog: confirmDialog } = useConfirm()
 
-  const { status, data, error, isRefreshing, refetch } = useAsync(
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(
+    queryKeys.hierarchy.spaces(floorId, { search: list.search, spaceTypeId, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
     async () => {
       const [floor, spaceTypesResult, spacesResult] = await Promise.all([
         getFloor(token, floorId),
@@ -59,7 +64,6 @@ export function SpacesListPage() {
       ])
       return { floor, spaceTypes: spaceTypesResult.items, spaces: spacesResult.items, totalCount: spacesResult.totalCount }
     },
-    [token, floorId, list.search, spaceTypeId, list.showDeleted, list.page, list.pageSize],
     { keepPreviousData: true },
   )
 
@@ -90,7 +94,7 @@ export function SpacesListPage() {
       return
     }
     if (affected.count === 0 && !affected.assignedEmployees) {
-      confirmAndRun(confirmMessage, remove, `${name} deleted.`)
+      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
@@ -100,8 +104,8 @@ export function SpacesListPage() {
     )
   }
 
-  function confirmAndRun(confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!window.confirm(confirmMessage)) return
+  async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
+    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -109,15 +113,25 @@ export function SpacesListPage() {
     <>
       <div className="main">
         <div className="content">
-          <div>
-            <p className="breadcrumb">
-              <Link to={`/admin/buildings/${buildingId}/floors`}>‹ Floors</Link>
-            </p>
-            <h1 className="pagetitle">{status === 'success' ? data.floor.name : 'Spaces'}</h1>
-            <p className="lead">
-              {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'}. ` : ''}
-              Bookable spaces on this floor.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="breadcrumb">
+                <Link to={`/admin/buildings/${buildingId}/floors`}>‹ Floors</Link>
+              </p>
+              <h1 className="pagetitle">{status === 'success' ? data.floor.name : 'Spaces'}</h1>
+              <p className="lead">
+                {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'}. ` : ''}
+                Bookable spaces on this floor.
+              </p>
+            </div>
+            <Can permission={Permissions.Spaces.Create}>
+              <Button
+                disabled={status !== 'success'}
+                onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
+              >
+                <PlusIcon /> Add space
+              </Button>
+            </Can>
           </div>
 
           <section className="card" id="spaces">
@@ -144,15 +158,6 @@ export function SpacesListPage() {
                   />
                   Show deleted
                 </label>
-                <Can permission={Permissions.Spaces.Create}>
-                  <button
-                    className="btn sm sec"
-                    disabled={status !== 'success'}
-                    onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
-                  >
-                    + Space
-                  </button>
-                </Can>
               </div>
             </div>
 
@@ -278,7 +283,7 @@ export function SpacesListPage() {
         />
       )}
       {impactPrompt}
-      <Toast toast={toast} />
+      {confirmDialog}
     </>
   )
 }

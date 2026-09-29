@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { SearchIcon } from '@/components/icons'
@@ -178,21 +178,25 @@ export function SpaceExplorer() {
       .catch(() => setFloors((f) => ({ ...f, [buildingId]: { ...(f[buildingId] ?? EMPTY_BRANCH), loading: false, error: true } })))
   }
 
-  function expand(id: string) {
-    if (!canSeeFloors) return
-    setExpanded((e) => (e.has(id) ? e : new Set(e).add(id)))
-  }
+  // Stable identity so the effects below can list it as a dependency honestly.
+  const expand = useCallback(
+    (id: string) => {
+      if (!canSeeFloors) return
+      setExpanded((e) => (e.has(id) ? e : new Set(e).add(id)))
+    },
+    [canSeeFloors],
+  )
 
   // Opening a building's page from anywhere (a list row, a link, Back) unfolds it here too.
   useEffect(() => {
     if (activeBuildingId) expand(activeBuildingId)
-  }, [activeBuildingId])
+  }, [activeBuildingId, expand])
 
   // A customer with a single building shouldn't have to click it open to see anything.
   const onlyBuildingId = !debouncedQuery && buildings.totalCount === 1 ? buildings.items[0]?.id : undefined
   useEffect(() => {
     if (onlyBuildingId) expand(onlyBuildingId)
-  }, [onlyBuildingId])
+  }, [onlyBuildingId, expand])
 
   // Every expanded building without cached floors gets fetched — covers a fresh expand and
   // the reload after a hierarchy change (which clears the cache) with one rule.

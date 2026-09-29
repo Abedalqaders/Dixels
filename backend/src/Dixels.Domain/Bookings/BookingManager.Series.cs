@@ -182,6 +182,13 @@ public partial class BookingManager
             })
             .ToList();
 
+        // A weekly rule whose weekdays all fall after the end date expands to nothing; say so
+        // instead of indexing an empty list.
+        if (slots.Count == 0)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.SeriesNothingToBook);
+        }
+
         var rangeStart = slots[0].StartUtc;
         var rangeEnd = slots[^1].EndUtc;
 

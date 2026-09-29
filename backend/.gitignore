@@ -264,3 +264,11 @@ src/Dixels.Blazor.Server.Tiered/Logs/*
 
 # Use abp install-libs to restore.
 **/wwwroot/libs/*
+
+# Serilog output (the template ignore above only matches "Log/", not "Logs/")
+Logs/
+logs.txt
+
+# Local secrets loaded by docker-compose (see .env.example)
+.env
+*.pfx

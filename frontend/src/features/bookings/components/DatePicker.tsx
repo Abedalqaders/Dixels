@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
 import { ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { IsoDate } from '@/lib/time/buildingTime'
+import { formatDay } from '@/lib/time/format'
 
 interface DatePickerProps {
   id: string
@@ -44,7 +44,7 @@ export function DatePicker({ id, value, min, max, onChange, errorId }: DatePicke
           aria-invalid={errorId ? true : undefined}
           aria-describedby={errorId}
         >
-          {format(toDate(value), 'PPP')}
+          {formatDay(value, 'long')}
           <ChevronDownIcon className="text-muted-foreground" />
         </Button>
       </PopoverTrigger>

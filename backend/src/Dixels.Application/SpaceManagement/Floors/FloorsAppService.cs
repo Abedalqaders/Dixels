@@ -114,6 +114,9 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     {
         await EnsureCanManageBuildingAsync(input.BuildingId);
 
+        // 404 for an unknown or deleted building, instead of a foreign-key failure (500).
+        await _buildingRepository.GetAsync(input.BuildingId);
+
         var floor = new Floor(GuidGenerator.Create(), input.BuildingId, input.Name, input.FloorNumber);
         await _floorRepository.InsertAsync(floor);
 
@@ -286,6 +289,14 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
             var floor = await _floorRepository.GetAsync(id);
             await EnsureCanManageBuildingAsync(floor.BuildingId);
 
+            // Restoring a floor under a building that is still deleted would leave it reachable
+            // by id but invisible in every list — restore the building first.
+            var building = await _buildingRepository.GetAsync(floor.BuildingId);
+            if (building.IsDeleted)
+            {
+                throw new BusinessException(DixelsDomainErrorCodes.ParentIsDeleted).WithData("parent", "building");
+            }
+
             var batchId = floor.DeletionBatchId;
 
             if (batchId is null)
@@ -324,13 +335,14 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
 
-    private async Task EnsureCanManageBuildingAsync(Guid buildingId)
+    private static Task EnsureCanManageBuildingAsync(Guid buildingId)
     {
-        // Same extensibility hook as BuildingsAppService's — today just re-checks the flat
-        // permission, but is where a future per-building-admin scoping check plugs in,
-        // using buildingId rather than the floor's own id.
+        // Same extensibility hook as BuildingsAppService's: where a future per-building-admin
+        // scoping check plugs in, using buildingId rather than the floor's own id. It must
+        // not re-check a flat permission — each method's [Authorize] already names what it
+        // needs, and requiring Edit here refused roles that only had Create or Delete.
         _ = buildingId;
-        await AuthorizationService.CheckAsync(DixelsPermissions.Floors.Edit);
+        return Task.CompletedTask;
     }
 
     private FloorDto MapToDto(Floor floor)

@@ -24,8 +24,9 @@ export function SignOutPage() {
     setTimeout(() => void auth.signoutRedirect(), SHOW_MS)
   }, [auth])
 
-  // Already signed out (a bookmark, the back button): nothing to do here.
-  if (!auth.isLoading && !auth.isAuthenticated && !started.current) {
+  // Already signed out (a bookmark, the back button): nothing to do here. Once the redirect
+  // above starts, isAuthenticated stays true until the tab leaves, so no extra guard is needed.
+  if (!auth.isLoading && !auth.isAuthenticated) {
     return <Navigate to="/" replace />
   }
 

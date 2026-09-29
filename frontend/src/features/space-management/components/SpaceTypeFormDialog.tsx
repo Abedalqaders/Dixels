@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ApiError, createSpaceType, updateSpaceType } from '@/features/space-management/api/spaceManagementApi'
-import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
+import type { IconKey, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
 interface SpaceTypeFormDialogProps {
@@ -83,7 +83,7 @@ export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: Spac
               aria-labelledby="st-icon-label"
               value={String(iconKey)}
               // Radix sends '' when the selected item is clicked again — keep the current icon.
-              onValueChange={(v) => v && setIconKey(Number(v))}
+              onValueChange={(v) => v && setIconKey(Number(v) as IconKey)}
               disabled={saving}
             >
               {ICON_OPTIONS.map((o) => (

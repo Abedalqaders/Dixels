@@ -36,7 +36,6 @@ using Volo.Abp.PermissionManagement.Web;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement.Web;
 using Volo.Abp.Swashbuckle;
-using Volo.Abp.TenantManagement.Web;
 using Volo.Abp.OpenIddict;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.UI;
@@ -54,7 +53,6 @@ namespace Dixels.Web;
     typeof(AbpSettingManagementWebModule),
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreMvcUiLeptonXLiteThemeModule),
-    typeof(AbpTenantManagementWebModule),
     typeof(AbpAspNetCoreSerilogModule),
     typeof(AbpSwashbuckleModule)
     )]
@@ -96,7 +94,16 @@ public class DixelsWebModule : AbpModule
 
             PreConfigure<OpenIddictServerBuilder>(serverBuilder =>
             {
-                serverBuilder.AddProductionEncryptionAndSigningCertificate("openiddict.pfx", "1ec32178-8220-43de-88fc-ba4e9deea226");
+                // Outside Development the certificate and its password come from configuration
+                // (AuthServer__CertificatePath / AuthServer__CertificatePassword env vars), never source.
+                var certificatePath = configuration["AuthServer:CertificatePath"] ?? "openiddict.pfx";
+                var certificatePassword = configuration["AuthServer:CertificatePassword"];
+                if (string.IsNullOrWhiteSpace(certificatePassword))
+                {
+                    throw new AbpInitializationException("AuthServer:CertificatePassword is required outside Development.");
+                }
+
+                serverBuilder.AddProductionEncryptionAndSigningCertificate(certificatePath, certificatePassword);
             });
         }
     }
@@ -204,6 +211,14 @@ public class DixelsWebModule : AbpModule
                 options.SwaggerDoc("v1", new OpenApiInfo { Title = "Dixels API", Version = "v1" });
                 options.DocInclusionPredicate((docName, description) => true);
                 options.CustomSchemaIds(type => type.FullName);
+
+                // Nullable reference types are the source of truth for "can this be null": a
+                // non-nullable string is emitted as a required, non-nullable field, not as an
+                // optional "string | null" — so the frontend types generated from this document
+                // (frontend/scripts/fetch-openapi.mjs) match the DTOs exactly.
+                options.SupportNonNullableReferenceTypes();
+                options.NonNullableReferenceTypesAsRequired();
+                options.SchemaFilter<Dixels.Swagger.RequireNonNullablePropertiesSchemaFilter>();
             }
         );
     }
@@ -241,11 +256,16 @@ public class DixelsWebModule : AbpModule
         app.UseDynamicClaims();
         app.UseAuthorization();
 
-        app.UseSwagger();
-        app.UseAbpSwaggerUI(options =>
+        // Swagger is a development tool: it exposes every route and the OAuth client used to
+        // try them. Keep it off outside Development.
+        if (env.IsDevelopment())
         {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "Dixels API");
-        });
+            app.UseSwagger();
+            app.UseAbpSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Dixels API");
+            });
+        }
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();

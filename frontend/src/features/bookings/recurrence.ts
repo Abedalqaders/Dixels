@@ -1,3 +1,4 @@
+import { MonthlyRepeat, RecurrenceFrequency } from './api/bookingsApi'
 import { addDays, formatDate } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
@@ -7,8 +8,9 @@ import { formatDays } from '@/features/bookings/format'
 // dropdown, the "Occurs every…" sentence under it, and sensible default end dates. All on
 // "YYYY-MM-DD" building-local dates, so no timezone math.
 
-export const Frequency = { Daily: 0, Weekly: 1, Monthly: 2 } as const
-export const MonthlyRepeat = { OnDay: 0, OnWeekday: 1 } as const
+// The API module owns these (they mirror the C# enums); this is the name the form code uses.
+export const Frequency = RecurrenceFrequency
+export { MonthlyRepeat }
 
 export type RepeatChoice = 'none' | 'workdays' | 'daily' | 'weekly' | 'monthly' | 'custom'
 

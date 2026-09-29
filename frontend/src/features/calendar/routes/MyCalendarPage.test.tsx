@@ -11,6 +11,7 @@ import { addMonths, gridMonthFor, monthGrid, startOfWeek } from '@/features/cale
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
 import { granted, WithPermissions } from '@/test/permissions'
+import { TestProviders } from '@/test/providers'
 import { MyCalendarPage } from './MyCalendarPage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
@@ -47,6 +48,7 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 60,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  ownOverlapPolicy: 1,
   days: [0, 1, 2, 3, 4, 5, 6],
   hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f3', name: 'Level 3', floorNumber: 3, spaces: [room] }],
@@ -92,11 +94,13 @@ const EMPLOYEE = granted(Permissions.Bookings.Default, Permissions.Bookings.Crea
 
 function renderPage(url = `/my-calendar?view=week&date=${tomorrow}`, permissions: PermissionsValue = EMPLOYEE) {
   render(
-    <WithPermissions value={permissions}>
-      <MemoryRouter initialEntries={[url]}>
-        <MyCalendarPage />
-      </MemoryRouter>
-    </WithPermissions>,
+    <TestProviders>
+      <WithPermissions value={permissions}>
+        <MemoryRouter initialEntries={[url]}>
+          <MyCalendarPage />
+        </MemoryRouter>
+      </WithPermissions>
+    </TestProviders>,
   )
 }
 

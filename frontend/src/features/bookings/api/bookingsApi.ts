@@ -1,5 +1,5 @@
 import { ApiError, query, request } from '@/lib/api/httpClient'
-import type { FieldValueDto, OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
+import type { FieldValueDto, IconKey, OperatingWindowDto, OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
 import type { IsoDate } from '@/lib/time/buildingTime'
 
 export { ApiError }
@@ -11,8 +11,7 @@ export interface BookableSpaceDto {
   name: string
   spaceTypeId: string
   spaceTypeName: string
-  /** Backend IconKey enum ordinal — see iconKeyToIconName. */
-  iconKey: number
+  iconKey: IconKey
   capacity: number
   minAttendees: number | null
   days: FieldValueDto<number[]>
@@ -38,7 +37,7 @@ export interface BookableBuildingDto {
   maxSeriesHorizonDays?: number
   minLeadMinutes: number
   /** Whether one person may hold two bookings at once here (0 Allow, 1 Warn, 2 Block). */
-  ownOverlapPolicy?: number
+  ownOverlapPolicy: OwnOverlapPolicy
   slotMinutes: number
   /** The building's own opening days (0 = Sunday … 6) and hours — what My calendar shades as closed. */
   days: number[]
@@ -237,15 +236,21 @@ export async function cancelBooking(
 
 // ---- Recurring bookings ----
 
+/** How often a series repeats (RecurrenceFrequency on the server). */
+export const RecurrenceFrequency = { Daily: 0, Weekly: 1, Monthly: 2 } as const
+export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof RecurrenceFrequency]
+
+/** Monthly only: the same date each month, or the same weekday position ("2nd Tuesday"). */
+export const MonthlyRepeat = { OnDay: 0, OnWeekday: 1 } as const
+export type MonthlyRepeat = (typeof MonthlyRepeat)[keyof typeof MonthlyRepeat]
+
 /** How a booking repeats (RecurrenceDto on the server). */
 export interface RecurrenceDto {
-  /** 0 daily, 1 weekly, 2 monthly. */
-  frequency: number
+  frequency: RecurrenceFrequency
   interval: number
   /** Weekly only: 0 = Sunday … 6 = Saturday. */
   weekdays: number[]
-  /** Monthly only: 0 on the same date, 1 on the same weekday position ("2nd Tuesday"). */
-  monthlyRepeat: number
+  monthlyRepeat: MonthlyRepeat
   /** Last date an occurrence may fall on, "YYYY-MM-DD". */
   endDate: IsoDate
 }

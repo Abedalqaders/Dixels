@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, NETWORK_ERROR_MESSAGE, PERMISSION_DENIED_MESSAGE, request, setUnauthorizedHandler } from './httpClient'
+import { ApiError, NETWORK_ERROR_MESSAGE, PERMISSION_DENIED_MESSAGE, request, setTokenRefresher, setUnauthorizedHandler } from './httpClient'
 
 const respond = (status: number) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { message: 'nope' } }), { status }))
 
 afterEach(() => {
   setUnauthorizedHandler(undefined)
+  setTokenRefresher(undefined)
   vi.restoreAllMocks()
 })
 
@@ -70,5 +71,50 @@ describe('ApiError', () => {
 
     expect(error.permissionDenied).toBe(false)
     expect(error.message).toBe('The end must be after the start.')
+  })
+})
+
+describe('request with a token refresher (an expired token)', () => {
+  it('renews once and repeats the request with the fresh token', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    setTokenRefresher(vi.fn(async () => 'fresh-token'))
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+
+    await expect(request('/api/app/x', 'stale-token')).resolves.toEqual({ ok: true })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    const retryHeaders = (fetchSpy.mock.calls[1]![1] as RequestInit).headers as Record<string, string>
+    expect(retryHeaders.Authorization).toBe('Bearer fresh-token')
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('gives up (session gone) when the renew fails, without retrying', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    setTokenRefresher(vi.fn(async () => null))
+    const fetchSpy = respond(401)
+
+    await expect(request('/api/app/x', 'stale-token')).rejects.toMatchObject({ status: 401 })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(onUnauthorized).toHaveBeenCalledOnce()
+  })
+
+  it('gives up when the fresh token is refused too — one retry, never a loop', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    const refresher = vi.fn(async () => 'fresh-token')
+    setTokenRefresher(refresher)
+    const fetchSpy = respond(401)
+
+    await expect(request('/api/app/x', 'stale-token')).rejects.toMatchObject({ status: 401 })
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(refresher).toHaveBeenCalledOnce()
+    expect(onUnauthorized).toHaveBeenCalledOnce()
   })
 })

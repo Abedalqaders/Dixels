@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { Toast, useToast } from '@/components/Toast'
+import { useToast } from '@/components/Toast'
 import { TextSkeleton } from '@/components/LoadingSkeletons'
-import { useAsync } from '@/hooks/useAsync'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
@@ -71,13 +72,14 @@ function rememberView(view: CalendarView) {
 
 /** The building's clock, re-read every 30 seconds so the "now" line moves on its own. */
 function useZonedNow(timeZone: string) {
-  const [now, setNow] = useState(() => nowInZone(timeZone))
+  const [clock, setClock] = useState(() => ({ timeZone, now: nowInZone(timeZone) }))
+  // A different building clock: re-read at once (during render, not in an effect).
+  if (clock.timeZone !== timeZone) setClock({ timeZone, now: nowInZone(timeZone) })
   useEffect(() => {
-    setNow(nowInZone(timeZone))
-    const timer = setInterval(() => setNow(nowInZone(timeZone)), 30_000)
+    const timer = setInterval(() => setClock({ timeZone, now: nowInZone(timeZone) }), 30_000)
     return () => clearInterval(timer)
   }, [timeZone])
-  return now
+  return clock.now
 }
 
 /**
@@ -88,7 +90,7 @@ function useZonedNow(timeZone: string) {
 export function MyCalendarPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
-  const { status, data: building, error } = useAsync(() => getMyBookableBuilding(token), [token])
+  const { status, data: building, error } = useApiQuery(queryKeys.bookings.myBuilding(), () => getMyBookableBuilding(token))
 
   return (
     <>
@@ -130,7 +132,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
   const canCreate = usePermission(Permissions.Bookings.Create)
   const canCancel = usePermission(Permissions.Bookings.Cancel)
   const readOnly = Boolean(building.isRemoved) || !canCreate
-  const { toast, showToast } = useToast()
+  const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const now = useZonedNow(building.timezone)
   const wide = useMediaQuery('(min-width: 860px)')
@@ -154,7 +156,12 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
   }
 
   const [miniMonth, setMiniMonth] = useState(date)
-  useEffect(() => setMiniMonth(date), [date])
+  // The mini calendar follows the main date whenever that changes (but can be browsed freely in between).
+  const [miniFollows, setMiniFollows] = useState(date)
+  if (miniFollows !== date) {
+    setMiniFollows(date)
+    setMiniMonth(date)
+  }
 
   // One request per month grid, cached — the week, day and mini calendar all read from
   // it, so moving around is instant. The month next door is fetched ahead only when a
@@ -175,7 +182,9 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
   // The calendar holds only the light list; opening an item fetches the booking in full.
   const [detail, setDetail] = useState<CalendarItem | null>(null)
-  const detailBooking = useAsync(() => (detail ? getBooking(token, detail.id) : Promise.resolve(null)), [token, detail?.id])
+  const detailBooking = useApiQuery(queryKeys.bookings.detail(detail?.id ?? null), () =>
+    detail ? getBooking(token, detail.id) : Promise.resolve(null),
+  )
   const detailError =
     detailBooking.status === 'error'
       ? detailBooking.error instanceof ApiError
@@ -441,7 +450,6 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         />
       )}
 
-      <Toast toast={toast} />
     </>
   )
 }

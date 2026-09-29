@@ -1,4 +1,5 @@
 import { addDays } from '@/lib/time/buildingTime'
+import { formatDay, formatDaySpan, formatMonth, formatMonthYear, formatWeekday } from '@/lib/time/format'
 import type { IsoDate } from '@/lib/time/buildingTime'
 
 // Calendar arithmetic on "YYYY-MM-DD" strings — the building's calendar days, never the
@@ -6,8 +7,6 @@ import type { IsoDate } from '@/lib/time/buildingTime'
 
 export type CalendarView = 'day' | 'week' | 'month'
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 function parts(date: IsoDate) {
   const [y, m, d] = date.split('-').map(Number)
@@ -95,20 +94,13 @@ export function shiftDate(view: CalendarView, date: IsoDate, direction: 1 | -1):
 
 /** The toolbar heading: "Tuesday 29 September 2026", "27 Sep – 3 Oct 2026", "September 2026". */
 export function rangeLabel(view: CalendarView, date: IsoDate): string {
-  const { y, m, d } = parts(date)
-  if (view === 'day') return `${WEEKDAYS[weekday(date)]} ${d} ${MONTHS[m - 1]} ${y}`
-  if (view === 'month') return `${MONTHS[m - 1]} ${y}`
-
-  const from = parts(startOfWeek(date))
-  const to = parts(addDays(startOfWeek(date), 6))
-  const short = (mm: number) => MONTHS[mm - 1].slice(0, 3)
-  if (from.y !== to.y) return `${from.d} ${short(from.m)} ${from.y} – ${to.d} ${short(to.m)} ${to.y}`
-  if (from.m !== to.m) return `${from.d} ${short(from.m)} – ${to.d} ${short(to.m)} ${to.y}`
-  return `${from.d} – ${to.d} ${short(to.m)} ${to.y}`
+  if (view === 'day') return formatDay(date, 'long')
+  if (view === 'month') return formatMonthYear(date)
+  return formatDaySpan(startOfWeek(date), addDays(startOfWeek(date), 6))
 }
 
 export function monthName(date: IsoDate): string {
-  return MONTHS[parts(date).m - 1]
+  return formatMonth(date)
 }
 
 export function dayOfMonth(date: IsoDate): number {
@@ -116,21 +108,10 @@ export function dayOfMonth(date: IsoDate): number {
 }
 
 export function shortWeekday(date: IsoDate): string {
-  return WEEKDAYS[weekday(date)].slice(0, 3)
-}
-
-/**
- * "9 AM", "12 PM", "2:20 PM" — the clock the calendar grids show, on the gutter, the "now"
- * marker and the cards. Minutes are left out on the hour. "24:00" reads as midnight.
- */
-export function clock12(time: string): string {
-  const [h, m] = time.split(':').map(Number)
-  const suffix = h < 12 || h === 24 ? 'AM' : 'PM'
-  const hour = h % 12 === 0 ? 12 : h % 12
-  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+  return formatWeekday(date, 'short')
 }
 
 /** "Monday" — the day's name, for the Day view's heading. */
 export function weekdayName(date: IsoDate): string {
-  return WEEKDAYS[weekday(date)]
+  return formatWeekday(date)
 }
