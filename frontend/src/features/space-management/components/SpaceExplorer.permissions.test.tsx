@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -9,6 +9,7 @@ import { getBuildings, getFloors } from '@/features/space-management/api/spaceMa
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
 import { granted, WithPermissions } from '@/test/permissions'
+import { stubMatchMedia } from '@/test/matchMedia'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 vi.mock('@/features/space-management/api/spaceManagementApi', async (importOriginal) => ({
@@ -62,5 +63,42 @@ describe('SpaceExplorer permissions', () => {
 
     expect(await screen.findByRole('link', { name: 'Level 1' })).toBeInTheDocument()
     expect(getFloors).toHaveBeenCalledWith('t', expect.objectContaining({ buildingId: 'b1' }))
+  })
+})
+
+describe('SpaceExplorer on small screens', () => {
+  let restore: () => void = () => {}
+
+  beforeEach(() => {
+    localStorage.clear()
+    vi.mocked(useAuth).mockReturnValue({ user: { access_token: 't' } } as unknown as ReturnType<typeof useAuth>)
+    vi.mocked(getBuildings).mockResolvedValue({ items: [{ id: 'b1', name: 'HQ' }], totalCount: 1 } as never)
+  })
+
+  afterEach(() => restore())
+
+  it('starts folded on a phone, so the list is what shows first', () => {
+    restore = stubMatchMedia(390)
+    renderExplorer(granted(Permissions.Buildings.Default))
+
+    expect(screen.getByRole('button', { name: 'Show buildings panel' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Find a building' })).not.toBeInTheDocument()
+  })
+
+  it('starts open on a tablet, beside the list', async () => {
+    restore = stubMatchMedia(900)
+    renderExplorer(granted(Permissions.Buildings.Default))
+
+    expect(await screen.findByText('HQ')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show buildings panel' })).not.toBeInTheDocument()
+  })
+
+  it("keeps the admin's own choice over the default for the screen", async () => {
+    restore = stubMatchMedia(390)
+    renderExplorer(granted(Permissions.Buildings.Default))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show buildings panel' }))
+    expect(await screen.findByText('HQ')).toBeInTheDocument()
+    expect(localStorage.getItem('dixels.explorer.collapsed')).toBe('0')
   })
 })

@@ -63,7 +63,6 @@
 .roleopt.on { background: var(--accent-soft); color: var(--accent-ink); }
 .loginfield .hint { margin-top: 2px; }
 .rowline { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 20px; font-size: 13px; }
-.chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
 .box { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-strong); background: var(--surface-raised); flex: none; }
 .link { color: var(--accent-ink); font-weight: 600; }
 .err {
@@ -84,7 +83,7 @@
 }
 .outwrap { min-height: 340px; display: flex; align-items: center; justify-content: center; padding: 48px; }
 .outcard {
-  width: 440px; text-align: center; background: var(--surface-raised);
+  width: 440px; max-width: 100%; text-align: center; background: var(--surface-raised);
   border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card); padding: 40px 32px;
 }
@@ -98,7 +97,7 @@
 .outbtns { display: flex; gap: 12px; }
 .outbtns .btn { flex: 1; justify-content: center; }
 
-@media (max-width: 860px) {
+@media (max-width: 1023px) {
   /* minmax(0, …): otherwise the 380px sign-in card sets the column's minimum width and the
      page scrolls sideways on a phone. */
   .page { grid-template-columns: minmax(0, 1fr); }
@@ -107,7 +106,7 @@
   .formwrap { padding: 32px 24px; }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 639px) {
   .brandpanel { padding: 32px 20px; }
   .formwrap { padding: 24px 16px; }
   .logincard { padding: 24px; }

@@ -7,6 +7,8 @@ import { useAuth } from 'react-oidc-context'
 import { getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { TestProviders } from '@/test/providers'
+import { granted, WithPermissions } from '@/test/permissions'
+import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { FindSpacePage } from './FindSpacePage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
@@ -65,12 +67,16 @@ function result(s: BookableSpaceDto, patch: Partial<SpaceAvailabilityDto>): Spac
 
 const violation = (shortMessage: string) => ({ code: 'x', level: null, message: shortMessage + '.', shortMessage })
 
-function renderPage(url = '/find-space?date=2026-10-01&from=10:00&to=11:00&people=4') {
+const BOOKER = [Permissions.Bookings.Default, Permissions.Bookings.Create]
+
+function renderPage(url = '/find-space?date=2026-10-01&from=10:00&to=11:00&people=4', grants: string[] = BOOKER) {
   render(
     <TestProviders>
-      <MemoryRouter initialEntries={[url]}>
-        <FindSpacePage />
-      </MemoryRouter>
+      <WithPermissions value={granted(...grants)}>
+        <MemoryRouter initialEntries={[url]}>
+          <FindSpacePage />
+        </MemoryRouter>
+      </WithPermissions>
     </TestProviders>,
   )
 }
@@ -97,6 +103,16 @@ describe('FindSpacePage', () => {
         result(podA, { isAvailable: false, violations: [violation('Seats 1 — you need 4')] }),
       ],
     })
+  })
+
+  it('shows availability but offers no way to book: no Book button, the bars are not pickers', async () => {
+    renderPage(undefined, [Permissions.Bookings.Default])
+
+    expect(await screen.findByRole('heading', { name: /1 space free/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Book Meeting Room 201' })).not.toBeInTheDocument()
+    expect(screen.getByText(/Availability only/)).toBeInTheDocument()
+    // Nothing on the page reacts to a press when booking isn't allowed: no dialog opens.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('searches for the window in the URL and lists the free rooms with how long they stay free', async () => {

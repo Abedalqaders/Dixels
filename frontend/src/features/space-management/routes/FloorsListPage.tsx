@@ -18,6 +18,7 @@ import { EditDetailsModal } from '@/features/space-management/components/EditDet
 import type { EditDetailsState } from '@/features/space-management/components/EditDetailsModal'
 import { useToast } from '@/components/Toast'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
+import { useCanEditRules } from '@/features/space-management/hooks/useCanEditRules'
 import { useConfirm } from '@/components/ConfirmDialog'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
@@ -34,9 +35,7 @@ export function FloorsListPage() {
   const { buildingId = '' } = useParams()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
-  // The rules page saves with Edit and changes closures with the Overrides permissions; with
-  // none of them it opens read-only, so the menu says so.
-  const canEditRules = usePermission([Permissions.Floors.Edit, Permissions.Overrides.Create, Permissions.Overrides.Delete])
+  const canEditRules = useCanEditRules('floor')
   // A floor opens into its spaces — a link only for someone who may see them.
   const canOpenSpaces = usePermission(HierarchyViewers.Spaces)
   const navigate = useNavigate()

@@ -3,6 +3,8 @@ import { Link, matchPath, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { SearchIcon } from '@/components/icons'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { up } from '@/lib/breakpoints'
 import { getBuilding, getBuildings, getFloors } from '@/features/space-management/api/spaceManagementApi'
 import { useHierarchyChanged } from '@/features/space-management/hierarchyEvents'
 import { HierarchyViewers } from '@/features/auth/permissions/permissionNames'
@@ -53,18 +55,19 @@ function PanelIcon() {
   )
 }
 
-function readCollapsed() {
+/** The admin's own choice (collapsed or not), or null when they never made one. */
+function readCollapsed(): boolean | null {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === '1'
+    const stored = localStorage.getItem(COLLAPSED_KEY)
+    return stored === '1' ? true : stored === '0' ? false : null
   } catch {
-    return false
+    return null
   }
 }
 
 function writeCollapsed(value: boolean) {
   try {
-    if (value) localStorage.setItem(COLLAPSED_KEY, '1')
-    else localStorage.removeItem(COLLAPSED_KEY)
+    localStorage.setItem(COLLAPSED_KEY, value ? '1' : '0')
   } catch {
     // Private window / blocked storage — the panel still toggles, it just won't be remembered.
   }
@@ -103,7 +106,11 @@ export function SpaceExplorer() {
     return '/admin/buildings'
   }
 
-  const [collapsed, setCollapsed] = useState(readCollapsed)
+  // Without a choice of their own, the panel starts folded on phones (it would push the list
+  // below the fold) and open from md up, where it sits beside the list.
+  const roomForPanel = useMediaQuery(up('md'))
+  const [chosenCollapsed, setCollapsed] = useState(readCollapsed)
+  const collapsed = chosenCollapsed ?? !roomForPanel
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebouncedValue(query, 250).trim()
   const [buildings, setBuildings] = useState<Branch>(EMPTY_BRANCH)
