@@ -29,6 +29,13 @@ function renderAs(permissions: PermissionsValue, role = 'employee') {
 const link = (name: string) => screen.queryByRole('link', { name })
 
 describe('Sidebar', () => {
+  it('hides Find a space from someone who may create bookings but not view them (the page reads first)', () => {
+    renderAs(granted(Permissions.Bookings.Create))
+
+    expect(link('Find a space')).not.toBeInTheDocument()
+    expect(link('My calendar')).not.toBeInTheDocument()
+  })
+
   it('splits someone who can both book and administer into Bookings and Administration', () => {
     renderAs(granted(...BOOKER, ...ADMIN), 'admin')
 

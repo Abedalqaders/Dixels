@@ -1,7 +1,7 @@
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useParams } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { RequirePermission } from '@/features/auth/components/RequirePermission'
-import { HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
+import { Flows, HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
 import type { HierarchyLevel } from '@/features/auth/permissions/permissionNames'
 import { HOME_PATH } from '@/features/auth/landing'
 import { CallbackPage } from '@/features/auth/routes/CallbackPage'
@@ -72,7 +72,7 @@ export const router = createBrowserRouter(
           path="/find-space"
           element={
             <RequirePermission
-              name={Permissions.Bookings.Create}
+              name={Flows.FindSpace}
               deniedTitle="You can't book spaces"
               deniedDetail="Your account doesn't have permission to create bookings. Ask an administrator if you think it should."
             >

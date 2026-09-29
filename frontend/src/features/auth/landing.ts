@@ -1,4 +1,4 @@
-import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { satisfies } from '@/features/auth/permissions/usePermission'
 import type { PermissionRequirement } from '@/features/auth/permissions/usePermission'
 
@@ -18,7 +18,7 @@ const LANDING_PAGES: LandingPage[] = [
   { permission: Permissions.SpaceTypes.Default, path: '/admin/space-types' },
   { permission: Permissions.Identity.Users, path: '/admin/users' },
   { permission: Permissions.Bookings.Default, path: '/my-calendar' },
-  { permission: Permissions.Bookings.Create, path: '/find-space' },
+  { permission: Flows.FindSpace, path: '/find-space' },
 ]
 
 /** The first page these grants open, or null when they open none of them. */

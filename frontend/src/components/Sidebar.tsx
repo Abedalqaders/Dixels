@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getDisplayName } from '@/features/auth/roles'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
-import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
+import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
 import logo from '@/assets/logo.png'
@@ -53,12 +53,13 @@ export function Sidebar() {
   // Every item follows the user's ABP grants, not their role — the same permission its page
   // (and API) needs, so taking a grant away takes the item with it.
   const canViewBookings = usePermission(Permissions.Bookings.Default)
-  const canCreateBookings = usePermission(Permissions.Bookings.Create)
+  // Find a space needs both the read and the create grant (see Flows).
+  const canFindSpace = usePermission(Flows.FindSpace)
   // Anyone who can see some level of the tree gets Hierarchy (read-only above their level).
   const canHierarchy = usePermission(HierarchyViewers.Buildings)
   const canSpaceTypes = usePermission(Permissions.SpaceTypes.Default)
   const canUsers = usePermission(Permissions.Identity.Users)
-  const showBookings = canViewBookings || canCreateBookings
+  const showBookings = canViewBookings || canFindSpace
   const showSpaceManagement = canHierarchy || canSpaceTypes
   const showAdministration = showSpaceManagement || canUsers
   // Section labels only earn their place when there are two sections to tell apart —
@@ -111,7 +112,7 @@ export function Sidebar() {
           My calendar
         </NavItem>
       )}
-      {canCreateBookings && (
+      {canFindSpace && (
         <NavItem
           to="/find-space"
           active={location.pathname === '/find-space'}

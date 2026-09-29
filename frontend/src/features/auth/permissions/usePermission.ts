@@ -1,18 +1,23 @@
 import { useContext } from 'react'
 import { PermissionsContext } from './permissionsContext'
 
-/** One permission, or several of which any one will do. */
-export type PermissionRequirement = string | readonly string[]
+/**
+ * One permission, several of which any one will do, or `{ allOf }` where every one is needed —
+ * for a page whose API calls need more than one grant (Find a space reads with
+ * Bookings.Default and books with Bookings.Create).
+ */
+export type PermissionRequirement = string | readonly string[] | { readonly allOf: readonly string[] }
 
 /** The whole permissions state — for guards that must tell "still loading" from "denied". */
 export function usePermissions() {
   return useContext(PermissionsContext)
 }
 
-/** Whether `granted` satisfies `required` — any one of a list is enough. */
+/** Whether `granted` satisfies `required`: any one of a list, every one of an `allOf`. */
 export function satisfies(granted: Record<string, boolean>, required: PermissionRequirement): boolean {
-  const names = typeof required === 'string' ? [required] : required
-  return names.some((name) => granted[name] === true)
+  if (typeof required === 'string') return granted[required] === true
+  if ('allOf' in required) return required.allOf.length > 0 && required.allOf.every((name) => granted[name] === true)
+  return required.some((name) => granted[name] === true)
 }
 
 /**
