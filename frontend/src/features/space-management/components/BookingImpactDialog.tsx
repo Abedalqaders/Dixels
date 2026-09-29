@@ -30,7 +30,7 @@ const plural = (n: number) => `${n} upcoming ${n === 1 ? 'booking' : 'bookings'}
 /**
  * What an admin sees before a change leaves bookings behind: how many, which (who, when,
  * where, why), and the choice — keep them (they were booked under the old rules) or cancel
- * them. A delete always cancels, so it only asks to confirm. Either way the people who
+ * them. A delete or a move always cancels, so it only asks to confirm. Either way the people who
  * booked see on their calendar that an admin cancelled it, and why.
  */
 export function BookingImpactDialog({ mode, impact, subject, onChoose }: BookingImpactDialogProps) {
@@ -44,7 +44,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
       : mode === 'closure'
         ? `This closure falls on ${plural(n)}`
         : mode === 'reassign'
-          ? `${subject} has ${plural(n)} in their current building`
+          ? `Moving ${subject} cancels ${plural(n)}`
           : `This change affects ${plural(n)}`
   const action = mode === 'closure' ? 'add the closure' : mode === 'reassign' ? 'move' : 'save'
 
@@ -59,7 +59,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
                 ? "They'll be cancelled, and whoever booked them will see why on their calendar. Restoring later won't bring them back."
                 : 'It can be restored later.'
               : mode === 'reassign'
-                ? 'Moving them doesn\'t cancel these by itself — they can still use them. Keep them, or cancel them now; they\'ll see why on their calendar.'
+                ? "They can only book in one building, so their bookings in the current one are cancelled. They'll see why on their calendar."
                 : 'They were booked under the current rules. Keep them as they are, or cancel them — whoever booked them will see why on their calendar.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -99,13 +99,13 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
 
         <AlertDialogFooter className="gap-2">
           <AlertDialogCancel>Go back</AlertDialogCancel>
-          {mode !== 'delete' && (
+          {mode !== 'delete' && mode !== 'reassign' && (
             <Button variant="outline" onClick={() => onChoose('keep')}>
               Keep them and {action}
             </Button>
           )}
           <Button variant="destructive" onClick={() => onChoose('cancel')}>
-            {mode === 'delete' ? (n > 0 ? `Delete and cancel ${n}` : 'Delete') : `Cancel ${n} and ${action}`}
+            {mode === 'delete' ? (n > 0 ? `Delete and cancel ${n}` : 'Delete') : mode === 'reassign' ? `Move and cancel ${n}` : `Cancel ${n} and ${action}`}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

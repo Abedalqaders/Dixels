@@ -32,5 +32,10 @@ public class BookableBuildingDto
     /// <summary>The booking time grid (install config) — the UI offers start/end times on it.</summary>
     public int SlotMinutes { get; set; }
 
+    /// <summary>The building's own opening days (0 = Sunday … 6) and hours — what My calendar
+    /// shades as closed. Rooms may be open for less; that's on each <see cref="BookableSpaceDto"/>.</summary>
+    public int[] Days { get; set; } = Array.Empty<int>();
+    public OperatingWindowDto Hours { get; set; } = new();
+
     public List<BookableFloorDto> Floors { get; set; } = new();
 }

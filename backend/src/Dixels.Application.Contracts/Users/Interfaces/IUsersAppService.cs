@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dixels.Bookings;
 using Dixels.SpaceManagement;
@@ -7,9 +8,12 @@ using Volo.Abp.Application.Services;
 namespace Dixels.Users;
 
 /// <summary>
-/// The one user endpoint ABP's Identity module doesn't have. Listing users and setting
-/// their building go through ABP's own <c>/api/identity/users</c> (see
-/// <c>DixelsIdentityUserAppService</c>), with the building in <c>extraProperties.BuildingId</c>.
+/// User endpoints ABP's Identity module doesn't have. Listing users and setting their
+/// building go through ABP's own <c>/api/identity/users</c> (see
+/// <c>DixelsIdentityUserAppService</c>), with the building in <c>extraProperties.BuildingId</c>;
+/// a single user's roles are ABP's own <c>/api/identity/users/{id}/roles</c>. The Users page's
+/// Roles column and role filter use the two below instead, so it needs neither one call per
+/// row nor the separate Role-management permission <c>/api/identity/roles</c> would require.
 /// </summary>
 public interface IUsersAppService : IApplicationService
 {
@@ -25,4 +29,10 @@ public interface IUsersAppService : IApplicationService
     /// in the one they're leaving — both in one go.
     /// </summary>
     Task AssignBuildingAsync(Guid userId, AssignUserBuildingDto input);
+
+    /// <summary>Each of these users' role names, one batch call for a page of the Users list.</summary>
+    Task<List<UserRolesDto>> GetRolesForUsersAsync(List<Guid> userIds);
+
+    /// <summary>Every role name in the system, for the Users page's role filter.</summary>
+    Task<List<string>> GetRoleNamesAsync();
 }

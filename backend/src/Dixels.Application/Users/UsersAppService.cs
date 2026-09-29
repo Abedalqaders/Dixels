@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
@@ -16,6 +17,7 @@ namespace Dixels.Users;
 public class UsersAppService : DixelsAppService, IUsersAppService
 {
     private readonly IIdentityUserRepository _identityUserRepository;
+    private readonly IIdentityRoleRepository _identityRoleRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IDataFilter _dataFilter;
     private readonly IdentityUserManager _userManager;
@@ -23,6 +25,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
 
     public UsersAppService(
         IIdentityUserRepository identityUserRepository,
+        IIdentityRoleRepository identityRoleRepository,
         IRepository<Building, Guid> buildingRepository,
         IDataFilter dataFilter,
         IdentityUserManager userManager,
@@ -32,6 +35,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         _userManager = userManager;
         _bookingImpact = bookingImpact;
         _identityUserRepository = identityUserRepository;
+        _identityRoleRepository = identityRoleRepository;
         _buildingRepository = buildingRepository;
     }
 
@@ -77,12 +81,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
             await _buildingRepository.GetAsync(target); // 404 for a missing or deleted building
         }
 
-        var current = user.GetBuildingId();
-        if (current is not null && current != input.BuildingId && input.CancelUpcomingBookings)
-        {
-            var (_, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId, current);
-            await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:MovedBuilding"));
-        }
+        await _bookingImpact.CancelOnMoveAsync(userId, user.GetBuildingId(), input.BuildingId, CurrentUser.GetId());
 
         user.SetBuildingId(input.BuildingId);
         var result = await _userManager.UpdateAsync(user);
@@ -90,6 +89,31 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         {
             throw new UserFriendlyException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
+    }
+
+    [Authorize(IdentityPermissions.Users.Default)]
+    public async Task<List<UserRolesDto>> GetRolesForUsersAsync(List<Guid> userIds)
+    {
+        var result = new List<UserRolesDto>();
+        foreach (var id in userIds.Distinct())
+        {
+            var user = await _userManager.FindByIdAsync(id.ToString());
+            if (user is null)
+            {
+                continue;
+            }
+
+            result.Add(new UserRolesDto { UserId = id, Roles = (await _userManager.GetRolesAsync(user)).ToList() });
+        }
+
+        return result;
+    }
+
+    [Authorize(IdentityPermissions.Users.Default)]
+    public async Task<List<string>> GetRoleNamesAsync()
+    {
+        var roles = await _identityRoleRepository.GetListAsync();
+        return roles.Select(r => r.Name).OrderBy(name => name).ToList();
     }
 
     private BuildingDto MapBuildingToDto(Building building)

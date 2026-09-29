@@ -1,20 +1,36 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Repeat } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
 import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import type { BookingDto } from '@/features/bookings/api/bookingsApi'
-import { dayOfMonth, shortWeekday } from '@/features/calendar/calendarDates'
-import { bookingMinutes, bookingsByDay, HOUR_PX, layoutDay } from '@/features/calendar/dayLayout'
-import { isCancelled } from '@/features/calendar/bookingPhase'
+import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
+import { clock12, dayOfMonth, shortWeekday, weekday } from '@/features/calendar/calendarDates'
+import type { CalendarItem } from '@/features/calendar/calendarItem'
+import { DAY_MINUTES, HOUR_PX, itemMinutes, itemsByDay, layoutDay, openWindow } from '@/features/calendar/dayLayout'
 import { dragHint } from '@/features/calendar/durationLimits'
 import type { DurationLimits } from '@/features/calendar/durationLimits'
 
 // Movement below this many pixels is a click, not a drag.
 const DRAG_THRESHOLD_PX = 4
 
-const NO_BOOKINGS: BookingDto[] = []
+const NO_ITEMS: CalendarItem[] = []
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Diagonal hatching for the hours the building is shut — the same idea as the closed
+// stretches on Find a space's day bars.
+const CLOSED_HATCH =
+  'repeating-linear-gradient(135deg, color-mix(in srgb, var(--border-subtle) 70%, transparent) 0 4px, transparent 4px 10px)'
+
+// A booking that has started (or is over) is hatched in its own tint — still readable,
+// clearly not ahead of you any more.
+const STARTED_HATCH =
+  'repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--focus-ring) 14%, transparent) 5px 6px)'
+
+type OpenWindow = { from: number; to: number } | null
+
+/** A minute's y on the grid — midnight is the top, so the day's minutes are the axis. */
+const top = (minute: number) => (minute / 60) * HOUR_PX
 
 export interface PickedRange {
   date: IsoDate
@@ -24,8 +40,10 @@ export interface PickedRange {
 
 interface TimeGridProps {
   days: IsoDate[]
-  bookings: BookingDto[]
-  hours: { from: number; to: number }
+  items: CalendarItem[]
+  /** The building's opening days (0 = Sunday … 6) and hours; everything else is shaded as closed. */
+  openDays: number[]
+  openHours: OperatingWindowDto
   today: IsoDate
   /** The building's current minute of the day. */
   nowMinute: number
@@ -38,7 +56,7 @@ interface TimeGridProps {
   defaultLength: number
   /** Every room's max length — a drag stops at the longest and says how many rooms fit on the way. */
   limits: DurationLimits
-  onOpenBooking: (booking: BookingDto) => void
+  onOpenItem: (item: CalendarItem) => void
   onPickRange: (range: PickedRange) => void
   /** Week view: clicking a day's heading opens that day. */
   onOpenDay?: (date: IsoDate) => void
@@ -47,15 +65,16 @@ interface TimeGridProps {
 }
 
 /**
- * The Day and Week views: a column per day on one shared hour axis. Bookings are blocks
- * (overlapping ones side by side); the past is shaded; today has a live "now" line. Drag
- * down across empty time to pick a window — or click for the usual length — and the page
- * offers the rooms that are free for it.
+ * The Day and Week views: a column per day on one shared 24-hour axis. Items are blocks
+ * (overlapping ones side by side); the past and the building's closed hours are shaded;
+ * today has a live "now" line. Drag down across empty time to pick a window — or click
+ * for the usual length — and the page offers the rooms that are free for it.
  */
 export function TimeGrid({
   days,
-  bookings,
-  hours,
+  items,
+  openDays,
+  openHours,
   today,
   nowMinute,
   firstBookableMinute,
@@ -63,55 +82,75 @@ export function TimeGrid({
   slotMinutes,
   defaultLength,
   limits,
-  onOpenBooking,
+  onOpenItem,
   onPickRange,
   onOpenDay,
   readOnly = false,
 }: TimeGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const top = useCallback((minute: number) => ((minute - hours.from * 60) / 60) * HOUR_PX, [hours.from])
-  const height = (hours.to - hours.from) * HOUR_PX
+  // The body scrolls (native scrollbar); the day headings don't, so without this the
+  // scrollbar's width would push the body's columns out of line with the headings above
+  // them. Matched via ResizeObserver, since it comes and goes with the viewport's height.
+  const [scrollbarWidth, setScrollbarWidth] = useState(0)
+  const height = 24 * HOUR_PX
   const showsToday = days.includes(today)
+  // The Day view marks "now" in red across its one column; the week keeps a quieter dotted line.
+  const dayView = days.length === 1
 
-  // Open scrolled to "now" (an hour of context above it) when today is on screen,
-  // otherwise to the first booking — not to the top of a long empty morning.
   const daysKey = days.join()
   // Grouped once per data change, so a column's list keeps its identity between renders
-  // and the memoised columns below skip re-rendering.
+  // and the memoised columns below skip re-rendering. Same for each day's open window.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const byDay = useMemo(() => bookingsByDay(bookings, days), [bookings, daysKey])
+  const byDay = useMemo(() => itemsByDay(items, days), [items, daysKey])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const openByDay = useMemo(() => new Map(days.map((d) => [d, openWindow(d, openDays, openHours)])), [daysKey, openDays, openHours])
+
+  // The whole day is drawn, but open scrolled to what matters: "now" (an hour of context
+  // above it) when today is on screen, otherwise the first item — or the building's
+  // opening hour, not the top of an empty night.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const firstBooking = bookings
-      .map((b) => bookingMinutes(b, days.find((d) => b.localStart.startsWith(d)) ?? days[0]).start)
+    const firstItem = items
+      .map((b) => itemMinutes(b, days.find((d) => b.localStart.startsWith(d)) ?? days[0]).start)
       .sort((a, b) => a - b)[0]
-    const target = showsToday ? nowMinute - 60 : (firstBooking ?? hours.from * 60) - 30
+    const opens = days.map((d) => openByDay.get(d)?.from).find((m) => m !== undefined) ?? 8 * 60
+    const target = showsToday ? nowMinute - 60 : (firstItem ?? opens) - 30
     el.scrollTop = Math.max(0, top(target))
     // Only when the days change — not on every refetch or clock tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daysKey])
 
-  const hourMarks: number[] = []
-  for (let h = hours.from; h < hours.to; h++) hourMarks.push(h)
+  const hourMarks = Array.from({ length: 24 }, (_, h) => h)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    // Doesn't exist in the test environment — there's no real scrollbar to measure there.
+    if (!el || typeof ResizeObserver !== 'function') return
+    const measure = () => setScrollbarWidth(el.offsetWidth - el.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-card">
+    <div className="flex min-h-0 flex-col">
       {/* Day headings */}
       <div
         className="grid border-b"
-        style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))`, paddingRight: scrollbarWidth }}
       >
         <span aria-hidden="true" />
         {days.map((d) => {
           const isToday = d === today
           const label = (
             <>
-              <span className="text-xs tracking-wide text-muted-foreground uppercase">{shortWeekday(d)}</span>
+              <span className="text-xs text-muted-foreground">{shortWeekday(d)}</span>
               <span
                 className={cn(
-                  'grid size-8 place-items-center rounded-full text-base font-semibold',
-                  isToday && 'bg-brand text-primary-foreground',
+                  'grid size-6 place-items-center rounded-full text-xs font-semibold',
+                  isToday && 'bg-foreground text-background',
                 )}
               >
                 {dayOfMonth(d)}
@@ -122,7 +161,7 @@ export function TimeGrid({
             <button
               key={d}
               type="button"
-              className="flex flex-col items-center gap-0.5 border-l py-2 hover:bg-muted"
+              className="flex items-center justify-center gap-1.5 border-l bg-transparent py-2.5 hover:bg-muted"
               aria-label={`Open ${shortWeekday(d)} ${dayOfMonth(d)}`}
               aria-current={isToday ? 'date' : undefined}
               onClick={() => onOpenDay(d)}
@@ -130,7 +169,7 @@ export function TimeGrid({
               {label}
             </button>
           ) : (
-            <div key={d} className="flex flex-col items-center gap-0.5 border-l py-2" aria-current={isToday ? 'date' : undefined}>
+            <div key={d} className="flex items-center justify-center gap-1.5 border-l py-2.5" aria-current={isToday ? 'date' : undefined}>
               {label}
             </div>
           )
@@ -139,25 +178,50 @@ export function TimeGrid({
 
       {/* Hours × days */}
       <div ref={scrollRef} className="max-h-[calc(100vh-240px)] min-h-[360px] overflow-y-auto">
-        <div className="grid" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(0, 1fr))`, height }}>
+        <div className="relative grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))`, height }}>
           <div className="relative" aria-hidden="true">
             {hourMarks.map((h) => (
               <span
                 key={h}
-                className="absolute right-2 -translate-y-1/2 font-mono text-[11px] text-muted-foreground"
+                className="absolute right-2 -translate-y-1/2 text-[11px] text-muted-foreground"
                 style={{ top: top(h * 60) }}
               >
-                {h === hours.from ? '' : fromMinutes(h * 60)}
+                {/* Midnight has no label; an hour the "now" marker sits on top of steps aside. */}
+                {h === 0 || (showsToday && Math.abs(h * 60 - nowMinute) < 20) ? '' : clock12(fromMinutes(h * 60))}
               </span>
             ))}
+            {showsToday && (
+              <span
+                className={cn(
+                  'absolute right-0 z-30 flex -translate-y-1/2 items-center gap-1 bg-card pl-1 text-[11px] font-semibold',
+                  dayView ? 'pr-2 text-destructive' : 'text-foreground',
+                )}
+                style={{ top: top(nowMinute) }}
+              >
+                {clock12(fromMinutes(nowMinute))}
+                {!dayView && <span className="size-1.5 rounded-full bg-foreground" />}
+              </span>
+            )}
           </div>
+
+          {/* "Now", once across every day on screen — the day columns only shade what's past. */}
+          {showsToday && (
+            <div
+              className={cn(
+                'pointer-events-none absolute right-0 left-16 z-30',
+                dayView ? 'border-t border-destructive' : 'border-t-2 border-dotted border-foreground/60',
+              )}
+              style={{ top: top(nowMinute) }}
+              aria-hidden="true"
+            />
+          )}
 
           {days.map((d) => (
             <DayColumn
               key={d}
               date={d}
-              bookings={byDay.get(d) ?? NO_BOOKINGS}
-              hours={hours}
+              items={byDay.get(d) ?? NO_ITEMS}
+              open={openByDay.get(d) ?? null}
               past={d < today}
               isToday={d === today}
               // Only today's column cares what time it is — the others get a constant, so the
@@ -169,8 +233,7 @@ export function TimeGrid({
               slotMinutes={slotMinutes}
               defaultLength={defaultLength}
               limits={limits}
-              top={top}
-              onOpenBooking={onOpenBooking}
+              onOpenItem={onOpenItem}
               onPickRange={onPickRange}
             />
           ))}
@@ -182,8 +245,9 @@ export function TimeGrid({
 
 interface DayColumnProps {
   date: IsoDate
-  bookings: BookingDto[]
-  hours: { from: number; to: number }
+  items: CalendarItem[]
+  /** When the building is open on this day; null when it's shut all day. */
+  open: OpenWindow
   past: boolean
   isToday: boolean
   nowMinute: number
@@ -192,16 +256,15 @@ interface DayColumnProps {
   slotMinutes: number
   defaultLength: number
   limits: DurationLimits
-  top: (minute: number) => number
-  onOpenBooking: (booking: BookingDto) => void
+  onOpenItem: (item: CalendarItem) => void
   onPickRange: (range: PickedRange) => void
   readOnly: boolean
 }
 
 const DayColumn = memo(function DayColumn({
   date,
-  bookings,
-  hours,
+  items,
+  open,
   past,
   isToday,
   nowMinute,
@@ -210,8 +273,7 @@ const DayColumn = memo(function DayColumn({
   slotMinutes,
   defaultLength,
   limits,
-  top,
-  onOpenBooking,
+  onOpenItem,
   onPickRange,
   readOnly,
 }: DayColumnProps) {
@@ -230,21 +292,23 @@ const DayColumn = memo(function DayColumn({
     return () => clearTimeout(timer)
   }, [notice])
 
-  const dayStart = hours.from * 60
-  const dayEnd = hours.to * 60
+  // A closed day is "opens at the end of the day": nothing to book, and both shaded bands
+  // below fall out of the same two numbers.
+  const openFrom = open?.from ?? DAY_MINUTES
+  const openTo = open?.to ?? DAY_MINUTES
   const snap = (m: number) => Math.floor(m / slotMinutes) * slotMinutes
 
   function minuteAt(clientY: number): number {
     const rect = ref.current!.getBoundingClientRect()
-    return dayStart + ((clientY - rect.top) / HOUR_PX) * 60
+    return ((clientY - rect.top) / HOUR_PX) * 60
   }
 
-  // Keeps a picked range on the grid, inside the day's hours, after "now + notice" and no
-  // longer than the longest any room allows. `anchor` says which end the pointer holds
-  // still, so the length cap trims the end being dragged.
+  // Keeps a picked range inside the building's hours, after "now + notice" and no longer
+  // than the longest any room allows. `anchor` says which end the pointer holds still, so
+  // the length cap trims the end being dragged.
   function clamp(start: number, end: number, anchor: 'start' | 'end' = 'start') {
-    let s = Math.max(start, dayStart, Math.ceil(firstBookableMinute / slotMinutes) * slotMinutes)
-    let e = Math.min(Math.max(end, s + slotMinutes), dayEnd)
+    let s = Math.max(start, openFrom, Math.ceil(firstBookableMinute / slotMinutes) * slotMinutes)
+    let e = Math.min(Math.max(end, s + slotMinutes), openTo)
     if (e - s > limits.longest) {
       if (anchor === 'start') e = s + limits.longest
       else s = e - limits.longest
@@ -252,20 +316,25 @@ const DayColumn = memo(function DayColumn({
     return { start: s, end: e }
   }
 
-  // A slot that's entirely in the past, inside the notice period, or on a past day can't be picked.
-  const isBlocked = (minute: number) => minute + slotMinutes <= firstBookableMinute || minute >= dayEnd
+  // A slot that's entirely in the past, inside the notice period, on a past day, or
+  // outside the building's hours can't be picked.
+  const isBlocked = (minute: number) =>
+    minute + slotMinutes <= firstBookableMinute || minute < openFrom || minute + slotMinutes > openTo
   const earliest = Math.ceil(firstBookableMinute / slotMinutes) * slotMinutes
 
   function whyBlocked(minute: number): string {
     if (past) return 'This day has passed.'
+    if (!open) return `The building is closed on ${DAY_NAMES[weekday(date)]}s.`
     if (minute < nowMinute) return 'That time has passed.'
+    if (minute < openFrom) return `The building opens at ${fromMinutes(openFrom)}.`
+    if (minute + slotMinutes > openTo) return `The building closes at ${fromMinutes(openTo)}.`
     return `Too soon: bookings need ${leadMinutes} min notice. The earliest you can start today is ${fromMinutes(earliest)}.`
   }
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
     if (readOnly || e.button !== 0 || e.target !== e.currentTarget) return
     const minute = snap(minuteAt(e.clientY))
-    if (minute >= dayEnd) return
+    if (minute >= DAY_MINUTES) return
     if (isBlocked(minute)) {
       setNotice({ minute, text: whyBlocked(minute) })
       return
@@ -311,10 +380,10 @@ const DayColumn = memo(function DayColumn({
   }
 
   const hint = draft ? dragHint(draft.end - draft.start, limits) : null
-  const placed = layoutDay(bookings.map((b) => ({ item: b, ...bookingMinutes(b, date) })))
-  const pastUntil = past ? dayEnd : isToday ? Math.min(Math.max(nowMinute, dayStart), dayEnd) : dayStart
+  const placed = layoutDay(items.map((b) => ({ item: b, ...itemMinutes(b, date) })))
+  const pastUntil = past ? DAY_MINUTES : isToday ? Math.min(Math.max(nowMinute, 0), DAY_MINUTES) : 0
   // Today, between "now" and the first bookable slot: not past, but too soon to book.
-  const noticeUntil = isToday ? Math.min(Math.max(earliest, pastUntil), dayEnd) : pastUntil
+  const noticeUntil = isToday ? Math.min(Math.max(earliest, pastUntil), DAY_MINUTES) : pastUntil
 
   return (
     <div
@@ -333,13 +402,37 @@ const DayColumn = memo(function DayColumn({
         setDraft(null)
       }}
     >
-      {pastUntil > dayStart && (
+      {/* Closed before opening (the whole day when the building is shut), and after closing. */}
+      {openFrom > 0 && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 flex items-end justify-end bg-muted/40 px-1.5 pb-0.5"
+          style={{ height: top(openFrom), backgroundImage: CLOSED_HATCH }}
+          aria-hidden="true"
+        >
+          {openFrom >= 30 && (
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{open ? 'Closed' : 'Closed all day'}</span>
+          )}
+        </div>
+      )}
+      {openTo < DAY_MINUTES && (
+        <div
+          className="pointer-events-none absolute inset-x-0 flex items-start justify-end bg-muted/40 px-1.5 pt-0.5"
+          style={{ top: top(openTo), height: top(DAY_MINUTES) - top(openTo), backgroundImage: CLOSED_HATCH }}
+          aria-hidden="true"
+        >
+          {DAY_MINUTES - openTo >= 30 && (
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Closed</span>
+          )}
+        </div>
+      )}
+
+      {pastUntil > 0 && (
         <div
           className="pointer-events-none absolute inset-x-0 top-0 flex items-end justify-end bg-muted/70 px-1.5 pb-0.5"
           style={{ height: top(pastUntil) }}
           aria-hidden="true"
         >
-          {pastUntil - dayStart >= 30 && (
+          {pastUntil >= 30 && (
             <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Past</span>
           )}
         </div>
@@ -371,43 +464,41 @@ const DayColumn = memo(function DayColumn({
       )}
 
       {placed.map(({ item: b, start, end, lane, lanes }) => {
-        const tall = end - start >= 45
-        const done = past || (isToday && end <= nowMinute)
-        const cancelled = isCancelled(b)
+        const showTime = end - start >= 30
+        const showPlace = end - start >= 60
+        const started = past || (isToday && start <= nowMinute)
         return (
           <button
             key={b.id}
             type="button"
             className={cn(
-              'absolute z-10 flex flex-col overflow-hidden rounded-md border-l-[3px] border-brand bg-slot-open px-1.5 py-0.5 text-left text-xs shadow-xs',
-              'transition-colors hover:bg-[color-mix(in_srgb,var(--focus-ring)_26%,var(--surface-raised))]',
+              'absolute z-10 flex flex-col overflow-hidden rounded-lg border border-brand/30 bg-slot-open px-2 py-1 text-left text-xs shadow-xs',
+              'transition-colors hover:border-brand/70 hover:bg-[color-mix(in_srgb,var(--focus-ring)_22%,var(--surface-raised))]',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
-              done && 'opacity-60',
               // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
-              cancelled && 'border-dashed border-muted-foreground bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
+              b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
             )}
             style={{
               top: top(start) + 1,
               height: Math.max(top(end) - top(start) - 2, 18),
               left: `calc(${(lane / lanes) * 100}% + 2px)`,
               width: `calc(${100 / lanes}% - 4px)`,
+              ...(started && !b.cancelled ? { backgroundImage: STARTED_HATCH } : {}),
             }}
-            aria-label={`${cancelled ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.spaceName}`}
+            aria-label={`${b.cancelled ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.location}`}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => onOpenBooking(b)}
+            onClick={() => onOpenItem(b)}
           >
-            <span className="flex min-w-0 items-center gap-1 font-semibold">
-              {b.seriesId && <Repeat className="size-3 flex-none text-brand" aria-label="Repeats" />}
+            <span className={cn('flex min-w-0 items-center gap-1 font-semibold', !b.cancelled && 'text-brand')}>
+              {b.repeats && <Repeat className="size-3 flex-none" aria-label="Repeats" />}
               <span className="truncate">{b.title}</span>
             </span>
-            {tall ? (
-              <>
-                <span className="truncate font-mono text-[11px] text-muted-foreground">
-                  {timeOf(b.localStart)}–{timeOf(b.localEnd)}
-                </span>
-                <span className="truncate text-[11px] text-muted-foreground">{b.spaceName}</span>
-              </>
-            ) : null}
+            {showTime && (
+              <span className={cn('truncate text-[11px]', b.cancelled ? 'text-muted-foreground' : 'text-brand/80')}>
+                {clock12(timeOf(b.localStart))}
+              </span>
+            )}
+            {showPlace && <span className="truncate text-[11px] text-muted-foreground">{b.location}</span>}
           </button>
         )
       })}
@@ -445,11 +536,6 @@ const DayColumn = memo(function DayColumn({
         </div>
       )}
 
-      {isToday && nowMinute >= dayStart && nowMinute <= dayEnd && (
-        <div className="pointer-events-none absolute inset-x-0 z-30 h-0.5 bg-destructive" style={{ top: top(nowMinute) }} aria-hidden="true">
-          <span className="absolute -top-[5px] -left-[5px] size-3 rounded-full bg-destructive" />
-        </div>
-      )}
     </div>
   )
 })

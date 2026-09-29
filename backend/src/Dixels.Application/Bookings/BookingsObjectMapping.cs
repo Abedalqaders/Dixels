@@ -139,6 +139,8 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableBuildingDto.SlotMinutes))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Floors))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.IsRemoved))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Days))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Hours))]
     public partial BookableBuildingDto Map(Building source);
 
     [MapperIgnoreSource(nameof(Building.BuildingNumber))]
@@ -158,6 +160,8 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableBuildingDto.SlotMinutes))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Floors))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.IsRemoved))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Days))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Hours))]
     public partial void Map(Building source, BookableBuildingDto destination);
 
     public void BeforeMap(Building source)

@@ -31,6 +31,8 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 30,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  days: [0, 1, 2, 3, 4, 5, 6],
+  hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f-1', name: 'Level 1', floorNumber: 1, spaces: [space] }],
 }
 
@@ -61,9 +63,13 @@ describe('BookingForm', () => {
 
     renderForm()
 
-    const alert = await screen.findByRole('alert')
-    expect(alert.querySelector('strong')).toHaveTextContent('at least 2 attendees')
-    expect(alert).toHaveTextContent('at most 2h')
+    // Each rule sits under the field it's about, not in one panel at the bottom.
+    const attendees = screen.getByLabelText('Attendees')
+    await waitFor(() => expect(attendees).toHaveAccessibleDescription(/at least 2 attendees/))
+    expect(attendees).toHaveAttribute('aria-invalid', 'true')
+    const from = screen.getByLabelText('From')
+    expect(from).toHaveAccessibleDescription(/at most 2h/)
+    expect(from).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('button', { name: 'Book' })).toBeDisabled()
   })
 
@@ -82,6 +88,24 @@ describe('BookingForm', () => {
     const sent = vi.mocked(createBooking).mock.calls[0][1]
     expect(sent).toMatchObject({ spaceId: 'space-1', attendees: 2, title: 'Planning' })
     expect(sent.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('says under Attendees when there are more people than seats, without asking the server', async () => {
+    vi.mocked(previewBooking).mockResolvedValue(valid)
+    const user = userEvent.setup()
+    renderForm()
+    await screen.findByText('Available')
+
+    const attendees = screen.getByLabelText('Attendees')
+    await user.clear(attendees)
+    await user.type(attendees, '9')
+
+    expect(screen.getByText('This room seats 8.')).toBeInTheDocument()
+    expect(attendees).toHaveAttribute('aria-invalid', 'true')
+    expect(attendees).toHaveAccessibleDescription('This room seats 8.')
+    expect(screen.getByRole('button', { name: 'Book' })).toBeDisabled()
+    // Only the opening check ran — an impossible number never goes to the server.
+    expect(previewBooking).toHaveBeenCalledTimes(1)
   })
 
   it('does not re-check availability while only the title changes', async () => {

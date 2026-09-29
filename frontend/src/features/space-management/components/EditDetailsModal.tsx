@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useFieldErrors } from '@/components/FieldError'
 import { ApiError, updateBuilding, updateFloor, updateSpace, getSpaceUpdateImpact } from '@/features/space-management/api/spaceManagementApi'
 import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
@@ -26,6 +27,8 @@ interface EditDetailsModalProps {
 
 const TIMEZONES = ['Asia/Amman', 'Europe/London', 'America/New_York', 'UTC']
 
+type Field = 'name' | 'floorNumber' | 'capacity' | 'type'
+
 export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, onError }: EditDetailsModalProps) {
   const [name, setName] = useState(state.name)
   const [buildingNumber, setBuildingNumber] = useState(state.kind === 'building' ? state.buildingNumber ?? '' : '')
@@ -33,20 +36,35 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   const [floorNumber, setFloorNumber] = useState(state.kind === 'floor' ? String(state.floorNumber ?? '') : '')
   const [spaceTypeId, setSpaceTypeId] = useState(state.kind === 'space' ? state.spaceTypeId : (spaceTypes[0]?.id ?? ''))
   const [capacity, setCapacity] = useState(state.kind === 'space' ? String(state.capacity) : '')
-  const [validationError, setValidationError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const f = useFieldErrors<Field>('edit')
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
 
   const titles = { building: 'Edit building details', floor: 'Edit floor details', space: 'Edit space details' }
 
+  // Every problem at once, each under its own field — not the first one found.
+  function validate(): Partial<Record<Field, string>> {
+    const errors: Partial<Record<Field, string>> = {}
+    if (!name.trim()) errors.name = 'Name is required.'
+    if (state.kind === 'floor' && floorNumber.trim() && !Number.isInteger(Number(floorNumber))) {
+      errors.floorNumber = 'Floor number must be a whole number.'
+    }
+    if (state.kind === 'space') {
+      const parsed = Number(capacity)
+      if (!capacity.trim() || !Number.isFinite(parsed) || parsed <= 0) errors.capacity = 'Capacity must be a positive number.'
+      if (!spaceTypeId) errors.type = 'Choose a space type.'
+    }
+    return errors
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setValidationError(null)
-
-    if (!name.trim()) {
-      setValidationError('Name is required.')
+    const errors = validate()
+    if (Object.keys(errors).length > 0) {
+      f.setErrors(errors)
       return
     }
+    f.clear()
 
     setSubmitting(true)
     try {
@@ -55,18 +73,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
       } else if (state.kind === 'floor') {
         await updateFloor(token, state.id, { name: name.trim(), floorNumber: floorNumber.trim() ? Number(floorNumber) : null })
       } else {
-        const parsedCapacity = Number(capacity)
-        if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
-          setValidationError('Capacity must be a positive number.')
-          setSubmitting(false)
-          return
-        }
-        if (!spaceTypeId) {
-          setValidationError('Choose a space type.')
-          setSubmitting(false)
-          return
-        }
-        const input = { name: name.trim(), spaceTypeId, capacity: parsedCapacity }
+        const input = { name: name.trim(), spaceTypeId, capacity: Number(capacity) }
         // A lower capacity can leave bookings for more people behind: ask first.
         const impact = await getSpaceUpdateImpact(token, state.id, input)
         let cancelAffectedBookings = false
@@ -93,43 +100,50 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   return (
     <div className="overlay show">
       {impactPrompt}
-      <form className="modal" onSubmit={handleSubmit}>
+      <form ref={f.formRef} className="modal" onSubmit={handleSubmit} noValidate>
         <h3>{titles[state.kind]}</h3>
         <div className="row2">
           <div className="field">
-            <span className="lbl">
+            <label className="lbl" htmlFor={f.id('name')}>
               Name<span className="req">*</span>
-            </span>
-            <input className="ctrl" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            </label>
+            <input {...f.field('name')} className="ctrl" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            {f.error('name')}
           </div>
           {state.kind === 'building' && (
             <div className="field">
-              <span className="lbl">Building number</span>
-              <input className="ctrl mono" value={buildingNumber} onChange={(e) => setBuildingNumber(e.target.value)} />
+              <label className="lbl" htmlFor="edit-buildingNumber">
+                Building number
+              </label>
+              <input id="edit-buildingNumber" className="ctrl mono" value={buildingNumber} onChange={(e) => setBuildingNumber(e.target.value)} />
             </div>
           )}
           {state.kind === 'floor' && (
             <div className="field">
-              <span className="lbl">Floor number</span>
-              <input className="ctrl mono" value={floorNumber} onChange={(e) => setFloorNumber(e.target.value)} />
+              <label className="lbl" htmlFor={f.id('floorNumber')}>
+                Floor number
+              </label>
+              <input {...f.field('floorNumber')} className="ctrl mono" value={floorNumber} onChange={(e) => setFloorNumber(e.target.value)} />
+              {f.error('floorNumber')}
             </div>
           )}
           {state.kind === 'space' && (
             <div className="field">
-              <span className="lbl">
+              <label className="lbl" htmlFor={f.id('capacity')}>
                 Capacity<span className="req">*</span>
-              </span>
-              <input className="ctrl mono" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+              </label>
+              <input {...f.field('capacity')} className="ctrl mono" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+              {f.error('capacity')}
             </div>
           )}
         </div>
         {state.kind === 'building' && (
           <div className="row2">
             <div className="field">
-              <span className="lbl">
+              <label className="lbl" htmlFor="edit-timezone">
                 Timezone<span className="req">*</span>
-              </span>
-              <select className="ctrl" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+              </label>
+              <select id="edit-timezone" className="ctrl" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
                 {TIMEZONES.map((tz) => (
                   <option key={tz} value={tz}>
                     {tz}
@@ -142,20 +156,20 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
         {state.kind === 'space' && (
           <div className="row2">
             <div className="field">
-              <span className="lbl">
+              <label className="lbl" htmlFor={f.id('type')}>
                 Type<span className="req">*</span>
-              </span>
-              <select className="ctrl" value={spaceTypeId} onChange={(e) => setSpaceTypeId(e.target.value)}>
+              </label>
+              <select {...f.field('type')} className="ctrl" value={spaceTypeId} onChange={(e) => setSpaceTypeId(e.target.value)}>
                 {spaceTypes.map((st) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
                   </option>
                 ))}
               </select>
+              {f.error('type')}
             </div>
           </div>
         )}
-        {validationError && <p className="noteline">{validationError}</p>}
         <div className="modalfoot">
           <button type="button" className="btn sec" onClick={onClose} disabled={submitting}>
             Cancel

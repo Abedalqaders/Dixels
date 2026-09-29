@@ -80,9 +80,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
         if (building.IsDeleted)
         {
-            var removed = ObjectMapper.Map<Building, BookableBuildingDto>(building);
+            var removed = MapBuilding(building);
             removed.IsRemoved = true;
-            removed.SlotMinutes = _bookingOptions.SlotMinutes;
             return removed;
         }
 
@@ -96,8 +95,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
         var spacesByFloor = spaces.ToLookup(s => s.FloorId);
 
-        var dto = ObjectMapper.Map<Building, BookableBuildingDto>(building);
-        dto.SlotMinutes = _bookingOptions.SlotMinutes;
+        var dto = MapBuilding(building);
         dto.Floors = floors
             .Where(f => spacesByFloor[f.Id].Any())
             .OrderBy(f => f.FloorNumber)
@@ -112,6 +110,17 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
                 return floorDto;
             })
             .ToList();
+        return dto;
+    }
+
+    // Days/Hours are value objects, converted here rather than copied by Mapperly (see
+    // SpaceManagementObjectMapping's note on the same two fields).
+    private BookableBuildingDto MapBuilding(Building building)
+    {
+        var dto = ObjectMapper.Map<Building, BookableBuildingDto>(building);
+        dto.SlotMinutes = _bookingOptions.SlotMinutes;
+        dto.Days = ConstraintDtoConversions.ToDayArray(building.Days);
+        dto.Hours = ConstraintDtoConversions.ToWindowDto(building.Hours);
         return dto;
     }
 

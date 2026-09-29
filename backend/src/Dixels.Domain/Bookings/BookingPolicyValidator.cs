@@ -11,9 +11,11 @@ namespace Dixels.Bookings;
 /// every input, including "now" and whether the slot is already taken, is passed in, so
 /// it touches no database and no clock and every rule is unit-testable on its own.
 ///
-/// Returns every violation rather than stopping at the first, ordered most-permanent first
-/// (CONSTRAINTS.md "Order of checks"): someone booking a space that's closed all week
-/// should hear that first, not be told to fix their start time and then be rejected again.
+/// Returns every violation rather than stopping at the first, biggest blocker first — the
+/// UI shows the first one as "why not": someone asking for a room that's closed that day
+/// should hear "closed", not "too long" and then be rejected again once they shorten it.
+/// Roughly: the date can't be booked at all, then the room isn't open, then it doesn't fit
+/// the group, then it's taken, and last what a small tweak fixes (length, slot grid).
 /// Precedence (which level's value wins) is already settled by <see cref="ConstraintResolver"/>;
 /// this order only decides which rejection is reported first.
 /// </summary>
@@ -30,22 +32,28 @@ public class BookingPolicyValidator : IDomainService
     {
         var violations = new List<BookingViolation>();
 
-        CheckAlignment(clock, request, slotMinutes, violations);
+        // The date: in the past, too soon, or beyond how far ahead you may book.
+        CheckLeadTime(rules, request, now, violations);
+        CheckHorizon(rules, clock, request, now, violations);
+
+        // The room isn't open then: closed by an admin, a closed day, outside the hours.
         CheckClosures(clock, request, overrides, violations);
+        CheckDaysAndHours(rules, clock, request, overrides, violations);
+
+        // The room doesn't suit the group.
         CheckCapacity(rules, request, violations);
         CheckMinAttendees(rules, request, violations);
-        CheckMaxDuration(rules, request, violations);
-        CheckDaysAndHours(rules, clock, request, overrides, violations);
-        CheckHorizon(rules, clock, request, now, violations);
-        CheckLeadTime(rules, request, now, violations);
 
-        // Last on purpose: a double-booking is a race, not a policy, and the database's
-        // exclusion constraint is its real enforcement — this is only the friendly early
-        // answer for the common, non-racing case.
+        // Someone has it. (The database's exclusion constraint is the real enforcement — a
+        // double-booking can be a race — this is the friendly early answer.)
         if (overlapsExistingBooking)
         {
             violations.Add(new BookingViolation(DixelsDomainErrorCodes.BookingOverlap, null, BookingFormat.Data()));
         }
+
+        // Fixed by a small tweak: shorten it, or snap to the slot grid.
+        CheckMaxDuration(rules, request, violations);
+        CheckAlignment(clock, request, slotMinutes, violations);
 
         return violations;
     }

@@ -29,7 +29,7 @@ export function MiniCalendar({ selected, month, today, bookedDays, onSelect, onM
   return (
     <Calendar
       mode="single"
-      className="rounded-xl border bg-card p-2 [--cell-size:--spacing(8)]"
+      className="p-1 [--cell-size:--spacing(8)]"
       selected={toDate(selected)}
       month={toDate(month)}
       today={toDate(today)}

@@ -223,27 +223,37 @@ public class BookingPolicyValidatorTests
     }
 
     [Fact]
-    public void An_overlap_is_reported_last()
+    public void An_overlap_comes_after_the_room_not_fitting()
     {
         Codes(Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 9, overlaps: true))
             .ShouldBe(new[] { DixelsDomainErrorCodes.BookingOverCapacity, DixelsDomainErrorCodes.BookingOverlap });
     }
 
     [Fact]
-    public void Every_violation_is_returned_most_permanent_first()
+    public void Every_violation_is_returned_biggest_blocker_first()
     {
         var closed = Override(Local(2026, 10, 2, 0), Local(2026, 10, 3, 0), OverrideEffect.Closed, OverrideScope.Space);
 
-        // Friday 2 Oct under a space closure, with too many people, for too long: four
-        // violations at once, reported closure first and the day rule after the policy ones.
-        var codes = Codes(Validate(Local(2026, 10, 2, 9), Local(2026, 10, 2, 12), attendees: 10, overrides: new[] { closed }));
+        // Friday 2 Oct under a space closure, with too many people, for too long, and taken:
+        // "closed" leads (shortening wouldn't help), "too long" comes last.
+        var codes = Codes(Validate(Local(2026, 10, 2, 9), Local(2026, 10, 2, 12), attendees: 10, overrides: new[] { closed }, overlaps: true));
 
         codes.ShouldBe(new[]
         {
             DixelsDomainErrorCodes.BookingSpaceClosed,
-            DixelsDomainErrorCodes.BookingOverCapacity,
-            DixelsDomainErrorCodes.BookingTooLong,
             DixelsDomainErrorCodes.BookingClosedDay,
+            DixelsDomainErrorCodes.BookingOverCapacity,
+            DixelsDomainErrorCodes.BookingOverlap,
+            DixelsDomainErrorCodes.BookingTooLong,
         });
+    }
+
+    [Fact]
+    public void A_date_that_cant_be_booked_comes_before_the_room_being_closed()
+    {
+        var codes = Codes(Validate(Local(2026, 9, 25, 9), Local(2026, 9, 25, 12)));
+
+        codes[0].ShouldBe(DixelsDomainErrorCodes.BookingStartInPast);
+        codes[^1].ShouldBe(DixelsDomainErrorCodes.BookingTooLong);
     }
 }

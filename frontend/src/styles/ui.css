@@ -65,4 +65,14 @@
   [data-slot]::after {
     border: 0 solid var(--color-border);
   }
+
+  /* The calendar grids are plain elements built with the same border utilities (day
+     columns, month cells, day-number buttons): give everything inside the calendar the
+     same reset, so their lines take the theme's border colour rather than the text colour
+     and buttons lose the browser's default edge. Utilities still win over this layer. */
+  [data-calendar] *,
+  [data-calendar] *::before,
+  [data-calendar] *::after {
+    border: 0 solid var(--color-border);
+  }
 }

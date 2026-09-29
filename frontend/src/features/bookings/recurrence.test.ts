@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { choiceFor, defaultEndDate, describeRecurrence, Frequency, MonthlyRepeat, repeatPresets, weekdayPosition } from './recurrence'
+import {
+  choiceFor,
+  defaultEndDate,
+  describeRecurrence,
+  endAfterMonths,
+  endAfterWeeks,
+  Frequency,
+  maxMonths,
+  maxWeeks,
+  MonthlyRepeat,
+  monthsUntil,
+  repeatPresets,
+  weekdayPosition,
+  weeksUntil,
+} from './recurrence'
 
 // Tue 29 Sep 2026; the building is open Sun–Thu.
 const TUE = '2026-09-29'
@@ -77,5 +91,33 @@ describe('choiceFor', () => {
     expect(choiceFor({ ...base, frequency: Frequency.Weekly, weekdays: [2] }, TUE, SUN_THU)).toBe('weekly')
     expect(choiceFor({ ...base, frequency: Frequency.Weekly, weekdays: [4, 3, 2, 1, 0] }, TUE, SUN_THU)).toBe('workdays')
     expect(choiceFor({ ...base, frequency: Frequency.Weekly, weekdays: [2, 4] }, TUE, SUN_THU)).toBe('custom')
+  })
+})
+
+describe('weekly occurrence count', () => {
+  it('counts the first week and converts back to the last occurrence date', () => {
+    expect(weeksUntil('2026-09-29', '2026-09-29')).toBe(1)
+    expect(weeksUntil('2026-09-29', '2026-10-20')).toBe(4)
+    expect(endAfterWeeks('2026-09-29', 4, '2026-12-31')).toBe('2026-10-20')
+  })
+
+  it('never runs past the series horizon', () => {
+    expect(maxWeeks('2026-09-29', '2026-10-20')).toBe(4)
+    expect(endAfterWeeks('2026-09-29', 10, '2026-10-20')).toBe('2026-10-20')
+    expect(endAfterWeeks('2026-09-29', 0, '2026-12-31')).toBe('2026-09-29')
+  })
+})
+
+describe('monthly occurrence count', () => {
+  it('counts the first month and lands on the last occurrence', () => {
+    expect(monthsUntil('2026-09-29', '2026-09-29')).toBe(1)
+    expect(monthsUntil('2026-09-29', '2026-11-29')).toBe(3)
+    expect(endAfterMonths('2026-09-29', 3, '2027-12-31')).toBe('2026-11-29')
+  })
+
+  it('clamps a late day like the occurrences do, and stops at the horizon', () => {
+    expect(endAfterMonths('2026-10-31', 2, '2027-12-31')).toBe('2026-11-30')
+    expect(maxMonths('2026-09-29', '2026-12-15')).toBe(3)
+    expect(endAfterMonths('2026-09-29', 12, '2026-12-15')).toBe('2026-11-29')
   })
 })

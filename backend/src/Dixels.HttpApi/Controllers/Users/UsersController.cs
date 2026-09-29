@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dixels.Bookings;
 using Dixels.SpaceManagement;
@@ -31,4 +32,11 @@ public class UsersController : DixelsController, IUsersAppService
     [HttpPut("{userId}/building")]
     public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>
         _usersAppService.AssignBuildingAsync(userId, input);
+
+    [HttpGet("roles")]
+    public virtual Task<List<UserRolesDto>> GetRolesForUsersAsync([FromQuery] List<Guid> userIds) =>
+        _usersAppService.GetRolesForUsersAsync(userIds);
+
+    [HttpGet("role-names")]
+    public virtual Task<List<string>> GetRoleNamesAsync() => _usersAppService.GetRoleNamesAsync();
 }

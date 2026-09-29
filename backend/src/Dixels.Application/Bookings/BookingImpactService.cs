@@ -84,6 +84,21 @@ public class BookingImpactService : ITransientDependency
         }
     }
 
+    /// <summary>
+    /// Someone leaves <paramref name="fromBuildingId"/> (moved or unassigned): they can only
+    /// book in one building, so their upcoming bookings there are cancelled.
+    /// </summary>
+    public async Task CancelOnMoveAsync(Guid userId, Guid? fromBuildingId, Guid? toBuildingId, Guid adminId)
+    {
+        if (fromBuildingId is null || fromBuildingId == toBuildingId)
+        {
+            return;
+        }
+
+        var (_, upcoming) = await UpcomingForUserAsync(userId, fromBuildingId);
+        await CancelAllAsync(upcoming, adminId, Text("Dixels:Bookings:CancelReason:MovedBuilding"));
+    }
+
     public BookingImpactChecker Checker => _checker;
 
     /// <summary>The bookings as the admin reads them; <paramref name="fixedReason"/> replaces the per-rule reasons (a delete).</summary>

@@ -40,6 +40,9 @@ export interface BookableBuildingDto {
   /** Whether one person may hold two bookings at once here (0 Allow, 1 Warn, 2 Block). */
   ownOverlapPolicy?: number
   slotMinutes: number
+  /** The building's own opening days (0 = Sunday … 6) and hours — what My calendar shades as closed. */
+  days: number[]
+  hours: OperatingWindowDto
   floors: BookableFloorDto[]
 }
 
@@ -100,6 +103,20 @@ export interface BookingDto {
   cancelReason?: string | null
 }
 
+/**
+ * What the calendar's list carries per booking — enough to draw it, nothing more. The
+ * full BookingDto is fetched when one is opened (getBooking).
+ */
+export interface BookingSummaryDto {
+  id: string
+  title: string
+  localStart: string
+  localEnd: string
+  spaceName: string
+  status: string
+  seriesId?: string | null
+}
+
 /** A stretch of the searched day, in minutes from the building's local midnight (0–1440). */
 export interface DayRangeDto {
   startMinute: number
@@ -148,7 +165,7 @@ export interface SearchAvailabilityInput {
 /** The current employee's bookable building, or null when they aren't assigned to one. */
 export async function getMyBookableBuilding(token: string): Promise<BookableBuildingDto | null> {
   // ABP answers a null result with 204 No Content, which request() maps to undefined.
-  return (await request<BookableBuildingDto | undefined>('/api/app/availability/my-building', token)) ?? null
+  return (await request<BookableBuildingDto | undefined>('/api/app/bookable-spaces/my-building', token)) ?? null
 }
 
 /** A dry run of the real create: same rules, nothing reserved. */
@@ -169,7 +186,7 @@ export function createBooking(token: string, input: CreateBookingDto): Promise<B
 /** Every space in my building checked against one window (same rules as a real booking). */
 export function searchAvailability(token: string, input: SearchAvailabilityInput): Promise<AvailabilitySearchResultDto> {
   return request<AvailabilitySearchResultDto>(
-    '/api/app/availability/search' +
+    '/api/app/bookable-spaces/search' +
       query({
         localStart: input.localStart,
         localEnd: input.localEnd,
@@ -185,9 +202,14 @@ export function searchAvailability(token: string, input: SearchAvailabilityInput
  * My confirmed bookings on building-local days `from` (inclusive) to `to` (exclusive),
  * earliest first. At most 62 days per call.
  */
-export async function getMyBookings(token: string, from: IsoDate, to: IsoDate): Promise<BookingDto[]> {
-  const result = await request<{ items: BookingDto[] }>('/api/app/bookings/mine' + query({ from, to }), token)
+export async function getMyBookings(token: string, from: IsoDate, to: IsoDate): Promise<BookingSummaryDto[]> {
+  const result = await request<{ items: BookingSummaryDto[] }>('/api/app/bookings/mine' + query({ from, to }), token)
   return result.items
+}
+
+/** One of my bookings in full — everything the calendar's light list leaves out. */
+export function getBooking(token: string, id: string): Promise<BookingDto> {
+  return request<BookingDto>(`/api/app/bookings/${id}`, token)
 }
 
 /** Cancels one of my own bookings before it starts; the slot is free the moment this returns. */

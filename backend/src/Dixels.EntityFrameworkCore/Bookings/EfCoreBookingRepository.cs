@@ -99,9 +99,23 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         DateTimeOffset start,
         DateTimeOffset end,
         DateTimeOffset now,
+        Guid? buildingId = null,
         CancellationToken cancellationToken = default)
     {
         var bookings = await GetQueryableAsync();
+        if (buildingId is not null)
+        {
+            // IgnoreQueryFilters: a removed building's (soft-deleted) rooms still hold the
+            // cancelled bookings its employees should see.
+            var dbContext = await GetDbContextAsync();
+            var roomIds =
+                from s in dbContext.Spaces.IgnoreQueryFilters()
+                join f in dbContext.Floors.IgnoreQueryFilters() on s.FloorId equals f.Id
+                where f.BuildingId == buildingId
+                select s.Id;
+            bookings = bookings.Where(b => roomIds.Contains(b.SpaceId));
+        }
+
         return await bookings
             .Where(b => b.UserId == userId
                         && b.StartsAt < end

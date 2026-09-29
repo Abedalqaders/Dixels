@@ -67,3 +67,21 @@ export function suggestWindow(
 
   return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(start + length) }
 }
+
+/**
+ * The window offered for a day picked directly, e.g. the month view's "+": today gets the
+ * usual next-slot suggestion; any other day (it can only be a future one) gets a plain
+ * 09:00 start, for the employee's usual length.
+ */
+export function suggestWindowForDay(
+  building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>,
+  date: IsoDate,
+  now = new Date(),
+  length = readLastDuration() ?? DEFAULT_LENGTH_MINUTES,
+): Slot {
+  const zoned = nowInZone(building.timezone, now)
+  if (date === zoned.date) return suggestWindow(building, now, length)
+
+  const morning = 9 * 60
+  return { date, start: fromMinutes(morning), end: fromMinutes(Math.min(morning + length, DAY_MINUTES)) }
+}

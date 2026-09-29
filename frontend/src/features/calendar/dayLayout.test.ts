@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookingMinutes, hourSpan, layoutDay } from './dayLayout'
+import { itemMinutes, layoutDay, openWindow } from './dayLayout'
 
 const at = (h: number, m = 0) => h * 60 + m
 const item = (id: string, start: number, end: number) => ({ item: id, start, end })
@@ -31,33 +31,24 @@ describe('layoutDay', () => {
   })
 })
 
-describe('bookingMinutes', () => {
+describe('itemMinutes', () => {
   it('reads the local times, drawing a booking that ends at midnight to the bottom', () => {
-    expect(bookingMinutes({ localStart: '2026-09-30T10:00:00', localEnd: '2026-09-30T11:30:00' }, '2026-09-30')).toEqual({ start: 600, end: 690 })
-    expect(bookingMinutes({ localStart: '2026-09-30T22:00:00', localEnd: '2026-10-01T00:00:00' }, '2026-09-30')).toEqual({ start: 1320, end: 1440 })
+    expect(itemMinutes({ localStart: '2026-09-30T10:00:00', localEnd: '2026-09-30T11:30:00' }, '2026-09-30')).toEqual({ start: 600, end: 690 })
+    expect(itemMinutes({ localStart: '2026-09-30T22:00:00', localEnd: '2026-10-01T00:00:00' }, '2026-09-30')).toEqual({ start: 1320, end: 1440 })
   })
 })
 
-describe('hourSpan', () => {
-  const building = (hours: { isOpen24Hours: boolean; open: string; close: string }[]) => ({
-    floors: [{ id: 'f', name: 'L1', floorNumber: 1, spaces: hours.map((h, i) => ({ id: String(i), hours: { value: h, source: 'Building' } })) }],
-  }) as never
+describe('openWindow', () => {
+  const week = [0, 1, 2, 3, 4, 5, 6]
+  const office = { isOpen24Hours: false, open: '08:00', close: '18:00' }
 
-  it('runs from the earliest opening to the latest closing', () => {
-    const b = building([
-      { isOpen24Hours: false, open: '08:00', close: '18:00' },
-      { isOpen24Hours: false, open: '07:30', close: '20:00' },
-    ])
-    expect(hourSpan(b, [])).toEqual({ from: 7, to: 20 })
+  it('is the building hours on an open day, and null on a closed one', () => {
+    expect(openWindow('2026-10-01', week, office)).toEqual({ from: 480, to: 1080 })
+    expect(openWindow('2026-10-02', [0, 1, 2, 3, 4], office)).toBeNull() // a Friday
   })
 
-  it('widens to fit a booking outside the hours, and covers the day for 24h rooms', () => {
-    const b = building([{ isOpen24Hours: false, open: '08:00', close: '18:00' }])
-    expect(hourSpan(b, [{ start: at(18), end: at(19, 30) }])).toEqual({ from: 8, to: 20 })
-    expect(hourSpan(building([{ isOpen24Hours: true, open: '00:00', close: '00:00' }]), [])).toEqual({ from: 0, to: 24 })
-  })
-
-  it('falls back to office hours with nothing to go on', () => {
-    expect(hourSpan(null, [])).toEqual({ from: 8, to: 18 })
+  it('covers the whole day for a 24h building, and for hours that run past midnight', () => {
+    expect(openWindow('2026-10-01', week, { isOpen24Hours: true, open: '00:00', close: '00:00' })).toEqual({ from: 0, to: 1440 })
+    expect(openWindow('2026-10-01', week, { isOpen24Hours: false, open: '20:00', close: '02:00' })).toEqual({ from: 1200, to: 1440 })
   })
 })

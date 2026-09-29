@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FieldError } from '@/components/FieldError'
+import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/violationFields'
 import {
   addDays,
   formatDate,
@@ -84,6 +86,14 @@ export function BookingForm({
   const seriesLastDate = addDays(today, Math.max(building.maxSeriesHorizonDays ?? 0, building.maxHorizonDays))
   const openDays = space.days.value
 
+  // A problem with the one field is said under it; the rules that need the room and the
+  // time together (too long, closed, taken, too few people) are the verdict panel's job.
+  const attendeesError = !Number.isInteger(attendees) || attendees < 1
+    ? 'Enter how many people are coming.'
+    : attendees > space.capacity
+      ? `This room seats ${space.capacity}.`
+      : null
+
   // The rule the Repeat field stands for on the current date: a quick choice follows the
   // date ("Weekly on Tuesday" becomes "…on Wednesday" when the date moves), keeping its end
   // date unless that's now before the first one.
@@ -100,7 +110,7 @@ export function BookingForm({
   // Only the fields that affect the rules — the title is deliberately left out, so typing
   // one doesn't re-check availability on every keystroke.
   const request = useMemo<BookingRequestDto | null>(() => {
-    if (!date || !Number.isInteger(attendees) || attendees < 1 || toMinutes(end) <= toMinutes(start)) {
+    if (!date || attendeesError || toMinutes(end) <= toMinutes(start)) {
       return null
     }
     return {
@@ -109,7 +119,7 @@ export function BookingForm({
       localEnd: toLocalDateTime(date, end),
       attendees,
     }
-  }, [space.id, date, start, end, attendees])
+  }, [space.id, date, start, end, attendees, attendeesError])
 
   const seriesRequest = useMemo<SeriesRequestDto | null>(
     () => (request && rule ? { ...request, recurrence: rule } : null),
@@ -118,6 +128,15 @@ export function BookingForm({
 
   // One preview or the other: a single booking's verdict, or every date of the series.
   const { state: preview, recheck } = useBookingPreview(token, rule ? null : request)
+
+  // Each broken rule is said under the field it's about — date, time or attendees. Only
+  // what fits no single field is left for the panel below.
+  const rejected = preview.status === 'done' && !preview.preview.isValid
+  const issues = rejected ? groupViolations(preview.preview.violations) : NO_ISSUES
+  const panelState = rejected ? { ...preview, preview: { ...preview.preview, violations: issues.other } } : preview
+  const attendeesMessage = attendeesError ?? issueText(issues.attendees)
+  const dateMessage = issueText(issues.date)
+  const timeMessage = issueText(issues.time)
   const { state: seriesPreview, recheck: recheckSeries } = useSeriesPreview(token, seriesRequest)
   const toBook =
     seriesPreview.status === 'done' && seriesPreview.preview.seriesViolations.length === 0
@@ -204,7 +223,15 @@ export function BookingForm({
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div className="grid gap-2 sm:col-span-2">
               <Label htmlFor="bk-date">Date</Label>
-              <DatePicker id="bk-date" value={date} min={today} max={lastDate} onChange={setDate} />
+              <DatePicker
+                id="bk-date"
+                value={date}
+                min={today}
+                max={lastDate}
+                onChange={setDate}
+                errorId={dateMessage ? 'bk-date-error' : undefined}
+              />
+              {dateMessage && <FieldError id="bk-date-error" message={dateMessage} />}
             </div>
             <FromToFields
               idPrefix="bk"
@@ -214,11 +241,17 @@ export function BookingForm({
               minStart={date === today ? now.minutes + building.minLeadMinutes : 0}
               maxLength={space.maxDurationMinutes.value}
               latestEnd={closingMinute(space)}
+              errorId={timeMessage ? 'bk-time-error' : undefined}
               onChange={(range) => {
                 setStart(range.start)
                 setEnd(range.end)
               }}
             />
+            {timeMessage && (
+              <div className="sm:col-span-2">
+                <FieldError id="bk-time-error" message={timeMessage} />
+              </div>
+            )}
           </div>
 
           <RepeatField
@@ -242,10 +275,13 @@ export function BookingForm({
                 max={space.capacity}
                 value={Number.isNaN(attendees) ? '' : attendees}
                 onChange={(e) => setAttendees(e.target.valueAsNumber)}
+                aria-invalid={attendeesMessage ? true : undefined}
+                aria-describedby={attendeesMessage ? 'bk-attendees-error' : undefined}
                 required
               />
               <span className="whitespace-nowrap text-sm text-muted-foreground">of {space.capacity} seats</span>
             </div>
+            {attendeesMessage && <FieldError id="bk-attendees-error" message={attendeesMessage} />}
           </div>
 
           <p className="text-sm text-muted-foreground">
@@ -266,7 +302,7 @@ export function BookingForm({
               }
             />
           ) : (
-            <VerdictPanel state={preview} slotLabel={`${formatDate(date)}, ${start}–${end}`} timezone={building.timezone} />
+            <VerdictPanel state={panelState} slotLabel={`${formatDate(date)}, ${start}–${end}`} timezone={building.timezone} />
           )}
 
           {submitError && (

@@ -2,7 +2,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { buildDurationLimits } from '@/features/calendar/durationLimits'
-import { bookingsByDay, HOUR_PX } from '@/features/calendar/dayLayout'
+import { HOUR_PX, itemsByDay } from '@/features/calendar/dayLayout'
 import { TimeGrid } from './TimeGrid'
 
 // jsdom has no layout: every column starts at y = 0, so a minute's y is just its offset.
@@ -10,8 +10,9 @@ beforeAll(() => {
   Element.prototype.setPointerCapture ??= () => {}
 })
 
-const HOURS = { from: 8, to: 20 }
-const y = (h: number, m = 0) => ((h * 60 + m - HOURS.from * 60) / 60) * HOUR_PX
+// The grid runs from midnight, so a minute's y is just its offset.
+const y = (h: number, m = 0) => ((h * 60 + m) / 60) * HOUR_PX
+const WEEK = [0, 1, 2, 3, 4, 5, 6]
 
 // Rooms allow at most 1h or 3h — the drag can't go past 3h anywhere.
 const limits = buildDurationLimits({
@@ -25,12 +26,13 @@ const limits = buildDurationLimits({
   ],
 })
 
-function renderGrid(day: string, onPickRange = vi.fn()) {
+function renderGrid(day: string, onPickRange = vi.fn(), openDays = WEEK) {
   const { container } = render(
     <TimeGrid
       days={[day]}
-      bookings={[]}
-      hours={HOURS}
+      items={[]}
+      openDays={openDays}
+      openHours={{ isOpen24Hours: false, open: '08:00', close: '20:00' }}
       today="2026-10-01"
       nowMinute={10 * 60}
       firstBookableMinute={10 * 60 + 15}
@@ -38,7 +40,7 @@ function renderGrid(day: string, onPickRange = vi.fn()) {
       slotMinutes={15}
       defaultLength={60}
       limits={limits}
-      onOpenBooking={vi.fn()}
+      onOpenItem={vi.fn()}
       onPickRange={onPickRange}
     />,
   )
@@ -46,14 +48,14 @@ function renderGrid(day: string, onPickRange = vi.fn()) {
   return { column, onPickRange }
 }
 
-describe('bookingsByDay', () => {
+describe('itemsByDay', () => {
   const b = (id: string, localStart: string, localEnd: string) => ({ id, localStart, localEnd }) as never
 
   it('puts a booking on each day it covers, but not on the day after one ending at midnight', () => {
     const untilMidnight = b('late', '2026-09-30T22:00:00', '2026-10-01T00:00:00')
     const overnight = b('night', '2026-09-30T22:00:00', '2026-10-01T02:00:00')
 
-    const byDay = bookingsByDay([untilMidnight, overnight], ['2026-09-30', '2026-10-01'])
+    const byDay = itemsByDay([untilMidnight, overnight], ['2026-09-30', '2026-10-01'])
 
     expect(byDay.get('2026-09-30')).toEqual([untilMidnight, overnight])
     expect(byDay.get('2026-10-01')).toEqual([overnight])
@@ -82,6 +84,21 @@ describe('TimeGrid', () => {
     const { column } = renderGrid('2026-09-30')
     fireEvent.pointerDown(column, { button: 0, pointerId: 1, clientY: y(15) })
     expect(screen.getByRole('status')).toHaveTextContent('This day has passed.')
+  })
+
+  it('explains a click before the building opens', () => {
+    const { column, onPickRange } = renderGrid('2026-10-02')
+    fireEvent.pointerDown(column, { button: 0, pointerId: 1, clientY: y(7) })
+    expect(screen.getByRole('status')).toHaveTextContent('The building opens at 08:00.')
+    expect(onPickRange).not.toHaveBeenCalled()
+  })
+
+  it('says the building is closed all day on a day outside its opening days', () => {
+    // 2 Oct 2026 is a Friday; the building is open Sun–Thu.
+    const { column, onPickRange } = renderGrid('2026-10-02', vi.fn(), [0, 1, 2, 3, 4])
+    fireEvent.pointerDown(column, { button: 0, pointerId: 1, clientY: y(11) })
+    expect(screen.getByRole('status')).toHaveTextContent('The building is closed on Fridays.')
+    expect(onPickRange).not.toHaveBeenCalled()
   })
 
   it('previews where a click would book before pressing', () => {

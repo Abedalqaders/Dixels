@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useFieldErrors } from '@/components/FieldError'
 import {
   ApiError,
   createBuilding,
@@ -32,27 +38,44 @@ interface AddNodeModalProps {
   onError: (message: string) => void
 }
 
+type Field = 'name' | 'meta' | 'type'
+
 export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onError }: AddNodeModalProps) {
   const [name, setName] = useState('')
   const [meta, setMeta] = useState('')
   const [timezone, setTimezone] = useState('UTC')
   const [spaceTypeId, setSpaceTypeId] = useState(spaceTypes[0]?.id ?? '')
-  const [validationError, setValidationError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const f = useFieldErrors<Field>('add')
 
   const titles = { building: 'Add building', floor: 'Add floor', space: 'Add space' }
   const metaLabel = state.kind === 'building' ? 'Building number' : state.kind === 'floor' ? 'Floor number' : 'Capacity'
   const metaPlaceholder = state.kind === 'building' ? 'e.g. RH-02' : state.kind === 'floor' ? 'e.g. 5' : 'e.g. 6'
   const metaRequired = state.kind === 'space' // Building/Floor number are optional; Capacity is required.
 
+  // Every problem at once, each under its own field — not the first one found.
+  function validate(): Partial<Record<Field, string>> {
+    const errors: Partial<Record<Field, string>> = {}
+    if (!name.trim()) errors.name = 'Name is required.'
+    if (state.kind === 'floor' && meta.trim() && !Number.isInteger(Number(meta))) {
+      errors.meta = 'Floor number must be a whole number.'
+    }
+    if (state.kind === 'space') {
+      const capacity = Number(meta)
+      if (!meta.trim() || !Number.isFinite(capacity) || capacity <= 0) errors.meta = 'Capacity must be a positive number.'
+      if (!spaceTypeId) errors.type = 'Choose a space type.'
+    }
+    return errors
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setValidationError(null)
-
-    if (!name.trim()) {
-      setValidationError('Name is required.')
+    const errors = validate()
+    if (Object.keys(errors).length > 0) {
+      f.setErrors(errors)
       return
     }
+    f.clear()
 
     setSubmitting(true)
     try {
@@ -74,18 +97,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
           floorNumber: meta.trim() ? Number(meta) : null,
         })
       } else {
-        const capacity = Number(meta)
-        if (!Number.isFinite(capacity) || capacity <= 0) {
-          setValidationError('Capacity must be a positive number.')
-          setSubmitting(false)
-          return
-        }
-        if (!spaceTypeId) {
-          setValidationError('Choose a space type.')
-          setSubmitting(false)
-          return
-        }
-        await createSpace(token, { floorId: state.parentId, name: name.trim(), spaceTypeId, capacity })
+        await createSpace(token, { floorId: state.parentId, name: name.trim(), spaceTypeId, capacity: Number(meta) })
       }
 
       onCreated()
@@ -98,77 +110,94 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   }
 
   return (
-    <div className="overlay show">
-      <form className="modal" onSubmit={handleSubmit}>
-        <h3>{titles[state.kind]}</h3>
-        {state.kind !== 'building' && <p className="sub">Added under {state.parentName}.</p>}
-        <div className="row2">
-          <div className="field">
-            <span className="lbl">
-              Name<span className="req">*</span>
-            </span>
-            <input
-              className="ctrl"
-              placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="field">
-            <span className="lbl">
-              {metaLabel}
-              {metaRequired && <span className="req">*</span>}
-            </span>
-            <input
-              className="ctrl mono"
-              placeholder={metaPlaceholder}
-              value={meta}
-              onChange={(e) => setMeta(e.target.value)}
-            />
-          </div>
-        </div>
-        {state.kind === 'building' && (
-          <div className="row2">
-            <div className="field">
-              <span className="lbl">
-                Timezone<span className="req">*</span>
-              </span>
-              <select className="ctrl" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
-                <option value="Asia/Amman">Asia/Amman</option>
-                <option value="Europe/London">Europe/London</option>
-                <option value="America/New_York">America/New_York</option>
-                <option value="UTC">UTC</option>
-              </select>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <form ref={f.formRef} onSubmit={handleSubmit} noValidate>
+          <DialogHeader>
+            <DialogTitle>{titles[state.kind]}</DialogTitle>
+            {state.kind !== 'building' && <DialogDescription>Added under {state.parentName}.</DialogDescription>}
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor={f.id('name')}>
+                Name<span className="text-destructive">*</span>
+              </Label>
+              <Input
+                {...f.field('name')}
+                placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+              />
+              {f.error('name')}
             </div>
-          </div>
-        )}
-        {state.kind === 'space' && (
-          <div className="row2">
-            <div className="field">
-              <span className="lbl">
-                Type<span className="req">*</span>
-              </span>
-              <select className="ctrl" value={spaceTypeId} onChange={(e) => setSpaceTypeId(e.target.value)}>
-                {spaceTypes.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+            <div className="grid gap-2">
+              <Label htmlFor={f.id('meta')}>
+                {metaLabel}
+                {metaRequired && <span className="text-destructive">*</span>}
+              </Label>
+              <Input
+                {...f.field('meta')}
+                className="font-mono"
+                placeholder={metaPlaceholder}
+                value={meta}
+                onChange={(e) => setMeta(e.target.value)}
+              />
+              {f.error('meta')}
             </div>
+
+            {state.kind === 'building' && (
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor="add-timezone">
+                  Timezone<span className="text-destructive">*</span>
+                </Label>
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger id="add-timezone" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Asia/Amman">Asia/Amman</SelectItem>
+                    <SelectItem value="Europe/London">Europe/London</SelectItem>
+                    <SelectItem value="America/New_York">America/New_York</SelectItem>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {state.kind === 'space' && (
+              <div className="grid gap-2 sm:col-span-2">
+                <Label htmlFor={f.id('type')}>
+                  Type<span className="text-destructive">*</span>
+                </Label>
+                <Select value={spaceTypeId} onValueChange={setSpaceTypeId}>
+                  <SelectTrigger {...f.field('type')} className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {spaceTypes.map((st) => (
+                      <SelectItem key={st.id} value={st.id}>
+                        {st.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {f.error('type')}
+              </div>
+            )}
           </div>
-        )}
-        {validationError && <p className="noteline">{validationError}</p>}
-        <div className="modalfoot">
-          <button type="button" className="btn sec" onClick={onClose} disabled={submitting}>
-            Cancel
-          </button>
-          <button type="submit" className="btn" disabled={submitting}>
-            {submitting ? 'Adding…' : 'Add'}
-          </button>
-        </div>
-      </form>
-    </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Adding…' : 'Add'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

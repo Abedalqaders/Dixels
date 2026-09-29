@@ -209,7 +209,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
   border-radius: var(--radius-pill); background: var(--surface-raised); transition: left .12s ease;
 }
 .sw2.on::after { left: 19px; }
-.saverow { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+.saverow { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
 .saverow .btngroup { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
 .pager {

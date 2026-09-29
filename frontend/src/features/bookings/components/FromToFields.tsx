@@ -16,6 +16,8 @@ interface FromToFieldsProps {
   maxLength?: number
   /** Latest allowed end, e.g. the room's closing time. */
   latestEnd?: number
+  /** The id of a message under the fields about a problem with the time; marks both invalid. */
+  errorId?: string
   onChange: (range: { start: HhMm; end: HhMm }) => void
 }
 
@@ -33,6 +35,7 @@ export function FromToFields({
   minStart = 0,
   maxLength = DAY_MINUTES,
   latestEnd = DAY_MINUTES,
+  errorId,
   onChange,
 }: FromToFieldsProps) {
   const latestEndFor = (s: number) => Math.min(DAY_MINUTES, s + maxLength, latestEnd)
@@ -57,6 +60,7 @@ export function FromToFields({
           min={minStart}
           max={DAY_MINUTES - slotMinutes}
           showNow={minStart > 0}
+          errorId={errorId}
           onChange={changeStart}
         />
       </div>
@@ -68,6 +72,7 @@ export function FromToFields({
           slotMinutes={slotMinutes}
           min={startMinute + slotMinutes}
           max={latestEndFor(startMinute)}
+          errorId={errorId}
           onChange={(next) => onChange({ start, end: next })}
         />
       </div>

@@ -1,6 +1,10 @@
 import { dateOf, timeOf, toMinutes } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import type { BookableBuildingDto, BookingDto } from '@/features/bookings/api/bookingsApi'
+import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
+import { weekday } from '@/features/calendar/calendarDates'
+
+/** Anything with a start and end on the building's wall clock — a CalendarItem, or a test stub. */
+type Timed = { localStart: string; localEnd: string }
 
 export interface Placed<T> {
   item: T
@@ -47,54 +51,40 @@ export function layoutDay<T>(items: { item: T; start: number; end: number }[]): 
   return placed
 }
 
-/** A booking's minutes on `date` — clipped at midnight, so one ending at 24:00 still draws to the bottom. */
-export function bookingMinutes(booking: Pick<BookingDto, 'localStart' | 'localEnd'>, date: IsoDate): { start: number; end: number } {
-  const start = dateOf(booking.localStart) === date ? toMinutes(timeOf(booking.localStart)) : 0
-  const end = dateOf(booking.localEnd) === date ? toMinutes(timeOf(booking.localEnd)) : 24 * 60
+/** An item's minutes on `date` — clipped at midnight, so one ending at 24:00 still draws to the bottom. */
+export function itemMinutes(item: Timed, date: IsoDate): { start: number; end: number } {
+  const start = dateOf(item.localStart) === date ? toMinutes(timeOf(item.localStart)) : 0
+  const end = dateOf(item.localEnd) === date ? toMinutes(timeOf(item.localEnd)) : DAY_MINUTES
   return { start, end }
 }
 
 /**
- * The hours the time grid shows: from the earliest opening to the latest closing across
- * the building's rooms, widened to fit any booking outside them, in whole hours. A room
- * open 24 hours (or one whose hours run past midnight) means the whole day.
+ * The minutes of `date` the building is open, from its own days and hours — or null when
+ * it's shut all day. The grid shades everything outside as closed. Hours that run past
+ * midnight (close at or before open) count as open until the end of the day.
  */
-export function hourSpan(
-  building: Pick<BookableBuildingDto, 'floors'> | null,
-  bookings: { start: number; end: number }[],
-): { from: number; to: number } {
-  let from = Infinity
-  let to = -Infinity
-  for (const floor of building?.floors ?? []) {
-    for (const space of floor.spaces) {
-      const { isOpen24Hours, open, close } = space.hours.value
-      const o = isOpen24Hours ? 0 : toMinutes(open)
-      const c = isOpen24Hours || toMinutes(close) <= toMinutes(open) ? 24 * 60 : toMinutes(close)
-      from = Math.min(from, o)
-      to = Math.max(to, c)
-    }
-  }
-  for (const b of bookings) {
-    from = Math.min(from, b.start)
-    to = Math.max(to, b.end)
-  }
-  if (!Number.isFinite(from)) return { from: 8, to: 18 }
-  return { from: Math.floor(from / 60), to: Math.min(24, Math.ceil(to / 60)) }
+export function openWindow(date: IsoDate, days: number[], hours: OperatingWindowDto): { from: number; to: number } | null {
+  if (!days.includes(weekday(date))) return null
+  if (hours.isOpen24Hours) return { from: 0, to: DAY_MINUTES }
+  const from = toMinutes(hours.open)
+  const close = toMinutes(hours.close)
+  return { from, to: close <= from ? DAY_MINUTES : close }
 }
 
 // One hour of the grid, in pixels. 15 minutes = 12px — big enough to aim a drag at.
 export const HOUR_PX = 48
+export const DAY_MINUTES = 24 * 60
 
 /**
- * Each day's bookings, for the columns. A booking belongs to every day it covers part of —
- * but one ending exactly at midnight ("until closing" in a 24h room ends 00:00 next day)
+ * Each day's items, for the columns. An item belongs to every day it covers part of — but
+ * one ending exactly at midnight ("until closing" in a 24h room ends 00:00 next day)
  * doesn't reach into the next day at all.
  */
-export function bookingsByDay(bookings: BookingDto[], days: IsoDate[]): Map<IsoDate, BookingDto[]> {
-  const byDay = new Map<IsoDate, BookingDto[]>()
+export function itemsByDay<T extends Timed>(items: T[], days: IsoDate[]): Map<IsoDate, T[]> {
+  const byDay = new Map<IsoDate, T[]>()
   for (const d of days) {
     const midnight = `${d}T00:00:00`
-    const list = bookings.filter((b) => b.localStart.startsWith(d) || (b.localStart < d && b.localEnd > midnight))
+    const list = items.filter((b) => b.localStart.startsWith(d) || (b.localStart < d && b.localEnd > midnight))
     if (list.length) byDay.set(d, list)
   }
   return byDay

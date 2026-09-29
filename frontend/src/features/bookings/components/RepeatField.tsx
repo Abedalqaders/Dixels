@@ -1,9 +1,21 @@
 import { useState } from 'react'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
-import { describeRecurrence, Frequency, repeatPresets, weekdayOf } from '@/features/bookings/recurrence'
+import {
+  describeRecurrence,
+  endAfterMonths,
+  endAfterWeeks,
+  Frequency,
+  maxMonths,
+  maxWeeks,
+  monthsUntil,
+  repeatPresets,
+  weekdayOf,
+  weeksUntil,
+} from '@/features/bookings/recurrence'
 import type { RepeatChoice, RepeatValue } from '@/features/bookings/recurrence'
 import { CustomRecurrenceDialog } from './CustomRecurrenceDialog'
 import { DatePicker } from './DatePicker'
@@ -35,8 +47,30 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
     }
     const preset = presets.find((p) => p.choice === choice)
     const frequency = preset?.rule ? preset.rule(date).frequency : Frequency.Weekly
-    onChange({ choice, endDate: choice === 'none' ? null : value.endDate ?? defaultEnd(frequency), custom: null })
+    let endDate = choice === 'none' ? null : value.endDate ?? defaultEnd(frequency)
+    // Counted choices end on their last occurrence, so "until …" names a real date.
+    if (endDate && choice === 'weekly') endDate = endAfterWeeks(date, weeksUntil(date, endDate), lastDate)
+    if (endDate && choice === 'monthly') endDate = endAfterMonths(date, monthsUntil(date, endDate), lastDate)
+    onChange({ choice, endDate, custom: null })
   }
+
+  // Quick choices that are counted instead of ending on a date.
+  const count =
+    rule && value.choice === 'weekly'
+      ? {
+          unit: 'week',
+          value: weeksUntil(date, rule.endDate),
+          max: maxWeeks(date, lastDate),
+          endAfter: (n: number) => endAfterWeeks(date, n, lastDate),
+        }
+      : rule && value.choice === 'monthly'
+        ? {
+            unit: 'month',
+            value: monthsUntil(date, rule.endDate),
+            max: maxMonths(date, lastDate),
+            endAfter: (n: number) => endAfterMonths(date, n, lastDate),
+          }
+        : null
 
   const customStart: RecurrenceDto = rule ?? {
     frequency: Frequency.Weekly,
@@ -64,7 +98,33 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
         </Select>
       </div>
 
-      {rule && value.choice !== 'custom' && (
+      {/* Weekly and monthly count occurrences ("for 6 weeks", "for 3 months") rather than
+          asking for an end date: it's how people think about a standing slot. It's still
+          sent as an end date — the day of the last occurrence. */}
+      {rule && count && (
+        <div className="grid gap-2">
+          <Label htmlFor="bk-repeat-count">Number of {count.unit}s</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="bk-repeat-count"
+              type="number"
+              min={1}
+              max={count.max}
+              className="w-24 font-mono"
+              value={count.value}
+              onChange={(e) => {
+                const n = e.target.valueAsNumber
+                if (Number.isInteger(n) && n >= 1) onChange({ ...value, endDate: count.endAfter(n) })
+              }}
+            />
+            <span className="text-sm text-muted-foreground">
+              {count.value === 1 ? count.unit : `${count.unit}s`} (up to {count.max})
+            </span>
+          </div>
+        </div>
+      )}
+
+      {rule && value.choice !== 'custom' && !count && (
         <div className="grid gap-2">
           <Label htmlFor="bk-repeat-end">Ends</Label>
           <DatePicker
@@ -79,7 +139,8 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
 
       {rule && (
         <p className="text-sm text-muted-foreground sm:col-span-2">
-          {describeRecurrence(rule, date, openDays)}
+          {/* Counted: say "until" the last occurrence, even if the date moved since. */}
+          {describeRecurrence(count ? { ...rule, endDate: count.endAfter(count.value) } : rule, date, openDays)}
           {value.choice === 'custom' && (
             <>
               {' · '}

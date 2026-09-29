@@ -54,7 +54,7 @@ export function FindSpacePage() {
         </span>
       </div>
 
-      <div className="content">
+      <div className="content" data-compact-top="">
         <h1 className="pagetitle">Find a space</h1>
 
         {status === 'loading' && <FindSpaceSkeleton />}

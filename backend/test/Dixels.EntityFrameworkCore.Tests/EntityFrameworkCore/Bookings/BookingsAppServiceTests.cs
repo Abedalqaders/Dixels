@@ -582,8 +582,12 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         var mine = await _bookingsAppService.GetMineAsync(Days(0, 5));
         mine.Items.Count.ShouldBe(4);
-        mine.Items[0].Recurrence.ShouldNotBeNull().Frequency.ShouldBe(RecurrenceFrequency.Daily);
-        mine.Items[0].Recurrence!.EndDate.ShouldBe(Day(4));
+        mine.Items.ShouldAllBe(b => b.SeriesId == created.SeriesId);
+
+        // The rule itself isn't in the calendar's light list — it comes with the full booking.
+        var full = await _bookingsAppService.GetAsync(mine.Items[0].Id);
+        full.Recurrence.ShouldNotBeNull().Frequency.ShouldBe(RecurrenceFrequency.Daily);
+        full.Recurrence!.EndDate.ShouldBe(Day(4));
     }
 
     [Fact]
@@ -728,6 +732,29 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         var twoDays = await _bookingsAppService.GetMineAsync(Days(0, 2));
         twoDays.Items.Select(b => b.Id).ShouldBe(new[] { early.Id, late.Id, dayAfter.Id });
+    }
+
+    [Fact]
+    public async Task Get_returns_my_own_booking_in_full_and_not_found_for_someone_elses()
+    {
+        var s = await CreateScenarioAsync();
+        var other = await CreateScenarioAsync();
+        Guid id;
+        using (ActAs(s.UserId))
+        {
+            id = (await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11))).Id;
+
+            var mine = await _bookingsAppService.GetAsync(id);
+            mine.SpaceName.ShouldBe("Room 1");
+            mine.FloorName.ShouldBe("Level 1");
+            mine.Attendees.ShouldBe(2);
+        }
+
+        // Not "forbidden": a 403 would confirm the id exists.
+        using (ActAs(other.UserId))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookingsAppService.GetAsync(id));
+        }
     }
 
     [Fact]

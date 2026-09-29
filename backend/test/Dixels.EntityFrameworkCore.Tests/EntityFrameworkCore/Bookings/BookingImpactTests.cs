@@ -168,8 +168,10 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var shown = mine.Items.ShouldHaveSingleItem();
         shown.Id.ShouldBe(late.Id);
         shown.Status.ShouldBe(nameof(BookingStatus.Cancelled));
-        shown.CancelledByAdmin.ShouldBeTrue();
-        shown.CancelReason.ShouldBe("Rules changed: Open 09:00–17:00 only");
+        // Why it went is detail, not calendar data — it comes with the full booking.
+        var full = await _bookings.GetAsync(late.Id);
+        full.CancelledByAdmin.ShouldBeTrue();
+        full.CancelReason.ShouldBe("Rules changed: Open 09:00–17:00 only");
     }
 
     [Fact]
@@ -319,7 +321,8 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var calendar = await _bookings.GetMineAsync(new GetMyBookingsInput { From = Tomorrow, To = Tomorrow.AddDays(1) });
         var shown = calendar.Items.ShouldHaveSingleItem();
         shown.Id.ShouldBe(booking.Id);
-        shown.CancelReason.ShouldBe("The building was removed");
+        shown.Status.ShouldBe(nameof(BookingStatus.Cancelled));
+        (await _bookings.GetAsync(booking.Id)).CancelReason.ShouldBe("The building was removed");
     }
 
     [Fact]

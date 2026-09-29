@@ -56,6 +56,12 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
     )
   }
 
+  // Not bookable, but every reason is shown under its own field (the form filters them
+  // out before passing the state here): nothing left for the panel to say.
+  if (preview.violations.length === 0) {
+    return null
+  }
+
   const [first, ...rest] = preview.violations
 
   return (

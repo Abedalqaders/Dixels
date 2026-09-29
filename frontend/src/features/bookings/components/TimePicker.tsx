@@ -12,6 +12,8 @@ interface TimePickerProps {
   max?: number
   /** Label the first time "now" — for a start time on today's date. */
   showNow?: boolean
+  /** The id of a message under the field about a problem with the time; marks the field invalid. */
+  errorId?: string
   onChange: (time: HhMm) => void
 }
 
@@ -25,7 +27,7 @@ function label(time: HhMm): string {
  * A plain shadcn Select of every allowed slot between `min` and `max` — past times, or an
  * end before the start, simply aren't in the list. Typing a digit jumps through the list.
  */
-export function TimePicker({ id, value, slotMinutes, min = 0, max = DAY_MINUTES - slotMinutes, showNow, onChange }: TimePickerProps) {
+export function TimePicker({ id, value, slotMinutes, min = 0, max = DAY_MINUTES - slotMinutes, showNow, errorId, onChange }: TimePickerProps) {
   const allowed: HhMm[] = []
   for (let t = nextSlot(min, slotMinutes); t <= max; t += slotMinutes) allowed.push(fromMinutes(t))
 
@@ -33,7 +35,7 @@ export function TimePicker({ id, value, slotMinutes, min = 0, max = DAY_MINUTES 
     // A value outside the list (e.g. a start that has just slipped into the past) shows as
     // the placeholder instead of a blank box, until a listed time is picked.
     <Select value={allowed.includes(value) ? value : ''} onValueChange={(v) => onChange(v as HhMm)} disabled={allowed.length === 0}>
-      <SelectTrigger id={id} className="w-full font-mono">
+      <SelectTrigger id={id} className="w-full font-mono" aria-invalid={errorId ? true : undefined} aria-describedby={errorId}>
         <SelectValue placeholder={allowed.length === 0 ? 'No times left' : label(value)} />
       </SelectTrigger>
       <SelectContent className="max-h-72">

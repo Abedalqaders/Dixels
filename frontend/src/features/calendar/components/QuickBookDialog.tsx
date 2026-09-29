@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { cn } from '@/lib/utils'
 import { useAsync } from '@/hooks/useAsync'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { formatDate, fromMinutes, toLocalDateTime } from '@/lib/time/buildingTime'
+import { formatDate, fromMinutes, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { formatDuration } from '@/features/bookings/format'
+import { FromToFields } from '@/features/bookings/components/FromToFields'
 import { groupUnavailable } from '@/features/calendar/unavailableGroups'
 import { OwnClashNotice } from '@/features/bookings/components/OwnClashNotice'
 import { ApiError, searchAvailability } from '@/features/bookings/api/bookingsApi'
@@ -24,6 +25,10 @@ export interface QuickBookWindow {
 interface QuickBookDialogProps {
   token: string
   window: QuickBookWindow
+  slotMinutes: number
+  today: IsoDate
+  /** The earliest minute that may be picked when the window's date is today (now + notice). */
+  firstBookableMinute: number
   onClose: () => void
   /** A room was picked — the page opens the full booking form for it, for this (possibly shortened) window. */
   onPick: (room: SpaceAvailabilityDto, attendees: number, window: QuickBookWindow) => void
@@ -37,7 +42,7 @@ interface QuickBookDialogProps {
  * grouped by why they can't take the time (open a group to see which rooms), and rooms
  * ruled out only by length get a one-click "Shorten to" that trims the window to fit.
  */
-export function QuickBookDialog({ token, window: picked, onClose, onPick }: QuickBookDialogProps) {
+export function QuickBookDialog({ token, window: picked, slotMinutes, today, firstBookableMinute, onClose, onPick }: QuickBookDialogProps) {
   const [attendees, setAttendees] = useState(1)
   const [w, setWindow] = useState(picked)
   const people = useDebouncedValue(attendees, 250)
@@ -65,10 +70,19 @@ export function QuickBookDialog({ token, window: picked, onClose, onPick }: Quic
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Book a room</DialogTitle>
-          <DialogDescription>
-            {formatDate(w.date)} · <span className="font-mono">{start}–{end}</span>
-          </DialogDescription>
+          <DialogDescription>{formatDate(w.date)}</DialogDescription>
         </DialogHeader>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <FromToFields
+            idPrefix="qb"
+            start={start}
+            end={end}
+            slotMinutes={slotMinutes}
+            minStart={w.date === today ? firstBookableMinute : 0}
+            onChange={(range) => setWindow({ ...w, start: toMinutes(range.start), end: toMinutes(range.end) })}
+          />
+        </div>
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-medium" id="qb-people-label">

@@ -46,12 +46,15 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// <summary>
     /// What the person's calendar shows for <c>[start, end)</c>: their confirmed bookings, and
     /// the ones an admin cancelled that haven't ended yet (so they see why a booking went).
+    /// With <paramref name="buildingId"/>, only those in that building (deleted rooms
+    /// included) — an employee books in one building, so their calendar is that building's.
     /// </summary>
     Task<List<Booking>> GetCalendarForUserAsync(
         Guid userId,
         DateTimeOffset start,
         DateTimeOffset end,
         DateTimeOffset now,
+        Guid? buildingId = null,
         CancellationToken cancellationToken = default);
 
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);

@@ -197,25 +197,19 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
     // ---- 3. The person moves to another building ----
 
     [Fact]
-    public async Task Moving_someone_lists_their_bookings_in_the_old_building_and_keeps_them_unless_asked()
+    public async Task Moving_someone_lists_their_bookings_in_the_old_building_first()
     {
         var s = await CreateScenarioAsync();
         var booking = await BookAsync(s, 10, 11);
-        var elsewhere = await CreateBuildingAsync("Annex");
 
         using var _ = ActAs(Admin);
         var impact = await _users.GetReassignImpactAsync(s.UserId);
         impact.Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(booking.Id);
         impact.Bookings[0].BookedBy.ShouldBe("Jordan Reed");
-
-        await _users.AssignBuildingAsync(s.UserId, new AssignUserBuildingDto { BuildingId = elsewhere.Id });
-
-        (await StoredAsync(booking.Id)).Status.ShouldBe(BookingStatus.Confirmed);
-        (await _users.GetReassignImpactAsync(s.UserId)).Count.ShouldBe(0); // nothing booked in the new one
     }
 
     [Fact]
-    public async Task Moving_someone_can_cancel_what_they_had_in_the_old_building()
+    public async Task Moving_someone_cancels_what_they_had_in_the_old_building()
     {
         var s = await CreateScenarioAsync();
         var booking = await BookAsync(s, 10, 11);
@@ -223,13 +217,51 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
 
         using (ActAs(Admin))
         {
-            await _users.AssignBuildingAsync(s.UserId, new AssignUserBuildingDto { BuildingId = elsewhere.Id, CancelUpcomingBookings = true });
+            await _users.AssignBuildingAsync(s.UserId, new AssignUserBuildingDto { BuildingId = elsewhere.Id });
+            (await _users.GetReassignImpactAsync(s.UserId)).Count.ShouldBe(0); // nothing booked in the new one
         }
 
-        (await StoredAsync(booking.Id)).CancelReason.ShouldBe("Moved to another building");
+        var stored = await StoredAsync(booking.Id);
+        stored.CancelledByAdmin.ShouldBeTrue();
+        stored.CancelReason.ShouldBe("Moved to another building");
         using (ActAs(s.UserId))
         {
             (await _users.GetMyBuildingAsync()).ShouldNotBeNull().Id.ShouldBe(elsewhere.Id);
+        }
+    }
+
+    [Fact]
+    public async Task Moving_someone_through_the_account_form_cancels_too()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+        var elsewhere = await CreateBuildingAsync("Annex");
+
+        using (ActAs(Admin))
+        {
+            var update = await UpdateFor(s.UserId, isActive: true);
+            update.ExtraProperties[DixelsUserConsts.BuildingIdPropertyName] = elsewhere.Id.ToString();
+            await _identityUsers.UpdateAsync(s.UserId, update);
+        }
+
+        (await StoredAsync(booking.Id)).CancelReason.ShouldBe("Moved to another building");
+    }
+
+    [Fact]
+    public async Task The_calendar_shows_only_the_current_building()
+    {
+        var s = await CreateScenarioAsync();
+        var old = await BookAsync(s, 10, 11);
+        var elsewhere = await CreateBuildingAsync("Annex");
+        using (ActAs(Admin))
+        {
+            await _users.AssignBuildingAsync(s.UserId, new AssignUserBuildingDto { BuildingId = elsewhere.Id });
+        }
+
+        using (ActAs(s.UserId))
+        {
+            var mine = await _bookings.GetMineAsync(new GetMyBookingsInput { From = Tomorrow, To = Tomorrow.AddDays(1) });
+            mine.Items.ShouldNotContain(b => b.Id == old.Id);
         }
     }
 

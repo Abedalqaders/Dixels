@@ -45,6 +45,8 @@ const building: BookableBuildingDto = {
   maxSeriesHorizonDays: 90,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  days: [0, 1, 2, 3, 4, 5, 6],
+  hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f-1', name: 'Level 1', floorNumber: 1, spaces: [space] }],
 }
 
@@ -124,12 +126,14 @@ describe('BookingForm — repeat', () => {
 
     await pickRepeat(user, 'Weekly on Tuesday')
 
-    expect(screen.getByText(/^Occurs every Tuesday until Mon 2 Nov/)).toBeInTheDocument()
+    // Four weeks by default, ending on the last of them — Tue 27 Oct, not a day after it.
+    expect(screen.getByLabelText('Number of weeks')).toHaveValue(4)
+    expect(screen.getByText(/^Occurs every Tuesday until Tue 27 Oct/)).toBeInTheDocument()
     const dates = await screen.findByRole('region', { name: 'Dates' })
     expect(within(dates).getByText('2 of 3 dates are free')).toBeInTheDocument()
     expect(within(dates).getByLabelText(/Tue 13 Oct Closed until 14 Oct/)).toBeDisabled()
     expect(previewSeries).toHaveBeenCalledWith('t', expect.objectContaining({
-      recurrence: { frequency: 1, interval: 1, weekdays: [2], monthlyRepeat: 0, endDate: '2026-11-02' },
+      recurrence: { frequency: 1, interval: 1, weekdays: [2], monthlyRepeat: 0, endDate: '2026-10-27' },
     }))
 
     // Untick the last free date: one left to book.

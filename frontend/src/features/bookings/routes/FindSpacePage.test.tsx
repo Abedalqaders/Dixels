@@ -40,6 +40,8 @@ const building: BookableBuildingDto = {
   maxHorizonDays: 30,
   minLeadMinutes: 0,
   slotMinutes: 15,
+  days: [0, 1, 2, 3, 4, 5, 6],
+  hours: { isOpen24Hours: false, open: '07:00', close: '20:00' },
   floors: [{ id: 'f1', name: 'Level 1', floorNumber: 1, spaces: [room201, desk12, podA] }],
 }
 

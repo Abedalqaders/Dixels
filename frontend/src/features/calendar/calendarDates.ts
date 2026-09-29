@@ -118,3 +118,19 @@ export function dayOfMonth(date: IsoDate): number {
 export function shortWeekday(date: IsoDate): string {
   return WEEKDAYS[weekday(date)].slice(0, 3)
 }
+
+/**
+ * "9 AM", "12 PM", "2:20 PM" — the clock the calendar grids show, on the gutter, the "now"
+ * marker and the cards. Minutes are left out on the hour. "24:00" reads as midnight.
+ */
+export function clock12(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const suffix = h < 12 || h === 24 ? 'AM' : 'PM'
+  const hour = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+/** "Monday" — the day's name, for the Day view's heading. */
+export function weekdayName(date: IsoDate): string {
+  return WEEKDAYS[weekday(date)]
+}

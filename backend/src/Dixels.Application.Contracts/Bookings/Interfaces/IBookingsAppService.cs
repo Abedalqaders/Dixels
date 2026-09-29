@@ -16,8 +16,14 @@ public interface IBookingsAppService : IApplicationService
     /// </summary>
     Task<BookingDto> CreateAsync(CreateBookingDto input);
 
-    /// <summary>The current user's confirmed bookings in a range of building-local days, earliest first.</summary>
-    Task<ListResultDto<BookingDto>> GetMineAsync(GetMyBookingsInput input);
+    /// <summary>
+    /// The current user's bookings in a range of building-local days, earliest first — just
+    /// enough to draw a calendar. <see cref="GetAsync"/> has the rest of any one of them.
+    /// </summary>
+    Task<ListResultDto<BookingSummaryDto>> GetMineAsync(GetMyBookingsInput input);
+
+    /// <summary>One of the current user's own bookings in full (404 for anyone else's).</summary>
+    Task<BookingDto> GetAsync(Guid id);
 
     /// <summary>
     /// Cancels one of the current user's own bookings before it starts, freeing the slot —

@@ -5,14 +5,18 @@ using Volo.Abp;
 
 namespace Dixels.Controllers.Bookings;
 
+/// <summary>
+/// What an employee can book: their building with its rooms (<c>my-building</c>), and which
+/// rooms are free for a time window (<c>search</c>).
+/// </summary>
 [RemoteService(Name = DixelsRemoteServiceConsts.RemoteServiceName)]
 [Area(DixelsRemoteServiceConsts.ModuleName)]
-[Route("api/app/availability")]
-public class AvailabilityController : DixelsController, IAvailabilityAppService
+[Route("api/app/bookable-spaces")]
+public class BookableSpacesController : DixelsController, IAvailabilityAppService
 {
     private readonly IAvailabilityAppService _availabilityAppService;
 
-    public AvailabilityController(IAvailabilityAppService availabilityAppService)
+    public BookableSpacesController(IAvailabilityAppService availabilityAppService)
     {
         _availabilityAppService = availabilityAppService;
     }

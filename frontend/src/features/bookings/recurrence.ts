@@ -55,6 +55,47 @@ export function defaultEndDate(date: IsoDate, frequency: number, lastDate: IsoDa
   return end < lastDate ? end : lastDate
 }
 
+function dayNumber(date: IsoDate): number {
+  return Date.parse(`${date}T00:00:00Z`) / 86_400_000
+}
+
+/** The most weeks a weekly series starting on `date` can run before the series horizon. */
+export function maxWeeks(date: IsoDate, lastDate: IsoDate): number {
+  return Math.max(1, Math.floor((dayNumber(lastDate) - dayNumber(date)) / 7) + 1)
+}
+
+/** How many weekly occurrences a series from `date` to `endDate` has — the first one counts. */
+export function weeksUntil(date: IsoDate, endDate: IsoDate): number {
+  return Math.max(1, Math.floor((dayNumber(endDate) - dayNumber(date)) / 7) + 1)
+}
+
+/** The end date for `weeks` weekly occurrences from `date`: the day of the last one. */
+export function endAfterWeeks(date: IsoDate, weeks: number, lastDate: IsoDate): IsoDate {
+  const end = addDays(date, (Math.min(Math.max(1, weeks), maxWeeks(date, lastDate)) - 1) * 7)
+  return end < lastDate ? end : lastDate
+}
+
+/** The most monthly occurrences a series starting on `date` can have before the horizon. */
+export function maxMonths(date: IsoDate, lastDate: IsoDate): number {
+  let n = 1
+  while (addMonths(date, n) <= lastDate) n++
+  return n
+}
+
+/** How many monthly occurrences a series from `date` to `endDate` has — the first one counts. */
+export function monthsUntil(date: IsoDate, endDate: IsoDate): number {
+  let n = 1
+  while (addMonths(date, n) <= endDate) n++
+  return n
+}
+
+/** The end date for `months` monthly occurrences from `date`: the day of the last one
+ * (clamped like the occurrences are — day 31 lands on the 30th in a 30-day month). */
+export function endAfterMonths(date: IsoDate, months: number, lastDate: IsoDate): IsoDate {
+  const end = addMonths(date, Math.min(Math.max(1, months), maxMonths(date, lastDate)) - 1)
+  return end < lastDate ? end : lastDate
+}
+
 export interface RepeatPreset {
   choice: RepeatChoice
   label: string

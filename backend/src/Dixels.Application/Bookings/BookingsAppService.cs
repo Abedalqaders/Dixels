@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
@@ -89,7 +90,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         }
     }
 
-    public async Task<ListResultDto<BookingDto>> GetMineAsync(GetMyBookingsInput input)
+    public async Task<ListResultDto<BookingSummaryDto>> GetMineAsync(GetMyBookingsInput input)
     {
         var from = input.From.Date;
         var to = input.To.Date;
@@ -116,8 +117,21 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var clock = new BuildingClock(building?.Timezone ?? "UTC");
 
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
-        var bookings = await _bookingRepository.GetCalendarForUserAsync(userId, clock.ToUtc(from), clock.ToUtc(to), now);
-        return new ListResultDto<BookingDto>(await MapToDtosAsync(bookings));
+        var bookings = await _bookingRepository.GetCalendarForUserAsync(userId, clock.ToUtc(from), clock.ToUtc(to), now, building?.Id);
+        return new ListResultDto<BookingSummaryDto>(await MapToSummariesAsync(bookings));
+    }
+
+    public async Task<BookingDto> GetAsync(Guid id)
+    {
+        var booking = await _bookingRepository.GetAsync(id);
+        // Someone else's booking reads as "not found", not "forbidden": a 403 would confirm
+        // the id exists, which is more than a guessed URL should learn.
+        if (booking.UserId != CurrentUser.GetId())
+        {
+            throw new EntityNotFoundException(typeof(Booking), id);
+        }
+
+        return (await MapToDtosAsync(new[] { booking })).Single();
     }
 
     [Authorize(DixelsPermissions.Bookings.Cancel)]
@@ -187,11 +201,21 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         EndDate = rule.EndDate,
     };
 
-    /// <summary>
-    /// Builds DTOs for a batch of bookings with one query per table (not one per booking) —
-    /// shaped for lists, since "my bookings" will reuse it.
-    /// </summary>
-    private async Task<List<BookingDto>> MapToDtosAsync(IReadOnlyCollection<Booking> bookings)
+    /// <summary>The rooms, floors and buildings a batch of bookings sit in — one query per table, not one per booking.</summary>
+    private sealed record Places(
+        Dictionary<Guid, Space> Spaces,
+        Dictionary<Guid, Floor> Floors,
+        Dictionary<Guid, Building> Buildings)
+    {
+        public (Space Space, Floor Floor, Building Building) Of(Booking booking)
+        {
+            var space = Spaces[booking.SpaceId];
+            var floor = Floors[space.FloorId];
+            return (space, floor, Buildings[floor.BuildingId]);
+        }
+    }
+
+    private async Task<Places> LoadPlacesAsync(IReadOnlyCollection<Booking> bookings)
     {
         // Deleted rooms included: a booking made before its room (or floor) was removed still
         // needs a name to show under.
@@ -206,6 +230,35 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var buildingIds = floors.Values.Select(f => f.BuildingId).Distinct().ToList();
         var buildings = (await _buildingRepository.GetListAsync(b => buildingIds.Contains(b.Id))).ToDictionary(b => b.Id);
 
+        return new Places(spaces, floors, buildings);
+    }
+
+    /// <summary>The calendar's light rows: no floor/building names, no series rule — just what's drawn.</summary>
+    private async Task<List<BookingSummaryDto>> MapToSummariesAsync(IReadOnlyCollection<Booking> bookings)
+    {
+        var places = await LoadPlacesAsync(bookings);
+        return bookings.Select(booking =>
+        {
+            var (space, _, building) = places.Of(booking);
+            var clock = new BuildingClock(building.Timezone);
+            return new BookingSummaryDto
+            {
+                Id = booking.Id,
+                Title = booking.Title,
+                LocalStart = clock.ToLocal(booking.StartsAt),
+                LocalEnd = clock.ToLocal(booking.EndsAt),
+                SpaceName = space.Name,
+                Status = booking.Status.ToString(),
+                SeriesId = booking.SeriesId,
+            };
+        }).ToList();
+    }
+
+    /// <summary>Builds full DTOs for a batch of bookings with one query per table (not one per booking).</summary>
+    private async Task<List<BookingDto>> MapToDtosAsync(IReadOnlyCollection<Booking> bookings)
+    {
+        var places = await LoadPlacesAsync(bookings);
+
         var seriesIds = bookings.Where(b => b.SeriesId != null).Select(b => b.SeriesId!.Value).Distinct().ToList();
         var seriesById = seriesIds.Count == 0
             ? new Dictionary<Guid, BookingSeries>()
@@ -213,9 +266,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
 
         return bookings.Select(booking =>
         {
-            var space = spaces[booking.SpaceId];
-            var floor = floors[space.FloorId];
-            var building = buildings[floor.BuildingId];
+            var (space, floor, building) = places.Of(booking);
             var clock = new BuildingClock(building.Timezone);
 
             var dto = ObjectMapper.Map<Booking, BookingDto>(booking);

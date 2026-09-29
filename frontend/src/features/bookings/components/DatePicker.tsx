@@ -13,6 +13,8 @@ interface DatePickerProps {
   min: IsoDate
   max: IsoDate
   onChange: (date: IsoDate) => void
+  /** The id of a message under the field about a problem with the date; marks the field invalid. */
+  errorId?: string
 }
 
 // The calendar works with JS Dates; only the year/month/day are used, so a Date at local
@@ -29,13 +31,19 @@ function toIso(date: Date): IsoDate {
 /** shadcn's basic date picker — a button that opens a plain month calendar (‹ › arrows),
  * limited to the booking horizon: dates outside it are disabled and the arrows stop at its
  * first and last months. */
-export function DatePicker({ id, value, min, max, onChange }: DatePickerProps) {
+export function DatePicker({ id, value, min, max, onChange, errorId }: DatePickerProps) {
   const [open, setOpen] = useState(false)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button id={id} variant="outline" className="w-full justify-between text-left font-normal">
+        <Button
+          id={id}
+          variant="outline"
+          className="w-full justify-between text-left font-normal"
+          aria-invalid={errorId ? true : undefined}
+          aria-describedby={errorId}
+        >
           {format(toDate(value), 'PPP')}
           <ChevronDownIcon className="text-muted-foreground" />
         </Button>
