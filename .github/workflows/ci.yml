@@ -1,0 +1,174 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      # Runs the Postgres suite (row locks + exclusion constraint) via Testcontainers.
+      DIXELS_POSTGRES_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Dixels.Web's login pages (and the Web tests) need wwwroot/libs, which is git-ignored.
+      # Without it ABP answers every request with a "Libs folder is missing" 500.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install client libs
+        working-directory: backend
+        run: |
+          dotnet tool install --global Volo.Abp.Studio.Cli
+          abp install-libs
+
+      - name: Restore
+        working-directory: backend
+        run: dotnet restore Dixels.slnx
+
+      - name: Build
+        working-directory: backend
+        run: dotnet build Dixels.slnx --no-restore -c Release -warnaserror:CS8600,CS8602,CS8603,CS8604
+
+      - name: Test
+        working-directory: backend
+        run: >
+          dotnet test Dixels.slnx --no-build -c Release
+          --logger "trx;LogFileName=results.trx"
+          --results-directory TestResults
+
+      - name: Migrations are current
+        # A model change without a migration makes the migrator drift from the snapshot.
+        # `dotnet ef migrations has-pending-model-changes` exits non-zero when that happens.
+        # The EF project is its own startup project (DixelsDbContextFactory); the migrator
+        # doesn't reference EntityFrameworkCore.Design. Note: in dotnet ef, `-c` means --context.
+        working-directory: backend
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef migrations has-pending-model-changes \
+            --project src/Dixels.EntityFrameworkCore \
+            --no-build --configuration Release
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: backend/TestResults
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Lint
+        run: npx oxlint --deny-warnings
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Build
+        run: npx vite build
+        env:
+          # Production builds refuse to fall back to localhost (see src/lib/api/httpClient.ts).
+          VITE_API_BASE_URL: https://api.example.invalid
+          VITE_OIDC_AUTHORITY: https://api.example.invalid
+          VITE_OIDC_REDIRECT_URI: https://app.example.invalid/callback
+          VITE_OIDC_POST_LOGOUT_REDIRECT_URI: https://app.example.invalid/
+
+  api-contract:
+    name: API contract (frontend types match the backend)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: Dixels
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ConnectionStrings__Default: Host=localhost;Port=5432;Database=Dixels;User ID=postgres;Password=ci;
+      StringEncryption__DefaultPassPhrase: ci-only-pass-phrase
+      Dixels__AdminPassword: Ci-only-1!
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: https://localhost:44334
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          # 24, not 22: one of the ABP client libs (select2) requires it.
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install client libs
+        working-directory: backend
+        run: |
+          dotnet tool install --global Volo.Abp.Studio.Cli
+          abp install-libs
+
+      - name: Trust a dev certificate
+        run: dotnet dev-certs https
+
+      - name: Migrate and seed
+        working-directory: backend
+        run: dotnet run --project src/Dixels.DbMigrator -c Release
+
+      - name: Start the API
+        working-directory: backend
+        run: |
+          dotnet run --project src/Dixels.Web -c Release --no-launch-profile > web.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -skf -o /dev/null https://localhost:44334/swagger/v1/swagger.json; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "API did not start"; cat web.log; exit 1
+
+      - name: Regenerate the OpenAPI document and types
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run api:types
+
+      - name: No drift
+        # The committed openapi.json / schema.d.ts must equal what the backend serves now.
+        # If this fails: run `npm run api:types` against your backend and commit the result.
+        run: git diff --exit-code -- frontend/src/lib/api/openapi.json frontend/src/lib/api/schema.d.ts
