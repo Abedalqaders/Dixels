@@ -144,7 +144,7 @@ describe('Sidebar drawer (below lg)', () => {
   })
 })
 
-describe('Sidebar theme toggle', () => {
+describe('Sidebar theme toggle (below lg, beside the menu button)', () => {
   afterEach(() => {
     localStorage.clear()
     delete document.documentElement.dataset.theme
@@ -153,7 +153,7 @@ describe('Sidebar theme toggle', () => {
   it('flips between light and dark, and remembers the pick', async () => {
     renderAs(granted(...BOOKER))
 
-    // jsdom has no OS theme, so the app starts light.
+    // jsdom has no OS theme (so the app starts light) and no width (so it is "below lg").
     await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }))
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(localStorage.getItem('dixels.theme')).toBe('dark')

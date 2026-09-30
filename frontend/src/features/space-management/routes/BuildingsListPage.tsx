@@ -30,6 +30,7 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TreeSkeleton } from '@/components/LoadingSkeletons'
+import { TopBar } from '@/components/TopBar'
 
 export function BuildingsListPage() {
   const auth = useAuth()
@@ -101,6 +102,7 @@ export function BuildingsListPage() {
   return (
     <>
       <div className="main">
+        <TopBar />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

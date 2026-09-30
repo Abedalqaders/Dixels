@@ -31,6 +31,7 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TableSkeleton } from '@/components/LoadingSkeletons'
+import { TopBar } from '@/components/TopBar'
 
 const ALL_ROLES = 'all'
 
@@ -151,6 +152,7 @@ export function AdminUsersPage() {
     <div className="app">
       <Sidebar />
       <div className="main">
+        <TopBar />
         <div className="content">
           <div>
             <h1 className="pagetitle">Users</h1>
