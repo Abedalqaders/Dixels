@@ -34,7 +34,7 @@ jobs:
       - name: Install client libs
         working-directory: backend
         run: |
-          dotnet tool install --global Volo.Abp.Studio.Cli
+          dotnet tool install --global Volo.Abp.Studio.Cli --version 3.1.3
           abp install-libs
 
       - name: Restore
@@ -142,7 +142,7 @@ jobs:
       - name: Install client libs
         working-directory: backend
         run: |
-          dotnet tool install --global Volo.Abp.Studio.Cli
+          dotnet tool install --global Volo.Abp.Studio.Cli --version 3.1.3
           abp install-libs
 
       - name: Trust a dev certificate
@@ -172,3 +172,24 @@ jobs:
         # The committed openapi.json / schema.d.ts must equal what the backend serves now.
         # If this fails: run `npm run api:types` against your backend and commit the result.
         run: git diff --exit-code -- frontend/src/lib/api/openapi.json frontend/src/lib/api/schema.d.ts
+
+  docker-images:
+    name: Production images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: API image
+        run: docker build --target web -t dixels-api backend
+
+      - name: Migrator image
+        run: docker build --target migrator -t dixels-migrator backend
+
+      - name: Web app image
+        run: >
+          docker build -t dixels-app
+          --build-arg VITE_API_BASE_URL=https://api.example.invalid
+          --build-arg VITE_OIDC_AUTHORITY=https://api.example.invalid
+          --build-arg VITE_OIDC_REDIRECT_URI=https://app.example.invalid/callback
+          --build-arg VITE_OIDC_POST_LOGOUT_REDIRECT_URI=https://app.example.invalid/
+          frontend

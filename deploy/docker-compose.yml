@@ -1,0 +1,94 @@
+# Production stack: Postgres, a one-shot migrator, the API and the web app.
+#
+# Setup, from this folder:
+#   1. cp .env.example .env            and fill it in (git-ignored).
+#   2. Put the OpenIddict signing certificate at certs/openiddict.pfx (git-ignored), e.g.
+#        dotnet dev-certs https -v -ep certs/openiddict.pfx -p <OPENIDDICT_CERT_PASSWORD>
+#      or a certificate from your own CA. Keep it: replacing it signs every user out.
+#      The api runs as a non-root user, so make the file readable (it is password-protected):
+#        chmod 644 certs/openiddict.pfx
+#   3. docker compose up -d --build
+#
+# TLS is not handled here. Whatever sits in front (a cloud load balancer, Caddy, nginx, Traefik)
+# terminates https and forwards, adding X-Forwarded-For/-Proto/-Host:
+#   ${API_URL} -> 127.0.0.1:8080 (api)       ${APP_URL} -> 127.0.0.1:8081 (web)
+# Both ports are bound to localhost only, so nothing reaches the containers around the proxy.
+#
+# Upgrading: git pull && docker compose up -d --build — the migrator runs again first and the
+# api only starts once it has finished successfully.
+
+name: dixels
+
+x-backend-env: &backend-env
+  ConnectionStrings__Default: "Host=db;Port=5432;Database=Dixels;User ID=postgres;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+  StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE:?set STRING_ENCRYPTION_PASSPHRASE in .env}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: Dixels
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Dixels"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrator:
+    build:
+      context: ../backend
+      target: migrator
+    environment:
+      <<: *backend-env
+      Dixels__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      Dixels__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      Dixels__DemoData: "false"
+      # The OIDC clients' redirect URLs are seeded from these (and updated on every run).
+      OpenIddict__Applications__Dixels_App__RootUrl: ${APP_URL:?set APP_URL in .env}
+      OpenIddict__Applications__Dixels_Swagger__RootUrl: ${API_URL:?set API_URL in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ../backend
+      target: web
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      App__SelfUrl: ${API_URL}
+      App__CorsOrigins: ${APP_URL}
+      AuthServer__CertificatePath: /certs/openiddict.pfx
+      AuthServer__CertificatePassword: ${OPENIDDICT_CERT_PASSWORD:?set OPENIDDICT_CERT_PASSWORD in .env}
+      ForwardedHeaders__Enabled: "true"
+      DataProtection__KeysPath: /keys
+    volumes:
+      - ./certs:/certs:ro
+      - dataprotection:/keys
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: ${API_URL}
+        VITE_OIDC_AUTHORITY: ${API_URL}
+        VITE_OIDC_REDIRECT_URI: ${APP_URL}/callback
+        VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${APP_URL}/
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8080"
+
+volumes:
+  pgdata:
+  dataprotection:

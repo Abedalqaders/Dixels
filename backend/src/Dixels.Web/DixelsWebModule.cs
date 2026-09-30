@@ -3,7 +3,10 @@ using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +15,7 @@ using Dixels.EntityFrameworkCore;
 using Dixels.Localization;
 using Dixels.MultiTenancy;
 using Dixels.Web.Menus;
+using Dixels.Web.RateLimiting;
 using Microsoft.OpenApi;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
@@ -117,11 +121,67 @@ public class DixelsWebModule : AbpModule
         ConfigureUrls(configuration);
         ConfigureBundles();
         ConfigureVirtualFileSystem(hostingEnvironment);
-        ConfigureNavigationServices();
+        ConfigureNavigationServices();
         ConfigureSwaggerServices(context.Services);
         ConfigureCors(context.Services, configuration);
+        ConfigureForwardedHeaders(context.Services, configuration);
+        ConfigureDataProtection(context.Services, configuration);
+        ConfigureHealthChecks(context.Services);
+        ConfigureRateLimiting(context.Services, configuration);
 
         context.Services.AddMapperlyObjectMapper<DixelsWebModule>();
+    }
+
+    // In production the app sits behind a TLS-terminating proxy or load balancer. With this on,
+    // the X-Forwarded-For/-Proto/-Host headers it adds become the request's client IP, scheme
+    // and host, so OpenIddict issues https URLs and rate limits see real clients. Off by default:
+    // a server reachable directly must not let callers pick their own IP through a header.
+    private void ConfigureForwardedHeaders(IServiceCollection services, IConfiguration configuration)
+    {
+        if (!configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+        {
+            return;
+        }
+
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders =
+                ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+            // The proxy's address inside a container network isn't known up front; trust the one
+            // hop in front of us (ForwardLimit stays 1, so only the value that proxy wrote counts).
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
+    }
+
+    // Sign-in cookies and antiforgery tokens are encrypted with data protection keys. Inside a
+    // container those keys would vanish on every restart (signing everyone out of the login
+    // pages), so production points DataProtection:KeysPath at a persistent volume.
+    private void ConfigureDataProtection(IServiceCollection services, IConfiguration configuration)
+    {
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (string.IsNullOrWhiteSpace(keysPath))
+        {
+            return;
+        }
+
+        services.AddDataProtection()
+            .SetApplicationName("Dixels")
+            .PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    }
+
+    // /health/live: the process answers (restart it if not). /health/ready: it can also reach
+    // the database (stop sending it traffic if not). Both are anonymous and unthrottled.
+    private void ConfigureHealthChecks(IServiceCollection services)
+    {
+        services.AddHealthChecks()
+            .AddDbContextCheck<DixelsDbContext>(tags: new[] { HealthCheckTags.Ready });
+    }
+
+    private void ConfigureRateLimiting(IServiceCollection services, IConfiguration configuration)
+    {
+        Configure<DixelsRateLimitOptions>(configuration.GetSection(DixelsRateLimitOptions.SectionName));
+        services.AddDixelsRateLimiting();
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context)
@@ -227,6 +287,13 @@ public class DixelsWebModule : AbpModule
     {
         var app = context.GetApplicationBuilder();
         var env = context.GetEnvironment();
+        var configuration = context.GetConfiguration();
+
+        // First, so everything after it sees the real client IP and scheme.
+        if (configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+        {
+            app.UseForwardedHeaders();
+        }
 
         if (env.IsDevelopment())
         {
@@ -252,6 +319,9 @@ public class DixelsWebModule : AbpModule
             app.UseMultiTenancy();
         }
 
+        // After authentication, so API calls are counted per signed-in user.
+        app.UseRateLimiter();
+
         app.UseUnitOfWork();
         app.UseDynamicClaims();
         app.UseAuthorization();
@@ -269,6 +339,18 @@ public class DixelsWebModule : AbpModule
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
-        app.UseConfiguredEndpoints();
+        app.UseConfiguredEndpoints(endpoints =>
+        {
+            endpoints.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+            endpoints.MapHealthChecks("/health/ready", new HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
+            });
+        });
+    }
+
+    private static class HealthCheckTags
+    {
+        public const string Ready = "ready";
     }
 }
