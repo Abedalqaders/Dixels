@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { getDisplayName } from '@/features/auth/roles'
 import { HOME_PATH } from '@/features/auth/landing'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
@@ -21,6 +22,7 @@ function returnPathOf(state: unknown): string | undefined {
 // as soon as this component mounts; we just wait for it to finish, confirm who signed in,
 // and then route to their home page — HOME_PATH picks it from what they're granted.
 export function CallbackPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const navigate = useNavigate()
   const signedIn = !auth.isLoading && auth.isAuthenticated
@@ -34,9 +36,9 @@ export function CallbackPage() {
 
   if (auth.error) {
     return (
-      <AuthStatusScreen state="error" title="Couldn't sign you in" detail={auth.error.message}>
+      <AuthStatusScreen state="error" title={t('Auth:SignInFailed')} detail={auth.error.message}>
         <Link className="btn" to="/">
-          Back to sign in
+          {t('Common:BackToSignIn')}
         </Link>
       </AuthStatusScreen>
     )
@@ -46,11 +48,11 @@ export function CallbackPage() {
     return (
       <AuthStatusScreen
         state="done"
-        title={`Signed in as ${getDisplayName(auth.user)}`}
-        detail={returnTo ? 'Taking you back…' : 'Taking you to your home page…'}
+        title={t('Auth:SignedInAs', { name: getDisplayName(auth.user) })}
+        detail={returnTo ? t('Auth:TakingYouBack') : t('Auth:TakingYouHome')}
       />
     )
   }
 
-  return <AuthStatusScreen state="busy" title="Signing you in…" detail="Checking your account." />
+  return <AuthStatusScreen state="busy" title={t('Auth:SigningIn')} detail={t('Auth:CheckingAccount')} />
 }

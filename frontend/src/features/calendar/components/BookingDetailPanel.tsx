@@ -31,7 +31,7 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
       <div className="flex items-start gap-2">
         <h3 className="min-w-0 flex-1 text-base leading-tight font-semibold">{item.title}</h3>
         {phase && <PhaseBadge phase={phase} />}
-        <Button variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1" aria-label="Close details" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" className="-mt-0.5 -me-1" aria-label="Close details" onClick={onClose}>
           <X />
         </Button>
       </div>

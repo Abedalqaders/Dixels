@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { getDisplayName } from '@/features/auth/roles'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
@@ -8,6 +9,7 @@ import { usePermission } from '@/features/auth/permissions/usePermission'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { up } from '@/lib/breakpoints'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
+import { LanguageSwitcher } from './LanguageSwitcher'
 import logo from '@/assets/logo.png'
 
 type NavItemProps = {
@@ -48,6 +50,7 @@ function ChevronDownIcon() {
 }
 
 export function Sidebar() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -132,7 +135,7 @@ export function Sidebar() {
         ref={menuButtonRef}
         type="button"
         className="menubtn"
-        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+        aria-label={mobileOpen ? t('Nav:CloseMenu') : t('Nav:OpenMenu')}
         aria-expanded={mobileOpen}
         aria-controls="app-sidebar"
         onClick={() => setMobileOpen((v) => !v)}
@@ -140,12 +143,12 @@ export function Sidebar() {
         <MenuIcon />
       </button>
       <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} aria-hidden="true" />
-      <nav id="app-sidebar" ref={drawerRef} aria-label="Main" className={`side${mobileOpen ? ' open' : ''}`}>
+      <nav id="app-sidebar" ref={drawerRef} aria-label={t('Nav:Main')} className={`side${mobileOpen ? ' open' : ''}`}>
       <div className="brand">
         <img className="logo-img" src={logo} alt="Dixels" />
       </div>
 
-      {labelSections && <div className="grp">Bookings</div>}
+      {labelSections && <div className="grp">{t('Nav:Bookings')}</div>}
       {canViewBookings && (
         <NavItem
           to="/my-calendar"
@@ -153,7 +156,7 @@ export function Sidebar() {
           onNavigate={closeMobile}
           icon={<CalendarLinesIcon />}
         >
-          My calendar
+          {t('Nav:MyCalendar')}
         </NavItem>
       )}
       {canFindSpace && (
@@ -163,11 +166,11 @@ export function Sidebar() {
           onNavigate={closeMobile}
           icon={<SearchIcon />}
         >
-          Find a space
+          {t('Nav:FindSpace')}
         </NavItem>
       )}
 
-      {labelSections && showAdministration && <div className="grp">Administration</div>}
+      {labelSections && showAdministration && <div className="grp">{t('Nav:Administration')}</div>}
       {showSpaceManagement && (
         <>
           <button
@@ -177,7 +180,7 @@ export function Sidebar() {
             onClick={() => setSpaceManagementManualOpen(!spaceManagementOpen)}
           >
             <BuildingDoorIcon />
-            Space management
+            {t('Nav:SpaceManagement')}
             <ChevronDownIcon />
           </button>
           <div className={`navsubwrap${spaceManagementOpen ? ' open' : ''}`}>
@@ -190,7 +193,7 @@ export function Sidebar() {
                     onNavigate={closeMobile}
                     icon={<BuildingDoorIcon />}
                   >
-                    Hierarchy
+                    {t('Nav:Hierarchy')}
                   </NavItem>
                 )}
                 {canSpaceTypes && (
@@ -200,7 +203,7 @@ export function Sidebar() {
                     onNavigate={closeMobile}
                     icon={<TagIcon />}
                   >
-                    Space types
+                    {t('Nav:SpaceTypes')}
                   </NavItem>
                 )}
               </div>
@@ -215,23 +218,24 @@ export function Sidebar() {
           onNavigate={closeMobile}
           icon={<PeopleIcon />}
         >
-          Users
+          {t('Nav:Users')}
         </NavItem>
       )}
 
       <div className="spacer"></div>
+      <LanguageSwitcher className="nav navlang" />
       <div className="acct">
         <span className="av">{initials}</span>
         <span>
           <span className="nm">{displayName}</span>
           <br />
-          <span className="rl">{isAdmin ? 'Administrator' : 'Employee'}</span>
+          <span className="rl">{isAdmin ? t('Nav:RoleAdministrator') : t('Nav:RoleEmployee')}</span>
         </span>
         <button
           type="button"
           className="out"
-          title="Sign out"
-          aria-label="Sign out"
+          title={t('Nav:SignOut')}
+          aria-label={t('Nav:SignOut')}
           onClick={() => navigate('/signing-out')}
         >
           <SignOutIcon />

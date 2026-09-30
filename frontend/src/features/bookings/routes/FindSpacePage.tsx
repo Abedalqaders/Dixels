@@ -264,7 +264,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             {taken.length > 0 && (
               <Collapsible defaultOpen={free.length === 0} className="mt-6">
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="group -ml-3 text-muted-foreground">
+                  <Button variant="ghost" className="group -ms-3 text-muted-foreground">
                     <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
                     {taken.length} not available at this time
                   </Button>

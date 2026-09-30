@@ -84,7 +84,7 @@ export function SeriesPreviewList({ state, skipped, onToggle }: SeriesPreviewLis
                 <span className="font-mono text-xs leading-5 text-muted-foreground">
                   {timeOf(o.localStart)}–{timeOf(o.localEnd)}
                 </span>
-                <span className="ml-auto flex flex-col items-end gap-0.5 text-right text-xs leading-5">
+                <span className="ms-auto flex flex-col items-end gap-0.5 text-end text-xs leading-5">
                   {o.isValid ? (
                     <span className="inline-flex items-center gap-1 text-brand">
                       <CircleCheck className="size-3.5" /> Free

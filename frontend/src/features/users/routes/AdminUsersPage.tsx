@@ -166,9 +166,9 @@ export function AdminUsersPage() {
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
               <CardAction className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <div className="relative w-full sm:w-auto">
-                  <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <SearchIcon className="pointer-events-none absolute top-1/2 inset-s-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="w-full rounded-full sm:w-64 border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
+                    className="w-full rounded-full sm:w-64 border-transparent bg-muted/40 ps-9 focus-visible:border-ring focus-visible:bg-background"
                     placeholder="Search by name, username or email…"
                     aria-label="Search users"
                     autoComplete="off"
@@ -217,10 +217,10 @@ export function AdminUsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="pl-4 font-semibold">User</TableHead>
+                      <TableHead className="ps-4 font-semibold">User</TableHead>
                       <TableHead className="hidden font-semibold md:table-cell">Email</TableHead>
                       <TableHead className="hidden font-semibold lg:table-cell">Roles</TableHead>
-                      <TableHead className="pr-4 font-semibold sm:w-60">Building</TableHead>
+                      <TableHead className="pe-4 font-semibold sm:w-60">Building</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -228,7 +228,7 @@ export function AdminUsersPage() {
                       const label = labelFor(user)
                       return (
                         <TableRow key={user.id}>
-                          <TableCell className="py-3.5 pl-4">
+                          <TableCell className="py-3.5 ps-4">
                             <div className="flex items-center gap-3">
                               <Avatar size="lg">
                                 <AvatarFallback
@@ -258,7 +258,7 @@ export function AdminUsersPage() {
                               <span className="text-sm text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="py-3.5 pr-4">
+                          <TableCell className="py-3.5 pe-4">
                             {canAssign ? (
                               <BuildingPicker
                                 token={token}

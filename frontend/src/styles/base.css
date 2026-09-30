@@ -25,7 +25,7 @@
 
 .side {
   width: 240px; flex: none; background: var(--surface-raised);
-  border-right: 1px solid var(--border-subtle);
+  border-inline-end: 1px solid var(--border-subtle);
   padding: var(--space-4);
   display: flex; flex-direction: column; gap: 4px;
   /* Stays in view while the page scrolls; scrolls on its own if the window is short. */
@@ -46,8 +46,8 @@
 .nav.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .nav.on:hover { background: var(--accent-soft); }
 .nav.on svg { color: var(--accent-ink); }
-.navtoggle { width: 100%; background: none; border: none; font-family: inherit; text-align: left; }
-.navchev { margin-left: auto; width: 14px !important; height: 14px !important; color: var(--ink-secondary); transition: transform .16s ease; }
+.navtoggle { width: 100%; background: none; border: none; font-family: inherit; text-align: start; }
+.navchev { margin-inline-start: auto; width: 14px !important; height: 14px !important; color: var(--ink-secondary); transition: transform .16s ease; }
 .navtoggle[aria-expanded="true"] .navchev { transform: rotate(180deg); }
 .navtoggle.on .navchev { color: var(--accent-ink); }
 
@@ -56,14 +56,14 @@
 .navsubinner { overflow: hidden; }
 .navsub { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 2px 0; position: relative; }
 .navsub::before {
-  content: ""; position: absolute; left: calc(var(--space-3) + 9px); top: 2px; bottom: 14px;
+  content: ""; position: absolute; inset-inline-start: calc(var(--space-3) + 9px); top: 2px; bottom: 14px;
   width: 1px; background: var(--border-subtle);
 }
 .navsub .nav {
-  position: relative; padding-left: calc(var(--space-3) + 18px + var(--space-3)); font-size: 14px;
+  position: relative; padding-inline-start: calc(var(--space-3) + 18px + var(--space-3)); font-size: 14px;
 }
 .navsub .nav::before {
-  content: ""; position: absolute; left: calc(var(--space-3) + 9px); top: 50%; width: 21px; height: 1px;
+  content: ""; position: absolute; inset-inline-start: calc(var(--space-3) + 9px); top: 50%; width: 21px; height: 1px;
   background: var(--border-subtle);
 }
 .navsub .nav svg { width: 14px; height: 14px; }
@@ -82,7 +82,7 @@
 }
 .nm { font-size: 13px; line-height: 18px; font-weight: 600; }
 .rl { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
-.out { margin-left: auto; color: var(--ink-secondary); background: none; border: none; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
+.out { margin-inline-start: auto; color: var(--ink-secondary); background: none; border: none; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
 .out svg { width: 18px; height: 18px; display: block; }
 .out:hover { background: var(--surface-sunken); color: var(--ink-primary); }
 
@@ -99,7 +99,7 @@
 }
 .pick.static { cursor: default; }
 .tz { font-size: 13px; color: var(--ink-secondary); }
-.now { margin-left: auto; font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--ink-secondary); }
+.now { margin-inline-start: auto; font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--ink-secondary); }
 .content { padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); }
 /* Pages built around one dense, scrollable thing (a calendar grid, a live search) want
    headroom for it, not chrome above it — less padding and gap than a typical page. */
@@ -220,7 +220,7 @@ select.ctrl { appearance: none; cursor: pointer; }
 .warn svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
 
 .toast {
-  position: fixed; right: var(--space-5); bottom: var(--space-5);
+  position: fixed; inset-inline-end: var(--space-5); bottom: var(--space-5);
   background: var(--state-confirmed-soft); color: var(--state-confirmed-ink);
   border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
   font-size: 13px; font-weight: 600; box-shadow: var(--shadow-overlay);
@@ -233,7 +233,7 @@ select.ctrl { appearance: none; cursor: pointer; }
 
 /* ---------- Mobile menu button / scrim (off-canvas sidebar) ---------- */
 .menubtn {
-  display: none; position: fixed; top: var(--space-3); left: var(--space-3); z-index: 110;
+  display: none; position: fixed; top: var(--space-3); inset-inline-start: var(--space-3); z-index: 110;
   width: 36px; height: 36px; align-items: center; justify-content: center;
   border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
   background: var(--surface-raised); box-shadow: var(--shadow-card); color: var(--ink-primary); cursor: pointer;
@@ -255,7 +255,7 @@ select.ctrl { appearance: none; cursor: pointer; }
   .app { padding-top: 56px; }
   .menubtn { display: flex; }
   .side {
-    position: fixed; top: 0; bottom: 0; left: 0; width: 260px; max-width: 82vw; z-index: 100;
+    position: fixed; top: 0; bottom: 0; inset-inline-start: 0; width: 260px; max-width: 82vw; z-index: 100;
     /* Hidden (not just moved) while closed: its shadow no longer bleeds onto the page's left
        edge, and its links drop out of the Tab order. visibility waits for the slide-out. */
     transform: translateX(-100%); visibility: hidden; transition: transform .2s ease, visibility 0s linear .2s;
@@ -285,3 +285,19 @@ body { overflow-x: clip; }
     min-width: 44px; min-height: 44px;
   }
 }
+
+/* ---------- Language ---------- */
+/* The sidebar's language button looks like a nav row. */
+.navlang { width: 100%; background: none; border: none; font-family: inherit; text-align: start; }
+
+/* ---------- Right-to-left (Arabic) ----------
+   The layout already mirrors (logical properties: inline-start/end). What doesn't:
+   - the drawer slides in from the right edge, so it hides off that side;
+   - icons that point "out"/"forward" flip to point the other way;
+   - letter-spacing pulls Arabic letters apart and breaks the joins between them. */
+@media (max-width: 1023px) {
+  [dir="rtl"] .side { transform: translateX(100%); }
+  [dir="rtl"] .side.open { transform: translateX(0); }
+}
+[dir="rtl"] .out svg { transform: scaleX(-1); }
+:lang(ar), :lang(ar) * { letter-spacing: normal !important; }

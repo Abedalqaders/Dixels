@@ -110,9 +110,9 @@ export function SpaceTypesPage() {
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
               <CardAction className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <div className="relative w-full sm:w-auto">
-                  <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <SearchIcon className="pointer-events-none absolute top-1/2 inset-s-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="w-full rounded-full sm:w-56 border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
+                    className="w-full rounded-full sm:w-56 border-transparent bg-muted/40 ps-9 focus-visible:border-ring focus-visible:bg-background"
                     placeholder="Search space types…"
                     aria-label="Search space types"
                     autoComplete="off"
@@ -136,16 +136,16 @@ export function SpaceTypesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-16 pl-4 font-semibold">Icon</TableHead>
+                      <TableHead className="w-16 ps-4 font-semibold">Icon</TableHead>
                       <TableHead className="font-semibold">Name</TableHead>
                       <TableHead className="hidden font-semibold sm:table-cell">Icon style</TableHead>
-                      <TableHead className="w-16 pr-4 text-right"><span className="sr-only">Actions</span></TableHead>
+                      <TableHead className="w-16 pe-4 text-end"><span className="sr-only">Actions</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pageRows.map((st) => (
                       <TableRow key={st.id}>
-                        <TableCell className="py-3 pl-4">
+                        <TableCell className="py-3 ps-4">
                           <span className="grid size-9 place-items-center rounded-md bg-accent text-accent-foreground [&_svg]:size-5">
                             {ICONS[iconKeyToIconName(st.iconKey)]}
                           </span>
@@ -154,7 +154,7 @@ export function SpaceTypesPage() {
                         <TableCell className="hidden py-3 text-muted-foreground sm:table-cell">
                           {ICON_OPTIONS.find((o) => o.value === st.iconKey)?.label ?? 'Generic'}
                         </TableCell>
-                        <TableCell className="py-3 pr-4 text-right">
+                        <TableCell className="py-3 pe-4 text-end">
                           <RowActionsMenu
                             label={st.name}
                             actions={[

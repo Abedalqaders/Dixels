@@ -70,7 +70,7 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
       <div>
         <strong>{first.message}</strong>
         {rest.length > 0 && (
-          <ul className="mt-2 list-disc space-y-1 pl-5">
+          <ul className="mt-2 list-disc space-y-1 ps-5">
             {rest.map((v) => (
               <li key={v.code + v.message}>{v.message}</li>
             ))}

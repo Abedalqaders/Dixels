@@ -1,3 +1,4 @@
+import { currentLanguage, languageInfo } from '@/i18n'
 import type { HhMm, IsoDate } from './buildingTime'
 
 /**
@@ -8,12 +9,57 @@ import type { HhMm, IsoDate } from './buildingTime'
  *
  * Dates arrive as the API's calendar strings ("2026-09-29", "10:30"), never as a browser
  * `Date` in local time: a building's day is a building's day whatever zone the viewer is
- * in. Names are fixed English tables rather than Intl's, whose short month for September
+ * in. English names are a fixed table rather than Intl's, whose short month for September
  * is "Sep" or "Sept" depending on the ICU version — the backend's own messages say "Sep".
+ * Every other language (the list comes from the backend, so there can be any number) takes
+ * its names from Intl, with Western digits. Arabic has no three-letter abbreviations: its
+ * "short" names are the full ones, as Intl gives them.
  */
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+interface Names {
+  weekdays: readonly string[]
+  months: readonly string[]
+  shortWeekdays: readonly string[]
+  shortMonths: readonly string[]
+}
+
+const EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+const ENGLISH: Names = {
+  weekdays: EN_WEEKDAYS,
+  months: EN_MONTHS,
+  shortWeekdays: EN_WEEKDAYS.map((w) => w.slice(0, 3)),
+  shortMonths: EN_MONTHS.map((m) => m.slice(0, 3)),
+}
+
+/** One language's names from Intl, worked out once. 4 Jan 2026 is a Sunday. */
+function intlNames(locale: string): Names {
+  const format = (options: Intl.DateTimeFormatOptions, date: Date) =>
+    new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(date)
+  const day = (i: number) => new Date(Date.UTC(2026, 0, 4 + i))
+  const month = (i: number) => new Date(Date.UTC(2026, i, 1))
+  const seven = Array.from({ length: 7 }, (_, i) => i)
+  const twelve = Array.from({ length: 12 }, (_, i) => i)
+  return {
+    weekdays: seven.map((i) => format({ weekday: 'long' }, day(i))),
+    months: twelve.map((i) => format({ month: 'long' }, month(i))),
+    shortWeekdays: seven.map((i) => format({ weekday: 'short' }, day(i))),
+    shortMonths: twelve.map((i) => format({ month: 'short' }, month(i))),
+  }
+}
+
+const byLanguage = new Map<string, Names>([['en', ENGLISH]])
+
+function names(): Names {
+  const language = currentLanguage()
+  let found = byLanguage.get(language)
+  if (!found) {
+    found = intlNames(languageInfo(language).intl)
+    byLanguage.set(language, found)
+  }
+  return found
+}
 
 function parts(date: IsoDate) {
   const d = new Date(`${date}T00:00:00Z`)
@@ -33,34 +79,37 @@ export type DateStyle =
 /** A calendar date in words, in one of a few fixed styles. */
 export function formatDay(date: IsoDate, style: DateStyle = 'short'): string {
   const p = parts(date)
+  const n = names()
   switch (style) {
     case 'short':
-      return `${WEEKDAYS[p.w].slice(0, 3)} ${p.d} ${MONTHS[p.m].slice(0, 3)}`
+      return `${n.shortWeekdays[p.w]} ${p.d} ${n.shortMonths[p.m]}`
     case 'medium':
-      return `${WEEKDAYS[p.w].slice(0, 3)} ${p.d} ${MONTHS[p.m].slice(0, 3)} ${p.y}`
+      return `${n.shortWeekdays[p.w]} ${p.d} ${n.shortMonths[p.m]} ${p.y}`
     case 'long':
-      return `${WEEKDAYS[p.w]} ${p.d} ${MONTHS[p.m]} ${p.y}`
+      return `${n.weekdays[p.w]} ${p.d} ${n.months[p.m]} ${p.y}`
     case 'day-month':
-      return `${p.d} ${MONTHS[p.m].slice(0, 3)}`
+      return `${p.d} ${n.shortMonths[p.m]}`
   }
 }
 
 /** "September 2026" */
 export function formatMonthYear(date: IsoDate): string {
   const p = parts(date)
-  return `${MONTHS[p.m]} ${p.y}`
+  return `${names().months[p.m]} ${p.y}`
 }
 
 /** "September", "Sep" */
 export function formatMonth(date: IsoDate, style: 'long' | 'short' = 'long'): string {
-  const name = MONTHS[parts(date).m]
-  return style === 'short' ? name.slice(0, 3) : name
+  const n = names()
+  const m = parts(date).m
+  return style === 'short' ? n.shortMonths[m] : n.months[m]
 }
 
 /** "Tuesday", "Tue" */
 export function formatWeekday(date: IsoDate, style: 'long' | 'short' = 'long'): string {
-  const name = WEEKDAYS[parts(date).w]
-  return style === 'short' ? name.slice(0, 3) : name
+  const n = names()
+  const w = parts(date).w
+  return style === 'short' ? n.shortWeekdays[w] : n.weekdays[w]
 }
 
 /**
@@ -70,7 +119,7 @@ export function formatWeekday(date: IsoDate, style: 'long' | 'short' = 'long'): 
 export function formatDaySpan(from: IsoDate, to: IsoDate): string {
   const a = parts(from)
   const b = parts(to)
-  const short = (m: number) => MONTHS[m].slice(0, 3)
+  const short = (m: number) => names().shortMonths[m]
   if (from === to) return formatDay(from, 'medium')
   if (a.y !== b.y) return `${a.d} ${short(a.m)} ${a.y} – ${b.d} ${short(b.m)} ${b.y}`
   if (a.m !== b.m) return `${a.d} ${short(a.m)} – ${b.d} ${short(b.m)} ${b.y}`

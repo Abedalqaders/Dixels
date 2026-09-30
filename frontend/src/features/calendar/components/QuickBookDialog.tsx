@@ -108,7 +108,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
           </div>
         </div>
 
-        <section aria-busy={results.isRefreshing} className="max-h-[60vh] min-h-40 overflow-y-auto pr-1">
+        <section aria-busy={results.isRefreshing} className="max-h-[60vh] min-h-40 overflow-y-auto pe-1">
           {results.status === 'loading' && <p className="py-6 text-center text-sm text-muted-foreground">Checking every room…</p>}
 
           {results.status === 'error' && (
@@ -131,7 +131,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                     <li key={room.space.id}>
                       <button
                         type="button"
-                        className="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors hover:border-brand hover:bg-slot-open focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        className="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-start transition-colors hover:border-brand hover:bg-slot-open focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                         onClick={() => onPick(room, attendees, w)}
                       >
                         <span
@@ -207,7 +207,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                         {group.rooms.map(({ room, reason }) => (
                           <li key={room.space.id} className="flex justify-between gap-3 text-xs">
                             <span className="truncate font-medium">{room.space.name}</span>
-                            <span className="text-right text-muted-foreground">{reason}</span>
+                            <span className="text-end text-muted-foreground">{reason}</span>
                           </li>
                         ))}
                       </ul>

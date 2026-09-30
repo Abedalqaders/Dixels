@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import i18n from '@/i18n'
 
 interface Props {
   /** 'page': the shell (sidebar) stays and only the page area shows the message.
@@ -38,18 +39,15 @@ export class AppErrorBoundary extends Component<Props, State> {
     const scope = this.props.scope ?? 'page'
     const message = (
       <div role="alert" className="mx-auto max-w-md p-6 text-center">
-        <h1 className="text-lg font-semibold">Something went wrong</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This part of the page hit an error it couldn't recover from. Reloading usually fixes it; if it keeps
-          happening, tell an administrator what you were doing.
-        </p>
+        <h1 className="text-lg font-semibold">{i18n.t('Error:BoundaryTitle')}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{i18n.t('Error:BoundaryDetail')}</p>
         <p className="mt-2 font-mono text-xs text-muted-foreground">{error.message}</p>
         <button
           type="button"
           className="mt-4 rounded-md border px-3 py-1.5 text-sm"
           onClick={() => (scope === 'app' ? globalThis.location.reload() : this.setState({ error: null }))}
         >
-          {scope === 'app' ? 'Reload' : 'Try again'}
+          {scope === 'app' ? i18n.t('Common:Reload') : i18n.t('Common:TryAgain')}
         </button>
       </div>
     )

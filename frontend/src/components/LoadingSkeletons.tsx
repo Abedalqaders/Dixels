@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import i18n from '@/i18n'
 
 /**
  * Placeholders shaped like the content that's on its way, shown while a page's first load
@@ -118,7 +119,7 @@ export function FindSpaceSkeleton() {
         ))}
       </Card>
       <div className="mt-6">
-        <ResultsSkeleton label="Loading your building…" />
+        <ResultsSkeleton label={i18n.t('Common:LoadingBuilding')} />
       </div>
     </div>
   )

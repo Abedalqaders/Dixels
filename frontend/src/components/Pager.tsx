@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PAGE_SIZE_OPTIONS } from '@/hooks/useListParams'
 
 interface PagerProps {
@@ -30,6 +31,7 @@ export function pageSlots(current: number, pageCount: number): PageSlot[] {
 }
 
 export function Pager({ page, pageSize, totalCount, onPageChange, onPageSizeChange }: PagerProps) {
+  const { t } = useTranslation()
   const valid = Number.isFinite(totalCount) && totalCount >= 0 && Number.isFinite(pageSize) && pageSize > 0
   const pageCount = valid ? Math.max(1, Math.ceil(totalCount / pageSize)) : 1
 
@@ -46,14 +48,12 @@ export function Pager({ page, pageSize, totalCount, onPageChange, onPageSizeChan
   const last = Math.min(totalCount, (page + 1) * pageSize)
 
   return (
-    <nav className="pager" aria-label="Pagination">
-      <span className="pager-range">
-        {first}–{last} of {totalCount}
-      </span>
+    <nav className="pager" aria-label={t('Pagination:Label')}>
+      <span className="pager-range">{t('Pagination:Range', { first, last, total: totalCount })}</span>
 
       {pageCount > 1 && (
         <div className="pager-pages">
-          <button type="button" className="pagebtn" disabled={page <= 0} onClick={() => onPageChange(page - 1)} aria-label="Previous page">
+          <button type="button" className="pagebtn" disabled={page <= 0} onClick={() => onPageChange(page - 1)} aria-label={t('Pagination:Previous')}>
             ‹
           </button>
           {pageSlots(page, pageCount).map((slot, i) =>
@@ -67,7 +67,7 @@ export function Pager({ page, pageSize, totalCount, onPageChange, onPageSizeChan
                 type="button"
                 className={`pagebtn${slot === page ? ' on' : ''}`}
                 aria-current={slot === page ? 'page' : undefined}
-                aria-label={`Page ${slot + 1}`}
+                aria-label={t('Pagination:Page', { page: slot + 1 })}
                 onClick={() => onPageChange(slot)}
               >
                 {slot + 1}
@@ -79,7 +79,7 @@ export function Pager({ page, pageSize, totalCount, onPageChange, onPageSizeChan
             className="pagebtn"
             disabled={page >= pageCount - 1}
             onClick={() => onPageChange(page + 1)}
-            aria-label="Next page"
+            aria-label={t('Pagination:Next')}
           >
             ›
           </button>
@@ -88,8 +88,8 @@ export function Pager({ page, pageSize, totalCount, onPageChange, onPageSizeChan
 
       {totalCount > PAGE_SIZE_OPTIONS[0] && (
         <label className="pager-size">
-          Rows
-          <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))} aria-label="Rows per page">
+          {t('Pagination:Rows')}
+          <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))} aria-label={t('Pagination:RowsPerPage')}>
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>
                 {size}

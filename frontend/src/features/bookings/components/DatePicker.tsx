@@ -40,7 +40,7 @@ export function DatePicker({ id, value, min, max, onChange, errorId }: DatePicke
         <Button
           id={id}
           variant="outline"
-          className="w-full justify-between text-left font-normal"
+          className="w-full justify-between text-start font-normal"
           aria-invalid={errorId ? true : undefined}
           aria-describedby={errorId}
         >

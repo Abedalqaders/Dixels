@@ -74,7 +74,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
               <button
                 key={d}
                 type="button"
-                className={cn(cellClass, 'cursor-pointer items-start text-left hover:bg-muted/50')}
+                className={cn(cellClass, 'cursor-pointer items-start text-start hover:bg-muted/50')}
                 aria-label={`Open ${d}${count ? `, ${count} ${count === 1 ? 'booking' : 'bookings'}` : ''}`}
                 onClick={() => onOpenDay(d)}
               >
@@ -125,7 +125,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                   key={b.id}
                   type="button"
                   className={cn(
-                    'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-left text-[11px] text-brand hover:border-brand/70',
+                    'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-start text-[11px] text-brand hover:border-brand/70',
                     d < today && 'opacity-60',
                     b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through',
                   )}

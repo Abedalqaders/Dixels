@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { setTokenRefresher, setUnauthorizedHandler } from '@/lib/api/httpClient'
 import { AuthStatusScreen } from './AuthStatusScreen'
 
@@ -23,6 +24,7 @@ const LOOP_LIMIT = 2
  *    minute the loop stops here with an explanation and a manual way to try again.
  */
 export function SessionGuard({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
   const { removeUser, signinSilent, signinRedirect } = useAuth()
   const [broken, setBroken] = useState(false)
 
@@ -62,8 +64,8 @@ export function SessionGuard({ children }: { children: ReactNode }) {
     return (
       <AuthStatusScreen
         state="error"
-        title="Signed in, but the server keeps refusing"
-        detail="Your sign-in works, yet every request is answered with “not authorized”. Signing in again won't change that — it usually means the app and the API are configured for different servers. Tell an administrator; you can retry once that's fixed."
+        title={t('Auth:RefusedTitle')}
+        detail={t('Auth:RefusedDetail')}
       >
         <button
           type="button"
@@ -74,7 +76,7 @@ export function SessionGuard({ children }: { children: ReactNode }) {
             void removeUser().then(() => signinRedirect())
           }}
         >
-          Try signing in again
+          {t('Auth:RefusedRetry')}
         </button>
       </AuthStatusScreen>
     )

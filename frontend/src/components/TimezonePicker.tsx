@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
@@ -44,7 +45,8 @@ function describe(zone: string): string {
  * that can't express a building in Riyadh or Cairo. Shows each zone's current UTC offset
  * so "Asia/Amman" and "Asia/Riyadh" can be told apart at a glance.
  */
-export function TimezonePicker({ id, value, onChange, ariaLabel = 'Timezone', className }: TimezonePickerProps) {
+export function TimezonePicker({ id, value, onChange, ariaLabel, className }: TimezonePickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const zones = useMemo(() => supportedTimezones(), [])
 
@@ -57,18 +59,18 @@ export function TimezonePicker({ id, value, onChange, ariaLabel = 'Timezone', cl
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          aria-label={ariaLabel}
+          aria-label={ariaLabel ?? t('Timezone:Label')}
           className={cn('w-full justify-between font-normal', className)}
         >
-          <span className="truncate">{value ? describe(value) : 'Choose a timezone'}</span>
+          <span className="truncate">{value ? describe(value) : t('Timezone:Choose')}</span>
           <ChevronsUpDownIcon className="opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 sm:min-w-64" align="start">
         <Command>
-          <CommandInput placeholder="Search a city or region…" />
+          <CommandInput placeholder={t('Timezone:Search')} />
           <CommandList>
-            <CommandEmpty>No timezone matches.</CommandEmpty>
+            <CommandEmpty>{t('Timezone:NoMatch')}</CommandEmpty>
             <CommandGroup>
               {zones.map((zone) => (
                 <CommandItem

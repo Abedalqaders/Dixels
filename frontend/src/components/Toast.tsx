@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { XIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import i18n from '@/i18n'
 
 export type ToastKind = 'success' | 'error'
 
@@ -97,7 +98,7 @@ export function Toaster() {
           <span className="flex-1">{toast.message}</span>
           <button
             type="button"
-            aria-label="Dismiss"
+            aria-label={i18n.t('Common:Dismiss')}
             className="-me-1 rounded p-0.5 opacity-70 hover:opacity-100"
             onClick={() => dismissToast(toast.id)}
           >

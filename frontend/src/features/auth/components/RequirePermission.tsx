@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { TextSkeleton } from '@/components/LoadingSkeletons'
@@ -49,12 +50,13 @@ function PermissionGate({ name, deniedTitle, deniedDetail, frame, children }: Re
 }
 
 function PermissionMessage({ deniedTitle, deniedDetail }: Pick<RequirePermissionProps, 'deniedTitle' | 'deniedDetail'>) {
+  const { t } = useTranslation()
   const permissions = usePermissions()
 
   if (permissions.status === 'loading') {
     return (
       <div className="content">
-        <TextSkeleton label="Checking your access…" />
+        <TextSkeleton label={t('Access:Checking')} />
       </div>
     )
   }
@@ -65,13 +67,13 @@ function PermissionMessage({ deniedTitle, deniedDetail }: Pick<RequirePermission
         <Card className="mt-6 gap-3 p-6" role="alert">
           <div className="grid gap-1">
             <p className="font-medium">
-              {permissions.error instanceof ApiError && permissions.error.isNetworkError ? "Couldn't reach the server" : "Couldn't check your access"}
+              {permissions.error instanceof ApiError && permissions.error.isNetworkError ? t('Access:Unreachable') : t('Access:CheckFailed')}
             </p>
             <p className="text-sm text-muted-foreground">{permissions.error.message}</p>
           </div>
           <div>
             <Button variant="outline" onClick={permissions.retry}>
-              Try again
+              {t('Common:TryAgain')}
             </Button>
           </div>
         </Card>
@@ -83,12 +85,12 @@ function PermissionMessage({ deniedTitle, deniedDetail }: Pick<RequirePermission
     <div className="content">
       <Card className="mt-6 gap-3 p-6" role="alert">
         <div className="grid gap-1">
-          <p className="font-medium">{deniedTitle ?? "You don't have access to this page"}</p>
-          <p className="text-sm text-muted-foreground">{deniedDetail ?? 'Ask an administrator if you think you should.'}</p>
+          <p className="font-medium">{deniedTitle ?? t('Access:DeniedTitle')}</p>
+          <p className="text-sm text-muted-foreground">{deniedDetail ?? t('Access:DeniedDetail')}</p>
         </div>
         <div>
           <Button asChild>
-            <Link to={HOME_PATH}>Go to your home page</Link>
+            <Link to={HOME_PATH}>{t('Common:GoHome')}</Link>
           </Button>
         </div>
       </Card>

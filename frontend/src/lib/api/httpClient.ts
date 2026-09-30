@@ -2,13 +2,8 @@
 // Takes the OIDC access token as a parameter rather than reaching into auth itself, so this
 // module has no dependency on react-oidc-context and stays trivially testable.
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:44334'
-
-// A production bundle must say where its API is; silently talking to localhost is a
-// deployment mistake that would otherwise only show up as "Couldn't reach the server".
-if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
-  throw new Error('VITE_API_BASE_URL must be set for a production build (see .env.example).')
-}
+import i18n, { currentLanguage } from '@/i18n'
+import { API_BASE_URL as BASE_URL } from './baseUrl'
 
 export interface ValidationErrorInfo {
   message: string
@@ -16,11 +11,11 @@ export interface ValidationErrorInfo {
 }
 
 /** Shown in place of ABP's "Authorization failed! Given policy has not granted." */
-export const PERMISSION_DENIED_MESSAGE = "You don't have permission to do this. Ask an administrator if you think you should."
+export const permissionDeniedMessage = () => i18n.t('Error:PermissionDenied')
 
 /** The request never got an answer: no network, the backend down or unreachable, a blocked
  * (CORS or certificate) response. Not a sign-in problem — that arrives as a 401. */
-export const NETWORK_ERROR_MESSAGE = "Couldn't reach the server. Check your connection, or that the backend is running, and try again."
+export const networkErrorMessage = () => i18n.t('Error:Network')
 
 /** Every ABP authorization failure's error code starts with this (Volo.Authorization:010001–5). */
 const ABP_AUTHORIZATION_CODE_PREFIX = 'Volo.Authorization:'
@@ -36,7 +31,7 @@ export class ApiError extends Error {
   /** The signed-in user lacks the permission this call needs. Not every 403: ABP answers a
    * broken business rule (a BusinessException) with 403 too, and that message must stay. */
   permissionDenied: boolean
-  /** No response at all (status 0) — see NETWORK_ERROR_MESSAGE. */
+  /** No response at all (status 0) — see networkErrorMessage. */
   isNetworkError: boolean
 
   constructor(status: number, body: unknown) {
@@ -61,11 +56,11 @@ export class ApiError extends Error {
     super(
       isNetworkError
         ? import.meta.env.DEV
-          ? `${NETWORK_ERROR_MESSAGE} (${BASE_URL})`
-          : NETWORK_ERROR_MESSAGE
+          ? `${networkErrorMessage()} (${BASE_URL})`
+          : networkErrorMessage()
         : permissionDenied
-          ? PERMISSION_DENIED_MESSAGE
-          : (errorInfo?.message ?? `Request failed with status ${status}`),
+          ? permissionDeniedMessage()
+          : (errorInfo?.message ?? i18n.t('Error:RequestFailed', { status })),
     )
     this.name = 'ApiError'
     this.status = status
@@ -110,6 +105,9 @@ async function send<T>(path: string, token: string, init: RequestInit | undefine
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        // ABP answers in this language: validation and business-rule messages, and later
+        // the names of buildings, floors and spaces.
+        'Accept-Language': currentLanguage(),
         Authorization: `Bearer ${token}`,
         ...init?.headers,
       },

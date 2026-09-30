@@ -184,7 +184,7 @@ export function TimeGrid({
             {hourMarks.map((h) => (
               <span
                 key={h}
-                className="absolute right-2 -translate-y-1/2 text-[11px] text-muted-foreground"
+                className="absolute inset-e-2 -translate-y-1/2 text-[11px] text-muted-foreground"
                 style={{ top: top(h * 60) }}
               >
                 {/* Midnight has no label; an hour the "now" marker sits on top of steps aside. */}
@@ -194,8 +194,8 @@ export function TimeGrid({
             {showsToday && (
               <span
                 className={cn(
-                  'absolute right-0 z-30 flex -translate-y-1/2 items-center gap-1 bg-card pl-1 text-[11px] font-semibold',
-                  dayView ? 'pr-2 text-destructive' : 'text-foreground',
+                  'absolute inset-e-0 z-30 flex -translate-y-1/2 items-center gap-1 bg-card ps-1 text-[11px] font-semibold',
+                  dayView ? 'pe-2 text-destructive' : 'text-foreground',
                 )}
                 style={{ top: top(nowMinute) }}
               >
@@ -209,7 +209,7 @@ export function TimeGrid({
           {showsToday && (
             <div
               className={cn(
-                'pointer-events-none absolute right-0 left-16 z-30',
+                'pointer-events-none absolute inset-e-0 inset-s-16 z-30',
                 dayView ? 'border-t border-destructive' : 'border-t-2 border-dotted border-foreground/60',
               )}
               style={{ top: top(nowMinute) }}
@@ -473,7 +473,7 @@ const DayColumn = memo(function DayColumn({
             key={b.id}
             type="button"
             className={cn(
-              'absolute z-10 flex flex-col overflow-hidden rounded-lg border border-brand/30 bg-slot-open px-2 py-1 text-left text-xs shadow-xs',
+              'absolute z-10 flex flex-col overflow-hidden rounded-lg border border-brand/30 bg-slot-open px-2 py-1 text-start text-xs shadow-xs',
               'transition-colors hover:border-brand/70 hover:bg-[color-mix(in_srgb,var(--focus-ring)_22%,var(--surface-raised))]',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
               // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
