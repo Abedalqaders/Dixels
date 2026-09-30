@@ -1,0 +1,13 @@
+# Used only by ./Dockerfile (the production image); Dockerfile.dev uses .dockerignore.
+# Build from what git tracks: nothing generated or secret from a developer's machine.
+**/bin
+**/obj
+**/node_modules
+**/Logs
+**/wwwroot/libs
+**/*.pfx
+.env
+.env.*
+test
+.vs
+.idea

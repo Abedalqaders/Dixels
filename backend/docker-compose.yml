@@ -6,7 +6,10 @@
 #        dotnet dev-certs https --trust
 services:
   web:
-    build: .
+    # Development image (runs from source). The production image is ./Dockerfile - see deploy/.
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
       - "44334:44334"
     env_file:

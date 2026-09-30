@@ -25,6 +25,7 @@
     "Dixels:SpaceManagement:SpaceTypeInUse": "This space type is still assigned to one or more spaces and can't be deleted.",
     "Dixels:SpaceManagement:ParentIsDeleted": "This can't be restored while the {parent} it belongs to is deleted. Restore the {parent} first.",
     "Dixels:Users:InvalidBuildingId": "The building id is not valid. Pick a building from the list.",
+    "Dixels:TooManyRequests": "Too many requests in a short time. Wait a moment and try again.",
 
     "Enum:ConstraintSource.Building": "Building",
     "Enum:ConstraintSource.Floor": "Floor",
