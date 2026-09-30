@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FieldError } from '@/components/FieldError'
+import { randomUuid } from '@/lib/uuid'
 import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/violationFields'
 import {
   addDays,
@@ -71,8 +72,8 @@ export function BookingForm({
 
   // One key per opening of the form: a retry of the same attempt (double-click, network
   // blip) can never create a second booking — the server answers it with the first one.
-  const [idempotencyKey] = useState(() => crypto.randomUUID())
-  const [seriesKey] = useState(() => crypto.randomUUID())
+  const [idempotencyKey] = useState(() => randomUuid())
+  const [seriesKey] = useState(() => randomUuid())
 
   // Repeat (Teams-style): a quick choice worded from the date, or a custom rule. The
   // dates the person unticks in the preview are left out when booking.
