@@ -99,9 +99,9 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.AuthorizationCode, OpenIddictConstants.GrantTypes.Implicit
                 },
                 scopes: commonScopes,
-                redirectUri: $"{webClientRootUrl}signin-oidc",
+                redirectUris: [$"{webClientRootUrl}signin-oidc"],
                 clientUri: webClientRootUrl,
-                postLogoutRedirectUri: $"{webClientRootUrl}signout-callback-oidc"
+                postLogoutRedirectUris: [$"{webClientRootUrl}signout-callback-oidc"]
             );
         }
 
@@ -113,7 +113,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         var swaggerClientId = configurationSection["Dixels_Swagger:ClientId"];
         if (!swaggerClientId.IsNullOrWhiteSpace())
         {
-            var swaggerRootUrl = configurationSection["Dixels_Swagger:RootUrl"]?.TrimEnd('/');
+            var swaggerRootUrls = GetRootUrls(configurationSection["Dixels_Swagger:RootUrl"]);
 
             await CreateApplicationAsync(
                 name: swaggerClientId!,
@@ -123,8 +123,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                 secret: null,
                 grantTypes: new List<string> { OpenIddictConstants.GrantTypes.AuthorizationCode, },
                 scopes: commonScopes,
-                redirectUri: $"{swaggerRootUrl}/swagger/oauth2-redirect.html",
-                clientUri: swaggerRootUrl
+                redirectUris: swaggerRootUrls.Select(url => $"{url}/swagger/oauth2-redirect.html").ToList(),
+                clientUri: swaggerRootUrls.FirstOrDefault()
             );
         }
 
@@ -132,7 +132,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         var appClientId = configurationSection["Dixels_App:ClientId"];
         if (!appClientId.IsNullOrWhiteSpace())
         {
-            var appRootUrl = configurationSection["Dixels_App:RootUrl"]?.TrimEnd('/');
+            var appRootUrls = GetRootUrls(configurationSection["Dixels_App:RootUrl"]);
 
             await CreateApplicationAsync(
                 name: appClientId!,
@@ -146,11 +146,22 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
                     OpenIddictConstants.GrantTypes.RefreshToken
                 },
                 scopes: commonScopes,
-                redirectUri: $"{appRootUrl}/callback",
-                clientUri: appRootUrl,
-                postLogoutRedirectUri: $"{appRootUrl}/"
+                redirectUris: appRootUrls.Select(url => $"{url}/callback").ToList(),
+                clientUri: appRootUrls.FirstOrDefault(),
+                postLogoutRedirectUris: appRootUrls.Select(url => $"{url}/").ToList()
             );
         }
+    }
+
+    // A client's RootUrl may list several comma-separated URLs, so one database can serve more
+    // than one copy of a frontend (e.g. local dev on :5173 and an IIS deployment). The first
+    // URL is the client's home page.
+    private static List<string> GetRootUrls(string? rootUrl)
+    {
+        return (rootUrl ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(url => url.TrimEnd('/'))
+            .ToList();
     }
 
     private async Task CreateApplicationAsync(
@@ -162,8 +173,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
         List<string> grantTypes,
         List<string> scopes,
         string? clientUri = null,
-        string? redirectUri = null,
-        string? postLogoutRedirectUri = null,
+        List<string>? redirectUris = null,
+        List<string>? postLogoutRedirectUris = null,
         List<string>? permissions = null)
     {
         if (!string.IsNullOrEmpty(secret) && string.Equals(type, OpenIddictConstants.ClientTypes.Public,
@@ -204,7 +215,7 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        if (!redirectUri.IsNullOrWhiteSpace() || !postLogoutRedirectUri.IsNullOrWhiteSpace())
+        if (redirectUris?.Count > 0 || postLogoutRedirectUris?.Count > 0)
         {
             application.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.EndSession);
         }
@@ -300,36 +311,30 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
             }
         }
 
-        if (redirectUri != null)
+        foreach (var redirectUri in redirectUris ?? [])
         {
-            if (!redirectUri.IsNullOrEmpty())
+            if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())
             {
-                if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri) || !uri.IsWellFormedOriginalString())
-                {
-                    throw new BusinessException(L["InvalidRedirectUri", redirectUri]);
-                }
+                throw new BusinessException(L["InvalidRedirectUri", redirectUri]);
+            }
 
-                if (application.RedirectUris.All(x => x != uri))
-                {
-                    application.RedirectUris.Add(uri);
-                }
+            if (application.RedirectUris.All(x => x != uri))
+            {
+                application.RedirectUris.Add(uri);
             }
         }
 
-        if (postLogoutRedirectUri != null)
+        foreach (var postLogoutRedirectUri in postLogoutRedirectUris ?? [])
         {
-            if (!postLogoutRedirectUri.IsNullOrEmpty())
+            if (!Uri.TryCreate(postLogoutRedirectUri, UriKind.Absolute, out var uri) ||
+                !uri.IsWellFormedOriginalString())
             {
-                if (!Uri.TryCreate(postLogoutRedirectUri, UriKind.Absolute, out var uri) ||
-                    !uri.IsWellFormedOriginalString())
-                {
-                    throw new BusinessException(L["InvalidPostLogoutRedirectUri", postLogoutRedirectUri]);
-                }
+                throw new BusinessException(L["InvalidPostLogoutRedirectUri", postLogoutRedirectUri]);
+            }
 
-                if (application.PostLogoutRedirectUris.All(x => x != uri))
-                {
-                    application.PostLogoutRedirectUris.Add(uri);
-                }
+            if (application.PostLogoutRedirectUris.All(x => x != uri))
+            {
+                application.PostLogoutRedirectUris.Add(uri);
             }
         }
 
@@ -351,8 +356,8 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
         if (!HasSameRedirectUris(client, application))
         {
-            client.RedirectUris = JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
-            client.PostLogoutRedirectUris = JsonSerializer.Serialize(application.PostLogoutRedirectUris.Select(q => q.ToString().TrimEnd('/')));
+            client.RedirectUris = SerializeUris(application.RedirectUris);
+            client.PostLogoutRedirectUris = SerializeUris(application.PostLogoutRedirectUris);
 
             await _applicationManager.UpdateAsync(client.ToModel());
         }
@@ -366,7 +371,15 @@ public class OpenIddictDataSeedContributor : IDataSeedContributor, ITransientDep
 
     private bool HasSameRedirectUris(OpenIddictApplication existingClient, AbpApplicationDescriptor application)
     {
-        return existingClient.RedirectUris == JsonSerializer.Serialize(application.RedirectUris.Select(q => q.ToString().TrimEnd('/')));
+        return existingClient.RedirectUris == SerializeUris(application.RedirectUris) &&
+               existingClient.PostLogoutRedirectUris == SerializeUris(application.PostLogoutRedirectUris);
+    }
+
+    // Stored exactly as configured: OpenIddict compares redirect URIs character for character, so
+    // trimming the "/" off "https://app/" would reject the post-logout redirect the SPA sends.
+    private static string SerializeUris(IEnumerable<Uri> uris)
+    {
+        return JsonSerializer.Serialize(uris.Select(q => q.ToString()));
     }
 
     private bool HasSameScopes(OpenIddictApplication existingClient, AbpApplicationDescriptor application)

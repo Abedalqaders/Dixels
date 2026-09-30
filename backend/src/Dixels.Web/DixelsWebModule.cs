@@ -17,6 +17,7 @@ using Dixels.MultiTenancy;
 using Dixels.Web.Menus;
 using Dixels.Web.RateLimiting;
 using Microsoft.OpenApi;
+using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
 using Volo.Abp;
 using Volo.Abp.Account.Web;
@@ -191,6 +192,16 @@ public class DixelsWebModule : AbpModule
         {
             options.IsDynamicClaimsEnabled = true;
         });
+
+        // OpenIddict rejects plain-http requests (error ID2083). Turning this off is solely for a
+        // LAN test server without TLS: passwords and tokens then cross the network unencrypted.
+        if (!context.Services.GetConfiguration().GetValue("AuthServer:RequireHttpsMetadata", true))
+        {
+            Configure<OpenIddictServerAspNetCoreOptions>(options =>
+            {
+                options.DisableTransportSecurityRequirement = true;
+            });
+        }
     }
 
     private void ConfigureUrls(IConfiguration configuration)
@@ -327,13 +338,16 @@ public class DixelsWebModule : AbpModule
         app.UseAuthorization();
 
         // Swagger is a development tool: it exposes every route and the OAuth client used to
-        // try them. Keep it off outside Development.
-        if (env.IsDevelopment())
+        // try them. Off outside Development unless Swagger:Enabled turns it on (calling an
+        // endpoint still needs a signed-in user with the right permissions).
+        if (env.IsDevelopment() || configuration.GetValue<bool>("Swagger:Enabled"))
         {
             app.UseSwagger();
             app.UseAbpSwaggerUI(options =>
             {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Dixels API");
+                // Relative to the UI page, so it also resolves when the app is hosted under a
+                // sub-path (e.g. an IIS application at /backend).
+                options.SwaggerEndpoint("v1/swagger.json", "Dixels API");
             });
         }
 
