@@ -1,6 +1,8 @@
 /* Generated from tokens.json — Dixels design tokens */
 
 :root {
+  /* Native controls (scrollbars, date pickers) follow the theme too. */
+  color-scheme: light;
   /* Brand colours pulled from the live dixels.ai marketing site's own CSS (--ink, --muted,
      --purple, --purple-dark, --soft, --line), so the app matches the real brand exactly
      rather than an approximation. */
@@ -64,6 +66,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --surface-canvas: #14120e;
   --surface-raised: #1e1b15;
   --surface-sunken: #0d0b08;
@@ -106,6 +109,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --surface-canvas: #14120e;
     --surface-raised: #1e1b15;
     --surface-sunken: #0d0b08;

@@ -85,6 +85,8 @@
 .out { margin-left: auto; color: var(--ink-secondary); background: none; border: none; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
 .out svg { width: 18px; height: 18px; display: block; }
 .out:hover { background: var(--surface-sunken); color: var(--ink-primary); }
+/* The theme toggle and Sign out sit together at the right end; only the first one pushes. */
+.out + .out { margin-left: 0; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .top {

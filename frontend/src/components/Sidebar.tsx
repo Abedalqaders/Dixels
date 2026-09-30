@@ -6,8 +6,19 @@ import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { useTheme } from '@/hooks/useTheme'
 import { up } from '@/lib/breakpoints'
-import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
+import {
+  BuildingDoorIcon,
+  CalendarLinesIcon,
+  MenuIcon,
+  MoonIcon,
+  PeopleIcon,
+  SearchIcon,
+  SignOutIcon,
+  SunIcon,
+  TagIcon,
+} from './icons'
 import logo from '@/assets/logo.png'
 
 type NavItemProps = {
@@ -52,6 +63,8 @@ export function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAdmin } = useAuthRole()
+  const { theme, toggleTheme } = useTheme()
+  const themeLabel = theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
   // Every item follows the user's ABP grants, not their role — the same permission its page
   // (and API) needs, so taking a grant away takes the item with it.
   const canViewBookings = usePermission(Permissions.Bookings.Default)
@@ -227,6 +240,9 @@ export function Sidebar() {
           <br />
           <span className="rl">{isAdmin ? 'Administrator' : 'Employee'}</span>
         </span>
+        <button type="button" className="out" title={themeLabel} aria-label={themeLabel} onClick={toggleTheme}>
+          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </button>
         <button
           type="button"
           className="out"

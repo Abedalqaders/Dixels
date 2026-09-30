@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -141,5 +141,32 @@ describe('Sidebar drawer (below lg)', () => {
   it('gives the sign-out button a name', () => {
     renderAs(granted(...BOOKER))
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+})
+
+describe('Sidebar theme toggle', () => {
+  afterEach(() => {
+    localStorage.clear()
+    delete document.documentElement.dataset.theme
+  })
+
+  it('flips between light and dark, and remembers the pick', async () => {
+    renderAs(granted(...BOOKER))
+
+    // jsdom has no OS theme, so the app starts light.
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to dark theme' }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(localStorage.getItem('dixels.theme')).toBe('dark')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }))
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(localStorage.getItem('dixels.theme')).toBe('light')
+  })
+
+  it('starts from a theme picked on an earlier visit', () => {
+    localStorage.setItem('dixels.theme', 'dark')
+    renderAs(granted(...BOOKER))
+
+    expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument()
   })
 })
