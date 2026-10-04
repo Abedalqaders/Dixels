@@ -53,6 +53,7 @@ import { MonthGrid } from '@/features/calendar/components/MonthGrid'
 import { QuickBookDialog } from '@/features/calendar/components/QuickBookDialog'
 import type { QuickBookWindow } from '@/features/calendar/components/QuickBookDialog'
 import { TimeGrid } from '@/features/calendar/components/TimeGrid'
+import { TopBar } from '@/components/TopBar'
 
 const VIEW_KEY = 'dixels.calendar.view'
 const VIEWS: CalendarView[] = ['day', 'week', 'month']
@@ -99,13 +100,13 @@ export function MyCalendarPage() {
 
   return (
     <>
-      <div className="top">
+      <TopBar>
         <span className="pick">
           <span className="picklbl">
             {status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}
           </span>
         </span>
-      </div>
+      </TopBar>
 
       <div className="content" data-compact-top="">
         <h1 className="pagetitle">{t('Calendar:Title')}</h1>

@@ -10,6 +10,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { up } from '@/lib/breakpoints'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { ThemeToggle } from './ThemeToggle'
 import logo from '@/assets/logo.png'
 
 type NavItemProps = {
@@ -142,6 +143,9 @@ export function Sidebar() {
       >
         <MenuIcon />
       </button>
+      {/* Docked, the theme toggle sits in each page's TopBar; below lg it takes the other
+          end of the band the menu button is in. */}
+      {!docked && <ThemeToggle className="corner" />}
       <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} aria-hidden="true" />
       <nav id="app-sidebar" ref={drawerRef} aria-label={t('Nav:Main')} className={`side${mobileOpen ? ' open' : ''}`}>
       <div className="brand">

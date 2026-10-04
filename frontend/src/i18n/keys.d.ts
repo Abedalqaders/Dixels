@@ -688,6 +688,8 @@ export interface TextKeys {
   "SpaceTypes:SearchLabel": string
   "SpaceTypes:Title": string
   "SpaceTypes:Updated": string
+  "Theme:ToDark": string
+  "Theme:ToLight": string
   "Timezone:Choose": string
   "Timezone:Label": string
   "Timezone:NoMatch": string

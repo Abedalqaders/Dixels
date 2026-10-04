@@ -34,6 +34,7 @@ import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TableSkeleton } from '@/components/LoadingSkeletons'
 import { availableLanguages, currentLanguage, getDefaultLanguage } from '@/i18n'
+import { TopBar } from '@/components/TopBar'
 
 // Space types aren't part of the Building → Floor hierarchy, so this page sits outside
 // SpaceManagementLayout — no explorer tree beside it, just the app nav.
@@ -104,6 +105,7 @@ export function SpaceTypesPage() {
     <div className="app">
       <Sidebar />
       <div className="main">
+        <TopBar />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

@@ -111,6 +111,8 @@
     "Common:GoHome": "Go to your home page",
     "Common:LoadingBuilding": "Loading your building…",
     "Language:Label": "Language",
+    "Theme:ToDark": "Switch to dark theme",
+    "Theme:ToLight": "Switch to light theme",
     "Nav:Main": "Main",
     "Nav:OpenMenu": "Open menu",
     "Nav:CloseMenu": "Close menu",

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { TextSkeleton } from '@/components/LoadingSkeletons'
+import { TopBar } from '@/components/TopBar'
 import { RequireAuth } from './RequireAuth'
 import { AppShell } from './AppShell'
 import { HOME_PATH } from '@/features/auth/landing'
@@ -45,8 +46,20 @@ function PermissionGate({ name, deniedTitle, deniedDetail, frame, children }: Re
 
   const message = <PermissionMessage deniedTitle={deniedTitle} deniedDetail={deniedDetail} />
   if (frame === 'shell') return <AppShell>{message}</AppShell>
-  if (frame === 'main') return <div className="main">{message}</div>
-  return message
+  // Pages draw their own TopBar, so the message stands in for that too.
+  if (frame === 'main')
+    return (
+      <div className="main">
+        <TopBar />
+        {message}
+      </div>
+    )
+  return (
+    <>
+      <TopBar />
+      {message}
+    </>
+  )
 }
 
 function PermissionMessage({ deniedTitle, deniedDetail }: Pick<RequirePermissionProps, 'deniedTitle' | 'deniedDetail'>) {

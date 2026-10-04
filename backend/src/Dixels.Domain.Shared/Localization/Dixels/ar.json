@@ -111,6 +111,8 @@
     "Common:GoHome": "الذهاب إلى صفحتك الرئيسية",
     "Common:LoadingBuilding": "جارٍ تحميل المبنى…",
     "Language:Label": "اللغة",
+    "Theme:ToDark": "التبديل إلى الوضع الداكن",
+    "Theme:ToLight": "التبديل إلى الوضع الفاتح",
     "Nav:Main": "القائمة الرئيسية",
     "Nav:OpenMenu": "فتح القائمة",
     "Nav:CloseMenu": "إغلاق القائمة",

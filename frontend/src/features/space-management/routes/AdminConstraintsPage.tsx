@@ -59,6 +59,7 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { FormSkeleton } from '@/components/LoadingSkeletons'
+import { TopBar } from '@/components/TopBar'
 
 type Level = 'building' | 'floor' | 'space'
 
@@ -556,6 +557,7 @@ export function AdminConstraintsPage() {
     <div className="app">
       <Sidebar />
       <div className="main">
+        <TopBar />
         <div className="content constraintspage">
           <div>
             <button
