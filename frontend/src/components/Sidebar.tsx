@@ -143,9 +143,14 @@ export function Sidebar() {
       >
         <MenuIcon />
       </button>
-      {/* Docked, the theme toggle sits in each page's TopBar; below lg it takes the other
-          end of the band the menu button is in. */}
-      {!docked && <ThemeToggle className="corner" />}
+      {/* Docked, the language and theme switches sit in each page's TopBar; below lg they
+          take the other end of the band the menu button is in. */}
+      {!docked && (
+        <div className="corner">
+          <LanguageSwitcher className="topbtn" compact align="end" />
+          <ThemeToggle />
+        </div>
+      )}
       <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} aria-hidden="true" />
       <nav id="app-sidebar" ref={drawerRef} aria-label={t('Nav:Main')} className={`side${mobileOpen ? ' open' : ''}`}>
       <div className="brand">
@@ -227,7 +232,6 @@ export function Sidebar() {
       )}
 
       <div className="spacer"></div>
-      <LanguageSwitcher className="nav navlang" />
       <div className="acct">
         <span className="av">{initials}</span>
         <span>

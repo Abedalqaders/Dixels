@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
 import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
-import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
+import { DetailsIcon, PencilIcon, TrashIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
 import { Can } from '@/features/auth/components/Can'
 import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
@@ -27,7 +27,7 @@ import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import { notifyHierarchyChanged } from '@/features/space-management/hierarchyEvents'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
-import { ApiError, getBuildings, deleteBuilding, getBuildingDeleteImpact, restoreBuilding } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, getBuildings, deleteBuilding, getBuildingDeleteImpact } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
@@ -53,11 +53,10 @@ export function BuildingsListPage() {
   const { confirm, dialog: confirmDialog } = useConfirm()
 
   const { status, data, error, isRefreshing, refetch } = useApiQuery(
-    queryKeys.hierarchy.buildings({ search: list.search, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
+    queryKeys.hierarchy.buildings({ search: list.search, page: list.page, pageSize: list.pageSize }),
     async () => {
       const buildingsResult = await getBuildings(token, {
         filter: list.search || undefined,
-        includeDeleted: list.showDeleted,
         skipCount: list.page * list.pageSize,
         maxResultCount: list.pageSize,
       })
@@ -114,7 +113,7 @@ export function BuildingsListPage() {
   return (
     <>
       <div className="main">
-        <TopBar />
+        <TopBar crumbs={[{ label: t('Nav:SpaceManagement') }, { label: t('Nav:Hierarchy') }]} />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -146,14 +145,6 @@ export function BuildingsListPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <label className="chk">
-                  <input
-                    type="checkbox"
-                    checked={list.showDeleted}
-                    onChange={(e) => list.setShowDeleted(e.target.checked)}
-                  />
-                  {t('Hierarchy:ShowDeleted')}
-                </label>
               </div>
             </div>
 
@@ -175,7 +166,7 @@ export function BuildingsListPage() {
 
               {status === 'success' &&
                 data.buildings.map((building) => (
-                  <div key={building.id} style={building.isDeleted ? { opacity: 0.55 } : undefined}>
+                  <div key={building.id}>
                     <div className="node l1" data-level="building">
                       {ICONS.building}
                       {canOpenFloors ? (
@@ -188,58 +179,44 @@ export function BuildingsListPage() {
                         </span>
                       )}
                       {building.buildingNumber && <span className="m">{building.buildingNumber}</span>}
-                      {building.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                       <span className="actions">
-                        {building.isDeleted ? (
-                          <Can permission={Permissions.Buildings.Edit}>
-                            <button
-                              className="rowbtn"
-                              title={t('Hierarchy:Restore', { name: building.name })}
-                              aria-label={t('Hierarchy:Restore', { name: building.name })}
-                              onClick={() => runAction(() => restoreBuilding(token, building.id), t('Hierarchy:Restored', { name: building.name }))}
-                            >
-                              <RestoreIcon />
-                            </button>
-                          </Can>
-                        ) : (
-                          <RowActionsMenu
-                            label={building.name}
-                            actions={[
-                              {
-                                label: t('Hierarchy:EditDetails'),
-                                permission: Permissions.Buildings.Edit,
-                                icon: <DetailsIcon />,
-                                onClick: () =>
-                                  setEditState({
-                                    kind: 'building',
-                                    id: building.id,
-                                    names: building.names,
-                                    buildingNumber: building.buildingNumber,
-                                    timezone: building.timezone,
-                                  }),
-                              },
-                              {
-                                label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
-                                permission: Permissions.Buildings.Default,
-                                icon: <PencilIcon />,
-                                onClick: () => navigate(`/admin/constraints/building/${building.id}`),
-                              },
-                              {
-                                label: t('Common:Delete'),
-                                permission: Permissions.Buildings.Delete,
-                                icon: <TrashIcon />,
-                                destructive: true,
-                                onClick: () =>
-                                  confirmDelete(
-                                    building.name,
-                                    t('Hierarchy:DeleteBuildingConfirm', { name: building.name }),
-                                    () => getBuildingDeleteImpact(token, building.id),
-                                    () => deleteBuilding(token, building.id),
-                                  ),
-                              },
-                            ]}
-                          />
-                        )}
+                        <RowActionsMenu
+                          label={building.name}
+                          actions={[
+                            {
+                              label: t('Hierarchy:EditDetails'),
+                              permission: Permissions.Buildings.Edit,
+                              icon: <DetailsIcon />,
+                              onClick: () =>
+                                setEditState({
+                                  kind: 'building',
+                                  id: building.id,
+                                  names: building.names,
+                                  buildingNumber: building.buildingNumber,
+                                  timezone: building.timezone,
+                                }),
+                            },
+                            {
+                              label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
+                              permission: Permissions.Buildings.Default,
+                              icon: <PencilIcon />,
+                              onClick: () => navigate(`/admin/constraints/building/${building.id}`),
+                            },
+                            {
+                              label: t('Common:Delete'),
+                              permission: Permissions.Buildings.Delete,
+                              icon: <TrashIcon />,
+                              destructive: true,
+                              onClick: () =>
+                                confirmDelete(
+                                  building.name,
+                                  t('Hierarchy:DeleteBuildingConfirm', { name: building.name }),
+                                  () => getBuildingDeleteImpact(token, building.id),
+                                  () => deleteBuilding(token, building.id),
+                                ),
+                            },
+                          ]}
+                        />
                       </span>
                     </div>
                   </div>

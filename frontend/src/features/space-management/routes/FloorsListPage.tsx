@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
 import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
-import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
+import { DetailsIcon, PencilIcon, TrashIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
 import { Can } from '@/features/auth/components/Can'
 import { HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
@@ -27,7 +27,7 @@ import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import { notifyHierarchyChanged } from '@/features/space-management/hierarchyEvents'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
-import { ApiError, getBuilding, getFloors, deleteFloor, getFloorDeleteImpact, restoreFloor } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, getBuilding, getFloors, deleteFloor, getFloorDeleteImpact } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
@@ -53,14 +53,13 @@ export function FloorsListPage() {
   const { confirm, dialog: confirmDialog } = useConfirm()
 
   const { status, data, error, isRefreshing, refetch } = useApiQuery(
-    queryKeys.hierarchy.floors(buildingId, { search: list.search, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
+    queryKeys.hierarchy.floors(buildingId, { search: list.search, page: list.page, pageSize: list.pageSize }),
     async () => {
       const [building, floorsResult] = await Promise.all([
         getBuilding(token, buildingId),
         getFloors(token, {
           buildingId,
           filter: list.search || undefined,
-          includeDeleted: list.showDeleted,
           skipCount: list.page * list.pageSize,
           maxResultCount: list.pageSize,
         }),
@@ -119,13 +118,16 @@ export function FloorsListPage() {
   return (
     <>
       <div className="main">
-        <TopBar />
+        <TopBar
+          crumbs={[
+            { label: t('Nav:SpaceManagement') },
+            { label: t('Nav:Hierarchy'), to: '/admin/buildings' },
+            { label: status === 'success' ? data.building.name : undefined },
+          ]}
+        />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="breadcrumb">
-                <Link to="/admin/buildings">‹ {t('Hierarchy:Buildings')}</Link>
-              </p>
               <h1 className="pagetitle">{status === 'success' ? data.building.name : t('Hierarchy:Floors')}</h1>
               <p className="lead">
                 {status === 'success' ? `${t('Hierarchy:FloorCount', { count: data.totalCount })} ` : ''}
@@ -157,14 +159,6 @@ export function FloorsListPage() {
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
                 </div>
-                <label className="chk">
-                  <input
-                    type="checkbox"
-                    checked={list.showDeleted}
-                    onChange={(e) => list.setShowDeleted(e.target.checked)}
-                  />
-                  {t('Hierarchy:ShowDeleted')}
-                </label>
               </div>
             </div>
 
@@ -186,7 +180,7 @@ export function FloorsListPage() {
 
               {status === 'success' &&
                 data.floors.map((floor) => (
-                  <div key={floor.id} style={floor.isDeleted ? { opacity: 0.55 } : undefined}>
+                  <div key={floor.id}>
                     <div className="node l1" data-level="floor">
                       {ICONS.floor}
                       {canOpenSpaces ? (
@@ -200,52 +194,38 @@ export function FloorsListPage() {
                       )}
                       {floor.floorNumber !== null && <span className="m">{t('Hierarchy:FloorNumberBadge', { number: floor.floorNumber })}</span>}
                       {floor.hasOverrides && <span className="badge completed">{t('Hierarchy:CustomBadge')}</span>}
-                      {floor.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                       <span className="actions">
-                        {floor.isDeleted ? (
-                          <Can permission={Permissions.Floors.Edit}>
-                            <button
-                              className="rowbtn"
-                              title={t('Hierarchy:Restore', { name: floor.name })}
-                              aria-label={t('Hierarchy:Restore', { name: floor.name })}
-                              onClick={() => runAction(() => restoreFloor(token, floor.id), t('Hierarchy:Restored', { name: floor.name }))}
-                            >
-                              <RestoreIcon />
-                            </button>
-                          </Can>
-                        ) : (
-                          <RowActionsMenu
-                            label={floor.name}
-                            actions={[
-                              {
-                                label: t('Hierarchy:EditDetails'),
-                                permission: Permissions.Floors.Edit,
-                                icon: <DetailsIcon />,
-                                onClick: () =>
-                                  setEditState({ kind: 'floor', id: floor.id, names: floor.names, floorNumber: floor.floorNumber }),
-                              },
-                              {
-                                label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
-                                permission: Permissions.Floors.Default,
-                                icon: <PencilIcon />,
-                                onClick: () => navigate(`/admin/constraints/floor/${floor.id}`),
-                              },
-                              {
-                                label: t('Common:Delete'),
-                                permission: Permissions.Floors.Delete,
-                                icon: <TrashIcon />,
-                                destructive: true,
-                                onClick: () =>
-                                  confirmDelete(
-                                    floor.name,
-                                    t('Hierarchy:DeleteFloorConfirm', { name: floor.name }),
-                                    () => getFloorDeleteImpact(token, floor.id),
-                                    () => deleteFloor(token, floor.id),
-                                  ),
-                              },
-                            ]}
-                          />
-                        )}
+                        <RowActionsMenu
+                          label={floor.name}
+                          actions={[
+                            {
+                              label: t('Hierarchy:EditDetails'),
+                              permission: Permissions.Floors.Edit,
+                              icon: <DetailsIcon />,
+                              onClick: () =>
+                                setEditState({ kind: 'floor', id: floor.id, names: floor.names, floorNumber: floor.floorNumber }),
+                            },
+                            {
+                              label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
+                              permission: Permissions.Floors.Default,
+                              icon: <PencilIcon />,
+                              onClick: () => navigate(`/admin/constraints/floor/${floor.id}`),
+                            },
+                            {
+                              label: t('Common:Delete'),
+                              permission: Permissions.Floors.Delete,
+                              icon: <TrashIcon />,
+                              destructive: true,
+                              onClick: () =>
+                                confirmDelete(
+                                  floor.name,
+                                  t('Hierarchy:DeleteFloorConfirm', { name: floor.name }),
+                                  () => getFloorDeleteImpact(token, floor.id),
+                                  () => deleteFloor(token, floor.id),
+                                ),
+                            },
+                          ]}
+                        />
                       </span>
                     </div>
                   </div>

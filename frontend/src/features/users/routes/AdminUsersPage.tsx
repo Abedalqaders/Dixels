@@ -167,7 +167,7 @@ export function AdminUsersPage() {
     <div className="app">
       <Sidebar />
       <div className="main">
-        <TopBar />
+        <TopBar crumbs={[{ label: t('Nav:Administration') }, { label: t('Nav:Users') }]} />
         <div className="content">
           <div>
             <h1 className="pagetitle">{t('Users:Title')}</h1>

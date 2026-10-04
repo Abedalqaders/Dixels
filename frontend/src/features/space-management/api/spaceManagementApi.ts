@@ -196,10 +196,6 @@ export function deleteBuilding(token: string, id: string) {
   return request<void>(`/api/app/buildings/${id}`, token, { method: 'DELETE' })
 }
 
-export function restoreBuilding(token: string, id: string) {
-  return request<void>(`/api/app/buildings/${id}/restore`, token, { method: 'POST' })
-}
-
 // ---- Floors -----------------------------------------------------------
 
 export interface FloorDto {
@@ -289,10 +285,6 @@ export function getFloorResolvedConstraints(token: string, id: string) {
 
 export function deleteFloor(token: string, id: string) {
   return request<void>(`/api/app/floors/${id}`, token, { method: 'DELETE' })
-}
-
-export function restoreFloor(token: string, id: string) {
-  return request<void>(`/api/app/floors/${id}/restore`, token, { method: 'POST' })
 }
 
 // ---- Spaces -----------------------------------------------------------
@@ -398,10 +390,6 @@ export function getSpaceResolvedConstraints(token: string, id: string) {
 
 export function deleteSpace(token: string, id: string) {
   return request<void>(`/api/app/spaces/${id}`, token, { method: 'DELETE' })
-}
-
-export function restoreSpace(token: string, id: string) {
-  return request<void>(`/api/app/spaces/${id}/restore`, token, { method: 'POST' })
 }
 
 // ---- Space types --------------------------------------------------------

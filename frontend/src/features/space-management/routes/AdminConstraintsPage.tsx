@@ -20,7 +20,7 @@ import type { FloorDraft } from '@/features/space-management/components/FloorLev
 import { SpaceLevelFields } from '@/features/space-management/components/SpaceLevelFields'
 import type { SpaceDraft } from '@/features/space-management/components/SpaceLevelFields'
 import { ClosuresList } from '@/features/space-management/components/ClosuresList'
-import { hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
+import { HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ResetToParentButton } from '@/features/space-management/components/ResetToParentButton'
 import { buildingDraftEquals, floorDraftEquals, spaceDraftEquals } from '@/features/space-management/components/draftEquality'
@@ -60,6 +60,7 @@ import '@/styles/base.css'
 import '@/styles/admin.css'
 import { FormSkeleton } from '@/components/LoadingSkeletons'
 import { TopBar } from '@/components/TopBar'
+import type { Crumb } from '@/components/Breadcrumbs'
 
 type Level = 'building' | 'floor' | 'space'
 
@@ -97,8 +98,8 @@ interface PageData {
   ancestorOverrides: AncestorClosure[]
   scope: OverrideScope
   isCurrentlyClosedNow: boolean
-  /** The names the lead line under the title mentions. */
-  lead: { buildingName?: string; floorName?: string }
+  /** The levels above this one, for the lead line under the title and the breadcrumbs. */
+  parents: { building?: { id: string; name: string }; floor?: { id: string; name: string } }
   building?: { name: string; draft: BuildingDraft }
   floor?: {
     name: string
@@ -204,6 +205,8 @@ export function AdminConstraintsPage() {
   const canViewClosures = usePermission(Permissions.Overrides.Default)
   const canAddClosure = usePermission(Permissions.Overrides.Create)
   const canDeleteClosure = usePermission(Permissions.Overrides.Delete)
+  const canOpenFloors = usePermission(HierarchyViewers.Floors)
+  const canOpenSpaces = usePermission(HierarchyViewers.Spaces)
   // Without Overrides.Default the closures API refuses: load none rather than fail the whole page.
   const listOverrides = (scope: OverrideScope, scopeId: string) =>
     canViewClosures ? getOverrides(token, scope, scopeId) : Promise.resolve({ items: [] as AvailabilityOverrideDto[] })
@@ -236,7 +239,7 @@ export function AdminConstraintsPage() {
         ancestorOverrides: [],
         scope: OverrideScope.Building,
         isCurrentlyClosedNow: isCurrentlyClosed(days, hours, toOverrideWindows(ownOverrides), new Date()),
-        lead: {},
+        parents: {},
         building: {
           name: building.name,
           draft: {
@@ -294,7 +297,7 @@ export function AdminConstraintsPage() {
           toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
           new Date(),
         ),
-        lead: { buildingName: building.name },
+        parents: { building: { id: building.id, name: building.name } },
         floor: {
           name: floor.name,
           buildingName: building.name,
@@ -364,7 +367,7 @@ export function AdminConstraintsPage() {
         toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
         new Date(),
       ),
-      lead: { buildingName: building.name, floorName: floor.name },
+      parents: { building: { id: building.id, name: building.name }, floor: { id: floor.id, name: floor.name } },
       space: {
         name: space.name,
         capacity: space.capacity,
@@ -544,8 +547,8 @@ export function AdminConstraintsPage() {
   // "Floor level · Riverside HQ — only this level's own rules are set here. …"
   function leadText(page: PageData): string {
     if (page.level === 'building') return t('Rules:LeadBuilding')
-    if (page.level === 'floor') return t('Rules:LeadFloor', { building: page.lead.buildingName ?? '' })
-    return t('Rules:LeadSpace', { floor: page.lead.floorName ?? '', building: page.lead.buildingName ?? '' })
+    if (page.level === 'floor') return t('Rules:LeadFloor', { building: page.parents.building?.name ?? '' })
+    return t('Rules:LeadSpace', { floor: page.parents.floor?.name ?? '', building: page.parents.building?.name ?? '' })
   }
 
   function handleBack() {
@@ -553,21 +556,30 @@ export function AdminConstraintsPage() {
     navigate('/admin/buildings#hierarchy')
   }
 
+  // Space management › Hierarchy › Riverside HQ › Level 3 › Constraints. Each level links to
+  // its list when this user may open it; unsaved edits are caught by the blocker too.
+  const floorsOf = (buildingId: string) => (canOpenFloors ? `/admin/buildings/${buildingId}/floors` : undefined)
+  const spacesOf = (buildingId: string, floorId: string) =>
+    canOpenSpaces ? `/admin/buildings/${buildingId}/floors/${floorId}/spaces` : undefined
+  const crumbs: Crumb[] = [{ label: t('Nav:SpaceManagement') }, { label: t('Nav:Hierarchy'), to: '/admin/buildings' }]
+  if (validLevel && status === 'loading') crumbs.push({})
+  if (data) {
+    const { building, floor } = data.parents
+    if (building) crumbs.push({ label: building.name, to: floorsOf(building.id) })
+    if (building && floor) crumbs.push({ label: floor.name, to: spacesOf(building.id, floor.id) })
+    if (data.level === 'building') crumbs.push({ label: displayName, to: floorsOf(id) })
+    if (data.level === 'floor') crumbs.push({ label: displayName, to: building && spacesOf(building.id, id) })
+    if (data.level === 'space') crumbs.push({ label: displayName })
+  }
+  crumbs.push({ label: t('Rules:Title') })
+
   return (
     <div className="app">
       <Sidebar />
       <div className="main">
-        <TopBar />
+        <TopBar crumbs={crumbs} />
         <div className="content constraintspage">
           <div>
-            <button
-              type="button"
-              className="backlink"
-              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-              onClick={handleBack}
-            >
-              {t('Rules:BackShort')}
-            </button>
             <h1 className="pagetitle">{displayName || t('Rules:Title')}</h1>
             <p className="lead">{data ? leadText(data) : ''}</p>
           </div>

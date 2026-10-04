@@ -20,7 +20,6 @@ export function useListParams() {
   const requestedSize = parseInt(params.get('size') ?? '', 10)
   const pageSize = PAGE_SIZE_OPTIONS.includes(requestedSize) ? requestedSize : DEFAULT_PAGE_SIZE
   const search = params.get('q') ?? ''
-  const showDeleted = params.get('deleted') === '1'
 
   function update(changes: Record<string, ParamValue>, resetPage = true) {
     setParams(
@@ -60,11 +59,9 @@ export function useListParams() {
     pageSize,
     search,
     searchInput,
-    showDeleted,
     setSearchInput,
     setPage: (value: number) => update({ page: value > 0 ? value + 1 : null }, false),
     setPageSize: (value: number) => update({ size: value === DEFAULT_PAGE_SIZE ? null : value }),
-    setShowDeleted: (value: boolean) => update({ deleted: value }),
     getFilter: (key: string) => params.get(key) ?? '',
     setFilter: (key: string, value: string) => update({ [key]: value }),
     /** Empties the search box and the named filters at once ("Clear filters" on an empty result). */

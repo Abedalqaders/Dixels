@@ -356,7 +356,6 @@ export interface TextKeys {
   "Hierarchy:DeleteSpaceConfirm": string
   "Hierarchy:DeleteTitle": string
   "Hierarchy:Deleted": string
-  "Hierarchy:DeletedBadge": string
   "Hierarchy:DeletedWithBookings_one": string
   "Hierarchy:DeletedWithBookings_other": string
   "Hierarchy:DetailsSaved": string
@@ -423,8 +422,6 @@ export interface TextKeys {
   "Hierarchy:NoFloorsYet": string
   "Hierarchy:NoSpaces": string
   "Hierarchy:NoSpacesHint": string
-  "Hierarchy:Restore": string
-  "Hierarchy:Restored": string
   "Hierarchy:Retry": string
   "Hierarchy:RowActions": string
   "Hierarchy:SaveDetails": string
@@ -435,7 +432,6 @@ export interface TextKeys {
   "Hierarchy:SearchSpaces": string
   "Hierarchy:SearchSpacesLabel": string
   "Hierarchy:Searching": string
-  "Hierarchy:ShowDeleted": string
   "Hierarchy:ShowMoreFloors_one": string
   "Hierarchy:ShowMoreFloors_other": string
   "Hierarchy:ShowMoreLeft": string
@@ -458,6 +454,8 @@ export interface TextKeys {
   "Names:Required": string
   "Nav:Administration": string
   "Nav:Bookings": string
+  "Nav:Breadcrumb": string
+  "Nav:BreadcrumbLoading": string
   "Nav:CloseMenu": string
   "Nav:FindSpace": string
   "Nav:Hierarchy": string
@@ -560,7 +558,6 @@ export interface TextKeys {
   "Rules:Adding": string
   "Rules:AllDay": string
   "Rules:Back": string
-  "Rules:BackShort": string
   "Rules:BaseLayer": string
   "Rules:BookingHorizon": string
   "Rules:BuildingLevel": string

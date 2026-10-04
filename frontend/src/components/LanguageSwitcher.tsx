@@ -14,8 +14,20 @@ import { GlobeIcon } from './icons'
  * Each name is written in its own language ("العربية"), so someone who can't read the current
  * one still finds theirs; next to it, in grey, the same name in the language showing now
  * ("Arabic"), so it's clear what each one is.
+ *
+ * `compact` shows just the globe (the phone band at the top); the list it opens is the same.
+ * `align` is which edge of the button the list lines up with — "end" for one near the
+ * screen's far edge, so it opens inward.
  */
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({
+  className,
+  compact = false,
+  align = 'start',
+}: {
+  className?: string
+  compact?: boolean
+  align?: 'start' | 'end'
+}) {
   const { t } = useTranslation()
   const languages = availableLanguages()
   const current = currentLanguage()
@@ -28,11 +40,15 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       <DropdownMenuTrigger asChild>
         <button type="button" className={cn('langtrigger', className)} aria-label={`${t('Language:Label')}: ${active.name}`}>
           <GlobeIcon />
-          <LanguageLabel language={active} viewer={current} />
-          <ChevronDownIcon className="langchev" aria-hidden />
+          {!compact && (
+            <>
+              <LanguageLabel language={active} viewer={current} />
+              <ChevronDownIcon className="langchev" aria-hidden />
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-64 overflow-hidden rounded-xl p-0 shadow-lg">
+      <DropdownMenuContent align={align} className="min-w-64 overflow-hidden rounded-xl p-0 shadow-lg">
         {languages.map((language) => {
           const selected = language.code === current
           return (
