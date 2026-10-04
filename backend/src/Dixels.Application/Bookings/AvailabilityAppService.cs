@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.MultiLingualObjects;
 using Volo.Abp.Users;
 
 namespace Dixels.Bookings;
@@ -31,6 +34,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
     private readonly BookingManager _bookingManager;
     private readonly BookingViolationLocalizer _violationLocalizer;
     private readonly IDataFilter _dataFilter;
+    private readonly IMultiLingualObjectManager _multiLingualObjectManager;
+    private readonly LocalizedNameReader _nameReader;
 
     public AvailabilityAppService(
         BookingAccessChecker accessChecker,
@@ -42,7 +47,9 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         IOptions<BookingOptions> bookingOptions,
         BookingManager bookingManager,
         BookingViolationLocalizer violationLocalizer,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        IMultiLingualObjectManager multiLingualObjectManager,
+        LocalizedNameReader nameReader)
     {
         _accessChecker = accessChecker;
         _constraintResolver = constraintResolver;
@@ -54,6 +61,8 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         _bookingManager = bookingManager;
         _violationLocalizer = violationLocalizer;
         _dataFilter = dataFilter;
+        _multiLingualObjectManager = multiLingualObjectManager;
+        _nameReader = nameReader;
     }
 
     public async Task<BookableBuildingDto?> GetMyBuildingAsync()
@@ -80,32 +89,37 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
         if (building.IsDeleted)
         {
-            var removed = MapBuilding(building);
+            var removed = await MapBuildingAsync(building);
             removed.IsRemoved = true;
             return removed;
         }
 
-        var floors = await _floorRepository.GetListAsync(f => f.BuildingId == building.Id);
+        // With details: their names, in the reader's language below.
+        var floors = await _floorRepository.GetListAsync(f => f.BuildingId == building.Id, includeDetails: true);
         var floorIds = floors.Select(f => f.Id).ToList();
-        var spaces = await _spaceRepository.GetListAsync(s => floorIds.Contains(s.FloorId));
+        var spaces = await _spaceRepository.GetListAsync(s => floorIds.Contains(s.FloorId), includeDetails: true);
+        var floorNames = await _nameReader.ShownAsync<Floor, FloorTranslation>(floors);
+        var spaceNames = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+        var byName = StringComparer.Create(CultureInfo.CurrentUICulture, ignoreCase: true);
 
         // Space types are a short company-wide list, so one unfiltered read is cheaper than
         // an IN query. Deleting a type that's in use is blocked, so every space's type exists.
-        var spaceTypes = (await _spaceTypeRepository.GetListAsync()).ToDictionary(t => t.Id);
+        var spaceTypes = await GetShownSpaceTypesAsync();
 
         var spacesByFloor = spaces.ToLookup(s => s.FloorId);
 
-        var dto = MapBuilding(building);
+        var dto = await MapBuildingAsync(building);
         dto.Floors = floors
             .Where(f => spacesByFloor[f.Id].Any())
             .OrderBy(f => f.FloorNumber)
-            .ThenBy(f => f.Name)
+            .ThenBy(f => floorNames[f.Id], byName)
             .Select(floor =>
             {
                 var floorDto = ObjectMapper.Map<Floor, BookableFloorDto>(floor);
+                floorDto.Name = floorNames[floor.Id];
                 floorDto.Spaces = spacesByFloor[floor.Id]
-                    .OrderBy(s => s.Name)
-                    .Select(space => ToDto(building, floor, space, spaceTypes[space.SpaceTypeId]))
+                    .OrderBy(s => spaceNames[s.Id], byName)
+                    .Select(space => ToDto(building, floor, space, spaceNames[space.Id], spaceTypes[space.SpaceTypeId]))
                     .ToList();
                 return floorDto;
             })
@@ -115,9 +129,10 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
 
     // Days/Hours are value objects, converted here rather than copied by Mapperly (see
     // SpaceManagementObjectMapping's note on the same two fields).
-    private BookableBuildingDto MapBuilding(Building building)
+    private async Task<BookableBuildingDto> MapBuildingAsync(Building building)
     {
         var dto = ObjectMapper.Map<Building, BookableBuildingDto>(building);
+        dto.Name = await _nameReader.ShownAsync(building);
         dto.SlotMinutes = _bookingOptions.SlotMinutes;
         dto.Days = ConstraintDtoConversions.ToDayArray(building.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDto(building.Hours);
@@ -129,7 +144,10 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         var search = await _bookingManager.SearchAsync(
             CurrentUser.GetId(), input.LocalStart, input.LocalEnd, input.Attendees, input.FloorId, input.SpaceTypeId);
 
-        var spaceTypes = (await _spaceTypeRepository.GetListAsync()).ToDictionary(t => t.Id);
+        var spaceTypes = await GetShownSpaceTypesAsync();
+        var floorNames = await _nameReader.ShownAsync<Floor, FloorTranslation>(search.Spaces.Select(s => s.Floor));
+        var spaceNames = await _nameReader.ShownAsync<Space, SpaceTranslation>(search.Spaces.Select(s => s.Space));
+        var byName = StringComparer.Create(CultureInfo.CurrentUICulture, ignoreCase: true);
         var dayStartLocal = search.LocalClock.ToLocal(search.Day.Start);
 
         // Minutes from local midnight, so the client draws the day without timezone math.
@@ -152,7 +170,7 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         return new AvailabilitySearchResultDto
         {
             BuildingId = search.Building.Id,
-            BuildingName = search.Building.Name,
+            BuildingName = await _nameReader.ShownAsync(search.Building),
             Timezone = search.Building.Timezone,
             LocalStart = input.LocalStart,
             LocalEnd = input.LocalEnd,
@@ -160,13 +178,13 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
             Spaces = search.Spaces
                 .OrderByDescending(s => s.IsAvailable)
                 .ThenBy(s => s.Floor.FloorNumber)
-                .ThenBy(s => s.Floor.Name)
-                .ThenBy(s => s.Space.Name)
+                .ThenBy(s => floorNames[s.Floor.Id], byName)
+                .ThenBy(s => spaceNames[s.Space.Id], byName)
                 .Select(s => new SpaceAvailabilityDto
                 {
-                    Space = ToDto(search.Building, s.Floor, s.Space, spaceTypes[s.Space.SpaceTypeId]),
+                    Space = ToDto(search.Building, s.Floor, s.Space, spaceNames[s.Space.Id], spaceTypes[s.Space.SpaceTypeId]),
                     FloorId = s.Floor.Id,
-                    FloorName = s.Floor.Name,
+                    FloorName = floorNames[s.Floor.Id],
                     IsAvailable = s.IsAvailable,
                     Violations = s.Violations.Select(_violationLocalizer.ToDto).ToList(),
                     FreeUntil = ToHhMm(s.FreeUntil),
@@ -184,11 +202,28 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         };
     }
 
-    private BookableSpaceDto ToDto(Building building, Floor floor, Space space, SpaceType spaceType)
+    /// <summary>What a result card shows of a space type: its name in the reader's language.</summary>
+    private sealed record ShownSpaceType(string Name, IconKey IconKey);
+
+    /// <summary>
+    /// Every space type, with the name to show resolved once for all of them (ABP's
+    /// IMultiLingualObjectManager: the request's language, else the default language's).
+    /// </summary>
+    private async Task<Dictionary<Guid, ShownSpaceType>> GetShownSpaceTypesAsync()
+    {
+        var spaceTypes = await _spaceTypeRepository.GetListAsync(includeDetails: true);
+        var named = await _multiLingualObjectManager.GetBulkTranslationsAsync<SpaceType, SpaceTypeTranslation>(spaceTypes);
+        return named.ToDictionary(
+            pair => pair.entity.Id,
+            pair => new ShownSpaceType(pair.translation?.Name ?? string.Empty, pair.entity.IconKey));
+    }
+
+    private BookableSpaceDto ToDto(Building building, Floor floor, Space space, string spaceName, ShownSpaceType spaceType)
     {
         var rules = _constraintResolver.Resolve(building, floor, space);
 
         var dto = ObjectMapper.Map<Space, BookableSpaceDto>(space);
+        dto.Name = spaceName;
         dto.SpaceTypeName = spaceType.Name;
         dto.IconKey = spaceType.IconKey;
         dto.Days = new FieldValueDto<int[]>

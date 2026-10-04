@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from 'lucide-react'
 import {
@@ -32,6 +33,7 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TableSkeleton } from '@/components/LoadingSkeletons'
+import { currentLanguage } from '@/i18n'
 import { TopBar } from '@/components/TopBar'
 
 // Space types aren't part of the Building → Floor hierarchy, so this page sits outside
@@ -40,7 +42,11 @@ import { TopBar } from '@/components/TopBar'
 // Search and paging run in the browser: the endpoint returns every type in one list (the
 // space pickers need them all anyway), and a company has tens of types, not thousands.
 // Page/size/search still live in the URL (useListParams), like every other admin list.
+//
+// Each row shows the name in the reader's language (the server picks it), and a muted note
+// naming the languages the type has no name in yet — those readers see the default one.
 export function SpaceTypesPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const { showToast } = useToast()
@@ -55,12 +61,14 @@ export function SpaceTypesPage() {
     keepPreviousData: true,
   })
 
+  const language = currentLanguage()
   const filtered = useMemo(() => {
-    const term = list.search.toLowerCase()
+    // Any of its names matches — an admin may search in a language other than the screen's.
+    const term = list.search.toLocaleLowerCase(language)
     return (data ?? [])
-      .filter((st) => !term || st.name.toLowerCase().includes(term))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [data, list.search])
+      .filter((st) => !term || [st.name, ...st.names.map((n) => n.name)].some((n) => n.toLocaleLowerCase(language).includes(term)))
+      .sort((a, b) => a.name.localeCompare(b.name, language))
+  }, [data, list.search, language])
 
   const pageRows = filtered.slice(list.page * list.pageSize, (list.page + 1) * list.pageSize)
 
@@ -75,12 +83,12 @@ export function SpaceTypesPage() {
     setDeleteBusy(true)
     try {
       await deleteSpaceType(token, deleting.id)
-      showToast(`${deleting.name} deleted.`)
+      showToast(t('SpaceTypes:Deleted', { name: deleting.name }))
       refetch()
     } catch (err) {
       // Surfaces the backend's real message, e.g. the SpaceTypeInUse block, rather than a
       // generic failure — the admin needs to know *why* before they can act on it.
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
     } finally {
       setDeleteBusy(false)
       setDeleting(null)
@@ -95,15 +103,13 @@ export function SpaceTypesPage() {
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="pagetitle">Space types</h1>
-              <p className="lead">
-                Shared across every building — renaming or re-icon-ing a type updates it everywhere it's used.
-              </p>
+              <h1 className="pagetitle">{t('SpaceTypes:Title')}</h1>
+              <p className="lead">{t('SpaceTypes:Lead')}</p>
             </div>
             <Can permission={Permissions.SpaceTypes.Create}>
               <Button onClick={() => setEditing(null)}>
                 <PlusIcon />
-                Add type
+                {t('SpaceTypes:Add')}
               </Button>
             </Can>
           </div>
@@ -112,11 +118,11 @@ export function SpaceTypesPage() {
             <CardHeader className="flex flex-wrap items-center gap-3 border-b px-5 py-4 [.border-b]:pb-4">
               <CardAction className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <div className="relative w-full sm:w-auto">
-                  <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <SearchIcon className="pointer-events-none absolute top-1/2 inset-s-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    className="w-full rounded-full sm:w-56 border-transparent bg-muted/40 pl-9 focus-visible:border-ring focus-visible:bg-background"
-                    placeholder="Search space types…"
-                    aria-label="Search space types"
+                    className="w-full rounded-full sm:w-56 border-transparent bg-muted/40 ps-9 focus-visible:border-ring focus-visible:bg-background"
+                    placeholder={t('SpaceTypes:Search')}
+                    aria-label={t('SpaceTypes:SearchLabel')}
                     autoComplete="off"
                     value={list.searchInput}
                     onChange={(e) => list.setSearchInput(e.target.value)}
@@ -126,11 +132,11 @@ export function SpaceTypesPage() {
             </CardHeader>
 
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <TableSkeleton label="Loading space types…" columns={3} />}
-              {status === 'error' && <p className="treeempty">Couldn't load space types: {error.message}</p>}
+              {status === 'loading' && <TableSkeleton label={t('SpaceTypes:Loading')} columns={3} />}
+              {status === 'error' && <p className="treeempty">{t('SpaceTypes:LoadFailed', { error: error.message })}</p>}
               {status === 'success' && filtered.length === 0 && (
                 <p className="treeempty">
-                  {list.search ? 'No space types match the search.' : 'No space types yet — add one to get started.'}
+                  {list.search ? t('SpaceTypes:NoMatch') : t('SpaceTypes:Empty')}
                 </p>
               )}
 
@@ -138,31 +144,31 @@ export function SpaceTypesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="w-16 pl-4 font-semibold">Icon</TableHead>
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="hidden font-semibold sm:table-cell">Icon style</TableHead>
-                      <TableHead className="w-16 pr-4 text-right"><span className="sr-only">Actions</span></TableHead>
+                      <TableHead className="w-16 ps-4 font-semibold">{t('SpaceTypes:ColumnIcon')}</TableHead>
+                      <TableHead className="font-semibold">{t('SpaceTypes:ColumnName')}</TableHead>
+                      <TableHead className="hidden font-semibold sm:table-cell">{t('SpaceTypes:ColumnIconStyle')}</TableHead>
+                      <TableHead className="w-16 pe-4 text-end"><span className="sr-only">{t('Common:Actions')}</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pageRows.map((st) => (
                       <TableRow key={st.id}>
-                        <TableCell className="py-3 pl-4">
+                        <TableCell className="py-3 ps-4">
                           <span className="grid size-9 place-items-center rounded-md bg-accent text-accent-foreground [&_svg]:size-5">
                             {ICONS[iconKeyToIconName(st.iconKey)]}
                           </span>
                         </TableCell>
                         <TableCell className="py-3 font-medium">{st.name}</TableCell>
                         <TableCell className="hidden py-3 text-muted-foreground sm:table-cell">
-                          {ICON_OPTIONS.find((o) => o.value === st.iconKey)?.label ?? 'Generic'}
+                          {t(ICON_OPTIONS.find((o) => o.value === st.iconKey)?.labelKey ?? 'Enum:IconKey.Generic')}
                         </TableCell>
-                        <TableCell className="py-3 pr-4 text-right">
+                        <TableCell className="py-3 pe-4 text-end">
                           <RowActionsMenu
                             label={st.name}
                             actions={[
-                              { label: 'Edit', permission: Permissions.SpaceTypes.Edit, icon: <PencilIcon />, onClick: () => setEditing(st) },
+                              { label: t('Common:Edit'), permission: Permissions.SpaceTypes.Edit, icon: <PencilIcon />, onClick: () => setEditing(st) },
                               {
-                                label: 'Delete',
+                                label: t('Common:Delete'),
                                 permission: Permissions.SpaceTypes.Delete,
                                 icon: <Trash2Icon />,
                                 onClick: () => setDeleting(st),
@@ -200,13 +206,11 @@ export function SpaceTypesPage() {
       <AlertDialog open={deleting !== null} onOpenChange={(open) => !open && !deleteBusy && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This can't be undone. A type that's still assigned to spaces can't be deleted.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('SpaceTypes:DeleteTitle', { name: deleting?.name ?? '' })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('SpaceTypes:DeleteDetail')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteBusy}>{t('Common:Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={deleteBusy}
@@ -216,7 +220,7 @@ export function SpaceTypesPage() {
                 void handleDelete()
               }}
             >
-              {deleteBusy ? 'Deleting…' : 'Delete'}
+              {deleteBusy ? t('Common:Deleting') : t('Common:Delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

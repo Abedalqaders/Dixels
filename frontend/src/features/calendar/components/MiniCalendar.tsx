@@ -1,5 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { Calendar } from '@/components/ui/calendar'
 import type { IsoDate } from '@/lib/time/buildingTime'
+import { formatMonthYear, formatWeekday } from '@/lib/time/format'
+import { languageInfo } from '@/i18n'
 
 interface MiniCalendarProps {
   /** The day the main view is on. */
@@ -24,11 +27,23 @@ function toIso(date: Date): IsoDate {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-/** A small month for jumping around, with a dot under every day that has a booking. */
+/** A small month for jumping around, with a dot under every day that has a booking. Month
+ * and weekday names come from the app's own formatting (the reader's language), and the
+ * month runs right to left in Arabic. */
 export function MiniCalendar({ selected, month, today, bookedDays, onSelect, onMonthChange }: MiniCalendarProps) {
+  const { t } = useTranslation()
   return (
     <Calendar
       mode="single"
+      dir={languageInfo().dir}
+      formatters={{
+        formatCaption: (m) => formatMonthYear(toIso(m)),
+        formatWeekdayName: (d) => formatWeekday(toIso(d), 'narrow'),
+      }}
+      labels={{
+        labelPrevious: () => t('Calendar:PreviousMonth'),
+        labelNext: () => t('Calendar:NextMonth'),
+      }}
       className="p-1 [--cell-size:--spacing(8)]"
       selected={toDate(selected)}
       month={toDate(month)}

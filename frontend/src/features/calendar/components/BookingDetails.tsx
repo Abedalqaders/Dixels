@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Building2, CalendarDays, Clock, Repeat, Users } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -11,15 +12,17 @@ import type { BookingPhase } from '@/features/calendar/bookingPhase'
 import { rangeLabel } from '@/features/calendar/calendarDates'
 import { formatClock } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
+import type { TextKeys } from '@/i18n/keys'
 
-const PHASE_LABEL: Record<BookingPhase, string> = {
-  upcoming: 'Upcoming',
-  'in-progress': 'In progress',
-  done: 'Done',
-  cancelled: 'Cancelled by admin',
+const PHASE_LABEL: Record<BookingPhase, keyof TextKeys> = {
+  upcoming: 'Booking:Upcoming',
+  'in-progress': 'Booking:InProgress',
+  done: 'Booking:Done',
+  cancelled: 'Booking:CancelledByAdmin',
 }
 
 export function PhaseBadge({ phase }: { phase: BookingPhase }) {
+  const { t } = useTranslation()
   return (
     <Badge
       variant="secondary"
@@ -30,7 +33,7 @@ export function PhaseBadge({ phase }: { phase: BookingPhase }) {
         phase === 'cancelled' && 'bg-slot-closed text-slot-closed-ink',
       )}
     >
-      {PHASE_LABEL[phase]}
+      {t(PHASE_LABEL[phase])}
     </Badge>
   )
 }
@@ -72,22 +75,27 @@ function Row({ icon: Icon, label, children }: { icon: ComponentType<{ className?
  * as the full booking arrives, so the calendar's light list never has to carry it.
  */
 export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
+  const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const date = dateOf(item.localStart)
 
   return (
     <>
       <dl className="grid gap-3 text-sm">
-        <Row icon={CalendarDays} label="Date">
+        <Row icon={CalendarDays} label={t('Booking:Date')}>
           <dd className="font-medium">{rangeLabel('day', date)}</dd>
         </Row>
-        <Row icon={Clock} label="Time">
+        <Row icon={Clock} label={t('Booking:Time')}>
           <dd className="font-medium">
             {formatClock(timeOf(item.localStart))} – {formatClock(timeOf(item.localEnd))}
           </dd>
-          {booking ? <dd className="text-muted-foreground">{booking.timezone} time</dd> : <Skeleton className="mt-1 h-4 w-24" />}
+          {booking ? (
+            <dd className="text-muted-foreground">{t('Booking:TimezoneTime', { timezone: booking.timezone })}</dd>
+          ) : (
+            <Skeleton className="mt-1 h-4 w-24" />
+          )}
         </Row>
-        <Row icon={Building2} label="Where">
+        <Row icon={Building2} label={t('Booking:Where')}>
           <dd className="font-medium">{item.location}</dd>
           {booking ? (
             <dd className="text-muted-foreground">
@@ -97,17 +105,15 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
             <Skeleton className="mt-1 h-4 w-40" />
           )}
         </Row>
-        <Row icon={Users} label="People">
+        <Row icon={Users} label={t('Booking:People')}>
           {booking ? (
-            <dd className="font-medium">
-              {booking.attendees} {booking.attendees === 1 ? 'person' : 'people'}
-            </dd>
+            <dd className="font-medium">{t('Booking:PeopleCount', { count: booking.attendees })}</dd>
           ) : (
             <Skeleton className="h-4 w-16" />
           )}
         </Row>
         {booking?.recurrence && (
-          <Row icon={Repeat} label="Repeats">
+          <Row icon={Repeat} label={t('Booking:Repeats')}>
             <dd>{describeRecurrence(booking.recurrence, date)}</dd>
           </Row>
         )}
@@ -122,13 +128,14 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
       {booking &&
         (phase === 'cancelled' ? (
           <p role="status" className="rounded-md bg-slot-closed px-3 py-2 text-sm text-slot-closed-ink">
-            An administrator cancelled this booking{booking.cancelReason ? ` — ${booking.cancelReason}` : ''}. The room is no
-            longer held for you; pick another time or room.
+            {booking.cancelReason
+              ? t('Booking:CancelledByAdminWithReason', { reason: booking.cancelReason })
+              : t('Booking:CancelledByAdminDetail')}
           </p>
         ) : (
           phase !== 'upcoming' && (
             <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-              {phase === 'in-progress' ? "This booking has already started, so it can't be cancelled." : 'This booking is over.'}
+              {phase === 'in-progress' ? t('Booking:AlreadyStarted') : t('Booking:Over')}
             </p>
           )
         ))}

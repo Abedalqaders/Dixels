@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // The Inherit/Override switch, one per overridable Floor/Space field — the UI form of
 // the nullable column behind it: "Inherit" stores null and follows the level above.
@@ -16,22 +17,15 @@ interface InheritOverrideFieldProps {
   children: ReactNode
 }
 
-export function InheritOverrideField({
-  label,
-  isOverridden,
-  onToggle,
-  note,
-  onLabel = 'Override',
-  offLabel = 'Inherit',
-  children,
-}: InheritOverrideFieldProps) {
+export function InheritOverrideField({ label, isOverridden, onToggle, note, onLabel, offLabel, children }: InheritOverrideFieldProps) {
+  const { t } = useTranslation()
   return (
     <div className={`inh${isOverridden ? ' on' : ''}`}>
       <div className="inh-head">
         <span className="lbl">{label}</span>
         <button type="button" className="inhbtn" onClick={onToggle}>
           <span className="sw2" />
-          <span className="inhstate">{isOverridden ? onLabel : offLabel}</span>
+          <span className="inhstate">{isOverridden ? (onLabel ?? t('Rules:Override')) : (offLabel ?? t('Rules:Inherit'))}</span>
         </button>
       </div>
       {children}

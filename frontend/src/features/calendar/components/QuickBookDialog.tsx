@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Minus, Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ interface QuickBookDialogProps {
  * ruled out only by length get a one-click "Shorten to" that trims the window to fit.
  */
 export function QuickBookDialog({ token, window: picked, slotMinutes, today, firstBookableMinute, onClose, onPick }: QuickBookDialogProps) {
+  const { t } = useTranslation()
   const [attendees, setAttendees] = useState(1)
   const [w, setWindow] = useState(picked)
   const people = useDebouncedValue(attendees, 250)
@@ -70,7 +72,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Book a room</DialogTitle>
+          <DialogTitle>{t('Calendar:BookARoom')}</DialogTitle>
           <DialogDescription>{formatDate(w.date)}</DialogDescription>
         </DialogHeader>
 
@@ -87,13 +89,13 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm font-medium" id="qb-people-label">
-            People
+            {t('Booking:People')}
           </span>
           <div className="flex items-center gap-1" role="group" aria-labelledby="qb-people-label">
             <Button
               variant="outline"
               size="icon-sm"
-              aria-label="Fewer people"
+              aria-label={t('Booking:FewerPeople')}
               disabled={attendees <= 1}
               onClick={() => setAttendees((n) => Math.max(1, n - 1))}
             >
@@ -102,18 +104,18 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
             <span className="w-8 text-center font-mono tabular-nums" aria-live="polite">
               {attendees}
             </span>
-            <Button variant="outline" size="icon-sm" aria-label="More people" onClick={() => setAttendees((n) => n + 1)}>
+            <Button variant="outline" size="icon-sm" aria-label={t('Booking:MorePeople')} onClick={() => setAttendees((n) => n + 1)}>
               <Plus />
             </Button>
           </div>
         </div>
 
-        <section aria-busy={results.isRefreshing} className="max-h-[60vh] min-h-40 overflow-y-auto pr-1">
-          {results.status === 'loading' && <p className="py-6 text-center text-sm text-muted-foreground">Checking every room…</p>}
+        <section aria-busy={results.isRefreshing} className="max-h-[60vh] min-h-40 overflow-y-auto pe-1">
+          {results.status === 'loading' && <p className="py-6 text-center text-sm text-muted-foreground">{t('QuickBook:Checking')}</p>}
 
           {results.status === 'error' && (
             <p role="alert" className="rounded-md bg-slot-closed px-3 py-2 text-sm text-slot-closed-ink">
-              {results.error instanceof ApiError ? results.error.message : "Couldn't check the rooms — please try again."}
+              {results.error instanceof ApiError ? results.error.message : t('QuickBook:CheckFailed')}
             </p>
           )}
 
@@ -123,7 +125,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                 <OwnClashNotice warnings={results.data.warnings} />
               </div>
               <p className="mb-2 text-sm font-medium" aria-live="polite">
-                {free.length === 0 ? 'No room is free for this time' : `${free.length} ${free.length === 1 ? 'room' : 'rooms'} free`}
+                {free.length === 0 ? t('QuickBook:NoneFree') : t('QuickBook:RoomsFree', { count: free.length })}
               </p>
               {free.length > 0 && (
                 <ul className="grid list-none gap-1.5 p-0">
@@ -131,7 +133,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                     <li key={room.space.id}>
                       <button
                         type="button"
-                        className="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors hover:border-brand hover:bg-slot-open focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                        className="flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-start transition-colors hover:border-brand hover:bg-slot-open focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
                         onClick={() => onPick(room, attendees, w)}
                       >
                         <span
@@ -143,17 +145,16 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-semibold">{room.space.name}</span>
                           <span className="block truncate text-xs text-muted-foreground">
-                            {room.floorName} · {room.space.spaceTypeName} · {room.space.capacity}{' '}
-                            {room.space.capacity === 1 ? 'seat' : 'seats'}
+                            {room.floorName} · {room.space.spaceTypeName} · {t('Booking:Seats', { count: room.space.capacity })}
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">
-                            Up to {formatDuration(room.space.maxDurationMinutes.value)}
-                            {room.space.minAttendees ? ` · min ${room.space.minAttendees} people` : ''}
+                            {t('QuickBook:UpTo', { duration: formatDuration(room.space.maxDurationMinutes.value) })}
+                            {room.space.minAttendees ? ` · ${t('Booking:MinPeople', { count: room.space.minAttendees })}` : ''}
                           </span>
                         </span>
                         {room.freeUntil && (
                           <span className="text-xs whitespace-nowrap text-muted-foreground">
-                            {room.freeUntil === '24:00' ? 'Free all day' : `Free until ${room.freeUntil}`}
+                            {room.freeUntil === '24:00' ? t('QuickBook:FreeAllDay') : t('QuickBook:FreeUntil', { time: room.freeUntil })}
                           </span>
                         )}
                       </button>
@@ -164,7 +165,9 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
               {groups.length > 0 && (
                 <div className="mt-3 grid gap-1.5">
                   <p className="text-xs font-medium text-muted-foreground">
-                    {free.length === 0 ? 'Why no room is free' : `${groups.reduce((n, g) => n + g.rooms.length, 0)} other rooms can't take this time`}
+                    {free.length === 0
+                      ? t('QuickBook:WhyNoneFree')
+                      : t('QuickBook:OthersUnavailable', { count: groups.reduce((n, g) => n + g.rooms.length, 0) })}
                   </p>
                   {groups.map((group) => (
                     <details
@@ -176,16 +179,16 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                       open={free.length === 0 && groups.length === 1}
                     >
                       <summary className="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
-                        <ChevronRight className="size-4 flex-none text-muted-foreground transition-transform group-open:rotate-90" />
+                        <ChevronRight className="size-4 flex-none text-muted-foreground transition-transform rtl:-scale-x-100 ltr:group-open:rotate-90 rtl:group-open:-rotate-90" />
                         <span className="flex-1">
                           <span className="font-medium">{group.title}</span>
                           <span className="text-muted-foreground">
                             {' '}
-                            · {group.rooms.length} {group.rooms.length === 1 ? 'room' : 'rooms'}
+                            · {t('QuickBook:RoomCount', { count: group.rooms.length })}
                           </span>
                           {group.shortenTo && (
                             <span className="block text-xs text-[var(--state-expired-ink)]">
-                              They allow up to {formatDuration(group.shortenTo)} — this is {formatDuration(w.end - w.start)}.
+                              {t('QuickBook:AllowUpTo', { max: formatDuration(group.shortenTo), length: formatDuration(w.end - w.start) })}
                             </span>
                           )}
                         </span>
@@ -199,7 +202,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                               setWindow({ ...w, end: w.start + group.shortenTo! })
                             }}
                           >
-                            Shorten to {formatDuration(group.shortenTo)}
+                            {t('QuickBook:ShortenTo', { duration: formatDuration(group.shortenTo) })}
                           </Button>
                         )}
                       </summary>
@@ -207,7 +210,7 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
                         {group.rooms.map(({ room, reason }) => (
                           <li key={room.space.id} className="flex justify-between gap-3 text-xs">
                             <span className="truncate font-medium">{room.space.name}</span>
-                            <span className="text-right text-muted-foreground">{reason}</span>
+                            <span className="text-end text-muted-foreground">{reason}</span>
                           </li>
                         ))}
                       </ul>
@@ -222,11 +225,11 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
         <DialogFooter className="sm:justify-between">
           <Button variant="ghost" asChild>
             <Link to={findSpaceLink}>
-              <Search /> Open in Find a space
+              <Search /> {t('QuickBook:OpenInFindSpace')}
             </Link>
           </Button>
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t('Common:Close')}
           </Button>
         </DialogFooter>
       </DialogContent>

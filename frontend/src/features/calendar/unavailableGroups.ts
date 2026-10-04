@@ -1,3 +1,5 @@
+import i18n from '@/i18n'
+import type { TextKeys } from '@/i18n/keys'
 import type { SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 
 const CODE = 'Dixels:Bookings:'
@@ -5,19 +7,19 @@ export const TOO_LONG = `${CODE}TooLong`
 
 // What each rule is called when it's the reason a group of rooms can't take the time.
 // Keyed by the server's violation codes; anything new falls back to "Not available".
-const TITLES: Record<string, string> = {
-  [TOO_LONG]: 'Shorter time limit',
-  [`${CODE}SpaceClosed`]: 'Closed',
-  [`${CODE}Overlap`]: 'Already booked',
-  [`${CODE}OverCapacity`]: 'Too small',
-  [`${CODE}BelowMinAttendees`]: 'Needs more people',
-  [`${CODE}ClosedDay`]: 'Not open that day',
-  [`${CODE}OutsideHours`]: 'Outside opening hours',
-  [`${CODE}BeyondHorizon`]: 'Too far ahead',
-  [`${CODE}TooSoon`]: 'Too soon',
-  [`${CODE}StartInPast`]: 'Too soon',
-  [`${CODE}NotAligned`]: 'Off the time grid',
-  [`${CODE}OwnOverlap`]: "You're already booked then",
+const TITLES: Record<string, keyof TextKeys> = {
+  [TOO_LONG]: 'Unavailable:TooLong',
+  [`${CODE}SpaceClosed`]: 'Unavailable:SpaceClosed',
+  [`${CODE}Overlap`]: 'Unavailable:Overlap',
+  [`${CODE}OverCapacity`]: 'Unavailable:OverCapacity',
+  [`${CODE}BelowMinAttendees`]: 'Unavailable:BelowMinAttendees',
+  [`${CODE}ClosedDay`]: 'Unavailable:ClosedDay',
+  [`${CODE}OutsideHours`]: 'Unavailable:OutsideHours',
+  [`${CODE}BeyondHorizon`]: 'Unavailable:BeyondHorizon',
+  [`${CODE}TooSoon`]: 'Unavailable:TooSoon',
+  [`${CODE}StartInPast`]: 'Unavailable:TooSoon',
+  [`${CODE}NotAligned`]: 'Unavailable:NotAligned',
+  [`${CODE}OwnOverlap`]: 'Unavailable:OwnOverlap',
 }
 
 export interface UnavailableGroup {
@@ -47,7 +49,7 @@ export function groupUnavailable(spaces: SpaceAvailabilityDto[]): UnavailableGro
 
     let group = groups.get(reason.code)
     if (!group) {
-      group = { code: reason.code, title: TITLES[reason.code] ?? 'Not available', rooms: [] }
+      group = { code: reason.code, title: i18n.t(TITLES[reason.code] ?? 'Unavailable:Other'), rooms: [] }
       groups.set(reason.code, group)
     }
     group.rooms.push({ room, reason: reason.shortMessage })

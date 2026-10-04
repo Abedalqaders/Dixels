@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dixels.Domain.Shared\Dixels.Domain.Shared.csproj" />
+    <ProjectReference Include="..\Volo.Abp.MultiLingualObjects\Volo.Abp.MultiLingualObjects.csproj" />
   </ItemGroup>
 
   <ItemGroup>

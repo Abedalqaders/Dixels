@@ -59,7 +59,7 @@
   flex: 1; font-family: inherit; font-size: 13px; font-weight: 600; line-height: 18px; padding: 8px 10px;
   border: none; cursor: pointer; background: var(--surface-raised); color: var(--ink-secondary);
 }
-.roleopt + .roleopt { border-left: 1px solid var(--border-strong); }
+.roleopt + .roleopt { border-inline-start: 1px solid var(--border-strong); }
 .roleopt.on { background: var(--accent-soft); color: var(--accent-ink); }
 .loginfield .hint { margin-top: 2px; }
 .rowline { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 20px; font-size: 13px; }
@@ -151,3 +151,14 @@
   .authcard, .authicon.done, .logincard { animation: none; }
   .authspinner { animation-duration: 2.4s; }
 }
+
+/* The language button, top corner of the form side. */
+.formwrap { position: relative; }
+.loginlang {
+  position: absolute; top: var(--space-4); inset-inline-end: var(--space-4);
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
+  background: var(--surface-raised); color: var(--ink-primary); font: inherit; font-size: 14px; cursor: pointer;
+}
+.loginlang:hover { background: var(--surface-sunken); }
+.loginlang svg { width: 16px; height: 16px; color: var(--ink-secondary); }

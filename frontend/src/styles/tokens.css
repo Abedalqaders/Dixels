@@ -60,8 +60,8 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
   /* The real site has no separate display face — headings are just Inter at weight. */
-  --font-display: "Inter Variable", "Inter", Arial, sans-serif;
-  --font-sans: "Inter Variable", "Inter", Arial, sans-serif;
+  --font-display: "Inter Variable", "Inter", "IBM Plex Sans Arabic", Arial, sans-serif;
+  --font-sans: "Inter Variable", "Inter", "IBM Plex Sans Arabic", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 

@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Dixels.Localization;
 
 namespace Dixels.SpaceManagement;
 
@@ -7,9 +9,10 @@ namespace Dixels.SpaceManagement;
 /// concurrency-checked save path.</summary>
 public class UpdateBuildingDto
 {
+    /// <summary>Every name it should have, one per language — a language left out loses its name. The default language's is required.</summary>
     [Required]
-    [StringLength(BuildingConsts.MaxNameLength)]
-    public string Name { get; set; } = string.Empty;
+    [MinLength(1)]
+    public List<LocalizedNameDto> Names { get; set; } = [];
 
     [StringLength(BuildingConsts.MaxBuildingNumberLength)]
     public string? BuildingNumber { get; set; }

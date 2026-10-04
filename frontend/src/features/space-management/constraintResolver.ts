@@ -6,6 +6,7 @@
 // frontend has no such entities yet (only mock data), so this operates on plain DTOs
 // with the same field-precedence semantics instead.
 
+import i18n from '@/i18n'
 import { OperatingDays } from './operatingDays'
 import type { DayName } from './operatingDays'
 import { OperatingWindow } from './operatingWindow'
@@ -118,11 +119,11 @@ export function findNarrowingConflicts(
 
   for (const candidate of candidates) {
     if (proposedDays !== undefined && candidate.ownDays !== undefined && !candidate.ownDays.isSubsetOf(proposedDays)) {
-      conflicts.push(`${candidate.displayName} no longer fits inside the new operating days`)
+      conflicts.push(i18n.t('Rules:NoLongerFitsDays', { name: candidate.displayName }))
     }
 
     if (proposedHours !== undefined && candidate.ownHours !== undefined && !candidate.ownHours.isSubsetOf(proposedHours)) {
-      conflicts.push(`${candidate.displayName} no longer fits inside the new operating hours`)
+      conflicts.push(i18n.t('Rules:NoLongerFitsHours', { name: candidate.displayName }))
     }
   }
 

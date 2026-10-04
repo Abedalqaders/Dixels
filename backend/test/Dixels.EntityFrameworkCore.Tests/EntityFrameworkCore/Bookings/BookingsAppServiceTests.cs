@@ -13,6 +13,7 @@ using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.Localization;
 using Volo.Abp.Security.Claims;
 using Xunit;
 
@@ -56,14 +57,14 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private Task<Scenario> CreateScenarioAsync(bool assign = true) => WithUnitOfWorkAsync(async () =>
     {
         var building = await _buildingRepository.InsertAsync(new Building(
-            Guid.NewGuid(), "Test HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+            Guid.NewGuid(), "en", "Test HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
             new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
             maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
 
-        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
 
         var spaceType = await _spaceTypeRepository.FirstAsync();
-        var space = new Space(Guid.NewGuid(), floor.Id, "Room 1", spaceType.Id, capacity: 8);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, capacity: 8);
         space.SetMinAttendees(2);
         await _spaceRepository.InsertAsync(space);
 
@@ -342,6 +343,36 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     }
 
     [Fact]
+    public async Task Search_names_the_space_type_in_the_readers_language()
+    {
+        var s = await CreateScenarioAsync();
+        var spaceType = await GetRequiredService<ISpaceTypesAppService>().CreateAsync(new CreateSpaceTypeDto
+        {
+            Names =
+            [
+                new() { Language = "en", Name = "Phone booth" },
+                new() { Language = "ar", Name = "كابينة هاتف" },
+            ],
+        });
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var space = await _spaceRepository.GetAsync(s.Space.Id);
+            space.SetSpaceType(spaceType.Id);
+        });
+        using var _ = ActAs(s.UserId);
+
+        using (CultureHelper.Use("ar"))
+        {
+            (await _availabilityAppService.SearchAsync(Search(10, 11))).Spaces.ShouldHaveSingleItem().Space.SpaceTypeName.ShouldBe("كابينة هاتف");
+        }
+
+        using (CultureHelper.Use("en"))
+        {
+            (await _availabilityAppService.SearchAsync(Search(10, 11))).Spaces.ShouldHaveSingleItem().Space.SpaceTypeName.ShouldBe("Phone booth");
+        }
+    }
+
+    [Fact]
     public async Task Search_gives_no_next_time_when_the_space_is_simply_too_small()
     {
         var s = await CreateScenarioAsync();
@@ -386,7 +417,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private Task<Space> AddSpaceAsync(Scenario s, string name) => WithUnitOfWorkAsync(async () =>
     {
         var spaceType = await _spaceTypeRepository.FirstAsync();
-        return await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), s.Floor.Id, name, spaceType.Id, capacity: 8));
+        return await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), s.Floor.Id, "en", name, spaceType.Id, capacity: 8));
     });
 
     private Task SetPolicyAsync(Scenario s, OwnOverlapPolicy policy) => WithUnitOfWorkAsync(async () =>

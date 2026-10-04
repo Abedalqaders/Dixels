@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Volo.Abp.EntityFrameworkCore.Modeling;
@@ -31,6 +32,19 @@ public static class SpaceManagementModelBuilderExtensions
         hours.Property(h => h.Close);
     }
 
+    // A name per language, one table per named entity ("AppBuildingTranslations"…), keyed by
+    // (entity, language). Shared by every multi-lingual entity's translation table.
+    private static void ConfigureNameTranslation<T>(EntityTypeBuilder<T> b, string table)
+        where T : NameTranslation
+    {
+        b.ToTable(DixelsConsts.DbTablePrefix + table, DixelsConsts.DbSchema);
+        b.ConfigureByConvention();
+
+        b.Property(x => x.Language).HasMaxLength(LocalizedNameConsts.MaxLanguageLength).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(LocalizedNameConsts.MaxNameLength).IsRequired();
+        b.Property(x => x.NormalizedName).HasMaxLength(LocalizedNameConsts.MaxNameLength).IsRequired();
+    }
+
     public static void ConfigureSpaceManagement(this ModelBuilder builder)
     {
         builder.Entity<SpaceType>(b =>
@@ -38,13 +52,22 @@ public static class SpaceManagementModelBuilderExtensions
             b.ToTable(DixelsConsts.DbTablePrefix + "SpaceTypes", DixelsConsts.DbSchema);
             b.ConfigureByConvention();
 
-            b.Property(x => x.Name).HasMaxLength(SpaceTypeConsts.MaxNameLength).IsRequired();
             b.Property(x => x.IconKey).HasConversion<string>().HasMaxLength(32).IsRequired();
 
-            // A plain unique index would still block re-using "Desk" after an old "Desk" row
-            // was soft-deleted, since the row still physically exists — the filter is what
-            // makes a soft-deleted name reusable.
-            b.HasIndex(x => x.Name).IsUnique().HasFilter("\"IsDeleted\" = false");
+            // The names, one row per language (ABP MultiLingualObjects).
+            b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceTypeId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SpaceTypeTranslation>(b =>
+        {
+            ConfigureNameTranslation(b, "SpaceTypeTranslations");
+            b.HasKey(x => new { x.SpaceTypeId, x.Language });
+
+            // No two live space types share a name in the same language ("Desk" = "desk ").
+            // A plain unique index would still block re-using "Desk" after an old "Desk" type
+            // was soft-deleted, since its rows still physically exist — the filter on the
+            // copied IsDeleted flag is what makes a deleted type's names reusable.
+            b.HasIndex(x => new { x.Language, x.NormalizedName }).IsUnique().HasFilter("\"IsDeleted\" = false");
         });
 
         builder.Entity<Building>(b =>
@@ -56,7 +79,8 @@ public static class SpaceManagementModelBuilderExtensions
             });
             b.ConfigureByConvention();
 
-            b.Property(x => x.Name).HasMaxLength(BuildingConsts.MaxNameLength).IsRequired();
+            // The names, one row per language (ABP MultiLingualObjects).
+            b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.BuildingId).IsRequired().OnDelete(DeleteBehavior.Cascade);
             b.Property(x => x.BuildingNumber).HasMaxLength(BuildingConsts.MaxBuildingNumberLength);
             b.Property(x => x.Timezone).HasMaxLength(BuildingConsts.MaxTimezoneLength).IsRequired();
             b.Property(x => x.OwnOverlapPolicy).HasConversion<string>().HasMaxLength(16).IsRequired();
@@ -73,7 +97,7 @@ public static class SpaceManagementModelBuilderExtensions
                 tb.HasCheckConstraint("CK_AppFloors_HoursOpenCloseTogether", "(\"Hours_Open\" IS NULL) = (\"Hours_Close\" IS NULL)"));
             b.ConfigureByConvention();
 
-            b.Property(x => x.Name).HasMaxLength(FloorConsts.MaxNameLength).IsRequired();
+            b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.FloorId).IsRequired().OnDelete(DeleteBehavior.Cascade);
 
             b.OwnsOne(x => x.Days, days => days.Property(d => d.Mask).HasColumnName("Days"));
             b.OwnsOne(x => x.Hours, ConfigureHours);
@@ -95,7 +119,7 @@ public static class SpaceManagementModelBuilderExtensions
             });
             b.ConfigureByConvention();
 
-            b.Property(x => x.Name).HasMaxLength(SpaceConsts.MaxNameLength).IsRequired();
+            b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceId).IsRequired().OnDelete(DeleteBehavior.Cascade);
 
             b.OwnsOne(x => x.Days, days => days.Property(d => d.Mask).HasColumnName("Days"));
             b.OwnsOne(x => x.Hours, ConfigureHours);
@@ -107,6 +131,24 @@ public static class SpaceManagementModelBuilderExtensions
             // application layer), never silently take Spaces down with it.
             b.HasOne<SpaceType>().WithMany().HasForeignKey(x => x.SpaceTypeId)
                 .OnDelete(DeleteBehavior.Restrict).IsRequired();
+        });
+
+        builder.Entity<BuildingTranslation>(b =>
+        {
+            ConfigureNameTranslation(b, "BuildingTranslations");
+            b.HasKey(x => new { x.BuildingId, x.Language });
+        });
+
+        builder.Entity<FloorTranslation>(b =>
+        {
+            ConfigureNameTranslation(b, "FloorTranslations");
+            b.HasKey(x => new { x.FloorId, x.Language });
+        });
+
+        builder.Entity<SpaceTranslation>(b =>
+        {
+            ConfigureNameTranslation(b, "SpaceTranslations");
+            b.HasKey(x => new { x.SpaceId, x.Language });
         });
 
         builder.Entity<AvailabilityOverride>(b =>

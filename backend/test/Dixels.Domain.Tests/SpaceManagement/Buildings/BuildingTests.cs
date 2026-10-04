@@ -11,6 +11,7 @@ public class BuildingTests
     private static Building CreateValidBuilding()
         => new(
             Guid.NewGuid(),
+            "en",
             "Ridge House",
             "RH-01",
             "Asia/Amman",
@@ -100,7 +101,7 @@ public class BuildingTests
     public void Recurring_bookings_default_to_90_days_or_the_normal_horizon_if_longer()
     {
         CreateValidBuilding().MaxSeriesHorizonDays.ShouldBe(90);
-        new Building(Guid.NewGuid(), "B", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
+        new Building(Guid.NewGuid(), "en", "B", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
             maxDurationMinutes: 60, maxHorizonDays: 120, minLeadMinutes: 0).MaxSeriesHorizonDays.ShouldBe(120);
     }
 

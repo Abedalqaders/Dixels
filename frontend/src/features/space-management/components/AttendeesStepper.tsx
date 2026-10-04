@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
+
 // Minimum attendees — space-only, anti-waste rule. Port of the mock's sMinAtt/sCapNote/
 // sMinAttNote (js/admin-constraints.js fillSpace).
 
@@ -9,6 +12,7 @@ interface AttendeesStepperProps {
 }
 
 export function AttendeesStepper({ value, capacity, disabled, onChange }: AttendeesStepperProps) {
+  const { t } = useTranslation()
   return (
     <div className="pair narrow">
       <input
@@ -19,17 +23,13 @@ export function AttendeesStepper({ value, capacity, disabled, onChange }: Attend
         disabled={disabled}
         onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
       />
-      <span className="unit">of {capacity} seats</span>
+      <span className="unit">{t('Rules:OfSeats', { count: capacity })}</span>
     </div>
   )
 }
 
 export function attendeesStepperNote(value: number | null, capacity: number): string {
-  if (value === null) {
-    return 'No minimum — any group size can book. The capacity is still enforced as the maximum.'
-  }
-  if (value > capacity) {
-    return `Invalid: a minimum above the ${capacity}-seat capacity makes this space unbookable.`
-  }
-  return `Rejects bookings for fewer than ${value} attendees.`
+  if (value === null) return i18n.t('Rules:NoMinimumNote')
+  if (value > capacity) return i18n.t('Rules:MinAboveCapacity', { capacity })
+  return i18n.t('Rules:MinAttendeesNote', { count: value })
 }

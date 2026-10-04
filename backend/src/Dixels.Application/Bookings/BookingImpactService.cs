@@ -29,6 +29,7 @@ public class BookingImpactService : ITransientDependency
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IDataFilter _dataFilter;
+    private readonly LocalizedNameReader _nameReader;
 
     public BookingImpactService(
         BookingImpactChecker checker,
@@ -38,7 +39,8 @@ public class BookingImpactService : ITransientDependency
         IRepository<Space, Guid> spaceRepository,
         IRepository<Floor, Guid> floorRepository,
         IRepository<Building, Guid> buildingRepository,
-        IDataFilter dataFilter)
+        IDataFilter dataFilter,
+        LocalizedNameReader nameReader)
     {
         _checker = checker;
         _userRepository = userRepository;
@@ -48,6 +50,7 @@ public class BookingImpactService : ITransientDependency
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
         _dataFilter = dataFilter;
+        _nameReader = nameReader;
     }
 
     /// <summary>
@@ -105,6 +108,7 @@ public class BookingImpactService : ITransientDependency
     public async Task<BookingImpactDto> DescribeAsync(Building building, IReadOnlyList<BookingImpact> impacts, string? fixedReason = null)
     {
         var clock = new BuildingClock(building.Timezone);
+        var names = await RoomNamesAsync(impacts);
         var userIds = impacts.Select(i => i.Booking.UserId).Distinct().ToList();
         var users = userIds.Count == 0
             ? new Dictionary<Guid, string>()
@@ -120,8 +124,8 @@ public class BookingImpactService : ITransientDependency
                 BookingId = i.Booking.Id,
                 Title = i.Booking.Title,
                 BookedBy = users.GetValueOrDefault(i.Booking.UserId, "Someone"),
-                SpaceName = i.Space.Name,
-                FloorName = i.Floor.Name,
+                SpaceName = names[i.Space.Id],
+                FloorName = names[i.Floor.Id],
                 LocalStart = clock.ToLocal(i.Booking.StartsAt),
                 LocalEnd = clock.ToLocal(i.Booking.EndsAt),
                 Reasons = fixedReason is not null
@@ -129,6 +133,30 @@ public class BookingImpactService : ITransientDependency
                     : i.Violations.Select(v => _violationLocalizer.ToDto(v).ShortMessage).Distinct().ToList(),
             }).ToList(),
         };
+    }
+
+    /// <summary>
+    /// The rooms' and floors' names in the reader's language, by id. Read afresh with their
+    /// names: the impacts come from many places, not all of which load them. Deleted ones
+    /// included — they're still where the booking is.
+    /// </summary>
+    private async Task<Dictionary<Guid, string>> RoomNamesAsync(IReadOnlyList<BookingImpact> impacts)
+    {
+        if (impacts.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var spaceIds = impacts.Select(i => i.Space.Id).Distinct().ToList();
+        var floorIds = impacts.Select(i => i.Floor.Id).Distinct().ToList();
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            var spaces = await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true);
+            var floors = await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id), includeDetails: true);
+            return (await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces))
+                .Concat(await _nameReader.ShownAsync<Floor, FloorTranslation>(floors))
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+        }
     }
 
     /// <summary>Cancels bookings a rule change broke: "Rules changed: Open 09:00–17:00 only".</summary>

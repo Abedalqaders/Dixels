@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useFieldErrors } from '@/components/FieldError'
+import { LocalizedNameField, fromNameList, toNameList } from '@/components/LocalizedNameField'
+import type { LocalizedNames } from '@/components/LocalizedNameField'
+import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
 import { ApiError, updateBuilding, updateFloor, updateSpace, getSpaceUpdateImpact } from '@/features/space-management/api/spaceManagementApi'
-import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
+import type { LocalizedNameDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 
 // The identity-fields counterpart to AddNodeModal — Name/BuildingNumber/Timezone (Building),
@@ -19,11 +23,15 @@ import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBoo
 //
 // Same shadcn Dialog as AddNodeModal: focus stays inside, Escape and the overlay close it,
 // and the title is announced — none of which the old hand-rolled overlay did.
+// `names` is every name the row has, one per language (its DTO's `names`).
 export type EditDetailsState =
-  | { kind: 'building'; id: string; name: string; buildingNumber: string | null; timezone: string }
-  | { kind: 'floor'; id: string; name: string; floorNumber: number | null }
-  | { kind: 'space'; id: string; name: string; spaceTypeId: string; capacity: number }
+  | { kind: 'building'; id: string; names: LocalizedNameDto[]; buildingNumber: string | null; timezone: string }
+  | { kind: 'floor'; id: string; names: LocalizedNameDto[]; floorNumber: number | null }
+  | { kind: 'space'; id: string; names: LocalizedNameDto[]; spaceTypeId: string; capacity: number }
   | null
+
+/** BuildingConsts/FloorConsts/SpaceConsts.MaxNameLength on the backend. */
+const MAX_NAME_LENGTH = 128
 
 interface EditDetailsModalProps {
   state: NonNullable<EditDetailsState>
@@ -37,7 +45,12 @@ interface EditDetailsModalProps {
 type Field = 'name' | 'floorNumber' | 'capacity' | 'type'
 
 export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, onError }: EditDetailsModalProps) {
-  const [name, setName] = useState(state.name)
+  const { t } = useTranslation()
+  // A name per language, typed in one box (LocalizedNameField) that opens on the admin's own
+  // language; the default language's is required.
+  const defaultLanguage = getDefaultLanguage()
+  const [names, setNames] = useState<LocalizedNames>(() => fromNameList(state.names))
+  const [language, setLanguage] = useState(currentLanguage())
   const [buildingNumber, setBuildingNumber] = useState(state.kind === 'building' ? (state.buildingNumber ?? '') : '')
   const [timezone, setTimezone] = useState(state.kind === 'building' ? state.timezone : 'UTC')
   const [floorNumber, setFloorNumber] = useState(state.kind === 'floor' ? String(state.floorNumber ?? '') : '')
@@ -47,19 +60,19 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   const f = useFieldErrors<Field>('edit')
   const { ask: askImpact, prompt: impactPrompt } = useBookingImpactPrompt()
 
-  const titles = { building: 'Edit building details', floor: 'Edit floor details', space: 'Edit space details' }
+  const titles = { building: t('Hierarchy:EditBuildingTitle'), floor: t('Hierarchy:EditFloorTitle'), space: t('Hierarchy:EditSpaceTitle') }
 
   // Every problem at once, each under its own field — not the first one found.
   function validate(): Partial<Record<Field, string>> {
     const errors: Partial<Record<Field, string>> = {}
-    if (!name.trim()) errors.name = 'Name is required.'
+    if (!names[defaultLanguage]?.trim()) errors.name = t('Hierarchy:NameRequired')
     if (state.kind === 'floor' && floorNumber.trim() && !Number.isInteger(Number(floorNumber))) {
-      errors.floorNumber = 'Floor number must be a whole number.'
+      errors.floorNumber = t('Hierarchy:FloorNumberWhole')
     }
     if (state.kind === 'space') {
       const parsed = Number(capacity)
-      if (!capacity.trim() || !Number.isFinite(parsed) || parsed <= 0) errors.capacity = 'Capacity must be a positive number.'
-      if (!spaceTypeId) errors.type = 'Choose a space type.'
+      if (!capacity.trim() || !Number.isFinite(parsed) || parsed <= 0) errors.capacity = t('Hierarchy:CapacityPositive')
+      if (!spaceTypeId) errors.type = t('Hierarchy:ChooseSpaceType')
     }
     return errors
   }
@@ -68,6 +81,8 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
     e.preventDefault()
     const errors = validate()
     if (Object.keys(errors).length > 0) {
+      // The missing name is the default language's: show that one.
+      if (errors.name) setLanguage(defaultLanguage)
       f.setErrors(errors)
       return
     }
@@ -76,11 +91,11 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
     setSubmitting(true)
     try {
       if (state.kind === 'building') {
-        await updateBuilding(token, state.id, { name: name.trim(), buildingNumber: buildingNumber.trim() || null, timezone })
+        await updateBuilding(token, state.id, { names: toNameList(names), buildingNumber: buildingNumber.trim() || null, timezone })
       } else if (state.kind === 'floor') {
-        await updateFloor(token, state.id, { name: name.trim(), floorNumber: floorNumber.trim() ? Number(floorNumber) : null })
+        await updateFloor(token, state.id, { names: toNameList(names), floorNumber: floorNumber.trim() ? Number(floorNumber) : null })
       } else {
-        const input = { name: name.trim(), spaceTypeId, capacity: Number(capacity) }
+        const input = { names: toNameList(names), spaceTypeId, capacity: Number(capacity) }
         // A lower capacity can leave bookings for more people behind: ask first.
         const impact = await getSpaceUpdateImpact(token, state.id, input)
         let cancelAffectedBookings = false
@@ -98,7 +113,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
       onSaved()
       onClose()
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : 'Something went wrong — please try again.')
+      onError(err instanceof ApiError ? err.message : t('Error:Generic'))
     } finally {
       setSubmitting(false)
     }
@@ -111,21 +126,32 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
         <form {...f.form} onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>{titles[state.kind]}</DialogTitle>
-            <DialogDescription>Rules and hours are edited on the constraints page; this is what it's called and where it is.</DialogDescription>
+            <DialogDescription>{t('Hierarchy:EditDetailsDetail')}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor={f.id('name')}>
-                Name<span className="text-destructive">*</span>
-              </Label>
-              <Input {...f.field('name')} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-              {f.error('name')}
+            <div className="sm:col-span-2">
+              <LocalizedNameField
+                id={f.id('name')}
+                label={
+                  <>
+                    {t('Hierarchy:Name')}<span className="text-destructive">*</span>
+                  </>
+                }
+                value={names}
+                onChange={setNames}
+                language={language}
+                onLanguageChange={setLanguage}
+                inputProps={f.field('name')}
+                error={f.error('name')}
+                maxLength={MAX_NAME_LENGTH}
+                autoFocus
+              />
             </div>
 
             {state.kind === 'building' && (
               <div className="grid gap-2">
-                <Label htmlFor="edit-buildingNumber">Building number</Label>
+                <Label htmlFor="edit-buildingNumber">{t('Hierarchy:BuildingNumber')}</Label>
                 <Input
                   id="edit-buildingNumber"
                   className="font-mono"
@@ -137,7 +163,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
 
             {state.kind === 'floor' && (
               <div className="grid gap-2">
-                <Label htmlFor={f.id('floorNumber')}>Floor number</Label>
+                <Label htmlFor={f.id('floorNumber')}>{t('Hierarchy:FloorNumber')}</Label>
                 <Input {...f.field('floorNumber')} className="font-mono" value={floorNumber} onChange={(e) => setFloorNumber(e.target.value)} />
                 {f.error('floorNumber')}
               </div>
@@ -146,7 +172,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
             {state.kind === 'space' && (
               <div className="grid gap-2">
                 <Label htmlFor={f.id('capacity')}>
-                  Capacity<span className="text-destructive">*</span>
+                  {t('Hierarchy:Capacity')}<span className="text-destructive">*</span>
                 </Label>
                 <Input {...f.field('capacity')} className="font-mono" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
                 {f.error('capacity')}
@@ -156,7 +182,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
             {state.kind === 'building' && (
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="edit-timezone">
-                  Timezone<span className="text-destructive">*</span>
+                  {t('Timezone:Label')}<span className="text-destructive">*</span>
                 </Label>
                 <TimezonePicker id="edit-timezone" value={timezone} onChange={setTimezone} />
               </div>
@@ -165,7 +191,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
             {state.kind === 'space' && (
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor={f.id('type')}>
-                  Type<span className="text-destructive">*</span>
+                  {t('Hierarchy:Type')}<span className="text-destructive">*</span>
                 </Label>
                 <Select value={spaceTypeId} onValueChange={setSpaceTypeId}>
                   <SelectTrigger {...f.field('type')} className="w-full">
@@ -186,10 +212,10 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('Common:Cancel')}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving…' : 'Save details'}
+              {submitting ? t('Common:Saving') : t('Hierarchy:SaveDetails')}
             </Button>
           </DialogFooter>
         </form>

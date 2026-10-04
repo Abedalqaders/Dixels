@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,6 +33,7 @@ const ANY = 'any'
  * grid, so there's nothing to type in a wrong format.
  */
 export function SearchBar({ building, value, onChange }: SearchBarProps) {
+  const { t } = useTranslation()
   const slot = building.slotMinutes
   const now = nowInZone(building.timezone)
   const today = now.date
@@ -46,12 +48,12 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
     <Card className="mt-6 p-4">
       <form
         role="search"
-        aria-label="Find a free space"
+        aria-label={t('FindSpace:SearchLabel')}
         onSubmit={(e) => e.preventDefault()}
         className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_0.7fr_1.2fr]"
       >
         <div className="col-span-2 grid gap-2 md:col-span-1">
-          <Label htmlFor="fs-date">Date</Label>
+          <Label htmlFor="fs-date">{t('Booking:Date')}</Label>
           <DatePicker id="fs-date" value={value.date} min={today} max={lastDate} onChange={(date) => onChange({ date })} />
         </div>
 
@@ -65,7 +67,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         />
 
         <div className="grid gap-2">
-          <Label htmlFor="fs-people">People</Label>
+          <Label htmlFor="fs-people">{t('Booking:People')}</Label>
           <Input
             id="fs-people"
             type="number"
@@ -80,7 +82,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="fs-type">Type</Label>
+          <Label htmlFor="fs-type">{t('FindSpace:Type')}</Label>
           <Select
             value={value.spaceTypeId || ANY}
             onValueChange={(v) => onChange({ spaceTypeId: v === ANY ? '' : v })}
@@ -89,7 +91,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ANY}>Any type</SelectItem>
+              <SelectItem value={ANY}>{t('FindSpace:AnyType')}</SelectItem>
               {[...spaceTypes].map(([id, name]) => (
                 <SelectItem key={id} value={id}>
                   {name}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICONS, iconKeyToIconName } from './spaceTypeIcons'
@@ -14,13 +15,14 @@ interface SpaceTypeFilterProps {
 
 /** Space-type filter for the spaces list — a shadcn dropdown with each type's icon. */
 export function SpaceTypeFilter({ spaceTypes, value, onChange }: SpaceTypeFilterProps) {
+  const { t } = useTranslation()
   return (
     <Select value={value || ALL} onValueChange={(v) => onChange(v === ALL ? '' : v)}>
-      <SelectTrigger size="sm" className="w-44" aria-label="Filter by space type">
+      <SelectTrigger size="sm" className="w-44" aria-label={t('Hierarchy:FilterByType')}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ALL}>All types</SelectItem>
+        <SelectItem value={ALL}>{t('Hierarchy:AllTypes')}</SelectItem>
         {spaceTypes.map((st) => (
           <SelectItem key={st.id} value={st.id}>
             {ICONS[iconKeyToIconName(st.iconKey)]}

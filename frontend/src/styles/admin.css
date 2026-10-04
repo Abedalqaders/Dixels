@@ -65,8 +65,8 @@
   text-transform: none; letter-spacing: normal;
 }
 .l1 { font-weight: 600; }
-.l2 { padding-left: 34px; }
-.l3 { padding-left: 58px; }
+.l2 { padding-inline-start: 34px; }
+.l3 { padding-inline-start: 58px; }
 .node.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
 .node.on:hover { background: var(--accent-soft); }
 .node.on > svg.ic, .node.on .m { color: var(--accent-ink); }
@@ -74,11 +74,11 @@
 /* connector guide — every space row draws its own branch off the floor above it */
 .l3 { position: relative; }
 .l3::before {
-  content: ""; position: absolute; left: 42px; top: 0; bottom: 0;
-  border-left: 1.5px solid var(--border-subtle); pointer-events: none;
+  content: ""; position: absolute; inset-inline-start: 42px; top: 0; bottom: 0;
+  border-inline-start: 1.5px solid var(--border-subtle); pointer-events: none;
 }
 .l3::after {
-  content: ""; position: absolute; left: 42px; top: 50%; width: 15px; height: 1.5px;
+  content: ""; position: absolute; inset-inline-start: 42px; top: 50%; width: 15px; height: 1.5px;
   background: var(--border-subtle); pointer-events: none;
 }
 
@@ -98,7 +98,7 @@
 .chev:disabled:hover { background: none; color: var(--ink-secondary); }
 
 /* row actions — visible on hover/focus so the tree reads clean by default */
-.actions { display: flex; align-items: center; gap: 2px; margin-left: auto; opacity: .5; transition: opacity .12s ease; flex: none; }
+.actions { display: flex; align-items: center; gap: 2px; margin-inline-start: auto; opacity: .5; transition: opacity .12s ease; flex: none; }
 .node:hover .actions, .node:focus-within .actions { opacity: 1; }
 /* No hover on touch screens: the actions are always fully visible there. */
 @media (hover: none) {
@@ -135,7 +135,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .resultcount { font-size: 12px; color: var(--ink-secondary); }
 
 /* required-field marker for create/edit forms (AddNodeModal, EditDetailsModal) */
-.req { color: var(--state-blocked-ink); margin-left: 2px; }
+.req { color: var(--state-blocked-ink); margin-inline-start: 2px; }
 
 /* "What applies here" — the resolved values, with the level each came from */
 .effective {
@@ -170,7 +170,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .inhbtn .sw2::after { width: 14px; height: 14px; }
 .inh.on .inhbtn { color: var(--accent-ink); }
 .inh.on .inhbtn .sw2 { background: var(--accent-solid); }
-.inh.on .inhbtn .sw2::after { left: 17px; }
+.inh.on .inhbtn .sw2::after { inset-inline-start: 17px; }
 .inhbtn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
 .inhnote { display: block; font-size: 12px; line-height: 17px; color: var(--ink-secondary); margin-top: 6px; }
 .inh.on .inhnote { color: var(--accent-ink); font-weight: 600; }
@@ -196,8 +196,8 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 
 /* Closures section — collapsible header + condensed rows (see ClosuresList's own doc
    comment for why: it used to be a mandatory multi-line block per closure). */
-.closuretoggle { width: 100%; border: none; background: none; cursor: pointer; text-align: left; padding: 0; }
-.closuretoggle .chevicon { margin-left: auto; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--ink-secondary); }
+.closuretoggle { width: 100%; border: none; background: none; cursor: pointer; text-align: start; padding: 0; }
+.closuretoggle .chevicon { margin-inline-start: auto; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--ink-secondary); }
 .closuretoggle .chevicon svg { width: 13px; height: 13px; transition: transform .15s ease; }
 .closuretoggle[aria-expanded="false"] .chevicon svg { transform: rotate(-90deg); }
 .closurerow {
@@ -216,10 +216,10 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .sw2 { width: 38px; height: 22px; border-radius: var(--radius-pill); background: var(--border-strong); position: relative; flex: none; transition: background .12s ease; }
 .sw2.on { background: var(--accent-solid); }
 .sw2::after {
-  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
-  border-radius: var(--radius-pill); background: var(--surface-raised); transition: left .12s ease;
+  content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px;
+  border-radius: var(--radius-pill); background: var(--surface-raised); transition: inset-inline-start .12s ease;
 }
-.sw2.on::after { left: 19px; }
+.sw2.on::after { inset-inline-start: 19px; }
 .saverow { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
 .saverow .btngroup { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 
@@ -264,14 +264,14 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 
 /* space-management explorer — Building → Floor tree beside the list pages */
 .explorer {
-  width: 260px; flex: none; background: var(--surface-raised); border-right: 1px solid var(--border-subtle);
+  width: 260px; flex: none; background: var(--surface-raised); border-inline-end: 1px solid var(--border-subtle);
   padding: var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: 4px;
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
 .explorer .searchbox { margin-bottom: var(--space-2); }
 .explorer .searchbox input { width: 100%; }
 .xtree, .xfloors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
-.xfloors { margin-left: 22px; padding-left: 6px; border-left: 1px solid var(--border-subtle); }
+.xfloors { margin-inline-start: 22px; padding-inline-start: 6px; border-inline-start: 1px solid var(--border-subtle); }
 .xrow {
   display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: var(--radius-md);
   font-size: 13px; line-height: 20px; color: var(--ink-primary); min-width: 0;
@@ -294,7 +294,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .xnote { font-size: 12px; color: var(--ink-secondary); padding: 4px 6px; }
 .xmore, .xlink {
   background: none; border: none; padding: 4px 6px; font: inherit; font-size: 12px; font-weight: 600;
-  color: var(--accent-ink); cursor: pointer; text-align: left; border-radius: var(--radius-sm);
+  color: var(--accent-ink); cursor: pointer; text-align: start; border-radius: var(--radius-sm);
 }
 .xlink { padding: 0; }
 .xmore:hover, .xlink:hover { text-decoration: underline; }
@@ -329,7 +329,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 @media (max-width: 767px) {
   .explorer, .explorer.collapsed {
     position: static; width: 100%; height: auto; max-height: 40vh; align-items: stretch;
-    border-right: 0; border-bottom: 1px solid var(--border-subtle);
+    border-inline-end: 0; border-bottom: 1px solid var(--border-subtle);
   }
   .explorer.collapsed { padding: var(--space-2) var(--space-3); flex-direction: row; }
 }

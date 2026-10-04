@@ -7,6 +7,7 @@ using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.SpaceManagement;
 
@@ -26,7 +27,7 @@ public class FloorsReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
     }
 
     private Task<Building> CreateBuildingAsync() => _buildingRepository.InsertAsync(new Building(
-        Guid.NewGuid(), "HQ", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
+        Guid.NewGuid(), "en", "HQ", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
         maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
 
     [Fact]
@@ -34,7 +35,7 @@ public class FloorsReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
     {
         await Should.ThrowAsync<EntityNotFoundException>(() => _floorsAppService.CreateAsync(new CreateFloorDto
         {
-            BuildingId = Guid.NewGuid(), Name = "Level 1", FloorNumber = 1,
+            BuildingId = Guid.NewGuid(), Names = En("Level 1"), FloorNumber = 1,
         }));
     }
 
@@ -42,7 +43,7 @@ public class FloorsReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
     public async Task Restore_Under_A_Deleted_Building_Is_Refused()
     {
         var building = await CreateBuildingAsync();
-        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
         await _floorRepository.DeleteAsync(floor);
         await _buildingRepository.DeleteAsync(building);
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { SearchIcon } from '@/components/icons'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -38,9 +39,11 @@ interface FloorHit {
 
 const EMPTY_BRANCH: Branch = { items: [], totalCount: 0, loading: true, error: false }
 
+// Points towards the end of the line when folded (right, or left in Arabic) and down when
+// unfolded: the mirror comes first, then the stylesheet's 90° turn, which looks the same both ways.
 function Chevron() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="rtl:-scale-x-100">
       <path d="M8 5.5 12.5 10 8 14.5" />
     </svg>
   )
@@ -85,6 +88,7 @@ function writeCollapsed(value: boolean) {
 // Lives in SpaceManagementLayout, so it stays mounted (and keeps what it loaded) while the
 // admin moves between pages.
 export function SpaceExplorer() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const location = useLocation()
@@ -241,8 +245,14 @@ export function SpaceExplorer() {
 
   if (collapsed) {
     return (
-      <aside className="explorer collapsed" aria-label="Buildings and floors">
-        <button type="button" className="xpanelbtn" aria-label="Show buildings panel" title="Show buildings panel" onClick={() => setPanelCollapsed(false)}>
+      <aside className="explorer collapsed" aria-label={t('Hierarchy:ExplorerLabel')}>
+        <button
+          type="button"
+          className="xpanelbtn"
+          aria-label={t('Hierarchy:ShowPanel')}
+          title={t('Hierarchy:ShowPanel')}
+          onClick={() => setPanelCollapsed(false)}
+        >
           <PanelIcon />
         </button>
       </aside>
@@ -255,31 +265,37 @@ export function SpaceExplorer() {
   const hiddenFloorHits = floorHits ? floorHits.totalCount - floorHits.items.length : 0
 
   return (
-    <aside className="explorer" aria-label="Buildings and floors">
+    <aside className="explorer" aria-label={t('Hierarchy:ExplorerLabel')}>
       <div className="xhead">
         <div className="searchbox">
           <SearchIcon />
           <input
             type="text"
-            placeholder={canSeeFloors ? 'Find a building or floor…' : 'Find a building…'}
+            placeholder={canSeeFloors ? t('Hierarchy:FindBuildingOrFloor') : t('Hierarchy:FindBuilding')}
             autoComplete="off"
-            aria-label={canSeeFloors ? 'Find a building or floor' : 'Find a building'}
+            aria-label={canSeeFloors ? t('Hierarchy:FindBuildingOrFloorLabel') : t('Hierarchy:FindBuildingLabel')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <button type="button" className="xpanelbtn" aria-label="Hide buildings panel" title="Hide buildings panel" onClick={() => setPanelCollapsed(true)}>
+        <button
+          type="button"
+          className="xpanelbtn"
+          aria-label={t('Hierarchy:HidePanel')}
+          title={t('Hierarchy:HidePanel')}
+          onClick={() => setPanelCollapsed(true)}
+        >
           <PanelIcon />
         </button>
       </div>
 
       <Link to={scopeLink()} className={`xrow root${rootIsCurrent ? ' on' : ''}`} aria-current={rootIsCurrent ? 'page' : undefined}>
         {ICONS.building}
-        <span className="xlbl">All buildings</span>
+        <span className="xlbl">{t('Hierarchy:AllBuildings')}</span>
         {!buildings.loading && !debouncedQuery && <span className="xcount">{buildings.totalCount}</span>}
       </Link>
 
-      {debouncedQuery && canSeeFloors && <p className="xsection">Buildings</p>}
+      {debouncedQuery && canSeeFloors && <p className="xsection">{t('Hierarchy:Buildings')}</p>}
       <ul className="xtree" aria-busy={buildings.loading}>
         {visibleBuildings.map((building) => {
           const isOpen = expanded.has(building.id)
@@ -293,7 +309,7 @@ export function SpaceExplorer() {
                     type="button"
                     className={`xtoggle${isOpen ? ' open' : ''}`}
                     aria-expanded={isOpen}
-                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${building.name}`}
+                    aria-label={isOpen ? t('Hierarchy:Collapse', { name: building.name }) : t('Hierarchy:Expand', { name: building.name })}
                     onClick={() => toggle(building.id)}
                   >
                     <Chevron />
@@ -327,20 +343,20 @@ export function SpaceExplorer() {
                       </Link>
                     </li>
                   ))}
-                  {branch?.loading && <li className="xnote">Loading floors…</li>}
+                  {branch?.loading && <li className="xnote">{t('Hierarchy:LoadingFloors')}</li>}
                   {branch?.error && (
                     <li className="xnote">
-                      Couldn't load floors.{' '}
+                      {t('Hierarchy:FloorsLoadFailedShort')}{' '}
                       <button type="button" className="xlink" onClick={() => fetchFloors(building.id, branch.items.length)}>
-                        Retry
+                        {t('Hierarchy:Retry')}
                       </button>
                     </li>
                   )}
-                  {branch && !branch.loading && !branch.error && branch.items.length === 0 && <li className="xnote">No floors yet</li>}
+                  {branch && !branch.loading && !branch.error && branch.items.length === 0 && <li className="xnote">{t('Hierarchy:NoFloorsYet')}</li>}
                   {branch && !branch.loading && branch.items.length < branch.totalCount && (
                     <li>
                       <button type="button" className="xmore" onClick={() => fetchFloors(building.id, branch.items.length)}>
-                        Show {Math.min(FLOOR_PAGE, branch.totalCount - branch.items.length)} more floors
+                        {t('Hierarchy:ShowMoreFloors', { count: Math.min(FLOOR_PAGE, branch.totalCount - branch.items.length) })}
                       </button>
                     </li>
                   )}
@@ -351,30 +367,30 @@ export function SpaceExplorer() {
         })}
       </ul>
 
-      {buildings.loading && buildings.items.length === 0 && <TreeSkeleton label="Loading buildings…" rows={4} />}
-      {buildings.loading && buildings.items.length > 0 && <p className="xnote">Loading…</p>}
+      {buildings.loading && buildings.items.length === 0 && <TreeSkeleton label={t('Hierarchy:LoadingBuildings')} rows={4} />}
+      {buildings.loading && buildings.items.length > 0 && <p className="xnote">{t('Hierarchy:Loading')}</p>}
       {buildings.error && (
         <p className="xnote">
-          Couldn't load buildings.{' '}
+          {t('Hierarchy:BuildingsLoadFailedShort')}{' '}
           <button type="button" className="xlink" onClick={() => setReloadKey((k) => k + 1)}>
-            Retry
+            {t('Hierarchy:Retry')}
           </button>
         </p>
       )}
       {!buildings.loading && !buildings.error && buildings.items.length === 0 && (
-        <p className="xnote">{debouncedQuery ? 'No buildings match.' : 'No buildings yet.'}</p>
+        <p className="xnote">{debouncedQuery ? t('Hierarchy:NoBuildingsMatch') : t('Hierarchy:NoBuildingsYet')}</p>
       )}
       {!buildings.loading && hiddenBuildings > 0 && (
         <button type="button" className="xmore" onClick={loadMoreBuildings}>
-          Show more ({hiddenBuildings} left)
+          {t('Hierarchy:ShowMoreLeft', { left: hiddenBuildings })}
         </button>
       )}
 
       {debouncedQuery && canSeeFloors && (
         <>
-          <p className="xsection">Floors</p>
-          {floorHits === null && <p className="xnote">Searching…</p>}
-          {floorHits !== null && floorHits.items.length === 0 && <p className="xnote">No floors match.</p>}
+          <p className="xsection">{t('Hierarchy:Floors')}</p>
+          {floorHits === null && <p className="xnote">{t('Hierarchy:Searching')}</p>}
+          {floorHits !== null && floorHits.items.length === 0 && <p className="xnote">{t('Hierarchy:NoFloorsMatch')}</p>}
           <ul className="xtree">
             {floorHits?.items.map((hit) => (
               <li key={hit.id}>
@@ -393,7 +409,7 @@ export function SpaceExplorer() {
               </li>
             ))}
           </ul>
-          {hiddenFloorHits > 0 && <p className="xnote">{hiddenFloorHits} more — keep typing to narrow down.</p>}
+          {hiddenFloorHits > 0 && <p className="xnote">{t('Hierarchy:MoreKeepTyping', { more: hiddenFloorHits })}</p>}
         </>
       )}
     </aside>

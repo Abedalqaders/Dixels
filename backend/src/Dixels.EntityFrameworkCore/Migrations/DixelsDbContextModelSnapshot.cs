@@ -358,11 +358,6 @@ namespace Dixels.Migrations
                     b.Property<int>("MinLeadMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.Property<string>("OwnOverlapPolicy")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -381,6 +376,30 @@ namespace Dixels.Migrations
 
                             t.HasCheckConstraint("CK_AppBuildings_SeriesHorizonAtLeastHorizon", "\"MaxSeriesHorizonDays\" >= \"MaxHorizonDays\"");
                         });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.BuildingTranslation", b =>
+                {
+                    b.Property<Guid>("BuildingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("BuildingId", "Language");
+
+                    b.ToTable("AppBuildingTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.SpaceManagement.Floor", b =>
@@ -442,11 +461,6 @@ namespace Dixels.Migrations
                     b.Property<int?>("MaxDurationMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("BuildingId");
@@ -455,6 +469,30 @@ namespace Dixels.Migrations
                         {
                             t.HasCheckConstraint("CK_AppFloors_HoursOpenCloseTogether", "(\"Hours_Open\" IS NULL) = (\"Hours_Close\" IS NULL)");
                         });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.FloorTranslation", b =>
+                {
+                    b.Property<Guid>("FloorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("FloorId", "Language");
+
+                    b.ToTable("AppFloorTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.SpaceManagement.Space", b =>
@@ -519,11 +557,6 @@ namespace Dixels.Migrations
                     b.Property<int?>("MinAttendees")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.Property<Guid>("SpaceTypeId")
                         .HasColumnType("uuid");
 
@@ -541,6 +574,30 @@ namespace Dixels.Migrations
 
                             t.HasCheckConstraint("CK_AppSpaces_MinAttendeesWithinCapacity", "\"MinAttendees\" IS NULL OR \"MinAttendees\" <= \"Capacity\"");
                         });
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTranslation", b =>
+                {
+                    b.Property<Guid>("SpaceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("SpaceId", "Language");
+
+                    b.ToTable("AppSpaceTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Dixels.SpaceManagement.SpaceType", b =>
@@ -595,18 +652,40 @@ namespace Dixels.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.HasKey("Id");
+
+                    b.ToTable("AppSpaceTypes", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTypeTranslation", b =>
+                {
+                    b.Property<Guid>("SpaceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
-                    b.HasIndex("Name")
+                    b.HasKey("SpaceTypeId", "Language");
+
+                    b.HasIndex("Language", "NormalizedName")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("AppSpaceTypes", (string)null);
+                    b.ToTable("AppSpaceTypeTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>
@@ -2579,6 +2658,15 @@ namespace Dixels.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Dixels.SpaceManagement.BuildingTranslation", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Building", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("BuildingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Dixels.SpaceManagement.Floor", b =>
                 {
                     b.HasOne("Dixels.SpaceManagement.Building", null)
@@ -2629,6 +2717,15 @@ namespace Dixels.Migrations
                     b.Navigation("Days");
 
                     b.Navigation("Hours");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.FloorTranslation", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Floor", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("FloorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Dixels.SpaceManagement.Space", b =>
@@ -2687,6 +2784,24 @@ namespace Dixels.Migrations
                     b.Navigation("Days");
 
                     b.Navigation("Hours");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTranslation", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.Space", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("SpaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTypeTranslation", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.SpaceType", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLogAction", b =>
@@ -2885,6 +3000,26 @@ namespace Dixels.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Building", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Floor", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.Space", b =>
+                {
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceType", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>

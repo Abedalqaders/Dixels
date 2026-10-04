@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLanguage } from '@/i18n'
 import { formatClock, formatClockRange, formatDay, formatDaySpan, formatMonthYear, formatWeekday, localDateToIso } from './format'
 
 describe('formatDay', () => {
@@ -38,5 +39,17 @@ describe('names', () => {
 describe('localDateToIso', () => {
   it("reads a picker's Date as the calendar day it shows", () => {
     expect(localDateToIso(new Date(2026, 8, 29, 23, 30))).toBe('2026-09-29')
+  })
+})
+
+describe('in Arabic', () => {
+  it('uses Arabic day and month names, full length even in the short styles, with Western digits', async () => {
+    await setLanguage('ar')
+    expect(formatDay('2026-09-29')).toBe('الثلاثاء 29 سبتمبر')
+    expect(formatDay('2026-09-29', 'long')).toBe('الثلاثاء 29 سبتمبر 2026')
+    expect(formatMonthYear('2026-09-29')).toBe('سبتمبر 2026')
+    expect(formatWeekday('2026-09-29', 'short')).toBe('الثلاثاء')
+    expect(formatDaySpan('2026-09-28', '2026-10-04')).toBe('28 سبتمبر – 4 أكتوبر 2026')
+    expect(formatClockRange('09:00', '10:30')).toBe('09:00–10:30')
   })
 })

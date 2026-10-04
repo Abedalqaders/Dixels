@@ -8,6 +8,7 @@ using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.SpaceManagement;
 
@@ -29,7 +30,7 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
 
     private static CreateBuildingDto NewBuildingInput(string name = "HQ") => new()
     {
-        Name = name,
+        Names = En(name),
         Timezone = "UTC",
         Days = new[] { 0, 1, 2, 3, 4, 5, 6 },
         Hours = new OperatingWindowDto { IsOpen24Hours = true },
@@ -43,7 +44,7 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
     {
         var created = await _buildingsAppService.CreateAsync(new CreateBuildingDto
         {
-            Name = "Main Building",
+            Names = En("Main Building"),
             Timezone = "Europe/London",
             Days = new[] { 1, 2, 3, 4, 5 },
             Hours = new OperatingWindowDto { IsOpen24Hours = false, Open = "08:00", Close = "18:00" },
@@ -69,7 +70,7 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
 
         var updated = await _buildingsAppService.UpdateAsync(created.Id, new UpdateBuildingDto
         {
-            Name = "Renamed HQ",
+            Names = En("Renamed HQ"),
             BuildingNumber = "12B",
             Timezone = "America/New_York",
         });
@@ -137,7 +138,7 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
     {
         var building = await _buildingsAppService.CreateAsync(NewBuildingInput());
 
-        var floor = new Floor(Guid.NewGuid(), building.Id, "Level 3", 3);
+        var floor = new Floor(Guid.NewGuid(), building.Id, "en", "Level 3", 3);
         floor.SetOwnOperatingHours(
             OperatingWindow.Create(TimeOnly.Parse("20:00"), TimeOnly.Parse("23:00")),
             OperatingWindow.FullDay);
@@ -160,11 +161,11 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
     public async Task Delete_Cascades_To_Floors_And_Spaces_With_A_Shared_Batch_Then_Restore_Brings_Them_Back()
     {
         var building = await _buildingsAppService.CreateAsync(NewBuildingInput());
-        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
-        var floor = new Floor(Guid.NewGuid(), building.Id, "Level 1", 1);
+        var floor = new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1);
         await _floorRepository.InsertAsync(floor);
-        var space = new Space(Guid.NewGuid(), floor.Id, "Room A", spaceType.Id, capacity: 4);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room A", spaceType.Id, capacity: 4);
         await _spaceRepository.InsertAsync(space);
 
         await _buildingsAppService.DeleteAsync(building.Id);
@@ -191,11 +192,11 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
     {
         var building = await _buildingsAppService.CreateAsync(NewBuildingInput());
 
-        var independentlyDeletedFloor = new Floor(Guid.NewGuid(), building.Id, "Already Gone", 9);
+        var independentlyDeletedFloor = new Floor(Guid.NewGuid(), building.Id, "en", "Already Gone", 9);
         await _floorRepository.InsertAsync(independentlyDeletedFloor);
         await _floorRepository.DeleteAsync(independentlyDeletedFloor);
 
-        var laterFloor = new Floor(Guid.NewGuid(), building.Id, "Still Here Until Delete", 2);
+        var laterFloor = new Floor(Guid.NewGuid(), building.Id, "en", "Still Here Until Delete", 2);
         await _floorRepository.InsertAsync(laterFloor);
 
         await _buildingsAppService.DeleteAsync(building.Id);

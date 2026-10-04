@@ -9545,6 +9545,26 @@
         },
         "additionalProperties": false
       },
+      "Dixels.Localization.LocalizedNameDto": {
+        "required": [
+          "language",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "maxLength": 10,
+            "minLength": 0,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Dixels.SpaceManagement.AvailabilityOverrideDto": {
         "required": [
           "effect",
@@ -9601,6 +9621,7 @@
           "maxSeriesHorizonDays",
           "minLeadMinutes",
           "name",
+          "names",
           "ownOverlapPolicy",
           "timezone"
         ],
@@ -9612,6 +9633,12 @@
           },
           "name": {
             "type": "string"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "buildingNumber": {
             "type": "string",
@@ -9734,16 +9761,18 @@
           "maxDurationMinutes",
           "maxHorizonDays",
           "minLeadMinutes",
-          "name",
+          "names",
           "ownOverlapPolicy",
           "timezone"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "buildingNumber": {
             "maxLength": 32,
@@ -9792,7 +9821,7 @@
       "Dixels.SpaceManagement.CreateFloorDto": {
         "required": [
           "buildingId",
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
@@ -9800,10 +9829,12 @@
             "type": "string",
             "format": "uuid"
           },
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "floorNumber": {
             "type": "integer",
@@ -9817,7 +9848,7 @@
         "required": [
           "capacity",
           "floorId",
-          "name",
+          "names",
           "spaceTypeId"
         ],
         "type": "object",
@@ -9826,10 +9857,12 @@
             "type": "string",
             "format": "uuid"
           },
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "spaceTypeId": {
             "type": "string",
@@ -9845,14 +9878,16 @@
       "Dixels.SpaceManagement.CreateSpaceTypeDto": {
         "required": [
           "iconKey",
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
@@ -9919,7 +9954,8 @@
           "hasOverrides",
           "id",
           "isDeleted",
-          "name"
+          "name",
+          "names"
         ],
         "type": "object",
         "properties": {
@@ -9933,6 +9969,12 @@
           },
           "name": {
             "type": "string"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "buildingName": {
             "type": "string",
@@ -10108,6 +10150,7 @@
           "id",
           "isDeleted",
           "name",
+          "names",
           "spaceTypeId"
         ],
         "type": "object",
@@ -10122,6 +10165,12 @@
           },
           "name": {
             "type": "string"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "floorName": {
             "type": "string",
@@ -10176,7 +10225,8 @@
         "required": [
           "iconKey",
           "id",
-          "name"
+          "name",
+          "names"
         ],
         "type": "object",
         "properties": {
@@ -10189,6 +10239,12 @@
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           }
         },
         "additionalProperties": false
@@ -10248,15 +10304,17 @@
       },
       "Dixels.SpaceManagement.UpdateBuildingDto": {
         "required": [
-          "name",
+          "names",
           "timezone"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "buildingNumber": {
             "maxLength": 32,
@@ -10307,14 +10365,16 @@
       },
       "Dixels.SpaceManagement.UpdateFloorDto": {
         "required": [
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "floorNumber": {
             "type": "integer",
@@ -10366,15 +10426,17 @@
         "required": [
           "cancelAffectedBookings",
           "capacity",
-          "name",
+          "names",
           "spaceTypeId"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "spaceTypeId": {
             "type": "string",
@@ -10393,14 +10455,16 @@
       "Dixels.SpaceManagement.UpdateSpaceTypeDto": {
         "required": [
           "iconKey",
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"

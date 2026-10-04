@@ -8,6 +8,7 @@ using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.SpaceManagement;
 
@@ -33,6 +34,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = new Building(
             Guid.NewGuid(),
+            "en",
             "HQ",
             null,
             "UTC",
@@ -43,12 +45,12 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
             minLeadMinutes: 0);
         await _buildingRepository.InsertAsync(building);
 
-        var floor = new Floor(Guid.NewGuid(), building.Id, "Level 1", 1);
+        var floor = new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1);
         return await _floorRepository.InsertAsync(floor);
     }
 
     private async Task<SpaceType> CreateSpaceTypeAsync() =>
-        await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
     [Fact]
     public async Task Create_Then_Get_Defaults_To_Inherit_Everything()
@@ -59,7 +61,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -78,19 +80,19 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var spaceType1 = await CreateSpaceTypeAsync();
-        var spaceType2 = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Meeting-ish", IconKey.MeetingRoom));
+        var spaceType2 = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Meeting-ish", IconKey.MeetingRoom));
 
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType1.Id,
             Capacity = 4,
         });
 
         var updated = await _spacesAppService.UpdateAsync(created.Id, new UpdateSpaceDto
         {
-            Name = "Room B",
+            Names = En("Room B"),
             SpaceTypeId = spaceType2.Id,
             Capacity = 6,
         });
@@ -108,7 +110,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 10,
         });
@@ -122,7 +124,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _spacesAppService.UpdateAsync(created.Id, new UpdateSpaceDto
             {
-                Name = "Room A",
+                Names = En("Room A"),
                 SpaceTypeId = spaceType.Id,
                 Capacity = 5,
             }));
@@ -140,7 +142,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -174,7 +176,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -208,7 +210,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -236,7 +238,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -258,7 +260,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
             FloorId = floor.Id,
-            Name = "Room A",
+            Names = En("Room A"),
             SpaceTypeId = spaceType.Id,
             Capacity = 4,
         });
@@ -283,9 +285,9 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
 
         for (var i = 0; i < 5; i++)
         {
-            await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorA.Id, Name = $"Room {i:D2}", SpaceTypeId = spaceType.Id, Capacity = 4 });
+            await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorA.Id, Names = En($"Room {i:D2}"), SpaceTypeId = spaceType.Id, Capacity = 4 });
         }
-        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorB.Id, Name = "Other Floor Room", SpaceTypeId = spaceType.Id, Capacity = 4 });
+        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorB.Id, Names = En("Other Floor Room"), SpaceTypeId = spaceType.Id, Capacity = 4 });
 
         var page1 = await _spacesAppService.GetListAsync(new GetSpacesInput { FloorId = floorA.Id, SkipCount = 0, MaxResultCount = 2 });
         page1.TotalCount.ShouldBe(5);
@@ -302,8 +304,8 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var spaceType = await CreateSpaceTypeAsync();
-        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Conference Room", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Phone Booth", SpaceTypeId = spaceType.Id, Capacity = 1 });
+        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Names = En("Conference Room"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Names = En("Phone Booth"), SpaceTypeId = spaceType.Id, Capacity = 1 });
 
         var result = await _spacesAppService.GetListAsync(new GetSpacesInput { FloorId = floor.Id, Filter = "Conference" });
 
@@ -316,10 +318,10 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var deskType = await CreateSpaceTypeAsync();
-        var meetingType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Meeting-ish", IconKey.MeetingRoom));
+        var meetingType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Meeting-ish", IconKey.MeetingRoom));
 
-        var desk = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Desk 1", SpaceTypeId = deskType.Id, Capacity = 1 });
-        var meetingRoom = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Meeting Room 1", SpaceTypeId = meetingType.Id, Capacity = 8 });
+        var desk = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Names = En("Desk 1"), SpaceTypeId = deskType.Id, Capacity = 1 });
+        var meetingRoom = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Names = En("Meeting Room 1"), SpaceTypeId = meetingType.Id, Capacity = 8 });
 
         var result = await _spacesAppService.GetListAsync(new GetSpacesInput { FloorId = floor.Id, SpaceTypeId = deskType.Id });
 
@@ -332,7 +334,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var spaceType = await CreateSpaceTypeAsync();
-        var created = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var created = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4 });
         await _spacesAppService.DeleteAsync(created.Id);
 
         var withoutDeleted = await _spacesAppService.GetListAsync(new GetSpacesInput { FloorId = floor.Id });
@@ -346,6 +348,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = new Building(
             Guid.NewGuid(),
+            "en",
             buildingName,
             null,
             "UTC",
@@ -356,7 +359,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
             minLeadMinutes: 0);
         await _buildingRepository.InsertAsync(building);
 
-        var floor = new Floor(Guid.NewGuid(), building.Id, floorName, 1);
+        var floor = new Floor(Guid.NewGuid(), building.Id, "en", floorName, 1);
         return await _floorRepository.InsertAsync(floor);
     }
 
@@ -367,8 +370,8 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var floorB = await CreateFloorAsync("Building B", "Level 2");
         var spaceType = await CreateSpaceTypeAsync();
 
-        var spaceA = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorA.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        var spaceB = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorB.Id, Name = "Room B", SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceA = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorA.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceB = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floorB.Id, Names = En("Room B"), SpaceTypeId = spaceType.Id, Capacity = 4 });
 
         var result = await _spacesAppService.GetListAsync(new GetSpacesInput { MaxResultCount = 100 });
 
@@ -386,9 +389,9 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var unrelatedFloor = await CreateFloorAsync("Other Building", "Other Level");
         var spaceType = await CreateSpaceTypeAsync();
 
-        var spaceOnMatchingFloor = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = matchingFloor.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        var spaceInMatchingBuilding = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = otherFloor.Id, Name = "Room B", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        var unrelatedSpace = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = unrelatedFloor.Id, Name = "Room C", SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceOnMatchingFloor = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = matchingFloor.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceInMatchingBuilding = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = otherFloor.Id, Names = En("Room B"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var unrelatedSpace = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = unrelatedFloor.Id, Names = En("Room C"), SpaceTypeId = spaceType.Id, Capacity = 4 });
 
         var result = await _spacesAppService.GetListAsync(new GetSpacesInput { Filter = "Riverside" });
 
@@ -401,14 +404,14 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task GetListAsync_BuildingId_Narrows_Across_All_Its_Floors()
     {
         var building = await CreateFloorAsync("Target Building", "Level 1");
-        var secondFloorInSameBuilding = new Floor(Guid.NewGuid(), building.BuildingId, "Level 2", 2);
+        var secondFloorInSameBuilding = new Floor(Guid.NewGuid(), building.BuildingId, "en", "Level 2", 2);
         await _floorRepository.InsertAsync(secondFloorInSameBuilding);
         var otherBuildingFloor = await CreateFloorAsync("Other Building", "Level 1");
         var spaceType = await CreateSpaceTypeAsync();
 
-        var spaceOnFloor1 = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = building.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        var spaceOnFloor2 = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = secondFloorInSameBuilding.Id, Name = "Room B", SpaceTypeId = spaceType.Id, Capacity = 4 });
-        var spaceInOtherBuilding = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = otherBuildingFloor.Id, Name = "Room C", SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceOnFloor1 = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = building.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceOnFloor2 = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = secondFloorInSameBuilding.Id, Names = En("Room B"), SpaceTypeId = spaceType.Id, Capacity = 4 });
+        var spaceInOtherBuilding = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = otherBuildingFloor.Id, Names = En("Room C"), SpaceTypeId = spaceType.Id, Capacity = 4 });
 
         var result = await _spacesAppService.GetListAsync(new GetSpacesInput { BuildingId = building.BuildingId });
 

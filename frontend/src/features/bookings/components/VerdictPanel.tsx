@@ -1,4 +1,5 @@
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { PreviewState } from '@/features/bookings/hooks/useBookingPreview'
 import { OwnClashNotice } from './OwnClashNotice'
 
@@ -18,6 +19,7 @@ const BOX = 'flex gap-2.5 rounded-md px-4 py-3 text-sm [&>svg]:mt-0.5 [&>svg]:si
  * the theme hue for "free", the blocked state colour for a rejection.
  */
 export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) {
+  const { t } = useTranslation()
   if (state.status === 'idle') {
     return null
   }
@@ -26,7 +28,7 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
     return (
       <div className={`${BOX} bg-muted text-muted-foreground`} role="status" aria-live="polite">
         <LoaderCircle className="animate-spin" />
-        Checking availability…
+        {t('BookingForm:CheckingAvailability')}
       </div>
     )
   }
@@ -48,7 +50,7 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
         <div className={`${BOX} bg-slot-open`} role="status" aria-live="polite">
           <CircleCheck className="text-brand" />
           <span>
-            <strong>Available</strong> — {slotLabel} ({timezone})
+            <strong>{t('BookingForm:Available')}</strong> — {slotLabel} ({timezone})
           </span>
         </div>
         <OwnClashNotice warnings={preview.warnings} />
@@ -70,7 +72,7 @@ export function VerdictPanel({ state, slotLabel, timezone }: VerdictPanelProps) 
       <div>
         <strong>{first.message}</strong>
         {rest.length > 0 && (
-          <ul className="mt-2 list-disc space-y-1 pl-5">
+          <ul className="mt-2 list-disc space-y-1 ps-5">
             {rest.map((v) => (
               <li key={v.code + v.message}>{v.message}</li>
             ))}

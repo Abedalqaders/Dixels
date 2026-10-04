@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using Dixels.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.MultiLingualObjects;
 using Dixels.SpaceManagement.ValueObjects;
 
 namespace Dixels.SpaceManagement;
@@ -10,9 +13,16 @@ namespace Dixels.SpaceManagement;
 /// is required (non-null) — this guarantees resolution always terminates with a real value,
 /// so the resolver never has to handle "no value set anywhere".
 /// </summary>
-public class Building : FullAuditedAggregateRoot<Guid>
+public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<BuildingTranslation>
 {
-    public string Name { get; private set; } = null!;
+    /// <summary>
+    /// Its name, once per language (ABP MultiLingualObjects) — there's no single Name. Which
+    /// one a reader sees is picked by IMultiLingualObjectManager: their language, else the
+    /// default language's (always there: it's required). Settable only because ABP's
+    /// interface demands it; use SetName/SetNames.
+    /// </summary>
+    public ICollection<BuildingTranslation> Translations { get; set; } = new List<BuildingTranslation>();
+
     public string? BuildingNumber { get; private set; }
     public string Timezone { get; private set; } = null!;
     public OperatingDays Days { get; private set; } = null!;
@@ -53,6 +63,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
 
     public Building(
         Guid id,
+        string language,
         string name,
         string? buildingNumber,
         string timezone,
@@ -65,7 +76,7 @@ public class Building : FullAuditedAggregateRoot<Guid>
         int? maxSeriesHorizonDays = null)
         : base(id)
     {
-        SetName(name);
+        SetName(language, name);
         SetBuildingNumber(buildingNumber);
         SetTimezone(timezone);
         Days = Check.NotNull(days, nameof(days));
@@ -77,10 +88,17 @@ public class Building : FullAuditedAggregateRoot<Guid>
         SetOwnOverlapPolicy(ownOverlapPolicy);
     }
 
-    public void SetName(string name)
-    {
-        Name = Check.NotNullOrWhiteSpace(name, nameof(name), BuildingConsts.MaxNameLength);
-    }
+    /// <summary>The name in exactly this language, if it has one (no fallback).</summary>
+    public string? FindName(string language) => Translations.FindName(language);
+
+    public void SetName(string language, string name) => Translations.SetName(language, name, NewTranslation);
+
+    public void RemoveName(string language) => Translations.RemoveName(language);
+
+    /// <summary>Makes the names exactly these (validated by LocalizedNameValidator): a language left out loses its name.</summary>
+    public void SetNames(IReadOnlyCollection<LocalizedName> names) => Translations.SetNames(names, NewTranslation);
+
+    private BuildingTranslation NewTranslation(string language, string name) => new(Id, language, name);
 
     public void SetBuildingNumber(string? buildingNumber)
     {

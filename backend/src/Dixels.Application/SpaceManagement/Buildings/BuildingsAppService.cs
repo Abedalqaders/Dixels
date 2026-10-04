@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.Users;
 using Dixels.SpaceManagement.ValueObjects;
@@ -29,6 +30,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
     private readonly IUserDirectoryRepository _userDirectory;
+    private readonly LocalizedNameValidator _nameValidator;
+    private readonly LocalizedNameReader _nameReader;
 
     public BuildingsAppService(
         IRepository<Building, Guid> buildingRepository,
@@ -38,7 +41,9 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
-        IUserDirectoryRepository userDirectory)
+        IUserDirectoryRepository userDirectory,
+        LocalizedNameValidator nameValidator,
+        LocalizedNameReader nameReader)
     {
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
@@ -48,33 +53,50 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
         _userDirectory = userDirectory;
+        _nameValidator = nameValidator;
+        _nameReader = nameReader;
     }
 
     public async Task<BuildingDto> GetAsync(Guid id)
     {
         await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
         var building = await _buildingRepository.GetAsync(id);
-        return MapToDto(building);
+        return await MapToDtoAsync(building);
     }
 
     public async Task<PagedResultDto<BuildingDto>> GetListAsync(GetBuildingsInput input)
     {
         await CheckAnyPermissionAsync(DixelsPermissions.Readers.Buildings);
 
+        // Search matches a name in any language, ignoring case; the page is sorted by the name
+        // the reader sees (theirs, else the default language's).
+        var (shown, fallback) = await _nameReader.GetLanguagesAsync();
+
         async Task<PagedResultDto<BuildingDto>> QueryAsync()
         {
-            var queryable = await _buildingRepository.GetQueryableAsync();
+            var queryable = await _buildingRepository.WithDetailsAsync();
 
             if (!input.Filter.IsNullOrWhiteSpace())
             {
-                queryable = queryable.Where(b => b.Name.Contains(input.Filter!));
+                var term = NameTranslation.Normalize(input.Filter!);
+                queryable = queryable.Where(b => b.Translations.Any(t => t.NormalizedName.Contains(term)));
             }
 
             var totalCount = await AsyncExecuter.CountAsync(queryable);
             var buildings = await AsyncExecuter.ToListAsync(
-                queryable.OrderBy(b => b.Name).Skip(input.SkipCount).Take(input.MaxResultCount));
+                queryable
+                    .OrderBy(b => b.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? b.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault())
+                    .Skip(input.SkipCount)
+                    .Take(input.MaxResultCount));
 
-            return new PagedResultDto<BuildingDto>(totalCount, buildings.Select(MapToDto).ToList());
+            var items = new List<BuildingDto>();
+            foreach (var building in buildings)
+            {
+                items.Add(await MapToDtoAsync(building));
+            }
+
+            return new PagedResultDto<BuildingDto>(totalCount, items);
         }
 
         if (input.IncludeDeleted)
@@ -91,9 +113,11 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     [Authorize(DixelsPermissions.Buildings.Create)]
     public async Task<BuildingDto> CreateAsync(CreateBuildingDto input)
     {
+        var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
         var building = new Building(
             GuidGenerator.Create(),
-            input.Name,
+            names[0].Language,
+            names[0].Name,
             input.BuildingNumber,
             input.Timezone,
             ConstraintDtoConversions.ToOperatingDays(input.Days),
@@ -103,10 +127,11 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             input.MinLeadMinutes,
             input.OwnOverlapPolicy,
             input.MaxSeriesHorizonDays);
+        building.SetNames(names);
 
         await _buildingRepository.InsertAsync(building);
 
-        return MapToDto(building);
+        return await MapToDtoAsync(building);
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
@@ -127,13 +152,13 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             }
         }
 
-        building.SetName(input.Name);
+        building.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
         building.SetBuildingNumber(input.BuildingNumber);
         building.SetTimezone(input.Timezone);
 
         await _buildingRepository.UpdateAsync(building);
 
-        return MapToDto(building);
+        return await MapToDtoAsync(building);
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
@@ -212,9 +237,12 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     // The proposed building is a fresh, untracked copy — checking it can never save anything.
     private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, UpdateBuildingConstraintsDto input)
     {
+        // Its name plays no part in the check — any one of them will do.
+        var name = building.Translations.First();
         var proposed = new Building(
             building.Id,
-            building.Name,
+            name.Language,
+            name.Name,
             building.BuildingNumber,
             building.Timezone,
             ConstraintDtoConversions.ToOperatingDays(input.Days),
@@ -342,11 +370,11 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 
     private async Task<List<string>> FindNarrowingConflictsAsync(Guid buildingId, OperatingDays proposedDays, OperatingWindow proposedHours)
     {
-        var floors = await _floorRepository.GetListAsync(f => f.BuildingId == buildingId);
-        var candidates = floors
+        var floors = (await _floorRepository.GetListAsync(f => f.BuildingId == buildingId, includeDetails: true))
             .Where(f => f.Days is not null || f.Hours is not null)
-            .Select(f => new NarrowingCandidate(f.Name, f.Days, f.Hours))
             .ToList();
+        var names = await _nameReader.ShownAsync<Floor, FloorTranslation>(floors);
+        var candidates = floors.Select(f => new NarrowingCandidate(names[f.Id], f.Days, f.Hours)).ToList();
 
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
@@ -361,9 +389,11 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return Task.CompletedTask;
     }
 
-    private BuildingDto MapToDto(Building building)
+    private async Task<BuildingDto> MapToDtoAsync(Building building)
     {
         var dto = ObjectMapper.Map<Building, BuildingDto>(building);
+        dto.Name = await _nameReader.ShownAsync(building);
+        dto.Names = building.Translations.ToNameDtos();
         dto.Days = ConstraintDtoConversions.ToDayArray(building.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDto(building.Hours);
         dto.IsDeleted = building.IsDeleted;

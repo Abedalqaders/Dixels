@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
 
 const SHOW_MS = 700
@@ -11,6 +12,7 @@ const SHOW_MS = 700
  * (post_logout_redirect_uri).
  */
 export function SignOutPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   // StrictMode runs effects twice in development; one logout redirect is enough.
   const started = useRef(false)
@@ -30,5 +32,5 @@ export function SignOutPage() {
     return <Navigate to="/" replace />
   }
 
-  return <AuthStatusScreen state="busy" title="Signing you out…" detail="Ending your session securely." />
+  return <AuthStatusScreen state="busy" title={t('Auth:SigningOut')} detail={t('Auth:SigningOutDetail')} />
 }

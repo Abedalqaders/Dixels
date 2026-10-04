@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { AuthStatusScreen } from './AuthStatusScreen'
 
 /** Where to land after signing in, carried through the login round trip in the OIDC state. */
@@ -15,6 +16,7 @@ export interface SignInState {
 // done. signinRedirect() is what kicks that redirect off — also when a
 // session ends mid-use (a 401 clears it, see SessionGuard).
 export function RequireAuth({ children }: { children: ReactNode }) {
+  const { t } = useTranslation()
   const auth = useAuth()
   const location = useLocation()
 
@@ -26,14 +28,14 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }, [auth, location.pathname, location.search])
 
   if (auth.isLoading || (!auth.isAuthenticated && !auth.error)) {
-    return <AuthStatusScreen state="busy" title="Taking you to sign in…" detail="You'll come straight back here afterwards." />
+    return <AuthStatusScreen state="busy" title={t('Auth:Redirecting')} detail={t('Auth:RedirectingComeBack')} />
   }
 
   if (auth.error) {
     return (
-      <AuthStatusScreen state="error" title="Couldn't check your sign-in" detail={auth.error.message}>
+      <AuthStatusScreen state="error" title={t('Auth:CheckFailed')} detail={auth.error.message}>
         <Link className="btn" to="/">
-          Back to sign in
+          {t('Common:BackToSignIn')}
         </Link>
       </AuthStatusScreen>
     )

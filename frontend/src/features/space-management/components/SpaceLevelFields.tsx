@@ -1,5 +1,7 @@
-import { OperatingDays } from '@/features/space-management/operatingDays'
-import { OperatingWindow } from '@/features/space-management/operatingWindow'
+import { useTranslation } from 'react-i18next'
+import { describeDays, OperatingDays } from '@/features/space-management/operatingDays'
+import { describeHours, OperatingWindow } from '@/features/space-management/operatingWindow'
+import { formatDuration } from '@/features/bookings/format'
 import { DayChipPicker } from './DayChipPicker'
 import { HoursRangeInput } from './HoursRangeInput'
 import { DurationPicker, minutesToHours, hoursToMinutes } from './DurationPicker'
@@ -17,16 +19,18 @@ export interface SpaceDraft {
   minAttendees: number | null
 }
 
+type ParentLevel = 'Building' | 'Floor'
+
 interface SpaceLevelFieldsProps {
   draft: SpaceDraft
   spaceName: string
   capacity: number
   parentDays: OperatingDays
-  parentDaysSource: 'Building' | 'Floor'
+  parentDaysSource: ParentLevel
   parentHours: OperatingWindow
-  parentHoursSource: 'Building' | 'Floor'
+  parentHoursSource: ParentLevel
   parentMaxDurationMinutes: number
-  parentMaxDurationSource: 'Building' | 'Floor'
+  parentMaxDurationSource: ParentLevel
   onChange: (next: SpaceDraft) => void
 }
 
@@ -45,28 +49,30 @@ export function SpaceLevelFields({
   parentMaxDurationSource,
   onChange,
 }: SpaceLevelFieldsProps) {
+  const { t } = useTranslation()
   const overrideCount = [draft.days, draft.hours, draft.maxDurationMinutes, draft.minAttendees].filter(
     (v) => v !== null,
   ).length
+  // "Overrides Floor (Mon, Tue)" / "Inherited from Building — Mon, Tue"
+  const note = (overridden: boolean, source: ParentLevel, value: string) =>
+    overridden
+      ? t('Rules:OverridesParent', { level: t(`Enum:ConstraintSource.${source}`), value })
+      : t('Rules:InheritedFrom', { level: t(`Enum:ConstraintSource.${source}`), value })
 
   return (
     <div className="level">
       <div className="levelhead">
         <h3>
-          Space level — <span>{spaceName}</span>
+          {t('Rules:SpaceLevel')} — <span>{spaceName}</span>
         </h3>
-        <span className="ovr">{overrideCount ? `${overrideCount} override${overrideCount === 1 ? '' : 's'}` : 'Inherits everything'}</span>
+        <span className="ovr">{overrideCount ? t('Rules:OverrideCount', { count: overrideCount }) : t('Rules:InheritsEverything')}</span>
       </div>
 
       <InheritOverrideField
-        label="Operating days"
+        label={t('Rules:OperatingDays')}
         isOverridden={draft.days !== null}
         onToggle={() => onChange({ ...draft, days: draft.days !== null ? null : parentDays })}
-        note={
-          draft.days !== null
-            ? `Overrides ${parentDaysSource} (${describeDays(parentDays)})`
-            : `Inherited from ${parentDaysSource} — ${describeDays(parentDays)}`
-        }
+        note={note(draft.days !== null, parentDaysSource, describeDays(parentDays))}
       >
         <DayChipPicker
           value={draft.days ?? parentDays}
@@ -77,14 +83,10 @@ export function SpaceLevelFields({
       </InheritOverrideField>
 
       <InheritOverrideField
-        label="Operating hours"
+        label={t('Rules:OperatingHours')}
         isOverridden={draft.hours !== null}
         onToggle={() => onChange({ ...draft, hours: draft.hours !== null ? null : parentHours })}
-        note={
-          draft.hours !== null
-            ? `Overrides ${parentHoursSource} (${describeHours(parentHours)})`
-            : `Inherited from ${parentHoursSource} — ${describeHours(parentHours)}`
-        }
+        note={note(draft.hours !== null, parentHoursSource, describeHours(parentHours))}
       >
         <HoursRangeInput
           value={draft.hours ?? parentHours}
@@ -95,16 +97,12 @@ export function SpaceLevelFields({
       </InheritOverrideField>
 
       <InheritOverrideField
-        label="Maximum duration"
+        label={t('Rules:MaxDuration')}
         isOverridden={draft.maxDurationMinutes !== null}
         onToggle={() =>
           onChange({ ...draft, maxDurationMinutes: draft.maxDurationMinutes !== null ? null : parentMaxDurationMinutes })
         }
-        note={
-          draft.maxDurationMinutes !== null
-            ? `Overrides ${parentMaxDurationSource} (${minutesToHours(parentMaxDurationMinutes)}h)`
-            : `Inherited from ${parentMaxDurationSource} — ${minutesToHours(parentMaxDurationMinutes)}h`
-        }
+        note={note(draft.maxDurationMinutes !== null, parentMaxDurationSource, formatDuration(parentMaxDurationMinutes))}
       >
         <DurationPicker
           hours={minutesToHours(draft.maxDurationMinutes ?? parentMaxDurationMinutes)}
@@ -114,11 +112,11 @@ export function SpaceLevelFields({
       </InheritOverrideField>
 
       <InheritOverrideField
-        label="Minimum attendees"
+        label={t('Rules:MinAttendees')}
         isOverridden={draft.minAttendees !== null}
         onToggle={() => onChange({ ...draft, minAttendees: draft.minAttendees !== null ? null : 2 })}
-        onLabel="Set"
-        offLabel="Not set"
+        onLabel={t('Rules:Set')}
+        offLabel={t('Rules:NotSet')}
         note={attendeesStepperNote(draft.minAttendees, capacity)}
       >
         <AttendeesStepper
@@ -130,15 +128,4 @@ export function SpaceLevelFields({
       </InheritOverrideField>
     </div>
   )
-}
-
-function describeDays(days: OperatingDays): string {
-  const names = days.toDayNames()
-  if (names.length === 7) return 'Every day'
-  if (names.length === 0) return 'None'
-  return names.map((n) => n.slice(0, 3)).join(', ')
-}
-
-function describeHours(hours: OperatingWindow): string {
-  return hours.isOpen24Hours ? '24 hours' : `${hours.open} – ${hours.close}`
 }

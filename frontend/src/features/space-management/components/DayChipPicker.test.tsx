@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { setLanguage } from '@/i18n'
 import { DayChipPicker } from './DayChipPicker'
 import { OperatingDays } from '@/features/space-management/operatingDays'
 
@@ -43,5 +44,15 @@ describe('DayChipPicker', () => {
 
     expect(screen.getByRole('button', { name: 'Mon' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Sun' })).toBeDisabled()
+  })
+})
+
+describe('DayChipPicker in Arabic', () => {
+  it('names the chips in Arabic, Sunday first', async () => {
+    await setLanguage('ar')
+    render(<DayChipPicker value={OperatingDays.None} parent={OperatingDays.Everyday} disabled={false} onChange={() => {}} />)
+
+    const chips = screen.getAllByRole('button').map((b) => b.textContent)
+    expect(chips).toEqual(['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'])
   })
 })

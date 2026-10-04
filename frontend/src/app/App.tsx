@@ -1,4 +1,7 @@
+import type { ComponentProps } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useParams } from 'react-router-dom'
+import type { TextKeys } from '@/i18n/keys'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
 import { RequirePermission } from '@/features/auth/components/RequirePermission'
 import { constraintsRequirement, ROUTE_REQUIREMENTS } from './routeRequirements'
@@ -21,21 +24,39 @@ import { MyCalendarPage } from '@/features/calendar/routes/MyCalendarPage'
 // Every page is gated by the permission its API needs (see DixelsPermissions.cs), so what
 // someone can open follows their ABP grants — change a grant and the page follows it.
 
+type GateProps = Omit<ComponentProps<typeof RequirePermission>, 'deniedTitle' | 'deniedDetail'> & {
+  deniedTitle: keyof TextKeys
+  deniedDetail: keyof TextKeys
+}
+
+/** RequirePermission with its "no access" texts given as keys. The route tree below is built
+ * once, when the app loads, so the texts are looked up here instead — in the language
+ * showing when the page opens, and again after a language switch. */
+function Gate({ deniedTitle, deniedDetail, ...props }: GateProps) {
+  const { t } = useTranslation()
+  return <RequirePermission {...props} deniedTitle={t(deniedTitle)} deniedDetail={t(deniedDetail)} />
+}
+
+const RULES_DENIED_DETAIL: Partial<Record<string, keyof TextKeys>> = {
+  building: 'App:DeniedRulesDetailBuilding',
+  floor: 'App:DeniedRulesDetailFloor',
+  space: 'App:DeniedRulesDetailSpace',
+}
+
 /** A level's constraints page needs that level's read permission; an unknown level is left
  * to the page, which already says so. */
 function ConstraintsRoute() {
   const { level } = useParams<{ level: string }>()
-  const known = level === 'building' || level === 'floor' || level === 'space'
   const permission = constraintsRequirement(level)
   return (
-    <RequirePermission
+    <Gate
       name={permission}
       frame="shell"
-      deniedTitle="You can't view these rules"
-      deniedDetail={`Viewing ${known ? `${level}s` : 'this level'} is needed to open its rules. Ask an administrator to add it to your role.`}
+      deniedTitle="App:DeniedRulesTitle"
+      deniedDetail={(level && RULES_DENIED_DETAIL[level]) || 'App:DeniedRulesDetailOther'}
     >
       <AdminConstraintsPage />
-    </RequirePermission>
+    </Gate>
   )
 }
 
@@ -58,25 +79,25 @@ export const router = createBrowserRouter(
         <Route
           path="/my-calendar"
           element={
-            <RequirePermission
+            <Gate
               name={ROUTE_REQUIREMENTS['/my-calendar']}
-              deniedTitle="You don't have access to My calendar"
-              deniedDetail="Your account doesn't have permission to view bookings. Ask an administrator if you think it should."
+              deniedTitle="App:DeniedMyCalendarTitle"
+              deniedDetail="App:DeniedMyCalendarDetail"
             >
               <MyCalendarPage />
-            </RequirePermission>
+            </Gate>
           }
         />
         <Route
           path="/find-space"
           element={
-            <RequirePermission
+            <Gate
               name={ROUTE_REQUIREMENTS['/find-space']}
-              deniedTitle="You can't book spaces"
-              deniedDetail="Your account doesn't have permission to create bookings. Ask an administrator if you think it should."
+              deniedTitle="App:DeniedFindSpaceTitle"
+              deniedDetail="App:DeniedFindSpaceDetail"
             >
               <FindSpacePage />
-            </RequirePermission>
+            </Gate>
           }
         />
       </Route>
@@ -84,41 +105,41 @@ export const router = createBrowserRouter(
         element={
           // Open to anyone who can see some level of the tree: the buildings above are read-only
           // to them, and each button still needs its own permission.
-          <RequirePermission
+          <Gate
             name={ROUTE_REQUIREMENTS['/admin/buildings']}
             frame="shell"
-            deniedTitle="You don't have access to the hierarchy"
-            deniedDetail="Viewing buildings, floors or spaces is needed to open it. Ask an administrator to add Buildings, Floors or Spaces to your role."
+            deniedTitle="App:DeniedHierarchyTitle"
+            deniedDetail="App:DeniedHierarchyDetail"
           >
             <SpaceManagementLayout />
-          </RequirePermission>
+          </Gate>
         }
       >
         <Route path="/admin/buildings" element={<BuildingsListPage />} />
         <Route
           path="/admin/buildings/:buildingId/floors"
           element={
-            <RequirePermission
+            <Gate
               name={ROUTE_REQUIREMENTS['/admin/buildings/:buildingId/floors']}
               frame="main"
-              deniedTitle="You can't see this building's floors"
-              deniedDetail="Viewing floors (or the spaces on them) is needed to open this page. Ask an administrator to add Floors or Spaces to your role."
+              deniedTitle="App:DeniedFloorsTitle"
+              deniedDetail="App:DeniedFloorsDetail"
             >
               <FloorsListPage />
-            </RequirePermission>
+            </Gate>
           }
         />
         <Route
           path="/admin/buildings/:buildingId/floors/:floorId/spaces"
           element={
-            <RequirePermission
+            <Gate
               name={ROUTE_REQUIREMENTS['/admin/buildings/:buildingId/floors/:floorId/spaces']}
               frame="main"
-              deniedTitle="You can't see this floor's spaces"
-              deniedDetail="Viewing spaces is needed to open this page. Ask an administrator to add Spaces to your role."
+              deniedTitle="App:DeniedSpacesTitle"
+              deniedDetail="App:DeniedSpacesDetail"
             >
               <SpacesListPage />
-            </RequirePermission>
+            </Gate>
           }
         />
       </Route>
@@ -128,28 +149,28 @@ export const router = createBrowserRouter(
       <Route
         path="/admin/space-types"
         element={
-          <RequirePermission
+          <Gate
             name={ROUTE_REQUIREMENTS['/admin/space-types']}
             frame="shell"
-            deniedTitle="You can't manage space types"
-            deniedDetail="Viewing space types is needed to open this page. Ask an administrator to add Space types to your role."
+            deniedTitle="App:DeniedSpaceTypesTitle"
+            deniedDetail="App:DeniedSpaceTypesDetail"
           >
             <SpaceTypesPage />
-          </RequirePermission>
+          </Gate>
         }
       />
       <Route path="/admin/constraints/:level/:id" element={<ConstraintsRoute />} />
       <Route
         path="/admin/users"
         element={
-          <RequirePermission
+          <Gate
             name={ROUTE_REQUIREMENTS['/admin/users']}
             frame="shell"
-            deniedTitle="You can't manage users"
-            deniedDetail="Viewing users is needed to open this page. Ask an administrator to add Identity management → User management to your role."
+            deniedTitle="App:DeniedUsersTitle"
+            deniedDetail="App:DeniedUsersDetail"
           >
             <AdminUsersPage />
-          </RequirePermission>
+          </Gate>
         }
       />
     </>,

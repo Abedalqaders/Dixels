@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
@@ -22,6 +23,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
     private readonly IDataFilter _dataFilter;
     private readonly IdentityUserManager _userManager;
     private readonly BookingImpactService _bookingImpact;
+    private readonly LocalizedNameReader _nameReader;
 
     public UsersAppService(
         IIdentityUserRepository identityUserRepository,
@@ -29,7 +31,8 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         IRepository<Building, Guid> buildingRepository,
         IDataFilter dataFilter,
         IdentityUserManager userManager,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        LocalizedNameReader nameReader)
     {
         _dataFilter = dataFilter;
         _userManager = userManager;
@@ -37,6 +40,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         _identityUserRepository = identityUserRepository;
         _identityRoleRepository = identityRoleRepository;
         _buildingRepository = buildingRepository;
+        _nameReader = nameReader;
     }
 
     public async Task<BuildingDto?> GetMyBuildingAsync()
@@ -53,7 +57,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         using (_dataFilter.Disable<ISoftDelete>())
         {
             var building = await _buildingRepository.FindAsync(buildingId.Value);
-            return building is null ? null : MapBuildingToDto(building);
+            return building is null ? null : await MapBuildingToDtoAsync(building);
         }
     }
 
@@ -116,9 +120,11 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         return roles.Select(r => r.Name).OrderBy(name => name).ToList();
     }
 
-    private BuildingDto MapBuildingToDto(Building building)
+    private async Task<BuildingDto> MapBuildingToDtoAsync(Building building)
     {
         var dto = ObjectMapper.Map<Building, BuildingDto>(building);
+        dto.Name = await _nameReader.ShownAsync(building);
+        dto.Names = building.Translations.ToNameDtos();
         dto.Days = ConstraintDtoConversions.ToDayArray(building.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDto(building.Hours);
         dto.IsDeleted = building.IsDeleted;

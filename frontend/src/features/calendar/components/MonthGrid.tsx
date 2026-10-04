@@ -1,15 +1,15 @@
+import { useTranslation } from 'react-i18next'
 import { Plus, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { addDays, timeOf } from '@/lib/time/buildingTime'
+import { addDays, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { dayOfMonth, monthGrid, startOfMonth } from '@/features/calendar/calendarDates'
-import { formatClock } from '@/lib/time/format'
+import { formatClock, formatWeekday } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 
 // More than this per day and the rest fold into "N more…" (chips) or "+N" (dots).
 const MAX_CHIPS = 3
 const MAX_DOTS = 3
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 interface MonthGridProps {
   /** Any day in the month to show. */
@@ -31,6 +31,7 @@ interface MonthGridProps {
  * there's no room for words and the Day view is one tap away.
  */
 export function MonthGrid({ date, items, today, compact = false, onOpenItem, onOpenDay, onQuickBook }: MonthGridProps) {
+  const { t } = useTranslation()
   const { start, weeks } = monthGrid(date)
   const month = startOfMonth(date).slice(0, 7)
   const cells = Array.from({ length: weeks * 7 }, (_, i) => addDays(start, i))
@@ -38,9 +39,10 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
   return (
     <div>
       <div className="grid grid-cols-7 border-b">
-        {WEEKDAYS.map((d) => (
+        {/* The grid's first row is Sunday to Saturday: its days name the columns. */}
+        {cells.slice(0, 7).map((d) => (
           <span key={d} className="py-2.5 text-center text-xs text-muted-foreground">
-            {compact ? d[0] : d}
+            {formatWeekday(d, compact ? 'narrow' : 'short')}
           </span>
         ))}
       </div>
@@ -50,7 +52,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
           const inMonth = d.startsWith(month)
           const cellClass = cn(
             'flex min-w-0 flex-col gap-1 border-b bg-transparent p-1.5',
-            i % 7 !== 0 && 'border-l',
+            i % 7 !== 0 && 'border-s',
             i >= (weeks - 1) * 7 && 'border-b-0',
             !inMonth && 'bg-muted/40',
           )
@@ -74,8 +76,8 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
               <button
                 key={d}
                 type="button"
-                className={cn(cellClass, 'cursor-pointer items-start text-left hover:bg-muted/50')}
-                aria-label={`Open ${d}${count ? `, ${count} ${count === 1 ? 'booking' : 'bookings'}` : ''}`}
+                className={cn(cellClass, 'cursor-pointer items-start text-start hover:bg-muted/50')}
+                aria-label={count ? t('Calendar:OpenDayWithBookings', { day: formatDate(d), count }) : t('Calendar:OpenDay', { day: formatDate(d) })}
                 onClick={() => onOpenDay(d)}
               >
                 {number}
@@ -98,7 +100,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                 <button
                   type="button"
                   className="self-start rounded-full bg-transparent hover:bg-muted"
-                  aria-label={`Open ${d}`}
+                  aria-label={t('Calendar:OpenDay', { day: formatDate(d) })}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOpenDay(d)
@@ -110,7 +112,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                   <button
                     type="button"
                     className="grid size-6 flex-none place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100 pointer-coarse:size-9 pointer-coarse:opacity-100"
-                    aria-label={`Book a room on ${d}`}
+                    aria-label={t('Calendar:BookOnDay', { day: formatDate(d) })}
                     onClick={(e) => {
                       e.stopPropagation()
                       onQuickBook(d)
@@ -125,17 +127,22 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                   key={b.id}
                   type="button"
                   className={cn(
-                    'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-left text-[11px] text-brand hover:border-brand/70',
+                    'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-start text-[11px] text-brand hover:border-brand/70',
                     d < today && 'opacity-60',
                     b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through',
                   )}
-                  aria-label={`${b.cancelled ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.location}`}
+                  aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : 'Calendar:Item', {
+                    title: b.title,
+                    start: timeOf(b.localStart),
+                    end: timeOf(b.localEnd),
+                    location: b.location,
+                  })}
                   onClick={(e) => {
                     e.stopPropagation()
                     onOpenItem(b)
                   }}
                 >
-                  {b.repeats && <Repeat className="size-3 flex-none" aria-label="Repeats" />}
+                  {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
                   <span className="min-w-0 flex-1 truncate font-semibold">{b.title}</span>
                   <span className="flex-none whitespace-nowrap opacity-70">{formatClock(timeOf(b.localStart))}</span>
                 </button>
@@ -149,7 +156,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                     onOpenDay(d)
                   }}
                 >
-                  {hidden} more…
+                  {t('Calendar:MoreItems', { count: hidden })}
                 </button>
               )}
             </div>

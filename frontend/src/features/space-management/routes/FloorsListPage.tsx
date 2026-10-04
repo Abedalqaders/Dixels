@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,6 +35,7 @@ import { TopBar } from '@/components/TopBar'
 
 export function FloorsListPage() {
   const { buildingId = '' } = useParams()
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const canEditRules = useCanEditRules('floor')
@@ -73,7 +75,7 @@ export function FloorsListPage() {
       refetch()
       notifyHierarchyChanged()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
     }
   }
 
@@ -84,22 +86,22 @@ export function FloorsListPage() {
     try {
       affected = await impact()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
       return
     }
     if (affected.count === 0 && !affected.assignedEmployees) {
-      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
+      confirmAndRun(name, confirmMessage, remove, t('Hierarchy:Deleted', { name }))
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
     runAction(
       remove,
-      affected.count > 0 ? `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.` : `${name} deleted.`,
+      affected.count > 0 ? t('Hierarchy:DeletedWithBookings', { name, count: affected.count }) : t('Hierarchy:Deleted', { name }),
     )
   }
 
   async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
+    if (!(await confirm({ title: t('Hierarchy:DeleteTitle', { name }), description: confirmMessage, confirmLabel: t('Common:Delete'), destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -111,12 +113,12 @@ export function FloorsListPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="breadcrumb">
-                <Link to="/admin/buildings">‹ Buildings</Link>
+                <Link to="/admin/buildings">‹ {t('Hierarchy:Buildings')}</Link>
               </p>
-              <h1 className="pagetitle">{status === 'success' ? data.building.name : 'Floors'}</h1>
+              <h1 className="pagetitle">{status === 'success' ? data.building.name : t('Hierarchy:Floors')}</h1>
               <p className="lead">
-                {status === 'success' ? `${data.totalCount} floor${data.totalCount === 1 ? '' : 's'}. ` : ''}
-                Open a floor to manage its spaces.
+                {status === 'success' ? `${t('Hierarchy:FloorCount', { count: data.totalCount })} ` : ''}
+                {t('Hierarchy:FloorsLead')}
               </p>
             </div>
             <Can permission={Permissions.Floors.Create}>
@@ -124,22 +126,22 @@ export function FloorsListPage() {
                 disabled={status !== 'success'}
                 onClick={() => status === 'success' && setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })}
               >
-                <PlusIcon /> Add floor
+                <PlusIcon /> {t('Hierarchy:AddFloor')}
               </Button>
             </Can>
           </div>
 
           <section className="card" id="floors">
             <div className="cardhead">
-              <h2 className="sectiontitle">Floors</h2>
+              <h2 className="sectiontitle">{t('Hierarchy:Floors')}</h2>
               <div className="treetools">
                 <div className="searchbox">
                   <SearchIcon />
                   <input
                     type="text"
-                    placeholder="Search floors…"
+                    placeholder={t('Hierarchy:SearchFloors')}
                     autoComplete="off"
-                    aria-label="Search floors"
+                    aria-label={t('Hierarchy:SearchFloorsLabel')}
                     value={list.searchInput}
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
@@ -150,18 +152,18 @@ export function FloorsListPage() {
                     checked={list.showDeleted}
                     onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
-                  Show deleted
+                  {t('Hierarchy:ShowDeleted')}
                 </label>
               </div>
             </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <TreeSkeleton label="Loading floors…" />}
-              {status === 'error' && <p className="treeempty">Couldn't load floors: {error.message}</p>}
+              {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingFloors')} />}
+              {status === 'error' && <p className="treeempty">{t('Hierarchy:FloorsLoadFailed', { error: error.message })}</p>}
 
               {status === 'success' && data.floors.length === 0 && (
                 <p className="treeempty">
-                  {list.search ?'Nothing matches your search.' : 'No floors yet — add one to get started.'}
+                  {list.search ? t('Hierarchy:NoSearchMatch') : t('Hierarchy:NoFloors')}
                 </p>
               )}
 
@@ -179,17 +181,17 @@ export function FloorsListPage() {
                           <HighlightedText text={floor.name} query={list.search} />
                         </span>
                       )}
-                      {floor.floorNumber !== null && <span className="m">Floor {floor.floorNumber}</span>}
-                      {floor.hasOverrides && <span className="badge completed">Custom</span>}
-                      {floor.isDeleted && <span className="badge cancelled">Deleted</span>}
+                      {floor.floorNumber !== null && <span className="m">{t('Hierarchy:FloorNumberBadge', { number: floor.floorNumber })}</span>}
+                      {floor.hasOverrides && <span className="badge completed">{t('Hierarchy:CustomBadge')}</span>}
+                      {floor.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                       <span className="actions">
                         {floor.isDeleted ? (
                           <Can permission={Permissions.Floors.Edit}>
                             <button
                               className="rowbtn"
-                              title={`Restore ${floor.name}`}
-                              aria-label={`Restore ${floor.name}`}
-                              onClick={() => runAction(() => restoreFloor(token, floor.id), `${floor.name} restored.`)}
+                              title={t('Hierarchy:Restore', { name: floor.name })}
+                              aria-label={t('Hierarchy:Restore', { name: floor.name })}
+                              onClick={() => runAction(() => restoreFloor(token, floor.id), t('Hierarchy:Restored', { name: floor.name }))}
                             >
                               <RestoreIcon />
                             </button>
@@ -199,27 +201,27 @@ export function FloorsListPage() {
                             label={floor.name}
                             actions={[
                               {
-                                label: 'Edit details',
+                                label: t('Hierarchy:EditDetails'),
                                 permission: Permissions.Floors.Edit,
                                 icon: <DetailsIcon />,
                                 onClick: () =>
-                                  setEditState({ kind: 'floor', id: floor.id, name: floor.name, floorNumber: floor.floorNumber }),
+                                  setEditState({ kind: 'floor', id: floor.id, names: floor.names, floorNumber: floor.floorNumber }),
                               },
                               {
-                                label: canEditRules ? 'Edit constraints' : 'View constraints',
+                                label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
                                 permission: Permissions.Floors.Default,
                                 icon: <PencilIcon />,
                                 onClick: () => navigate(`/admin/constraints/floor/${floor.id}`),
                               },
                               {
-                                label: 'Delete',
+                                label: t('Common:Delete'),
                                 permission: Permissions.Floors.Delete,
                                 icon: <TrashIcon />,
                                 destructive: true,
                                 onClick: () =>
                                   confirmDelete(
                                     floor.name,
-                                    `Delete "${floor.name}"? This also deletes its spaces — they can all be restored together later.`,
+                                    t('Hierarchy:DeleteFloorConfirm', { name: floor.name }),
                                     () => getFloorDeleteImpact(token, floor.id),
                                     () => deleteFloor(token, floor.id),
                                   ),
@@ -253,7 +255,7 @@ export function FloorsListPage() {
           spaceTypes={[]}
           onClose={() => setModal(null)}
           onCreated={() => {
-            showToast('Floor added.')
+            showToast(t('Hierarchy:FloorAdded'))
             refetch()
             notifyHierarchyChanged()
           }}
@@ -267,7 +269,7 @@ export function FloorsListPage() {
           spaceTypes={[]}
           onClose={() => setEditState(null)}
           onSaved={() => {
-            showToast('Details saved.')
+            showToast(t('Hierarchy:DetailsSaved'))
             refetch()
             notifyHierarchyChanged()
           }}

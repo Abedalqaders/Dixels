@@ -1,6 +1,9 @@
 using System;
-using Volo.Abp;
+using System.Collections.Generic;
+using System.Linq;
+using Dixels.Localization;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.MultiLingualObjects;
 
 namespace Dixels.SpaceManagement;
 
@@ -9,31 +12,59 @@ namespace Dixels.SpaceManagement;
 /// Company-wide, not scoped to a building. Deleting a type that's still referenced by a
 /// <see cref="Space"/> is rejected by the application layer, not cascaded — a lookup value
 /// in use shouldn't silently vanish out from under existing spaces.
+///
+/// Its name is stored once per language (<see cref="Translations"/>, ABP's
+/// MultiLingualObjects): there's no single Name. Which one a reader sees is picked by
+/// IMultiLingualObjectManager — their language, else the default language's.
 /// </summary>
-public class SpaceType : FullAuditedAggregateRoot<Guid>
+public class SpaceType : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTypeTranslation>
 {
-    public string Name { get; private set; } = null!;
     public IconKey IconKey { get; private set; }
+
+    /// <summary>Settable only because ABP's interface demands it; use SetName/RemoveName.</summary>
+    public ICollection<SpaceTypeTranslation> Translations { get; set; } = new List<SpaceTypeTranslation>();
 
     private SpaceType()
     {
         // EF Core
     }
 
-    public SpaceType(Guid id, string name, IconKey iconKey = IconKey.Generic)
+    public SpaceType(Guid id, IconKey iconKey = IconKey.Generic)
         : base(id)
     {
-        SetName(name);
         IconKey = iconKey;
     }
 
-    public void SetName(string name)
+    /// <summary>A type with one name, e.g. a built-in one: <c>new SpaceType(id, "en", "Desk", IconKey.Desk)</c>.</summary>
+    public SpaceType(Guid id, string language, string name, IconKey iconKey = IconKey.Generic)
+        : this(id, iconKey)
     {
-        Name = Check.NotNullOrWhiteSpace(name, nameof(name), SpaceTypeConsts.MaxNameLength);
+        SetName(language, name);
     }
+
+    /// <summary>The name in exactly this language, if it has one (no fallback).</summary>
+    public string? FindName(string language) => Translations.FindName(language);
+
+    public void SetName(string language, string name) => Translations.SetName(language, name, NewTranslation);
+
+    public void RemoveName(string language) => Translations.RemoveName(language);
+
+    private SpaceTypeTranslation NewTranslation(string language, string name) => new(Id, language, name);
 
     public void SetIconKey(IconKey iconKey)
     {
         IconKey = iconKey;
+    }
+
+    /// <summary>
+    /// Called just before the type is (soft-)deleted: frees its names for reuse (see
+    /// <see cref="SpaceTypeTranslation.IsDeleted"/>).
+    /// </summary>
+    public void ReleaseNames()
+    {
+        foreach (var translation in Translations)
+        {
+            translation.MarkDeleted();
+        }
     }
 }

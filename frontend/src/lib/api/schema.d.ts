@@ -5687,6 +5687,10 @@ export interface components {
             space: components["schemas"]["Dixels.Bookings.BookableSpaceDto"];
             violations: components["schemas"]["Dixels.Bookings.BookingViolationDto"][];
         };
+        "Dixels.Localization.LocalizedNameDto": {
+            language: string;
+            name: string;
+        };
         "Dixels.SpaceManagement.AvailabilityOverrideDto": {
             effect: components["schemas"]["Dixels.SpaceManagement.OverrideEffect"];
             /** Format: date-time */
@@ -5718,6 +5722,7 @@ export interface components {
             /** Format: int32 */
             minLeadMinutes: number;
             name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             ownOverlapPolicy: components["schemas"]["Dixels.SpaceManagement.OwnOverlapPolicy"];
             timezone: string;
         };
@@ -5752,7 +5757,7 @@ export interface components {
             maxSeriesHorizonDays?: number | null;
             /** Format: int32 */
             minLeadMinutes: number;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             ownOverlapPolicy: components["schemas"]["Dixels.SpaceManagement.OwnOverlapPolicy"];
             timezone: string;
         };
@@ -5761,20 +5766,20 @@ export interface components {
             buildingId: string;
             /** Format: int32 */
             floorNumber?: number | null;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.SpaceManagement.CreateSpaceDto": {
             /** Format: int32 */
             capacity: number;
             /** Format: uuid */
             floorId: string;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             /** Format: uuid */
             spaceTypeId: string;
         };
         "Dixels.SpaceManagement.CreateSpaceTypeDto": {
             iconKey: components["schemas"]["Dixels.SpaceManagement.IconKey"];
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             source: string;
@@ -5805,6 +5810,7 @@ export interface components {
             /** Format: int32 */
             maxDurationMinutes?: number | null;
             name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         /**
          * Format: int32
@@ -5875,6 +5881,7 @@ export interface components {
             /** Format: int32 */
             minAttendees?: number | null;
             name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             /** Format: uuid */
             spaceTypeId: string;
         };
@@ -5883,6 +5890,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.SpaceManagement.UpdateBuildingConstraintsDto": {
             cancelAffectedBookings: boolean;
@@ -5901,7 +5909,7 @@ export interface components {
         };
         "Dixels.SpaceManagement.UpdateBuildingDto": {
             buildingNumber?: string | null;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             timezone: string;
         };
         "Dixels.SpaceManagement.UpdateFloorConstraintsDto": {
@@ -5915,7 +5923,7 @@ export interface components {
         "Dixels.SpaceManagement.UpdateFloorDto": {
             /** Format: int32 */
             floorNumber?: number | null;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.SpaceManagement.UpdateSpaceConstraintsDto": {
             cancelAffectedBookings: boolean;
@@ -5931,13 +5939,13 @@ export interface components {
             cancelAffectedBookings: boolean;
             /** Format: int32 */
             capacity: number;
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             /** Format: uuid */
             spaceTypeId: string;
         };
         "Dixels.SpaceManagement.UpdateSpaceTypeDto": {
             iconKey: components["schemas"]["Dixels.SpaceManagement.IconKey"];
-            name: string;
+            names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.Users.AssignUserBuildingDto": {
             /** Format: uuid */
@@ -6022,6 +6030,7 @@ export type SchemaDixelsBookingsSeriesCreatedDto = components['schemas']['Dixels
 export type SchemaDixelsBookingsSeriesPreviewDto = components['schemas']['Dixels.Bookings.SeriesPreviewDto'];
 export type SchemaDixelsBookingsSeriesRequestDto = components['schemas']['Dixels.Bookings.SeriesRequestDto'];
 export type SchemaDixelsBookingsSpaceAvailabilityDto = components['schemas']['Dixels.Bookings.SpaceAvailabilityDto'];
+export type SchemaDixelsLocalizationLocalizedNameDto = components['schemas']['Dixels.Localization.LocalizedNameDto'];
 export type SchemaDixelsSpaceManagementAvailabilityOverrideDto = components['schemas']['Dixels.SpaceManagement.AvailabilityOverrideDto'];
 export type SchemaDixelsSpaceManagementBuildingDto = components['schemas']['Dixels.SpaceManagement.BuildingDto'];
 export type SchemaDixelsSpaceManagementConstraintsSaveResultDto = components['schemas']['Dixels.SpaceManagement.ConstraintsSaveResultDto'];

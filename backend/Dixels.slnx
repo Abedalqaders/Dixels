@@ -22,6 +22,7 @@
     
     
     <Project Path="src/Dixels.Web/Dixels.Web.csproj" />
+    <Project Path="src/Volo.Abp.MultiLingualObjects/Volo.Abp.MultiLingualObjects.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Dixels.Application.Tests/Dixels.Application.Tests.csproj" />

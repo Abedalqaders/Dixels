@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly BookingAccessChecker _accessChecker;
     private readonly IDataFilter _dataFilter;
     private readonly IRepository<BookingSeries, Guid> _seriesRepository;
+    private readonly LocalizedNameReader _nameReader;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -36,7 +38,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         IBookingRepository bookingRepository,
         BookingAccessChecker accessChecker,
         IDataFilter dataFilter,
-        IRepository<BookingSeries, Guid> seriesRepository)
+        IRepository<BookingSeries, Guid> seriesRepository,
+        LocalizedNameReader nameReader)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -47,6 +50,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _accessChecker = accessChecker;
         _dataFilter = dataFilter;
         _seriesRepository = seriesRepository;
+        _nameReader = nameReader;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -201,11 +205,15 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         EndDate = rule.EndDate,
     };
 
-    /// <summary>The rooms, floors and buildings a batch of bookings sit in — one query per table, not one per booking.</summary>
+    /// <summary>
+    /// The rooms, floors and buildings a batch of bookings sit in — one query per table, not
+    /// one per booking — with each one's name in the reader's language, by id.
+    /// </summary>
     private sealed record Places(
         Dictionary<Guid, Space> Spaces,
         Dictionary<Guid, Floor> Floors,
-        Dictionary<Guid, Building> Buildings)
+        Dictionary<Guid, Building> Buildings,
+        Dictionary<Guid, string> Names)
     {
         public (Space Space, Floor Floor, Building Building) Of(Booking booking)
         {
@@ -222,15 +230,22 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         using var _ = _dataFilter.Disable<ISoftDelete>();
 
         var spaceIds = bookings.Select(b => b.SpaceId).Distinct().ToList();
-        var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id);
+        // With details: their names.
+        var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true)).ToDictionary(s => s.Id);
 
         var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
-        var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
+        var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id), includeDetails: true)).ToDictionary(f => f.Id);
 
         var buildingIds = floors.Values.Select(f => f.BuildingId).Distinct().ToList();
-        var buildings = (await _buildingRepository.GetListAsync(b => buildingIds.Contains(b.Id))).ToDictionary(b => b.Id);
+        var buildings = (await _buildingRepository.GetListAsync(b => buildingIds.Contains(b.Id), includeDetails: true)).ToDictionary(b => b.Id);
 
-        return new Places(spaces, floors, buildings);
+        // Ids are unique across the three tables, so one lookup serves them all.
+        var names = (await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces.Values))
+            .Concat(await _nameReader.ShownAsync<Floor, FloorTranslation>(floors.Values))
+            .Concat(await _nameReader.ShownAsync<Building, BuildingTranslation>(buildings.Values))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+        return new Places(spaces, floors, buildings, names);
     }
 
     /// <summary>The calendar's light rows: no floor/building names, no series rule — just what's drawn.</summary>
@@ -247,7 +262,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 Title = booking.Title,
                 LocalStart = clock.ToLocal(booking.StartsAt),
                 LocalEnd = clock.ToLocal(booking.EndsAt),
-                SpaceName = space.Name,
+                SpaceName = places.Names[space.Id],
                 Status = booking.Status.ToString(),
                 SeriesId = booking.SeriesId,
             };
@@ -270,9 +285,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             var clock = new BuildingClock(building.Timezone);
 
             var dto = ObjectMapper.Map<Booking, BookingDto>(booking);
-            dto.SpaceName = space.Name;
-            dto.FloorName = floor.Name;
-            dto.BuildingName = building.Name;
+            dto.SpaceName = places.Names[space.Id];
+            dto.FloorName = places.Names[floor.Id];
+            dto.BuildingName = places.Names[building.Id];
             dto.Timezone = building.Timezone;
             dto.LocalStart = clock.ToLocal(booking.StartsAt);
             dto.LocalEnd = clock.ToLocal(booking.EndsAt);

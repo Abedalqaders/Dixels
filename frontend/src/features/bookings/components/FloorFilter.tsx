@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { BookableFloorDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
@@ -21,23 +22,24 @@ const ALL = 'all'
  * free for the searched time, so the employee sees where to look before picking.
  */
 export function FloorFilter({ floors, spaces, value, onChange }: FloorFilterProps) {
+  const { t } = useTranslation()
   const freeOn = (floorId: string) => spaces.filter((s) => s.floorId === floorId && s.isAvailable).length
   const allFree = spaces.filter((s) => s.isAvailable).length
 
   return (
     <div className="mb-4 flex items-center gap-2">
       <Label htmlFor="fs-floor" className="text-muted-foreground">
-        Floor
+        {t('FindSpace:Floor')}
       </Label>
       <Select value={value || ALL} onValueChange={(v) => onChange(v === ALL ? '' : v)}>
         <SelectTrigger id="fs-floor" className="w-full sm:w-56">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={ALL}>All floors · {allFree} free</SelectItem>
+          <SelectItem value={ALL}>{t('FindSpace:AllFloorsFree', { free: allFree })}</SelectItem>
           {floors.map((f) => (
             <SelectItem key={f.id} value={f.id}>
-              {f.name} · {freeOn(f.id)} free
+              {t('FindSpace:FloorFree', { floor: f.name, free: freeOn(f.id) })}
             </SelectItem>
           ))}
         </SelectContent>

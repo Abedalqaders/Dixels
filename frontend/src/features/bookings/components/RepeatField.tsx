@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -37,6 +38,7 @@ interface RepeatFieldProps {
  * date, the "Occurs every…" sentence — and "Custom…", which opens the full dialog.
  */
 export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd, onChange }: RepeatFieldProps) {
+  const { t } = useTranslation()
   const [customOpen, setCustomOpen] = useState(false)
   const presets = repeatPresets(date, openDays)
 
@@ -58,14 +60,16 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
   const count =
     rule && value.choice === 'weekly'
       ? {
-          unit: 'week',
+          label: 'Repeat:NumberOfWeeks' as const,
+          units: 'Repeat:WeeksUpTo' as const,
           value: weeksUntil(date, rule.endDate),
           max: maxWeeks(date, lastDate),
           endAfter: (n: number) => endAfterWeeks(date, n, lastDate),
         }
       : rule && value.choice === 'monthly'
         ? {
-            unit: 'month',
+            label: 'Repeat:NumberOfMonths' as const,
+            units: 'Repeat:MonthsUpTo' as const,
             value: monthsUntil(date, rule.endDate),
             max: maxMonths(date, lastDate),
             endAfter: (n: number) => endAfterMonths(date, n, lastDate),
@@ -83,7 +87,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
   return (
     <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
       <div className="grid gap-2">
-        <Label htmlFor="bk-repeat">Repeat</Label>
+        <Label htmlFor="bk-repeat">{t('Repeat:Label')}</Label>
         <Select value={value.choice} onValueChange={(v) => choose(v as RepeatChoice)}>
           <SelectTrigger id="bk-repeat" className="w-full">
             <SelectValue />
@@ -91,7 +95,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
           <SelectContent>
             {presets.map((p) => (
               <SelectItem key={p.choice} value={p.choice}>
-                {p.choice === 'custom' && value.choice === 'custom' ? 'Custom' : p.label}
+                {p.choice === 'custom' && value.choice === 'custom' ? t('Repeat:Custom') : p.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -103,7 +107,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
           sent as an end date — the day of the last occurrence. */}
       {rule && count && (
         <div className="grid gap-2">
-          <Label htmlFor="bk-repeat-count">Number of {count.unit}s</Label>
+          <Label htmlFor="bk-repeat-count">{t(count.label)}</Label>
           <div className="flex items-center gap-2">
             <Input
               id="bk-repeat-count"
@@ -118,7 +122,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
               }}
             />
             <span className="text-sm text-muted-foreground">
-              {count.value === 1 ? count.unit : `${count.unit}s`} (up to {count.max})
+              {t(count.units, { count: count.value, max: count.max })}
             </span>
           </div>
         </div>
@@ -126,7 +130,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
 
       {rule && value.choice !== 'custom' && !count && (
         <div className="grid gap-2">
-          <Label htmlFor="bk-repeat-end">Ends</Label>
+          <Label htmlFor="bk-repeat-end">{t('Repeat:Ends')}</Label>
           <DatePicker
             id="bk-repeat-end"
             value={rule.endDate}
@@ -149,7 +153,7 @@ export function RepeatField({ date, openDays, lastDate, value, rule, defaultEnd,
                 className="font-medium text-foreground underline underline-offset-4"
                 onClick={() => setCustomOpen(true)}
               >
-                Edit
+                {t('Common:Edit')}
               </button>
             </>
           )}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, NETWORK_ERROR_MESSAGE, PERMISSION_DENIED_MESSAGE, request, setTokenRefresher, setUnauthorizedHandler } from './httpClient'
+import { ApiError, networkErrorMessage, permissionDeniedMessage, request, setTokenRefresher, setUnauthorizedHandler } from './httpClient'
 
 const respond = (status: number) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { message: 'nope' } }), { status }))
@@ -39,7 +39,7 @@ describe('request without a response', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).isNetworkError).toBe(true)
     expect((error as ApiError).status).toBe(0)
-    expect((error as ApiError).message).toContain(NETWORK_ERROR_MESSAGE)
+    expect((error as ApiError).message).toContain(networkErrorMessage())
   })
 
   it("leaves a cancelled request alone — that's the caller's own doing", async () => {
@@ -56,14 +56,14 @@ describe('ApiError', () => {
     })
 
     expect(error.permissionDenied).toBe(true)
-    expect(error.message).toBe(PERMISSION_DENIED_MESSAGE)
+    expect(error.message).toBe(permissionDeniedMessage())
   })
 
   it('treats a bare 403 (ASP.NET refused before ABP) as a missing permission, not "status 403"', () => {
     const error = new ApiError(403, null)
 
     expect(error.permissionDenied).toBe(true)
-    expect(error.message).toBe(PERMISSION_DENIED_MESSAGE)
+    expect(error.message).toBe(permissionDeniedMessage())
   })
 
   it("keeps a business rule's own message — ABP sends those as 403 too", () => {

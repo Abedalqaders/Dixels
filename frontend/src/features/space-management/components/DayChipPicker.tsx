@@ -1,19 +1,10 @@
-import { allowedDays, OperatingDays } from '@/features/space-management/operatingDays'
+import { useTranslation } from 'react-i18next'
+import { allowedDays, dayLabel, OperatingDays } from '@/features/space-management/operatingDays'
 import type { DayName } from '@/features/space-management/operatingDays'
 
 // Port of the mock's renderChips/dayOptions (js/admin-constraints.js), but proactive
 // rather than reactive: days outside the parent's own set are rendered disabled instead
 // of accepting the click and then rejecting it with a toast.
-
-const DAY_LABELS: Record<DayName, string> = {
-  Sunday: 'Sun',
-  Monday: 'Mon',
-  Tuesday: 'Tue',
-  Wednesday: 'Wed',
-  Thursday: 'Thu',
-  Friday: 'Fri',
-  Saturday: 'Sat',
-}
 
 const ALL_DAYS: DayName[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -25,6 +16,8 @@ interface DayChipPickerProps {
 }
 
 export function DayChipPicker({ value, parent, disabled, onChange }: DayChipPickerProps) {
+  // The chips' names are in the reader's language (dayLabel): re-render when it changes.
+  useTranslation()
   const allowed = new Set(allowedDays(parent))
 
   function toggle(day: DayName) {
@@ -43,7 +36,7 @@ export function DayChipPicker({ value, parent, disabled, onChange }: DayChipPick
           disabled={disabled || !allowed.has(day)}
           onClick={() => toggle(day)}
         >
-          {DAY_LABELS[day]}
+          {dayLabel(day)}
         </button>
       ))}
     </div>

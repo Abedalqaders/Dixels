@@ -11,6 +11,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.Bookings;
 
@@ -46,7 +47,7 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
 
     private Task<Building> CreateBuildingAsync(string name) => WithUnitOfWorkAsync(() =>
         GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(
-            Guid.NewGuid(), name + " " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+            Guid.NewGuid(), "en", name + " " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
             new OperatingDays(OperatingDays.AllDaysMask), OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0)),
             maxDurationMinutes: 180, maxHorizonDays: 30, minLeadMinutes: 0)));
 
@@ -56,9 +57,9 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
         var building = await CreateBuildingAsync("People HQ");
         return await WithUnitOfWorkAsync(async () =>
         {
-            var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+            var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
             var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
-            var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "Room 1", spaceType.Id, 8));
+            var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, 8));
 
             var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io")
             {
@@ -122,7 +123,7 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
         using var _ = ActAs(Admin);
         var ex = await Should.ThrowAsync<BusinessException>(() => _buildings.UpdateAsync(s.Building.Id, new UpdateBuildingDto
         {
-            Name = s.Building.Name,
+            Names = En(s.Building.FindName("en")!),
             Timezone = "Asia/Amman",
         }));
 
@@ -138,7 +139,7 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
 
         using (ActAs(Admin))
         {
-            (await _buildings.UpdateAsync(s.Building.Id, new UpdateBuildingDto { Name = "Renamed", Timezone = "Asia/Amman" }))
+            (await _buildings.UpdateAsync(s.Building.Id, new UpdateBuildingDto { Names = En("Renamed"), Timezone = "Asia/Amman" }))
                 .Timezone.ShouldBe("Asia/Amman");
         }
 
@@ -146,7 +147,7 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
         await BookAsync(busy, 10, 11);
         using (ActAs(Admin))
         {
-            (await _buildings.UpdateAsync(busy.Building.Id, new UpdateBuildingDto { Name = "Renamed too", Timezone = "UTC" }))
+            (await _buildings.UpdateAsync(busy.Building.Id, new UpdateBuildingDto { Names = En("Renamed too"), Timezone = "UTC" }))
                 .Name.ShouldBe("Renamed too");
         }
     }

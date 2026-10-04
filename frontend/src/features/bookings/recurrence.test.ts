@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLanguage } from '@/i18n'
 import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
 import {
   choiceFor,
@@ -66,6 +67,46 @@ describe('describeRecurrence', () => {
     expect(describeRecurrence({ ...monthly, monthlyRepeat: MonthlyRepeat.OnWeekday, interval: 2 }, '2026-10-29')).toBe(
       'Occurs on the last Thursday of every 2 months until Thu 31 Dec',
     )
+  })
+})
+
+describe('in Arabic', () => {
+  const rule = (patch: Partial<RecurrenceDto>): RecurrenceDto => ({ frequency: Frequency.Weekly, interval: 1, weekdays: [2], monthlyRepeat: 0, endDate: '2026-10-27', ...patch })
+
+  it('words the quick choices', async () => {
+    await setLanguage('ar')
+    expect(repeatPresets(TUE, SUN_THU).map((p) => p.label)).toEqual([
+      'لا يتكرر',
+      'كل أيام العمل (الأحد إلى الخميس)',
+      'يوميًا',
+      'أسبوعيًا يوم الثلاثاء',
+      'شهريًا في اليوم 29',
+      'مخصص…',
+    ])
+  })
+
+  it('reads naturally, with the plural form each count needs', async () => {
+    await setLanguage('ar')
+    const until = 'الثلاثاء 27 أكتوبر'
+    expect(describeRecurrence(rule({}), TUE)).toBe(`يتكرر أيام الثلاثاء حتى ${until}`)
+    expect(describeRecurrence(rule({ weekdays: [4, 2] }), TUE)).toBe(`يتكرر أيام الثلاثاء والخميس حتى ${until}`)
+    expect(describeRecurrence(rule({ interval: 2, weekdays: [0, 2, 4] }), TUE)).toBe(
+      `يتكرر كل أسبوعين أيام الأحد، الثلاثاء والخميس حتى ${until}`,
+    )
+    expect(describeRecurrence(rule({ weekdays: SUN_THU }), TUE, SUN_THU)).toBe(`يتكرر كل أيام العمل (الأحد إلى الخميس) حتى ${until}`)
+    expect(describeRecurrence(rule({ frequency: Frequency.Daily, interval: 1 }), TUE)).toBe(`يتكرر كل يوم حتى ${until}`)
+    expect(describeRecurrence(rule({ frequency: Frequency.Daily, interval: 3 }), TUE)).toBe(`يتكرر كل 3 أيام حتى ${until}`)
+    expect(describeRecurrence(rule({ frequency: Frequency.Daily, interval: 11 }), TUE)).toBe(`يتكرر كل 11 يومًا حتى ${until}`)
+  })
+
+  it('says monthly by date or by weekday position', async () => {
+    await setLanguage('ar')
+    const monthly = rule({ frequency: Frequency.Monthly, endDate: '2026-12-31' })
+    expect(describeRecurrence(monthly, TUE)).toBe('يتكرر في اليوم 29 من كل شهر حتى الخميس 31 ديسمبر')
+    expect(describeRecurrence({ ...monthly, monthlyRepeat: MonthlyRepeat.OnWeekday, interval: 2 }, '2026-10-29')).toBe(
+      'يتكرر في الخميس الأخير من كل شهرين حتى الخميس 31 ديسمبر',
+    )
+    expect(weekdayPosition('2026-10-13')).toBe('الثلاثاء الثاني')
   })
 })
 

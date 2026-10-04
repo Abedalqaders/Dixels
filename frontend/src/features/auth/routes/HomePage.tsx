@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { useTranslation } from 'react-i18next'
 import { HOME_PATH } from '@/features/auth/landing'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
 import { CalendarIcon, ClockIcon } from '@/components/icons'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import logo from '@/assets/logo.png'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -17,6 +19,7 @@ import '@/styles/login.css'
 // Step 2 in the plan): clicking "Sign in" just kicks off the OIDC redirect,
 // same as clicking "Sign in with Google" anywhere else.
 export function HomePage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const [redirecting, setRedirecting] = useState(false)
 
@@ -26,7 +29,7 @@ export function HomePage() {
   }
 
   if (redirecting) {
-    return <AuthStatusScreen state="busy" title="Taking you to sign in…" detail="Opening your organization's sign-in page." />
+    return <AuthStatusScreen state="busy" title={t('Auth:Redirecting')} detail={t('Auth:RedirectingDetail')} />
   }
 
   function signIn() {
@@ -38,37 +41,34 @@ export function HomePage() {
     <div className="page">
       <div className="brandpanel">
         <div className="mark"><img className="logo-img" src={logo} alt="Dixels" /></div>
-        <p className="tag">
-          Find a desk, a focus pod or a meeting room across every building — and know it is really yours.
-        </p>
+        <p className="tag">{t('SignIn:Tagline')}</p>
         <div className="pts">
           <div className="pt">
             <CalendarIcon />
-            Single and recurring bookings, validated one occurrence at a time
+            {t('SignIn:PointRecurring')}
           </div>
           <div className="pt">
             <ClockIcon />
-            Every time shown in the building's own timezone
+            {t('SignIn:PointTimezone')}
           </div>
           <div className="pt">
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2.5 16.5 5v5c0 4-3 6.3-6.5 7.5C6.5 16.3 3.5 14 3.5 10V5z" /><path d="M7.2 10.1 9.2 12l3.6-3.8" /></svg>
-            No double bookings — a slot is yours the moment it commits
+            {t('SignIn:PointNoDoubleBooking')}
           </div>
         </div>
       </div>
 
       <div className="formwrap">
+        <LanguageSwitcher className="loginlang" />
         <div className="logincard">
-          <h1>Sign in</h1>
-          <p className="loginsub">Use your Email to continue.</p>
+          <h1>{t('SignIn:Title')}</h1>
+          <p className="loginsub">{t('SignIn:Subtitle')}</p>
 
           <button className="btn loginbtn" onClick={signIn}>
-            Sign in with your Email
+            {t('SignIn:Button')}
           </button>
 
-          <div className="foot">
-            You'll be taken to your organization's sign-in page. Nothing is typed here.
-          </div>
+          <div className="foot">{t('SignIn:Foot')}</div>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { TextSkeleton } from '@/components/LoadingSkeletons'
@@ -22,6 +23,7 @@ export function LandingPage() {
 }
 
 function Landing() {
+  const { t } = useTranslation()
   const permissions = usePermissions()
 
   if (permissions.status === 'success') {
@@ -32,19 +34,19 @@ function Landing() {
   return (
     <AppShell>
       <div className="content">
-        {permissions.status === 'loading' && <TextSkeleton label="Checking your access…" />}
+        {permissions.status === 'loading' && <TextSkeleton label={t('Access:Checking')} />}
 
         {permissions.status === 'error' && (
           <Card className="mt-6 gap-3 p-6" role="alert">
             <div className="grid gap-1">
               <p className="font-medium">
-                {permissions.error instanceof ApiError && permissions.error.isNetworkError ? "Couldn't reach the server" : "Couldn't check your access"}
+                {permissions.error instanceof ApiError && permissions.error.isNetworkError ? t('Access:Unreachable') : t('Access:CheckFailed')}
               </p>
               <p className="text-sm text-muted-foreground">{permissions.error.message}</p>
             </div>
             <div>
               <Button variant="outline" onClick={permissions.retry}>
-                Try again
+                {t('Common:TryAgain')}
               </Button>
             </div>
           </Card>
@@ -52,10 +54,8 @@ function Landing() {
 
         {permissions.status === 'success' && (
           <Card className="mt-6 gap-1 p-6" role="status">
-            <p className="font-medium">Nothing's been set up for your account yet</p>
-            <p className="text-sm text-muted-foreground">
-              You're signed in, but you haven't been given access to any page. Ask an administrator to set up your access.
-            </p>
+            <p className="font-medium">{t('Access:NothingSetUpTitle')}</p>
+            <p className="text-sm text-muted-foreground">{t('Access:NothingSetUpDetail')}</p>
           </Card>
         )}
       </div>

@@ -5,6 +5,10 @@
 // Date.getDay() convention — that is what pins "which bit is Sunday" for every caller,
 // in both the backend and the frontend.
 
+import i18n from '@/i18n'
+import { addDays } from '@/lib/time/buildingTime'
+import { formatWeekday } from '@/lib/time/format'
+
 export type DayName = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
 
 const DAY_ORDER: readonly DayName[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -58,4 +62,22 @@ export class OperatingDays {
  */
 export function allowedDays(parentDays: OperatingDays): DayName[] {
   return parentDays.toDayNames()
+}
+
+// ---- display (not part of the backend port) ----
+
+/** A week known to start on a Sunday (4 Jan 2026), so day N of it is DayOfWeek N. */
+const A_SUNDAY = '2026-01-04'
+
+/** "Mon" in English; in Arabic the full name ("الاثنين"), which has no short form. */
+export function dayLabel(day: DayName, style: 'long' | 'short' = 'short'): string {
+  return formatWeekday(addDays(A_SUNDAY, DAY_ORDER.indexOf(day)), style)
+}
+
+/** "Every day", "None", or the days by short name: "Mon, Tue, Wed". */
+export function describeDays(days: OperatingDays): string {
+  const names = days.toDayNames()
+  if (names.length === 7) return i18n.t('Rules:EveryDay')
+  if (names.length === 0) return i18n.t('Rules:NoDays')
+  return names.map((n) => dayLabel(n)).join(i18n.t('Rules:ListSeparator'))
 }

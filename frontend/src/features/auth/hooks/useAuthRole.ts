@@ -1,7 +1,5 @@
 import { useAuth } from 'react-oidc-context'
-import { hasRole } from '@/features/auth/roles'
-
-const ADMIN_ROLE = 'admin'
+import { ADMIN_ROLE, hasRole } from '@/features/auth/roles'
 
 /** Whether the user holds the admin role — only for labelling them ("Administrator").
  * What they can open and do follows their permissions (usePermission), not this. */

@@ -31,7 +31,7 @@ describe('MonthGrid', () => {
     const onOpenDay = vi.fn()
     render(<MonthGrid compact date="2026-10-01" items={four} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={onOpenDay} />)
 
-    const day = screen.getByRole('button', { name: 'Open 2026-10-06, 4 bookings' })
+    const day = screen.getByRole('button', { name: 'Open Tue 6 Oct, 4 bookings' })
     expect(day).toHaveTextContent('+1')
     expect(screen.queryByRole('button', { name: /One, / })).not.toBeInTheDocument()
 
@@ -44,7 +44,7 @@ describe('MonthGrid on touch screens', () => {
   it('shows the "+" to book a day without needing hover, at a finger-sized target', () => {
     render(<MonthGrid date="2026-10-01" items={[]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} onQuickBook={vi.fn()} />)
 
-    const plus = screen.getByRole('button', { name: 'Book a room on 2026-10-06' })
+    const plus = screen.getByRole('button', { name: 'Book a room on Tue 6 Oct' })
     expect(plus).toHaveClass('pointer-coarse:opacity-100', 'pointer-coarse:size-9')
   })
 })

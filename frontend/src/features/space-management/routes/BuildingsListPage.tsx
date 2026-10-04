@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,7 @@ import { TreeSkeleton } from '@/components/LoadingSkeletons'
 import { TopBar } from '@/components/TopBar'
 
 export function BuildingsListPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const canEditRules = useCanEditRules('building')
@@ -69,7 +71,7 @@ export function BuildingsListPage() {
       refetch()
       notifyHierarchyChanged()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
     }
   }
 
@@ -80,22 +82,22 @@ export function BuildingsListPage() {
     try {
       affected = await impact()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
       return
     }
     if (affected.count === 0 && !affected.assignedEmployees) {
-      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
+      confirmAndRun(name, confirmMessage, remove, t('Hierarchy:Deleted', { name }))
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
     runAction(
       remove,
-      affected.count > 0 ? `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.` : `${name} deleted.`,
+      affected.count > 0 ? t('Hierarchy:DeletedWithBookings', { name, count: affected.count }) : t('Hierarchy:Deleted', { name }),
     )
   }
 
   async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
+    if (!(await confirm({ title: t('Hierarchy:DeleteTitle', { name }), description: confirmMessage, confirmLabel: t('Common:Delete'), destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -106,30 +108,30 @@ export function BuildingsListPage() {
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="pagetitle">Space management</h1>
+              <h1 className="pagetitle">{t('Hierarchy:Title')}</h1>
               <p className="lead">
-                {status === 'success' ? `${data.totalCount} building${data.totalCount === 1 ? '' : 's'}. ` : ''}
-                Open a building to manage its floors and spaces.
+                {status === 'success' ? `${t('Hierarchy:BuildingCount', { count: data.totalCount })} ` : ''}
+                {t('Hierarchy:BuildingsLead')}
               </p>
             </div>
             <Can permission={Permissions.Buildings.Create}>
               <Button onClick={() => setModal({ kind: 'building' })}>
-                <PlusIcon /> Add building
+                <PlusIcon /> {t('Hierarchy:AddBuilding')}
               </Button>
             </Can>
           </div>
 
           <section className="card" id="buildings">
             <div className="cardhead">
-              <h2 className="sectiontitle">Buildings</h2>
+              <h2 className="sectiontitle">{t('Hierarchy:Buildings')}</h2>
               <div className="treetools">
                 <div className="searchbox">
                   <SearchIcon />
                   <input
                     type="text"
-                    placeholder="Search buildings…"
+                    placeholder={t('Hierarchy:SearchBuildings')}
                     autoComplete="off"
-                    aria-label="Search buildings"
+                    aria-label={t('Hierarchy:SearchBuildingsLabel')}
                     value={list.searchInput}
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
@@ -140,18 +142,18 @@ export function BuildingsListPage() {
                     checked={list.showDeleted}
                     onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
-                  Show deleted
+                  {t('Hierarchy:ShowDeleted')}
                 </label>
               </div>
             </div>
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <TreeSkeleton label="Loading buildings…" />}
-              {status === 'error' && <p className="treeempty">Couldn't load buildings: {error.message}</p>}
+              {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingBuildings')} />}
+              {status === 'error' && <p className="treeempty">{t('Hierarchy:BuildingsLoadFailed', { error: error.message })}</p>}
 
               {status === 'success' && data.buildings.length === 0 && (
                 <p className="treeempty">
-                  {list.search ? 'Nothing matches your search.' : 'No buildings yet — add one to get started.'}
+                  {list.search ? t('Hierarchy:NoSearchMatch') : t('Hierarchy:NoBuildings')}
                 </p>
               )}
 
@@ -170,15 +172,15 @@ export function BuildingsListPage() {
                         </span>
                       )}
                       {building.buildingNumber && <span className="m">{building.buildingNumber}</span>}
-                      {building.isDeleted && <span className="badge cancelled">Deleted</span>}
+                      {building.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                       <span className="actions">
                         {building.isDeleted ? (
                           <Can permission={Permissions.Buildings.Edit}>
                             <button
                               className="rowbtn"
-                              title={`Restore ${building.name}`}
-                              aria-label={`Restore ${building.name}`}
-                              onClick={() => runAction(() => restoreBuilding(token, building.id), `${building.name} restored.`)}
+                              title={t('Hierarchy:Restore', { name: building.name })}
+                              aria-label={t('Hierarchy:Restore', { name: building.name })}
+                              onClick={() => runAction(() => restoreBuilding(token, building.id), t('Hierarchy:Restored', { name: building.name }))}
                             >
                               <RestoreIcon />
                             </button>
@@ -188,33 +190,33 @@ export function BuildingsListPage() {
                             label={building.name}
                             actions={[
                               {
-                                label: 'Edit details',
+                                label: t('Hierarchy:EditDetails'),
                                 permission: Permissions.Buildings.Edit,
                                 icon: <DetailsIcon />,
                                 onClick: () =>
                                   setEditState({
                                     kind: 'building',
                                     id: building.id,
-                                    name: building.name,
+                                    names: building.names,
                                     buildingNumber: building.buildingNumber,
                                     timezone: building.timezone,
                                   }),
                               },
                               {
-                                label: canEditRules ? 'Edit constraints' : 'View constraints',
+                                label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
                                 permission: Permissions.Buildings.Default,
                                 icon: <PencilIcon />,
                                 onClick: () => navigate(`/admin/constraints/building/${building.id}`),
                               },
                               {
-                                label: 'Delete',
+                                label: t('Common:Delete'),
                                 permission: Permissions.Buildings.Delete,
                                 icon: <TrashIcon />,
                                 destructive: true,
                                 onClick: () =>
                                   confirmDelete(
                                     building.name,
-                                    `Delete "${building.name}"? This also deletes its floors and spaces — they can all be restored together later.`,
+                                    t('Hierarchy:DeleteBuildingConfirm', { name: building.name }),
                                     () => getBuildingDeleteImpact(token, building.id),
                                     () => deleteBuilding(token, building.id),
                                   ),
@@ -248,7 +250,7 @@ export function BuildingsListPage() {
           spaceTypes={[]}
           onClose={() => setModal(null)}
           onCreated={() => {
-            showToast('Building added.')
+            showToast(t('Hierarchy:BuildingAdded'))
             refetch()
             notifyHierarchyChanged()
           }}
@@ -262,7 +264,7 @@ export function BuildingsListPage() {
           spaceTypes={[]}
           onClose={() => setEditState(null)}
           onSaved={() => {
-            showToast('Details saved.')
+            showToast(t('Hierarchy:DetailsSaved'))
             refetch()
             notifyHierarchyChanged()
           }}

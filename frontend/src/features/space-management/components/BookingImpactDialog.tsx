@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,8 +26,6 @@ interface BookingImpactDialogProps extends ImpactRequest {
   onChoose: (choice: ImpactChoice) => void
 }
 
-const plural = (n: number) => `${n} upcoming ${n === 1 ? 'booking' : 'bookings'}`
-
 /**
  * What an admin sees before a change leaves bookings behind: how many, which (who, when,
  * where, why), and the choice — keep them (they were booked under the old rules) or cancel
@@ -34,19 +33,31 @@ const plural = (n: number) => `${n} upcoming ${n === 1 ? 'booking' : 'bookings'}
  * booked see on their calendar that an admin cancelled it, and why.
  */
 export function BookingImpactDialog({ mode, impact, subject, onChoose }: BookingImpactDialogProps) {
+  const { t } = useTranslation()
   const n = impact.count
   const people = impact.assignedEmployees ?? 0
   const title =
     mode === 'delete'
       ? n > 0
-        ? `Deleting “${subject}” cancels ${plural(n)}`
-        : `Delete “${subject}”?`
+        ? t('Hierarchy:ImpactDeleteTitle', { subject, count: n })
+        : t('Hierarchy:DeleteTitle', { name: subject })
       : mode === 'closure'
-        ? `This closure falls on ${plural(n)}`
+        ? t('Hierarchy:ImpactClosureTitle', { count: n })
         : mode === 'reassign'
-          ? `Moving ${subject} cancels ${plural(n)}`
-          : `This change affects ${plural(n)}`
-  const action = mode === 'closure' ? 'add the closure' : mode === 'reassign' ? 'move' : 'save'
+          ? t('Hierarchy:ImpactReassignTitle', { subject, count: n })
+          : t('Hierarchy:ImpactChangeTitle', { count: n })
+  // The two buttons that finish the job. A delete or a move never offers "keep".
+  const keepLabel = mode === 'closure' ? t('Hierarchy:KeepAndAddClosure') : t('Hierarchy:KeepAndSave')
+  const cancelLabel =
+    mode === 'delete'
+      ? n > 0
+        ? t('Hierarchy:DeleteAndCancel', { count: n })
+        : t('Common:Delete')
+      : mode === 'reassign'
+        ? t('Hierarchy:MoveAndCancel', { count: n })
+        : mode === 'closure'
+          ? t('Hierarchy:CancelAndAddClosure', { count: n })
+          : t('Hierarchy:CancelAndSave', { count: n })
 
   return (
     <AlertDialog open onOpenChange={(open) => !open && onChoose(null)}>
@@ -56,25 +67,22 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
           <AlertDialogDescription>
             {mode === 'delete'
               ? n > 0
-                ? "They'll be cancelled, and whoever booked them will see why on their calendar. Restoring later won't bring them back."
-                : 'It can be restored later.'
+                ? t('Hierarchy:ImpactDeleteDetail')
+                : t('Hierarchy:ImpactDeleteNoneDetail')
               : mode === 'reassign'
-                ? "They can only book in one building, so their bookings in the current one are cancelled. They'll see why on their calendar."
-                : 'They were booked under the current rules. Keep them as they are, or cancel them — whoever booked them will see why on their calendar.'}
+                ? t('Hierarchy:ImpactReassignDetail')
+                : t('Hierarchy:ImpactChangeDetail')}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {people > 0 && (
           <p role="note" className="rounded-md bg-[var(--state-expired-soft)] px-3 py-2 text-sm text-[var(--state-expired-ink)]">
-            <strong>
-              {people} {people === 1 ? 'employee is' : 'employees are'} assigned to {subject}.
-            </strong>{' '}
-            They won't be able to book until you assign them to another building — or restore this one.
+            <strong>{t('Hierarchy:ImpactAssigned', { count: people, subject })}</strong> {t('Hierarchy:ImpactAssignedDetail')}
           </p>
         )}
 
         {n > 0 && (
-        <ul className="grid max-h-64 gap-1.5 overflow-y-auto rounded-md border p-1.5" aria-label="Affected bookings">
+        <ul className="grid max-h-64 gap-1.5 overflow-y-auto rounded-md border p-1.5" aria-label={t('Hierarchy:AffectedBookings')}>
           {impact.bookings.map((b) => (
             <li key={b.bookingId} className="grid gap-0.5 rounded px-2 py-1.5 text-sm odd:bg-muted/50">
               <span className="flex flex-wrap justify-between gap-x-3">
@@ -98,14 +106,14 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
         )}
 
         <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel>Go back</AlertDialogCancel>
+          <AlertDialogCancel>{t('Hierarchy:GoBack')}</AlertDialogCancel>
           {mode !== 'delete' && mode !== 'reassign' && (
             <Button variant="outline" onClick={() => onChoose('keep')}>
-              Keep them and {action}
+              {keepLabel}
             </Button>
           )}
           <Button variant="destructive" onClick={() => onChoose('cancel')}>
-            {mode === 'delete' ? (n > 0 ? `Delete and cancel ${n}` : 'Delete') : mode === 'reassign' ? `Move and cancel ${n}` : `Cancel ${n} and ${action}`}
+            {cancelLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

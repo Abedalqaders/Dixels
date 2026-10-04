@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import type { BookableBuildingDto } from '@/features/bookings/api/bookingsApi'
 import { formatDuration } from '@/features/bookings/format'
 
@@ -56,8 +57,11 @@ export function dragHint(length: number, limits: DurationLimits): DragHint {
     const fit = roomsThatFit(limits, length)
     return {
       capped: true,
-      suffix: `${max} max`,
-      announcement: `Capped at ${max}, the longest any room allows${fit < total ? ` — ${fit} of ${total} rooms` : ''}.`,
+      suffix: i18n.t('Calendar:MaxLength', { duration: max }),
+      announcement:
+        fit < total
+          ? i18n.t('Calendar:CappedAtSome', { duration: max, fit, total })
+          : i18n.t('Calendar:CappedAt', { duration: max }),
     }
   }
 

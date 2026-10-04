@@ -11,6 +11,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.Bookings;
 
@@ -52,12 +53,12 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
     private Task<Scenario> CreateScenarioAsync() => WithUnitOfWorkAsync(async () =>
     {
         var building = await GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(
-            Guid.NewGuid(), "Impact HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+            Guid.NewGuid(), "en", "Impact HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
             new OperatingDays(OperatingDays.AllDaysMask), OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0)),
             maxDurationMinutes: 180, maxHorizonDays: 30, minLeadMinutes: 0));
-        var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+        var floor = await GetRequiredService<IRepository<Floor, Guid>>().InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
         var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
-        var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "Room 1", spaceType.Id, 8));
+        var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, 8));
 
         var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io")
         {
@@ -314,7 +315,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var mine = await _availability.GetMyBuildingAsync();
         mine.ShouldNotBeNull();
         mine.IsRemoved.ShouldBeTrue();
-        mine.Name.ShouldBe(s.Building.Name);
+        mine.Name.ShouldBe(s.Building.FindName("en"));
         mine.Timezone.ShouldBe("UTC");
         mine.Floors.ShouldBeEmpty();
 
@@ -348,7 +349,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var big = await BookAsync(s, 9, 10, attendees: 6);
         var small = await BookAsync(s, 11, 12, attendees: 3);
         var space = await _spaces.GetAsync(s.Space.Id);
-        var input = new UpdateSpaceDto { Name = space.Name, SpaceTypeId = space.SpaceTypeId, Capacity = 4 };
+        var input = new UpdateSpaceDto { Names = En(space.Name), SpaceTypeId = space.SpaceTypeId, Capacity = 4 };
 
         using var _ = ActAs(Admin);
         var impact = await _spaces.GetUpdateImpactAsync(s.Space.Id, input);
