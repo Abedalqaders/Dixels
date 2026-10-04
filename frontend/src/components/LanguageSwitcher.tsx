@@ -1,17 +1,19 @@
 import { useTranslation } from 'react-i18next'
-import { CheckIcon } from 'lucide-react'
+import { ChevronDownIcon, CircleCheckIcon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { availableLanguages, currentLanguage, setLanguage } from '@/i18n'
+import { availableLanguages, currentLanguage, languageInfo, setLanguage } from '@/i18n'
 import type { LanguageOption } from '@/i18n'
+import { cn } from '@/lib/utils'
 import { GlobeIcon } from './icons'
 
 /**
- * Switches the app's language. The list is the backend's (ABP), so a language added there
- * shows up here without a frontend change.
- * - Two languages: one button that names the other one — quicker than a menu.
- * - More: a menu of every language.
- * Each name is written in its own language, so someone who can't read the current one
- * still finds theirs.
+ * Switches the app's language: a button naming the current one, opening a list of every
+ * language. The list is the backend's (ABP), so a language added there shows up here without
+ * a frontend change.
+ *
+ * Each name is written in its own language ("العربية"), so someone who can't read the current
+ * one still finds theirs; next to it, in grey, the same name in the language showing now
+ * ("Arabic"), so it's clear what each one is.
  */
 export function LanguageSwitcher({ className }: { className?: string }) {
   const { t } = useTranslation()
@@ -20,46 +22,63 @@ export function LanguageSwitcher({ className }: { className?: string }) {
 
   if (languages.length < 2) return null
 
-  if (languages.length === 2) {
-    const other = languages.find((l) => l.code !== current) ?? languages[0]
-    return (
-      <button
-        type="button"
-        className={className}
-        aria-label={`${t('Language:Label')}: ${other.name}`}
-        onClick={() => void setLanguage(other.code)}
-      >
-        <GlobeIcon />
-        <LanguageName language={other} />
-      </button>
-    )
-  }
-
   const active = languages.find((l) => l.code === current) ?? languages[0]
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className={className} aria-label={`${t('Language:Label')}: ${active.name}`}>
+        <button type="button" className={cn('langtrigger', className)} aria-label={`${t('Language:Label')}: ${active.name}`}>
           <GlobeIcon />
-          <LanguageName language={active} />
+          <LanguageLabel language={active} viewer={current} />
+          <ChevronDownIcon className="langchev" aria-hidden />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        {languages.map((language) => (
-          <DropdownMenuItem key={language.code} onSelect={() => void setLanguage(language.code)}>
-            <CheckIcon className={language.code === current ? 'opacity-100' : 'opacity-0'} />
-            <LanguageName language={language} />
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="start" className="min-w-64 overflow-hidden rounded-xl p-0 shadow-lg">
+        {languages.map((language) => {
+          const selected = language.code === current
+          return (
+            <DropdownMenuItem
+              key={language.code}
+              role="menuitemradio"
+              aria-checked={selected}
+              className={cn(
+                'gap-3 rounded-none border-b border-border px-4 py-3 text-[15px] last:border-b-0 focus:bg-muted focus:text-foreground',
+                selected && 'bg-muted',
+              )}
+              onSelect={() => void setLanguage(language.code)}
+            >
+              <LanguageLabel language={language} viewer={current} />
+              {selected && <CircleCheckIcon className="ms-auto" aria-hidden />}
+            </DropdownMenuItem>
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-function LanguageName({ language }: { language: LanguageOption }) {
+/** "العربية  Arabic" — the grey part left out when it would only repeat the name. */
+function LanguageLabel({ language, viewer }: { language: LanguageOption; viewer: string }) {
+  const translated = viewer === language.code ? undefined : nameIn(viewer, language.code)
   return (
-    <span lang={language.code} dir={language.dir}>
-      {language.name}
+    <span className="langlabel">
+      <span lang={language.code} dir={language.dir}>
+        {language.name}
+      </span>
+      {translated && translated.toLocaleLowerCase() !== language.name.toLocaleLowerCase() && (
+        <span className="langother" lang={viewer} dir={languageInfo(viewer).dir}>
+          {translated}
+        </span>
+      )}
     </span>
   )
+}
+
+/** A language's name in another language — "Arabic" in English — or undefined if Intl can't say. */
+function nameIn(viewer: string, code: string): string | undefined {
+  try {
+    const name = new Intl.DisplayNames([viewer], { type: 'language' }).of(code)
+    return name && name !== code ? name : undefined
+  } catch {
+    return undefined
+  }
 }

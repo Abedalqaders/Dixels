@@ -302,6 +302,13 @@ body { overflow-x: clip; }
 /* ---------- Language ---------- */
 /* The sidebar's language button looks like a nav row. */
 .navlang { width: 100%; background: none; border: none; font-family: inherit; text-align: start; }
+/* Language switcher (sidebar and sign-in page): "🌐 English ⌄", and in the list
+   "العربية  Arabic" — the name in its own language, then in grey in the one showing now. */
+.langtrigger { cursor: pointer; }
+.langlabel { display: inline-flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.langother { color: var(--ink-secondary); font-size: 0.9em; }
+.langchev { margin-inline-start: auto; width: 14px !important; height: 14px !important; color: var(--ink-secondary); transition: transform .16s ease; }
+.langtrigger[aria-expanded="true"] .langchev { transform: rotate(180deg); }
 
 /* ---------- Right-to-left (Arabic) ----------
    The layout already mirrors (logical properties: inline-start/end). What doesn't:
