@@ -39,4 +39,12 @@ describe('NoResults', () => {
     expect(screen.getByTestId('query')).toHaveTextContent(/^\?size=50$/)
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
+
+  it('offers the given action in place of Clear filters', () => {
+    render(<NoResults onClear={() => {}} action={<button>Add building</button>} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent("add it if it isn't here yet")
+    expect(screen.getByRole('button', { name: 'Add building' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
+  })
 })

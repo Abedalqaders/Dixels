@@ -30,6 +30,7 @@ import { SpaceTypeFormDialog } from '@/features/space-management/components/Spac
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
 import { Can } from '@/features/auth/components/Can'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -52,6 +53,7 @@ export function SpaceTypesPage() {
   const token = auth.user?.access_token ?? ''
   const { showToast } = useToast()
   const list = useListParams()
+  const canAdd = usePermission(Permissions.SpaceTypes.Create)
 
   // undefined = closed, null = adding, a type = editing that type.
   const [editing, setEditing] = useState<SpaceTypeDto | null | undefined>(undefined)
@@ -94,6 +96,15 @@ export function SpaceTypesPage() {
     }
   }
 
+  // What an empty list and a search that found nothing both offer. Without the permission
+  // there's no Add, so a search that found nothing falls back to Clear filters.
+  const addAction = canAdd ? (
+    <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
+      <PlusIcon />
+      {t('SpaceTypes:Add')}
+    </Button>
+  ) : undefined
+
   return (
     <div className="app">
       <Sidebar />
@@ -135,21 +146,9 @@ export function SpaceTypesPage() {
               {status === 'error' && <p className="treeempty">{t('SpaceTypes:LoadFailed', { error: error.message })}</p>}
               {status === 'success' && pageRows.length === 0 &&
                 (list.search ? (
-                  <NoResults onClear={() => list.clearFilters()} />
+                  <NoResults onClear={() => list.clearFilters()} action={addAction} />
                 ) : (
-                  <EmptyState
-                    icon={<TagIcon />}
-                    title={t('SpaceTypes:Empty')}
-                    description={t('SpaceTypes:EmptyHint')}
-                    action={
-                      <Can permission={Permissions.SpaceTypes.Create}>
-                        <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
-                          <PlusIcon />
-                          {t('SpaceTypes:Add')}
-                        </Button>
-                      </Can>
-                    }
-                  />
+                  <EmptyState icon={<TagIcon />} title={t('SpaceTypes:Empty')} description={t('SpaceTypes:EmptyHint')} action={addAction} />
                 ))}
 
               {status === 'success' && pageRows.length > 0 && (

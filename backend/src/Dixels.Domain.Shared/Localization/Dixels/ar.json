@@ -106,6 +106,7 @@
     "Common:Cancel": "إلغاء",
     "Common:NoResults": "لم يتم العثور على نتائج",
     "Common:NoResultsHint": "لا شيء يطابق البحث وعوامل التصفية. جرّب تغييرها، أو امسحها لعرض كل شيء.",
+    "Common:NoResultsAddHint": "لا شيء يطابق البحث وعوامل التصفية. جرّب تغييرها، أو أضِفه إن لم يكن موجودًا بعد.",
     "Common:ClearFilters": "مسح عوامل التصفية",
     "Common:TryAgain": "حاول مرة أخرى",
     "Common:Reload": "إعادة التحميل",

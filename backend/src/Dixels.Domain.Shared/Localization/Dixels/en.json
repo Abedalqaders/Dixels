@@ -106,6 +106,7 @@
     "Common:Cancel": "Cancel",
     "Common:NoResults": "No results found",
     "Common:NoResultsHint": "Nothing matches your search and filters. Try changing them, or clear them to see everything.",
+    "Common:NoResultsAddHint": "Nothing matches your search and filters. Try changing them, or add it if it isn't here yet.",
     "Common:ClearFilters": "Clear filters",
     "Common:TryAgain": "Try again",
     "Common:Reload": "Reload",

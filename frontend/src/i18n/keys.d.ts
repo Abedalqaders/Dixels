@@ -188,6 +188,7 @@ export interface TextKeys {
   "Common:GoHome": string
   "Common:LoadingBuilding": string
   "Common:NoResults": string
+  "Common:NoResultsAddHint": string
   "Common:NoResultsHint": string
   "Common:Optional": string
   "Common:Reload": string

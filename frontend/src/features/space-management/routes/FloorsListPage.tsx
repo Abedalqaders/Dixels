@@ -42,6 +42,7 @@ export function FloorsListPage() {
   const canEditRules = useCanEditRules('floor')
   // A floor opens into its spaces — a link only for someone who may see them.
   const canOpenSpaces = usePermission(HierarchyViewers.Spaces)
+  const canAdd = usePermission(Permissions.Floors.Create)
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -106,6 +107,15 @@ export function FloorsListPage() {
     runAction(action, successMessage)
   }
 
+  // What an empty list and a search that found nothing both offer. Without the permission
+  // there's no Add, so a search that found nothing falls back to Clear filters.
+  const addAction =
+    canAdd && status === 'success' ? (
+      <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })}>
+        <PlusIcon /> {t('Hierarchy:AddFloor')}
+      </Button>
+    ) : undefined
+
   return (
     <>
       <div className="main">
@@ -164,19 +174,13 @@ export function FloorsListPage() {
 
               {status === 'success' && data.floors.length === 0 &&
                 (list.search ? (
-                  <NoResults onClear={() => list.clearFilters()} />
+                  <NoResults onClear={() => list.clearFilters()} action={addAction} />
                 ) : (
                   <EmptyState
                     icon={ICONS.floor}
                     title={t('Hierarchy:NoFloors')}
                     description={t('Hierarchy:NoFloorsHint')}
-                    action={
-                      <Can permission={Permissions.Floors.Create}>
-                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })}>
-                          <PlusIcon /> {t('Hierarchy:AddFloor')}
-                        </Button>
-                      </Can>
-                    }
+                    action={addAction}
                   />
                 ))}
 
