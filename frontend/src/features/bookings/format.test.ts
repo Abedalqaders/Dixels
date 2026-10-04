@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLanguage } from '@/i18n'
 import { formatDays, formatDuration, formatHours } from './format'
 
 describe('booking rule formatting', () => {
@@ -14,5 +15,16 @@ describe('booking rule formatting', () => {
     expect(formatDuration(45)).toBe('45 min')
     expect(formatDuration(120)).toBe('2h')
     expect(formatDuration(150)).toBe('2h 30m')
+  })
+
+  it('says durations in Arabic with its plural forms', async () => {
+    await setLanguage('ar')
+    expect(formatDuration(1)).toBe('دقيقة واحدة')
+    expect(formatDuration(5)).toBe('5 دقائق')
+    expect(formatDuration(45)).toBe('45 دقيقة')
+    expect(formatDuration(60)).toBe('ساعة')
+    expect(formatDuration(120)).toBe('ساعتان')
+    expect(formatDuration(180)).toBe('3 ساعات')
+    expect(formatDuration(90)).toBe('ساعة و30 دقيقة')
   })
 })

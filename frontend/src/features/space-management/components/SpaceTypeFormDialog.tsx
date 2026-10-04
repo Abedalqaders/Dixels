@@ -3,21 +3,20 @@ import type { FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useFieldErrors } from '@/components/FieldError'
-import { TranslationsField, translationFieldName } from '@/components/TranslationsField'
-import type { TranslationValue } from '@/components/TranslationsField'
-import { getDefaultLanguage, languageInfo } from '@/i18n'
+import { LocalizedNameField, fromNameList, toNameList } from '@/components/LocalizedNameField'
+import type { LocalizedNames } from '@/components/LocalizedNameField'
+import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { ApiError, createSpaceType, updateSpaceType } from '@/features/space-management/api/spaceManagementApi'
-import type { IconKey, SpaceTypeDto, SpaceTypeNameDto } from '@/features/space-management/api/spaceManagementApi'
+import type { IconKey, LocalizedNameDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
 /** SpaceTypeConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
 
-/** The error codes that are about one particular name, so they show under that name. */
+/** The error codes that are about one particular name, so they show under the name field. */
 const NAME_ERROR_CODES = new Set([
   'Dixels:SpaceManagement:SpaceTypeNameAlreadyExists',
   'Dixels:Localization:DefaultLanguageNameRequired',
@@ -32,10 +31,8 @@ interface SpaceTypeFormDialogProps {
 }
 
 /** Every non-empty name, trimmed, as "language=name" — what "nothing changed" compares. */
-function nameSet(names: SpaceTypeNameDto[]) {
-  return names
-    .map((n) => ({ language: n.language, name: n.name.trim() }))
-    .filter((n) => n.name)
+function nameSet(names: LocalizedNameDto[]) {
+  return toNameList(fromNameList(names))
     .map((n) => `${n.language}=${n.name}`)
     .sort()
     .join('\n')
@@ -44,61 +41,55 @@ function nameSet(names: SpaceTypeNameDto[]) {
 /** Add or edit one space type. Mounted only while open, so its fields always start from
  * the row that opened it.
  *
- * The name is one field in the default language (required: every language without its own
- * name shows it), then the translations the type has. Errors show where the admin is
- * typing: a duplicate under the very name that clashes (the server says which language),
- * anything else above the buttons. */
+ * The name is one box with a language beside it (LocalizedNameField): it opens on the
+ * language the admin is using, and the default language's name is required. Errors show
+ * where the admin is typing — a duplicate switches the box to the language that clashes
+ * (the server says which) — anything else above the buttons. */
 export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: SpaceTypeFormDialogProps) {
   const { t } = useTranslation()
   const defaultLanguage = getDefaultLanguage()
   const original = spaceType?.names ?? []
 
-  const [name, setName] = useState(original.find((n) => n.language === defaultLanguage)?.name ?? '')
-  const [translations, setTranslations] = useState<TranslationValue[]>(
-    original.filter((n) => n.language !== defaultLanguage).map((n) => ({ language: n.language, name: n.name })),
-  )
+  const [names, setNames] = useState<LocalizedNames>(() => fromNameList(original))
+  // A new type starts in the default language (its name is the one required); an existing
+  // one in the admin's own language.
+  const [language, setLanguage] = useState(spaceType ? currentLanguage() : defaultLanguage)
   const [iconKey, setIconKey] = useState(spaceType?.iconKey ?? 0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const f = useFieldErrors<string>('st')
+  const f = useFieldErrors<'name'>('st')
 
   const isEdit = spaceType !== null
-  const trimmed = name.trim()
-  const names: SpaceTypeNameDto[] = [
-    { language: defaultLanguage, name: trimmed },
-    // An added row left empty is no name at all — not sent.
-    ...translations.map((tr) => ({ language: tr.language, name: tr.name.trim() })).filter((tr) => tr.name),
-  ]
-  const unchanged = isEdit && nameSet(names) === nameSet(original) && iconKey === spaceType.iconKey
+  const list = toNameList(names)
+  const hasDefault = list.some((n) => n.language === defaultLanguage)
+  const unchanged = isEdit && nameSet(list) === nameSet(original) && iconKey === spaceType.iconKey
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!trimmed || unchanged) return
+    if (!hasDefault || unchanged) return
 
     setSaving(true)
     setError(null)
     f.clear()
     try {
       if (isEdit) {
-        await updateSpaceType(token, spaceType.id, { names, iconKey })
+        await updateSpaceType(token, spaceType.id, { names: list, iconKey })
         onSaved(t('SpaceTypes:Updated'))
       } else {
-        await createSpaceType(token, { names, iconKey })
+        await createSpaceType(token, { names: list, iconKey })
         onSaved(t('SpaceTypes:Added'))
       }
     } catch (err) {
       if (err instanceof ApiError && NAME_ERROR_CODES.has(err.code ?? '')) {
-        const language = err.data?.language
-        const onRow = typeof language === 'string' && translations.some((tr) => tr.language === language)
-        f.setErrors({ [onRow ? translationFieldName(language) : 'name']: err.message })
+        const clash = err.data?.language
+        if (typeof clash === 'string' && clash in names) setLanguage(clash)
+        f.setErrors({ name: err.message })
       } else {
         setError(err instanceof ApiError ? err.message : t('Error:Generic'))
       }
       setSaving(false)
     }
   }
-
-  const defaultLanguageInfo = languageInfo(defaultLanguage)
 
   return (
     <Dialog open onOpenChange={(open) => !open && !saving && onClose()}>
@@ -109,30 +100,19 @@ export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: Spac
             <DialogDescription>{t('SpaceTypes:FormDetail')}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-2">
-            <Label htmlFor={f.id('name')}>{t('SpaceTypes:NameIn', { language: defaultLanguageInfo.name })}</Label>
-            <Input
-              {...f.field('name')}
-              lang={defaultLanguage}
-              dir={defaultLanguageInfo.dir}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('SpaceTypes:NamePlaceholder')}
-              maxLength={MAX_NAME_LENGTH}
-              required
-              autoComplete="off"
-              autoFocus
-              disabled={saving}
-            />
-            {f.error('name')}
-          </div>
-
-          <TranslationsField
-            value={translations}
-            onChange={setTranslations}
-            fieldErrors={f}
+          <LocalizedNameField
+            id={f.id('name')}
+            label={t('SpaceTypes:ColumnName')}
+            value={names}
+            onChange={setNames}
+            language={language}
+            onLanguageChange={setLanguage}
+            inputProps={f.field('name')}
+            error={f.error('name')}
+            placeholder={t('SpaceTypes:NamePlaceholder')}
             maxLength={MAX_NAME_LENGTH}
             disabled={saving}
+            autoFocus
           />
 
           <div className="flex flex-col gap-2">
@@ -164,7 +144,7 @@ export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: Spac
             <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
               {t('Common:Cancel')}
             </Button>
-            <Button type="submit" disabled={saving || !trimmed || unchanged}>
+            <Button type="submit" disabled={saving || !hasDefault || unchanged}>
               {saving ? t('Common:Saving') : isEdit ? t('Common:Save') : t('SpaceTypes:Add')}
             </Button>
           </DialogFooter>

@@ -7,6 +7,7 @@ using Shouldly;
 using Volo.Abp.Authorization;
 using Volo.Abp.Identity;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.Authorization;
 
@@ -186,13 +187,13 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
     public async Task Create_and_delete_need_only_their_own_permission()
     {
         ActAs(DixelsPermissions.Spaces.Default, DixelsPermissions.Spaces.Create);
-        await ShouldAllow(() => _spaces.CreateAsync(new CreateSpaceDto { FloorId = Missing, Name = "Desk", SpaceTypeId = Missing, Capacity = 1 }));
+        await ShouldAllow(() => _spaces.CreateAsync(new CreateSpaceDto { FloorId = Missing, Names = En("Desk"), SpaceTypeId = Missing, Capacity = 1 }));
 
         ActAs(DixelsPermissions.Spaces.Default, DixelsPermissions.Spaces.Delete);
         await ShouldAllow(() => _spaces.DeleteAsync(Missing));
 
         ActAs(DixelsPermissions.Floors.Create);
-        await ShouldAllow(() => _floors.CreateAsync(new CreateFloorDto { BuildingId = Missing, Name = "Level 1" }));
+        await ShouldAllow(() => _floors.CreateAsync(new CreateFloorDto { BuildingId = Missing, Names = En("Level 1") }));
 
         ActAs(DixelsPermissions.Floors.Delete);
         await ShouldAllow(() => _floors.DeleteAsync(Missing));

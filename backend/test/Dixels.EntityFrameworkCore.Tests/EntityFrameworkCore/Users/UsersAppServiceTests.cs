@@ -50,7 +50,7 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
     }
 
     private Task<Building> CreateBuildingAsync() => WithUnitOfWorkAsync(() => _buildingRepository.InsertAsync(new Building(
-        Guid.NewGuid(), "HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+        Guid.NewGuid(), "en", "HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
         new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
         maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0)));
 

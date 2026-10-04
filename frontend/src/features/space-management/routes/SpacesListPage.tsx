@@ -209,7 +209,7 @@ export function SpacesListPage() {
                                 setEditState({
                                   kind: 'space',
                                   id: space.id,
-                                  name: space.name,
+                                  names: space.names,
                                   spaceTypeId: space.spaceTypeId,
                                   capacity: space.capacity,
                                 }),

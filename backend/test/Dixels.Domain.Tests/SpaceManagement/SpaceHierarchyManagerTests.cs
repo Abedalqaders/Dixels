@@ -10,15 +10,15 @@ public class SpaceHierarchyManagerTests
 
     private static Building CreateBuilding()
         => new(
-            Guid.NewGuid(), "Ridge House", "RH-01", "Asia/Amman",
+            Guid.NewGuid(), "en", "Ridge House", "RH-01", "Asia/Amman",
             ValueObjects.OperatingDays.Everyday, ValueObjects.OperatingWindow.FullDay,
             480, 14, 15);
 
     private static Floor CreateFloor(Guid buildingId, string name = "Level 1")
-        => new(Guid.NewGuid(), buildingId, name, floorNumber: 1);
+        => new(Guid.NewGuid(), buildingId, "en", name, floorNumber: 1);
 
     private static Space CreateSpace(Guid floorId, string name = "Desk 1")
-        => new(Guid.NewGuid(), floorId, name, Guid.NewGuid(), capacity: 1);
+        => new(Guid.NewGuid(), floorId, "en", name, Guid.NewGuid(), capacity: 1);
 
     [Fact]
     public void MarkForSoftDelete_stamps_the_same_batch_id_on_every_descendant()

@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useFieldErrors } from '@/components/FieldError'
+import { LocalizedNameField, toNameList } from '@/components/LocalizedNameField'
+import type { LocalizedNames } from '@/components/LocalizedNameField'
+import { getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
 import {
   ApiError,
@@ -30,6 +33,9 @@ const DEFAULT_BUILDING_MAX_DURATION_MINUTES = 120
 const DEFAULT_BUILDING_MAX_HORIZON_DAYS = 30
 const DEFAULT_BUILDING_MIN_LEAD_MINUTES = 0
 
+/** BuildingConsts/FloorConsts/SpaceConsts.MaxNameLength on the backend. */
+const MAX_NAME_LENGTH = 128
+
 interface AddNodeModalProps {
   state: NonNullable<ModalState>
   token: string
@@ -42,7 +48,10 @@ interface AddNodeModalProps {
 type Field = 'name' | 'meta' | 'type'
 
 export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onError }: AddNodeModalProps) {
-  const [name, setName] = useState('')
+  // A name per language, typed in one box (LocalizedNameField); the default language's is required.
+  const defaultLanguage = getDefaultLanguage()
+  const [names, setNames] = useState<LocalizedNames>({})
+  const [language, setLanguage] = useState(defaultLanguage)
   const [meta, setMeta] = useState('')
   const [timezone, setTimezone] = useState('UTC')
   const [spaceTypeId, setSpaceTypeId] = useState(spaceTypes[0]?.id ?? '')
@@ -57,7 +66,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   // Every problem at once, each under its own field — not the first one found.
   function validate(): Partial<Record<Field, string>> {
     const errors: Partial<Record<Field, string>> = {}
-    if (!name.trim()) errors.name = 'Name is required.'
+    if (!names[defaultLanguage]?.trim()) errors.name = 'Name is required.'
     if (state.kind === 'floor' && meta.trim() && !Number.isInteger(Number(meta))) {
       errors.meta = 'Floor number must be a whole number.'
     }
@@ -73,6 +82,8 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
     e.preventDefault()
     const errors = validate()
     if (Object.keys(errors).length > 0) {
+      // The missing name is the default language's: show that one.
+      if (errors.name) setLanguage(defaultLanguage)
       f.setErrors(errors)
       return
     }
@@ -82,7 +93,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
     try {
       if (state.kind === 'building') {
         await createBuilding(token, {
-          name: name.trim(),
+          names: toNameList(names),
           buildingNumber: meta.trim() || null,
           timezone,
           days: DEFAULT_BUILDING_DAYS,
@@ -94,11 +105,11 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
       } else if (state.kind === 'floor') {
         await createFloor(token, {
           buildingId: state.parentId,
-          name: name.trim(),
+          names: toNameList(names),
           floorNumber: meta.trim() ? Number(meta) : null,
         })
       } else {
-        await createSpace(token, { floorId: state.parentId, name: name.trim(), spaceTypeId, capacity: Number(meta) })
+        await createSpace(token, { floorId: state.parentId, names: toNameList(names), spaceTypeId, capacity: Number(meta) })
       }
 
       onCreated()
@@ -120,18 +131,24 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
           </DialogHeader>
 
           <div className="grid gap-4 py-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor={f.id('name')}>
-                Name<span className="text-destructive">*</span>
-              </Label>
-              <Input
-                {...f.field('name')}
+            <div className="sm:col-span-2">
+              <LocalizedNameField
+                id={f.id('name')}
+                label={
+                  <>
+                    Name<span className="text-destructive">*</span>
+                  </>
+                }
+                value={names}
+                onChange={setNames}
+                language={language}
+                onLanguageChange={setLanguage}
+                inputProps={f.field('name')}
+                error={f.error('name')}
                 placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                maxLength={MAX_NAME_LENGTH}
                 autoFocus
               />
-              {f.error('name')}
             </div>
             <div className="grid gap-2">
               <Label htmlFor={f.id('meta')}>

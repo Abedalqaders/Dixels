@@ -84,6 +84,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(BuildingDto.Days))]
     [MapperIgnoreTarget(nameof(BuildingDto.Hours))]
     [MapperIgnoreTarget(nameof(BuildingDto.IsDeleted))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Building.Translations))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Name))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Names))]
     public partial BuildingDto Map(Building source);
 
     [MapperIgnoreSource(nameof(Building.DeletionBatchId))]
@@ -100,6 +105,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(BuildingDto.Days))]
     [MapperIgnoreTarget(nameof(BuildingDto.Hours))]
     [MapperIgnoreTarget(nameof(BuildingDto.IsDeleted))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Building.Translations))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Name))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Names))]
     public partial void Map(Building source, BuildingDto destination);
 
     public void BeforeMap(Building source)
@@ -126,6 +136,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(FloorDto.HasOverrides))]
     [MapperIgnoreTarget(nameof(FloorDto.IsDeleted))]
     [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Floor.Translations))]
+    [MapperIgnoreTarget(nameof(FloorDto.Name))]
+    [MapperIgnoreTarget(nameof(FloorDto.Names))]
     public partial FloorDto Map(Floor source);
 
     [MapperIgnoreSource(nameof(Floor.DeletionBatchId))]
@@ -144,6 +159,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(FloorDto.HasOverrides))]
     [MapperIgnoreTarget(nameof(FloorDto.IsDeleted))]
     [MapperIgnoreTarget(nameof(FloorDto.BuildingName))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Floor.Translations))]
+    [MapperIgnoreTarget(nameof(FloorDto.Name))]
+    [MapperIgnoreTarget(nameof(FloorDto.Names))]
     public partial void Map(Floor source, FloorDto destination);
 
     public void BeforeMap(Floor source)
@@ -171,6 +191,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(SpaceDto.IsDeleted))]
     [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
     [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Space.Translations))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Name))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Names))]
     public partial SpaceDto Map(Space source);
 
     [MapperIgnoreSource(nameof(Space.DeletionBatchId))]
@@ -190,6 +215,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreTarget(nameof(SpaceDto.IsDeleted))]
     [MapperIgnoreTarget(nameof(SpaceDto.FloorName))]
     [MapperIgnoreTarget(nameof(SpaceDto.BuildingName))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name and Names itself.
+    [MapperIgnoreSource(nameof(Space.Translations))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Name))]
+    [MapperIgnoreTarget(nameof(SpaceDto.Names))]
     public partial void Map(Space source, SpaceDto destination);
 
     public void BeforeMap(Space source)

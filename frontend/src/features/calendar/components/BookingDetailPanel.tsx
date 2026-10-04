@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Search, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -23,15 +24,16 @@ interface BookingDetailPanelProps {
  * calendar stays in view while you read, and the next click just swaps the booking.
  */
 export function BookingDetailPanel({ item, booking, error, canBook, canCancel, onClose, onCancel }: BookingDetailPanelProps) {
+  const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const link = canBook ? findSpaceLink(item, booking) : null
 
   return (
-    <section className="grid gap-4 border-t p-4" aria-label="Booking details" aria-busy={!booking && !error}>
+    <section className="grid gap-4 border-t p-4" aria-label={t('Booking:Details')} aria-busy={!booking && !error}>
       <div className="flex items-start gap-2">
         <h3 className="min-w-0 flex-1 text-base leading-tight font-semibold">{item.title}</h3>
         {phase && <PhaseBadge phase={phase} />}
-        <Button variant="ghost" size="icon-xs" className="-mt-0.5 -me-1" aria-label="Close details" onClick={onClose}>
+        <Button variant="ghost" size="icon-xs" className="-mt-0.5 -me-1" aria-label={t('Booking:CloseDetails')} onClick={onClose}>
           <X />
         </Button>
       </div>
@@ -41,13 +43,13 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
       <div className="flex flex-wrap gap-2">
         {canCancel && booking && phase === 'upcoming' && (
           <Button variant="destructive" size="sm" onClick={() => onCancel(booking)}>
-            Cancel booking
+            {t('Booking:Cancel')}
           </Button>
         )}
         {link && (
           <Button variant="outline" size="sm" asChild>
             <Link to={link}>
-              <Search /> Other rooms at this time
+              <Search /> {t('Booking:OtherRooms')}
             </Link>
           </Button>
         )}

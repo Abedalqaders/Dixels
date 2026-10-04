@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Dixels.Localization;
 using Volo.Abp.Application.Dtos;
 
 namespace Dixels.SpaceManagement;
@@ -6,7 +8,14 @@ namespace Dixels.SpaceManagement;
 public class FloorDto : EntityDto<Guid>
 {
     public Guid BuildingId { get; set; }
+    /// <summary>
+    /// The name to show: in the request's language (Accept-Language), else the default
+    /// language's.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>Every name it has, one per language — what the edit form shows.</summary>
+    public List<LocalizedNameDto> Names { get; set; } = [];
 
     /// <summary>Set by every <c>GetListAsync</c> result (the standalone Floors page needs it
     /// to show which building a row belongs to) — never populated by <c>GetAsync</c>.</summary>

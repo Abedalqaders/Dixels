@@ -22,12 +22,12 @@ import type {
   CreateFloorDto,
   CreateSpaceDto,
   CreateSpaceTypeDto,
+  LocalizedNameDto,
   FloorDto,
   OperatingWindowDto,
   ResolvedConstraintsDto,
   SpaceDto,
   SpaceTypeDto,
-  SpaceTypeNameDto,
   UpdateBuildingConstraintsDto,
   UpdateBuildingDto,
   UpdateFloorConstraintsDto,
@@ -104,7 +104,7 @@ void ({} satisfies Same<BuildingDto, S['Dixels.SpaceManagement.BuildingDto']>)
 void ({} satisfies Same<FloorDto, S['Dixels.SpaceManagement.FloorDto']>)
 void ({} satisfies Same<SpaceDto, S['Dixels.SpaceManagement.SpaceDto']>)
 void ({} satisfies Same<SpaceTypeDto, S['Dixels.SpaceManagement.SpaceTypeDto']>)
-void ({} satisfies Same<SpaceTypeNameDto, S['Dixels.SpaceManagement.SpaceTypeNameDto']>)
+void ({} satisfies Same<LocalizedNameDto, S['Dixels.Localization.LocalizedNameDto']>)
 void ({} satisfies Same<AvailabilityOverrideDto, S['Dixels.SpaceManagement.AvailabilityOverrideDto']>)
 void ({} satisfies Same<OperatingWindowDto, S['Dixels.SpaceManagement.OperatingWindowDto']>)
 void ({} satisfies Same<ResolvedConstraintsDto, S['Dixels.SpaceManagement.ResolvedConstraintsDto']>)

@@ -57,14 +57,14 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private Task<Scenario> CreateScenarioAsync(bool assign = true) => WithUnitOfWorkAsync(async () =>
     {
         var building = await _buildingRepository.InsertAsync(new Building(
-            Guid.NewGuid(), "Test HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+            Guid.NewGuid(), "en", "Test HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
             new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
             maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
 
-        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+        var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
 
         var spaceType = await _spaceTypeRepository.FirstAsync();
-        var space = new Space(Guid.NewGuid(), floor.Id, "Room 1", spaceType.Id, capacity: 8);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, capacity: 8);
         space.SetMinAttendees(2);
         await _spaceRepository.InsertAsync(space);
 
@@ -417,7 +417,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private Task<Space> AddSpaceAsync(Scenario s, string name) => WithUnitOfWorkAsync(async () =>
     {
         var spaceType = await _spaceTypeRepository.FirstAsync();
-        return await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), s.Floor.Id, name, spaceType.Id, capacity: 8));
+        return await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), s.Floor.Id, "en", name, spaceType.Id, capacity: 8));
     });
 
     private Task SetPolicyAsync(Scenario s, OwnOverlapPolicy policy) => WithUnitOfWorkAsync(async () =>

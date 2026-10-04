@@ -1,3 +1,4 @@
+using Dixels.Localization;
 using System;
 using System.Collections.Generic;
 using Volo.Abp.Application.Dtos;
@@ -15,5 +16,5 @@ public class SpaceTypeDto : EntityDto<Guid>
     public IconKey IconKey { get; set; }
 
     /// <summary>Every name it has, one per language — what the edit form shows.</summary>
-    public List<SpaceTypeNameDto> Names { get; set; } = [];
+    public List<LocalizedNameDto> Names { get; set; } = [];
 }

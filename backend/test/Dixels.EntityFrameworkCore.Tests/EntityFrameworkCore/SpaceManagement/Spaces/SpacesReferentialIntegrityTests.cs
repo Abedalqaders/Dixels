@@ -7,6 +7,7 @@ using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.SpaceManagement;
 
@@ -36,10 +37,10 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
     private async Task<Floor> CreateFloorAsync()
     {
         var building = new Building(
-            Guid.NewGuid(), "HQ", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
+            Guid.NewGuid(), "en", "HQ", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
             maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0);
         await _buildingRepository.InsertAsync(building);
-        return await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "Level 1", 1));
+        return await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
     }
 
     private Task<SpaceType> CreateSpaceTypeAsync() =>
@@ -52,7 +53,7 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
 
         await Should.ThrowAsync<EntityNotFoundException>(() => _spacesAppService.CreateAsync(new CreateSpaceDto
         {
-            FloorId = Guid.NewGuid(), Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4,
+            FloorId = Guid.NewGuid(), Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4,
         }));
     }
 
@@ -65,7 +66,7 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
 
         await Should.ThrowAsync<EntityNotFoundException>(() => _spacesAppService.CreateAsync(new CreateSpaceDto
         {
-            FloorId = floor.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4,
+            FloorId = floor.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4,
         }));
     }
 
@@ -76,12 +77,12 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
         var spaceType = await CreateSpaceTypeAsync();
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
-            FloorId = floor.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4,
+            FloorId = floor.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4,
         });
 
         await Should.ThrowAsync<EntityNotFoundException>(() => _spacesAppService.UpdateAsync(created.Id, new UpdateSpaceDto
         {
-            Name = "Room A", SpaceTypeId = Guid.NewGuid(), Capacity = 4,
+            Names = En("Room A"), SpaceTypeId = Guid.NewGuid(), Capacity = 4,
         }));
     }
 
@@ -92,7 +93,7 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
         var spaceType = await CreateSpaceTypeAsync();
         var space = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
-            FloorId = floor.Id, Name = "Room A", SpaceTypeId = spaceType.Id, Capacity = 4,
+            FloorId = floor.Id, Names = En("Room A"), SpaceTypeId = spaceType.Id, Capacity = 4,
         });
 
         await _floorsAppService.DeleteAsync(floor.Id); // cascades to the space

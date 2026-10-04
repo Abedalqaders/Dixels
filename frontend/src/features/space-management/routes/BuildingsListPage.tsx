@@ -193,7 +193,7 @@ export function BuildingsListPage() {
                                   setEditState({
                                     kind: 'building',
                                     id: building.id,
-                                    name: building.name,
+                                    names: building.names,
                                     buildingNumber: building.buildingNumber,
                                     timezone: building.timezone,
                                   }),

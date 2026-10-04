@@ -8,4 +8,7 @@ public static class LocalizedNameConsts
 {
     /// <summary>An ABP culture name: "en", "ar", "zh-Hans".</summary>
     public const int MaxLanguageLength = 10;
+
+    /// <summary>The longest name in any one language — space types, buildings, floors, spaces.</summary>
+    public const int MaxNameLength = 128;
 }

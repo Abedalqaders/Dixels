@@ -89,6 +89,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableSpaceDto.Days))]
     [MapperIgnoreTarget(nameof(BookableSpaceDto.Hours))]
     [MapperIgnoreTarget(nameof(BookableSpaceDto.MaxDurationMinutes))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Space.Translations))]
+    [MapperIgnoreTarget(nameof(BookableSpaceDto.Name))]
     public partial BookableSpaceDto Map(Space source);
 
     [MapperIgnoreSource(nameof(Space.FloorId))]
@@ -110,6 +114,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableSpaceDto.Days))]
     [MapperIgnoreTarget(nameof(BookableSpaceDto.Hours))]
     [MapperIgnoreTarget(nameof(BookableSpaceDto.MaxDurationMinutes))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Space.Translations))]
+    [MapperIgnoreTarget(nameof(BookableSpaceDto.Name))]
     public partial void Map(Space source, BookableSpaceDto destination);
 
     public void BeforeMap(Space source)
@@ -141,6 +149,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableBuildingDto.IsRemoved))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Days))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Hours))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Building.Translations))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Name))]
     public partial BookableBuildingDto Map(Building source);
 
     [MapperIgnoreSource(nameof(Building.BuildingNumber))]
@@ -162,6 +174,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookableBuildingDto.IsRemoved))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Days))]
     [MapperIgnoreTarget(nameof(BookableBuildingDto.Hours))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Building.Translations))]
+    [MapperIgnoreTarget(nameof(BookableBuildingDto.Name))]
     public partial void Map(Building source, BookableBuildingDto destination);
 
     public void BeforeMap(Building source)
@@ -188,6 +204,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreSource(nameof(Floor.DeleterId))]
     [MapperIgnoreSource(nameof(Floor.DeletionTime))]
     [MapperIgnoreTarget(nameof(BookableFloorDto.Spaces))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Floor.Translations))]
+    [MapperIgnoreTarget(nameof(BookableFloorDto.Name))]
     public partial BookableFloorDto Map(Floor source);
 
     [MapperIgnoreSource(nameof(Floor.BuildingId))]
@@ -205,6 +225,10 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreSource(nameof(Floor.DeleterId))]
     [MapperIgnoreSource(nameof(Floor.DeletionTime))]
     [MapperIgnoreTarget(nameof(BookableFloorDto.Spaces))]
+    // The names: which one is shown depends on the reader's language (LocalizedNameReader),
+    // so the app service fills Name itself.
+    [MapperIgnoreSource(nameof(Floor.Translations))]
+    [MapperIgnoreTarget(nameof(BookableFloorDto.Name))]
     public partial void Map(Floor source, BookableFloorDto destination);
 
     public void BeforeMap(Floor source)

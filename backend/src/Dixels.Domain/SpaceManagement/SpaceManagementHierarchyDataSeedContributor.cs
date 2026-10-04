@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement.ValueObjects;
 using Volo.Abp.Data;
@@ -21,6 +22,9 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
     {
         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday
     };
+
+    // The seeded names are English (the default language); an admin can add Arabic ones.
+    private const string English = "en";
 
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
@@ -49,7 +53,7 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
     {
         // Checked by name, not "any Building exists" — this seed data should land alongside
         // whatever an admin has already created through the UI, not be skipped because of it.
-        if (await _buildingRepository.AnyAsync(b => b.Name == "Riverside HQ"))
+        if (await _buildingRepository.AnyAsync(b => b.Translations.Any(t => t.Language == English && t.Name == "Riverside HQ")))
         {
             return;
         }
@@ -137,18 +141,18 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
         int maxDurationMinutes, int maxHorizonDays, int minLeadMinutes)
     {
         return await _buildingRepository.InsertAsync(new Building(
-            _guidGenerator.Create(), name, buildingNumber, timezone,
+            _guidGenerator.Create(), English, name, buildingNumber, timezone,
             days, hours, maxDurationMinutes, maxHorizonDays, minLeadMinutes));
     }
 
     private async Task<Floor> CreateFloorAsync(Guid buildingId, string name, int floorNumber)
     {
-        return await _floorRepository.InsertAsync(new Floor(_guidGenerator.Create(), buildingId, name, floorNumber));
+        return await _floorRepository.InsertAsync(new Floor(_guidGenerator.Create(), buildingId, English, name, floorNumber));
     }
 
     private async Task<Space> CreateSpaceAsync(Guid floorId, string name, Guid spaceTypeId, int capacity)
     {
-        return await _spaceRepository.InsertAsync(new Space(_guidGenerator.Create(), floorId, name, spaceTypeId, capacity));
+        return await _spaceRepository.InsertAsync(new Space(_guidGenerator.Create(), floorId, English, name, spaceTypeId, capacity));
     }
 
     private async Task CreateOverrideAsync(

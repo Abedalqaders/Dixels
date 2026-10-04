@@ -201,7 +201,7 @@ export function FloorsListPage() {
                                 permission: Permissions.Floors.Edit,
                                 icon: <DetailsIcon />,
                                 onClick: () =>
-                                  setEditState({ kind: 'floor', id: floor.id, name: floor.name, floorNumber: floor.floorNumber }),
+                                  setEditState({ kind: 'floor', id: floor.id, names: floor.names, floorNumber: floor.floorNumber }),
                               },
                               {
                                 label: canEditRules ? 'Edit constraints' : 'View constraints',

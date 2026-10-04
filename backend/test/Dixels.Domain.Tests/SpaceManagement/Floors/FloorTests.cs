@@ -9,7 +9,7 @@ namespace Dixels.SpaceManagement.Tests;
 public class FloorTests
 {
     private static Floor CreateFloor()
-        => new(Guid.NewGuid(), Guid.NewGuid(), "Level 3", floorNumber: 3);
+        => new(Guid.NewGuid(), Guid.NewGuid(), "en", "Level 3", floorNumber: 3);
 
     [Fact]
     public void New_floor_inherits_everything_by_default()

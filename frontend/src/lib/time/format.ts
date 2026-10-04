@@ -21,6 +21,8 @@ interface Names {
   months: readonly string[]
   shortWeekdays: readonly string[]
   shortMonths: readonly string[]
+  /** One or two letters, for a calendar's column headings: "S", "ح". */
+  narrowWeekdays: readonly string[]
 }
 
 const EN_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -31,6 +33,7 @@ const ENGLISH: Names = {
   months: EN_MONTHS,
   shortWeekdays: EN_WEEKDAYS.map((w) => w.slice(0, 3)),
   shortMonths: EN_MONTHS.map((m) => m.slice(0, 3)),
+  narrowWeekdays: EN_WEEKDAYS.map((w) => w[0]),
 }
 
 /** One language's names from Intl, worked out once. 4 Jan 2026 is a Sunday. */
@@ -46,6 +49,7 @@ function intlNames(locale: string): Names {
     months: twelve.map((i) => format({ month: 'long' }, month(i))),
     shortWeekdays: seven.map((i) => format({ weekday: 'short' }, day(i))),
     shortMonths: twelve.map((i) => format({ month: 'short' }, month(i))),
+    narrowWeekdays: seven.map((i) => format({ weekday: 'narrow' }, day(i))),
   }
 }
 
@@ -105,11 +109,11 @@ export function formatMonth(date: IsoDate, style: 'long' | 'short' = 'long'): st
   return style === 'short' ? n.shortMonths[m] : n.months[m]
 }
 
-/** "Tuesday", "Tue" */
-export function formatWeekday(date: IsoDate, style: 'long' | 'short' = 'long'): string {
+/** "Tuesday", "Tue", "T" */
+export function formatWeekday(date: IsoDate, style: 'long' | 'short' | 'narrow' = 'long'): string {
   const n = names()
   const w = parts(date).w
-  return style === 'short' ? n.shortWeekdays[w] : n.weekdays[w]
+  return style === 'narrow' ? n.narrowWeekdays[w] : style === 'short' ? n.shortWeekdays[w] : n.weekdays[w]
 }
 
 /**

@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using Dixels.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.MultiLingualObjects;
 using Dixels.SpaceManagement.ValueObjects;
 
 namespace Dixels.SpaceManagement;
@@ -10,10 +13,18 @@ namespace Dixels.SpaceManagement;
 /// the *resolved* Floor value (the Floor's own override if set, else the Building's),
 /// never the raw Floor row.
 /// </summary>
-public class Space : FullAuditedAggregateRoot<Guid>
+public class Space : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTranslation>
 {
     public Guid FloorId { get; private set; }
-    public string Name { get; private set; } = null!;
+
+    /// <summary>
+    /// Its name, once per language (ABP MultiLingualObjects) — there's no single Name. Which
+    /// one a reader sees is picked by IMultiLingualObjectManager: their language, else the
+    /// default language's (always there: it's required). Settable only because ABP's
+    /// interface demands it; use SetName/SetNames.
+    /// </summary>
+    public ICollection<SpaceTranslation> Translations { get; set; } = new List<SpaceTranslation>();
+
     public Guid SpaceTypeId { get; private set; }
     public int Capacity { get; private set; }
     public OperatingDays? Days { get; private set; }
@@ -40,19 +51,26 @@ public class Space : FullAuditedAggregateRoot<Guid>
         // EF Core
     }
 
-    public Space(Guid id, Guid floorId, string name, Guid spaceTypeId, int capacity)
+    public Space(Guid id, Guid floorId, string language, string name, Guid spaceTypeId, int capacity)
         : base(id)
     {
         FloorId = floorId;
-        SetName(name);
+        SetName(language, name);
         SpaceTypeId = spaceTypeId;
         SetCapacity(capacity);
     }
 
-    public void SetName(string name)
-    {
-        Name = Check.NotNullOrWhiteSpace(name, nameof(name), SpaceConsts.MaxNameLength);
-    }
+    /// <summary>The name in exactly this language, if it has one (no fallback).</summary>
+    public string? FindName(string language) => Translations.FindName(language);
+
+    public void SetName(string language, string name) => Translations.SetName(language, name, NewTranslation);
+
+    public void RemoveName(string language) => Translations.RemoveName(language);
+
+    /// <summary>Makes the names exactly these (validated by LocalizedNameValidator): a language left out loses its name.</summary>
+    public void SetNames(IReadOnlyCollection<LocalizedName> names) => Translations.SetNames(names, NewTranslation);
+
+    private SpaceTranslation NewTranslation(string language, string name) => new(Id, language, name);
 
     public void SetSpaceType(Guid spaceTypeId)
     {

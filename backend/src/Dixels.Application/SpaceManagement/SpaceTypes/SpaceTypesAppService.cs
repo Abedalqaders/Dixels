@@ -47,7 +47,7 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
     [Authorize(DixelsPermissions.SpaceTypes.Create)]
     public async Task<SpaceTypeDto> CreateAsync(CreateSpaceTypeDto input)
     {
-        var spaceType = await _spaceTypeManager.CreateAsync(ToNames(input.Names), input.IconKey);
+        var spaceType = await _spaceTypeManager.CreateAsync(input.Names.ToNames(), input.IconKey);
         await _spaceTypeRepository.InsertCheckedAsync(spaceType);
 
         return await ToDtoAsync(spaceType);
@@ -58,7 +58,7 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
     {
         var spaceType = await _spaceTypeRepository.GetAsync(id);
 
-        await _spaceTypeManager.SetNamesAsync(spaceType, ToNames(input.Names));
+        await _spaceTypeManager.SetNamesAsync(spaceType, input.Names.ToNames());
         spaceType.SetIconKey(input.IconKey);
 
         await _spaceTypeRepository.UpdateCheckedAsync(spaceType);
@@ -74,9 +74,6 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
         await _spaceTypeRepository.DeleteAsync(spaceType);
     }
 
-    private static IEnumerable<LocalizedName> ToNames(IEnumerable<SpaceTypeNameDto> names) =>
-        names.Select(n => new LocalizedName(n.Language, n.Name));
-
     private async Task<SpaceTypeDto> ToDtoAsync(SpaceType spaceType)
     {
         var translation = await _multiLingualObjectManager.GetTranslationAsync<SpaceType, SpaceTypeTranslation>(spaceType);
@@ -88,10 +85,7 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
         var dto = ObjectMapper.Map<SpaceType, SpaceTypeDto>(spaceType);
         // Never null in practice: the default language's name is required.
         dto.Name = shown?.Name ?? string.Empty;
-        dto.Names = spaceType.Translations
-            .OrderBy(t => t.Language, StringComparer.Ordinal)
-            .Select(t => new SpaceTypeNameDto { Language = t.Language, Name = t.Name })
-            .ToList();
+        dto.Names = spaceType.Translations.ToNameDtos();
         return dto;
     }
 }

@@ -24,15 +24,108 @@ export interface TextKeys {
   "Auth:SigningOutDetail": string
   "Auth:TakingYouBack": string
   "Auth:TakingYouHome": string
+  "Booking:AlreadyStarted": string
+  "Booking:Cancel": string
+  "Booking:CancelFailed": string
+  "Booking:CancelOnlyUpcoming": string
+  "Booking:CancelScope": string
+  "Booking:CancelScopeFollowing": string
+  "Booking:CancelScopeSeries": string
+  "Booking:CancelScopeThis": string
+  "Booking:CancelSeriesTitle": string
+  "Booking:CancelSummary": string
+  "Booking:CancelTitle": string
+  "Booking:CancelledByAdmin": string
+  "Booking:CancelledByAdminDetail": string
+  "Booking:CancelledByAdminWithReason": string
+  "Booking:Cancelling": string
+  "Booking:CloseDetails": string
+  "Booking:Date": string
+  "Booking:Details": string
+  "Booking:Done": string
+  "Booking:FewerPeople": string
+  "Booking:From": string
+  "Booking:InProgress": string
+  "Booking:Keep": string
+  "Booking:MinPeople_one": string
+  "Booking:MinPeople_other": string
+  "Booking:MorePeople": string
+  "Booking:OtherRooms": string
+  "Booking:Over": string
+  "Booking:People": string
+  "Booking:PeopleCount_one": string
+  "Booking:PeopleCount_other": string
+  "Booking:Reason": string
+  "Booking:ReasonPlaceholder": string
+  "Booking:Repeats": string
+  "Booking:Seats_one": string
+  "Booking:Seats_other": string
+  "Booking:Time": string
+  "Booking:TimezoneTime": string
+  "Booking:To": string
+  "Booking:Upcoming": string
+  "Booking:Where": string
+  "Calendar:BookARoom": string
+  "Calendar:BookOnDay": string
+  "Calendar:Booked": string
+  "Calendar:BookedSeries_one": string
+  "Calendar:BookedSeries_other": string
+  "Calendar:BookingLoadFailed": string
+  "Calendar:BookingsLoadFailed": string
+  "Calendar:BuildingLoadFailed": string
+  "Calendar:Cancelled": string
+  "Calendar:CancelledItem": string
+  "Calendar:CancelledSeries_one": string
+  "Calendar:CancelledSeries_other": string
+  "Calendar:CappedAt": string
+  "Calendar:CappedAtSome": string
+  "Calendar:Closed": string
+  "Calendar:ClosedAllDay": string
+  "Calendar:ClosedOnWeekday": string
+  "Calendar:ClosesAt": string
+  "Calendar:DayHeading": string
+  "Calendar:DayPassed": string
+  "Calendar:DayView": string
+  "Calendar:Item": string
+  "Calendar:MaxLength": string
+  "Calendar:MonthHeading": string
+  "Calendar:MonthView": string
+  "Calendar:MoreItems_one": string
+  "Calendar:MoreItems_other": string
+  "Calendar:NewBooking": string
+  "Calendar:Next": string
+  "Calendar:NextMonth": string
+  "Calendar:NoBuilding": string
+  "Calendar:NoBuildingDetail": string
+  "Calendar:NothingThisDay": string
+  "Calendar:NothingThisMonth": string
+  "Calendar:NothingThisWeek": string
+  "Calendar:Notice": string
+  "Calendar:OpenDay": string
+  "Calendar:OpenDayWithBookings_one": string
+  "Calendar:OpenDayWithBookings_other": string
+  "Calendar:OpensAt": string
+  "Calendar:Past": string
+  "Calendar:Previous": string
+  "Calendar:PreviousMonth": string
+  "Calendar:Repeats": string
+  "Calendar:TimePassed": string
+  "Calendar:Title": string
+  "Calendar:Today": string
+  "Calendar:TooSoon": string
+  "Calendar:View": string
+  "Calendar:WeekView": string
   "Common:Actions": string
   "Common:BackToSignIn": string
   "Common:Cancel": string
+  "Common:Close": string
   "Common:Delete": string
   "Common:Deleting": string
   "Common:Dismiss": string
   "Common:Edit": string
   "Common:GoHome": string
   "Common:LoadingBuilding": string
+  "Common:Optional": string
   "Common:Reload": string
   "Common:Save": string
   "Common:Saving": string
@@ -111,6 +204,13 @@ export interface TextKeys {
   "Dixels:SpaceManagement:TimezoneChangeWithBookings": string
   "Dixels:TooManyRequests": string
   "Dixels:Users:InvalidBuildingId": string
+  "Duration:HoursMinutes": string
+  "Duration:Hours_one": string
+  "Duration:Hours_other": string
+  "Duration:MinutesShort_one": string
+  "Duration:MinutesShort_other": string
+  "Duration:Minutes_one": string
+  "Duration:Minutes_other": string
   "Enum:ConstraintSource.Building": string
   "Enum:ConstraintSource.Floor": string
   "Enum:ConstraintSource.Space": string
@@ -131,6 +231,10 @@ export interface TextKeys {
   "Language:Label": string
   "LongWelcomeMessage": string
   "Menu:Home": string
+  "Names:DefaultRequired": string
+  "Names:HasName": string
+  "Names:Language": string
+  "Names:Required": string
   "Nav:Administration": string
   "Nav:Bookings": string
   "Nav:CloseMenu": string
@@ -164,6 +268,22 @@ export interface TextKeys {
   "Permission:SpaceTypes": string
   "Permission:Spaces": string
   "PermissionGroup:Dixels": string
+  "QuickBook:AllowUpTo": string
+  "QuickBook:CheckFailed": string
+  "QuickBook:Checking": string
+  "QuickBook:FreeAllDay": string
+  "QuickBook:FreeUntil": string
+  "QuickBook:NoneFree": string
+  "QuickBook:OpenInFindSpace": string
+  "QuickBook:OthersUnavailable_one": string
+  "QuickBook:OthersUnavailable_other": string
+  "QuickBook:RoomCount_one": string
+  "QuickBook:RoomCount_other": string
+  "QuickBook:RoomsFree_one": string
+  "QuickBook:RoomsFree_other": string
+  "QuickBook:ShortenTo": string
+  "QuickBook:UpTo": string
+  "QuickBook:WhyNoneFree": string
   "SignIn:Button": string
   "SignIn:Foot": string
   "SignIn:PointNoDoubleBooking": string
@@ -188,7 +308,6 @@ export interface TextKeys {
   "SpaceTypes:Lead": string
   "SpaceTypes:LoadFailed": string
   "SpaceTypes:Loading": string
-  "SpaceTypes:NameIn": string
   "SpaceTypes:NamePlaceholder": string
   "SpaceTypes:NoMatch": string
   "SpaceTypes:Search": string
@@ -199,11 +318,18 @@ export interface TextKeys {
   "Timezone:Label": string
   "Timezone:NoMatch": string
   "Timezone:Search": string
-  "Translations:Add": string
-  "Translations:Count": string
-  "Translations:Hint": string
   "Translations:Missing": string
-  "Translations:Remove": string
-  "Translations:Title": string
+  "Unavailable:BelowMinAttendees": string
+  "Unavailable:BeyondHorizon": string
+  "Unavailable:ClosedDay": string
+  "Unavailable:NotAligned": string
+  "Unavailable:Other": string
+  "Unavailable:OutsideHours": string
+  "Unavailable:OverCapacity": string
+  "Unavailable:Overlap": string
+  "Unavailable:OwnOverlap": string
+  "Unavailable:SpaceClosed": string
+  "Unavailable:TooLong": string
+  "Unavailable:TooSoon": string
   "Welcome": string
 }

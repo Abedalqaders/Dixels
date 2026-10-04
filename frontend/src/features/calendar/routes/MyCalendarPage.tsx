@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
@@ -15,6 +16,8 @@ import { up } from '@/lib/breakpoints'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { addDays, dateOf, formatDate, fromMinutes, nextSlot, nowInZone, timeOf, toMinutes } from '@/lib/time/buildingTime'
+import { formatDaySpan, formatMonth } from '@/lib/time/format'
+import { languageInfo } from '@/i18n'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { ApiError, getBooking, getMyBookableBuilding } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookingDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
@@ -89,6 +92,7 @@ function useZonedNow(timeZone: string) {
  * which rooms are free then and book one, without leaving the page.
  */
 export function MyCalendarPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const { status, data: building, error } = useApiQuery(queryKeys.bookings.myBuilding(), () => getMyBookableBuilding(token))
@@ -98,24 +102,24 @@ export function MyCalendarPage() {
       <div className="top">
         <span className="pick">
           <span className="picklbl">
-            {status === 'loading' ? <TextSkeleton label="Loading your building…" /> : building?.name}
+            {status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}
           </span>
         </span>
       </div>
 
       <div className="content" data-compact-top="">
-        <h1 className="pagetitle">My calendar</h1>
+        <h1 className="pagetitle">{t('Calendar:Title')}</h1>
 
         {status === 'error' && (
           <p className="lead" role="alert">
-            {error instanceof ApiError ? error.message : "Couldn't load your building — please refresh."}
+            {error instanceof ApiError ? error.message : t('Calendar:BuildingLoadFailed')}
           </p>
         )}
 
         {status === 'success' && !building && (
           <Card className="mt-6 gap-1 p-6">
-            <p>You haven't been assigned to a building yet, so there's nothing to show.</p>
-            <p className="text-sm text-muted-foreground">Ask an administrator to assign you to your building.</p>
+            <p>{t('Calendar:NoBuilding')}</p>
+            <p className="text-sm text-muted-foreground">{t('Calendar:NoBuildingDetail')}</p>
           </Card>
         )}
 
@@ -128,6 +132,9 @@ export function MyCalendarPage() {
 }
 
 function Calendar({ token, building }: { token: string; building: BookableBuildingDto }) {
+  const { t } = useTranslation()
+  // Right to left, "previous" points right: the arrow keys and chevrons follow the reading direction.
+  const rtl = languageInfo().dir === 'rtl'
   // Bookings are still shown, but nothing can be booked from here when the building was deleted
   // (past and cancelled ones remain) or the user hasn't been granted Bookings.Create.
   const canCreate = usePermission(Permissions.Bookings.Create)
@@ -190,18 +197,20 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     detailBooking.status === 'error'
       ? detailBooking.error instanceof ApiError
         ? detailBooking.error.message
-        : "Couldn't load this booking — please try again."
+        : t('Calendar:BookingLoadFailed')
       : null
   const [cancelling, setCancelling] = useState<BookingDto | null>(null)
 
   // The heading: the day itself in Day view, otherwise the month with the exact range under it.
+  // Word order is the language's ("October 4, 2026", "4 أكتوبر 2026").
   const year = date.slice(0, 4)
+  const monthHeading = t('Calendar:MonthHeading', { month: monthName(date), year })
   const heading =
     view === 'day'
-      ? { big: `${monthName(date)} ${dayOfMonth(date)}, ${year}`, small: weekdayName(date) }
+      ? { big: t('Calendar:DayHeading', { month: monthName(date), day: dayOfMonth(date), year }), small: weekdayName(date) }
       : view === 'week'
-        ? { big: `${monthName(date)} ${year}`, small: rangeLabel('week', date) }
-        : { big: `${monthName(date)} ${year}`, small: `1 – ${daysInMonth(date)} ${monthName(date).slice(0, 3)} ${year}` }
+        ? { big: monthHeading, small: rangeLabel('week', date) }
+        : { big: monthHeading, small: formatDaySpan(startOfMonth(date), addDays(startOfMonth(date), daysInMonth(date) - 1)) }
   const [quickBook, setQuickBook] = useState<QuickBookWindow | null>(null)
   const [form, setForm] = useState<{ room: SpaceAvailabilityDto; window: QuickBookWindow; attendees: number } | null>(null)
   const anyDialog = Boolean(detail || cancelling || quickBook || form)
@@ -215,8 +224,8 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
       const key = e.key.toLowerCase()
       if (key === 't') go({ date: now.date })
-      else if (e.key === 'ArrowLeft') go({ date: shiftDate(view, date, -1) })
-      else if (e.key === 'ArrowRight') go({ date: shiftDate(view, date, 1) })
+      else if (e.key === 'ArrowLeft') go({ date: shiftDate(view, date, rtl ? 1 : -1) })
+      else if (e.key === 'ArrowRight') go({ date: shiftDate(view, date, rtl ? -1 : 1) })
       else if (key === 'd') go({ view: 'day' })
       else if (wide && key === 'w') go({ view: 'week' })
       else if (key === 'm') go({ view: 'month' })
@@ -250,11 +259,13 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
   function handleBooked(created: BookingDto, count = 1) {
     setForm(null)
-    showToast(
-      count > 1
-        ? `Booked ${created.spaceName} on ${count} dates from ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`
-        : `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
-    )
+    const booked = {
+      space: created.spaceName,
+      date: formatDate(dateOf(created.localStart)),
+      start: timeOf(created.localStart),
+      end: timeOf(created.localEnd),
+    }
+    showToast(count > 1 ? t('Calendar:BookedSeries', { ...booked, count }) : t('Calendar:Booked', booked))
     // Jump to the new booking if it's off screen.
     const day = dateOf(created.localStart)
     if (day < range.from || day >= range.to) go({ date: day })
@@ -267,8 +278,8 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     emitBookingsChanged()
     showToast(
       all.length > 1
-        ? `Cancelled ${all.length} bookings of “${cancelled.title}” — ${cancelled.spaceName} is free again then`
-        : `Cancelled — ${cancelled.spaceName} is free again for ${timeOf(cancelled.localStart)}–${timeOf(cancelled.localEnd)}`,
+        ? t('Calendar:CancelledSeries', { count: all.length, title: cancelled.title, space: cancelled.spaceName })
+        : t('Calendar:Cancelled', { space: cancelled.spaceName, start: timeOf(cancelled.localStart), end: timeOf(cancelled.localEnd) }),
     )
   }
 
@@ -278,10 +289,11 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         {/* Where you are, then the controls: date tile, month + range, ‹ Today ›, the view, New booking. */}
         <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <div
-            className="grid h-12 w-12 flex-none place-items-center rounded-lg border bg-card leading-none shadow-xs"
+            className="grid h-12 min-w-12 flex-none place-items-center rounded-lg border bg-card px-1 leading-none shadow-xs"
             aria-hidden="true"
           >
-            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{monthName(date).slice(0, 3)}</span>
+            {/* "Oct" — Arabic has no abbreviations, so its short month is the full name. */}
+            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{formatMonth(date, 'short')}</span>
             <span className="text-lg font-semibold">{dayOfMonth(date)}</span>
           </div>
           {/* Month on top, the exact range under it — in reading order the range comes first. */}
@@ -296,29 +308,43 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
             {building.name} · {building.timezone}
           </span>
           <div className="flex items-center overflow-hidden rounded-md border">
-            <Button variant="ghost" size="icon" className="rounded-none" aria-label="Previous" title="Previous (←)" onClick={() => go({ date: shiftDate(view, date, -1) })}>
-              <ChevronLeft />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-none"
+              aria-label={t('Calendar:Previous')}
+              title={`${t('Calendar:Previous')} (${rtl ? '→' : '←'})`}
+              onClick={() => go({ date: shiftDate(view, date, -1) })}
+            >
+              <ChevronLeft className="rtl:-scale-x-100" />
             </Button>
-            <Button variant="ghost" className="rounded-none border-x px-3" onClick={() => go({ date: now.date })} title="Today (T)">
-              Today
+            <Button variant="ghost" className="rounded-none border-x px-3" onClick={() => go({ date: now.date })} title={`${t('Calendar:Today')} (T)`}>
+              {t('Calendar:Today')}
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-none" aria-label="Next" title="Next (→)" onClick={() => go({ date: shiftDate(view, date, 1) })}>
-              <ChevronRight />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-none"
+              aria-label={t('Calendar:Next')}
+              title={`${t('Calendar:Next')} (${rtl ? '←' : '→'})`}
+              onClick={() => go({ date: shiftDate(view, date, 1) })}
+            >
+              <ChevronRight className="rtl:-scale-x-100" />
             </Button>
           </div>
           <Select value={view} onValueChange={(v) => v && go({ view: v as CalendarView })}>
-            <SelectTrigger className="w-32" aria-label="View">
+            <SelectTrigger className="w-32" aria-label={t('Calendar:View')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="day">Day view</SelectItem>
-              {wide && <SelectItem value="week">Week view</SelectItem>}
-              <SelectItem value="month">Month view</SelectItem>
+              <SelectItem value="day">{t('Calendar:DayView')}</SelectItem>
+              {wide && <SelectItem value="week">{t('Calendar:WeekView')}</SelectItem>}
+              <SelectItem value="month">{t('Calendar:MonthView')}</SelectItem>
             </SelectContent>
           </Select>
           {!readOnly && (
             <Button onClick={newBooking}>
-              <Plus /> New booking
+              <Plus /> {t('Calendar:NewBooking')}
             </Button>
           )}
         </div>
@@ -330,7 +356,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           >
             {bookings.status === 'error' && (
               <p role="alert" className="m-3 rounded-md bg-slot-closed px-4 py-3 text-sm text-slot-closed-ink">
-                {bookings.error instanceof ApiError ? bookings.error.message : "Couldn't load your bookings — please try again."}
+                {bookings.error instanceof ApiError ? bookings.error.message : t('Calendar:BookingsLoadFailed')}
               </p>
             )}
 
@@ -366,10 +392,10 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
             {bookings.status === 'success' && items.length === 0 && (
               <p className="border-t px-4 py-3 text-center text-sm text-muted-foreground">
-                Nothing booked {view === 'day' ? 'this day' : view === 'week' ? 'this week' : 'this month'}.{' '}
+                {t(view === 'day' ? 'Calendar:NothingThisDay' : view === 'week' ? 'Calendar:NothingThisWeek' : 'Calendar:NothingThisMonth')}{' '}
                 {!readOnly && (
                   <button type="button" className="font-medium text-foreground underline underline-offset-4" onClick={newBooking}>
-                    Book a room
+                    {t('Calendar:BookARoom')}
                   </button>
                 )}
               </p>
@@ -377,7 +403,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           </section>
 
           {/* The side panel: a month to jump around, and the booking you clicked underneath. */}
-          <aside className="hidden flex-col border-l lg:flex">
+          <aside className="hidden flex-col border-s lg:flex">
             <div className="p-3">
               <MiniCalendar
                 selected={date}

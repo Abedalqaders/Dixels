@@ -8,6 +8,7 @@ using Volo.Abp;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Xunit;
+using static Dixels.TestNames;
 
 namespace Dixels.EntityFrameworkCore.SpaceManagement;
 
@@ -31,6 +32,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = new Building(
             Guid.NewGuid(),
+            "en",
             name,
             null,
             "UTC",
@@ -50,7 +52,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
         var created = await _floorsAppService.CreateAsync(new CreateFloorDto
         {
             BuildingId = building.Id,
-            Name = "Level 1",
+            Names = En("Level 1"),
             FloorNumber = 1,
         });
 
@@ -67,9 +69,9 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task Update_Changes_Identity_Fields_Only()
     {
         var building = await CreateBuildingAsync();
-        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Old" });
+        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Old") });
 
-        var updated = await _floorsAppService.UpdateAsync(created.Id, new UpdateFloorDto { Name = "New", FloorNumber = 5 });
+        var updated = await _floorsAppService.UpdateAsync(created.Id, new UpdateFloorDto { Names = En("New"), FloorNumber = 5 });
 
         updated.Name.ShouldBe("New");
         updated.FloorNumber.ShouldBe(5);
@@ -79,7 +81,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task UpdateConstraints_Sets_An_Override_And_Marks_HasOverrides()
     {
         var building = await CreateBuildingAsync();
-        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
 
         var result = await _floorsAppService.UpdateConstraintsAsync(created.Id, new UpdateFloorConstraintsDto
         {
@@ -101,7 +103,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task UpdateConstraints_Clearing_Back_To_Null_Restores_Inherit()
     {
         var building = await CreateBuildingAsync();
-        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
 
         var first = await _floorsAppService.UpdateConstraintsAsync(created.Id, new UpdateFloorConstraintsDto
         {
@@ -131,6 +133,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = new Building(
             Guid.NewGuid(),
+            "en",
             "Narrow Hours HQ",
             null,
             "UTC",
@@ -141,7 +144,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
             minLeadMinutes: 0);
         await _buildingRepository.InsertAsync(building);
 
-        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
 
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _floorsAppService.UpdateConstraintsAsync(created.Id, new UpdateFloorConstraintsDto
@@ -159,7 +162,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task UpdateConstraints_With_Stale_ConcurrencyStamp_Throws()
     {
         var building = await CreateBuildingAsync();
-        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var created = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
         var staleStamp = created.ConcurrencyStamp;
 
         await _floorsAppService.UpdateConstraintsAsync(created.Id, new UpdateFloorConstraintsDto
@@ -180,10 +183,10 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task Tightening_Floor_Hours_Over_An_Existing_Space_Override_Returns_A_Warning()
     {
         var building = await CreateBuildingAsync();
-        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
         var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
-        var space = new Space(Guid.NewGuid(), floor.Id, "Room A", spaceType.Id, capacity: 4);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room A", spaceType.Id, capacity: 4);
         space.SetOwnOperatingHours(
             OperatingWindow.Create(new TimeOnly(20, 0), new TimeOnly(23, 0)),
             OperatingWindow.FullDay);
@@ -202,7 +205,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task GetResolvedConstraints_Includes_Building_Ancestor_Trail()
     {
         var building = await CreateBuildingAsync("Resolved HQ");
-        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
 
         var resolved = await _floorsAppService.GetResolvedConstraintsAsync(floor.Id);
 
@@ -216,10 +219,10 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task Delete_Cascades_To_Spaces_Then_Restore_Brings_Them_Back()
     {
         var building = await CreateBuildingAsync();
-        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
         var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
-        var space = new Space(Guid.NewGuid(), floor.Id, "Room A", spaceType.Id, capacity: 4);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room A", spaceType.Id, capacity: 4);
         await _spaceRepository.InsertAsync(space);
 
         await _floorsAppService.DeleteAsync(floor.Id);
@@ -240,14 +243,14 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task Restore_Does_Not_Resurrect_A_Space_Deleted_Independently_Earlier()
     {
         var building = await CreateBuildingAsync();
-        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
         var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
-        var independentlyDeletedSpace = new Space(Guid.NewGuid(), floor.Id, "Already Gone", spaceType.Id, capacity: 2);
+        var independentlyDeletedSpace = new Space(Guid.NewGuid(), floor.Id, "en", "Already Gone", spaceType.Id, capacity: 2);
         await _spaceRepository.InsertAsync(independentlyDeletedSpace);
         await _spaceRepository.DeleteAsync(independentlyDeletedSpace);
 
-        var laterSpace = new Space(Guid.NewGuid(), floor.Id, "Still Here Until Delete", spaceType.Id, capacity: 4);
+        var laterSpace = new Space(Guid.NewGuid(), floor.Id, "en", "Still Here Until Delete", spaceType.Id, capacity: 4);
         await _spaceRepository.InsertAsync(laterSpace);
 
         await _floorsAppService.DeleteAsync(floor.Id);
@@ -265,9 +268,9 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
 
         for (var i = 0; i < 5; i++)
         {
-            await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingA.Id, Name = $"Floor {i:D2}" });
+            await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingA.Id, Names = En($"Floor {i:D2}") });
         }
-        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingB.Id, Name = "Other Building Floor" });
+        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingB.Id, Names = En("Other Building Floor") });
 
         var page1 = await _floorsAppService.GetListAsync(new GetFloorsInput { BuildingId = buildingA.Id, SkipCount = 0, MaxResultCount = 2 });
         page1.TotalCount.ShouldBe(5);
@@ -283,8 +286,8 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task GetListAsync_Filter_Narrows_By_Name()
     {
         var building = await CreateBuildingAsync();
-        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Ground Floor" });
-        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Mezzanine" });
+        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Ground Floor") });
+        await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Mezzanine") });
 
         var result = await _floorsAppService.GetListAsync(new GetFloorsInput { BuildingId = building.Id, Filter = "Ground" });
 
@@ -296,7 +299,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     public async Task GetListAsync_Without_IncludeDeleted_Excludes_Deleted_Floor()
     {
         var building = await CreateBuildingAsync();
-        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
+        var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Names = En("Level 1") });
         await _floorsAppService.DeleteAsync(floor.Id);
 
         var withoutDeleted = await _floorsAppService.GetListAsync(new GetFloorsInput { BuildingId = building.Id });
@@ -311,8 +314,8 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var buildingA = await CreateBuildingAsync("Building A");
         var buildingB = await CreateBuildingAsync("Building B");
-        var floorA = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingA.Id, Name = "Level 1" });
-        var floorB = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingB.Id, Name = "Level 1" });
+        var floorA = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingA.Id, Names = En("Level 1") });
+        var floorB = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = buildingB.Id, Names = En("Level 1") });
 
         var result = await _floorsAppService.GetListAsync(new GetFloorsInput { MaxResultCount = 100 });
 
@@ -327,8 +330,8 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var matchingBuilding = await CreateBuildingAsync("Riverside Tower");
         var otherBuilding = await CreateBuildingAsync("Lakeside Tower");
-        var floorInMatchingBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = matchingBuilding.Id, Name = "Level 1" });
-        var floorInOtherBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = otherBuilding.Id, Name = "Level 1" });
+        var floorInMatchingBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = matchingBuilding.Id, Names = En("Level 1") });
+        var floorInOtherBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = otherBuilding.Id, Names = En("Level 1") });
 
         var result = await _floorsAppService.GetListAsync(new GetFloorsInput { Filter = "Riverside" });
 
@@ -341,8 +344,8 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var riverside = await CreateBuildingAsync("Riverside Tower");
         var lakeside = await CreateBuildingAsync("Lakeside Tower");
-        var floorNamedAfterRiver = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = lakeside.Id, Name = "Riverside Lounge" });
-        var floorInRiversideBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = riverside.Id, Name = "Level 1" });
+        var floorNamedAfterRiver = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = lakeside.Id, Names = En("Riverside Lounge") });
+        var floorInRiversideBuilding = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = riverside.Id, Names = En("Level 1") });
 
         var result = await _floorsAppService.GetListAsync(new GetFloorsInput { Filter = "Riverside", FloorNameOnly = true });
 

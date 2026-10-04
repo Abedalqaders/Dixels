@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using Dixels.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.MultiLingualObjects;
 using Dixels.SpaceManagement.ValueObjects;
 
 namespace Dixels.SpaceManagement;
@@ -10,10 +13,18 @@ namespace Dixels.SpaceManagement;
 /// means "inherit from the Building" — except <see cref="MaxDurationMinutes"/>-style policy
 /// overrides and the days/hours narrow-only rule, both enforced by this class's own setters.
 /// </summary>
-public class Floor : FullAuditedAggregateRoot<Guid>
+public class Floor : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<FloorTranslation>
 {
     public Guid BuildingId { get; private set; }
-    public string Name { get; private set; } = null!;
+
+    /// <summary>
+    /// Its name, once per language (ABP MultiLingualObjects) — there's no single Name. Which
+    /// one a reader sees is picked by IMultiLingualObjectManager: their language, else the
+    /// default language's (always there: it's required). Settable only because ABP's
+    /// interface demands it; use SetName/SetNames.
+    /// </summary>
+    public ICollection<FloorTranslation> Translations { get; set; } = new List<FloorTranslation>();
+
     public int? FloorNumber { get; private set; }
     public OperatingDays? Days { get; private set; }
     public OperatingWindow? Hours { get; private set; }
@@ -38,18 +49,25 @@ public class Floor : FullAuditedAggregateRoot<Guid>
         // EF Core
     }
 
-    public Floor(Guid id, Guid buildingId, string name, int? floorNumber)
+    public Floor(Guid id, Guid buildingId, string language, string name, int? floorNumber)
         : base(id)
     {
         BuildingId = buildingId;
-        SetName(name);
+        SetName(language, name);
         FloorNumber = floorNumber;
     }
 
-    public void SetName(string name)
-    {
-        Name = Check.NotNullOrWhiteSpace(name, nameof(name), FloorConsts.MaxNameLength);
-    }
+    /// <summary>The name in exactly this language, if it has one (no fallback).</summary>
+    public string? FindName(string language) => Translations.FindName(language);
+
+    public void SetName(string language, string name) => Translations.SetName(language, name, NewTranslation);
+
+    public void RemoveName(string language) => Translations.RemoveName(language);
+
+    /// <summary>Makes the names exactly these (validated by LocalizedNameValidator): a language left out loses its name.</summary>
+    public void SetNames(IReadOnlyCollection<LocalizedName> names) => Translations.SetNames(names, NewTranslation);
+
+    private FloorTranslation NewTranslation(string language, string name) => new(Id, language, name);
 
     public void SetFloorNumber(int? floorNumber)
     {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Dixels.Localization;
 using Volo.Abp.Domain.Entities.Auditing;
 using Volo.Abp.MultiLingualObjects;
 
@@ -42,29 +43,13 @@ public class SpaceType : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<Spa
     }
 
     /// <summary>The name in exactly this language, if it has one (no fallback).</summary>
-    public string? FindName(string language) => Translations.FirstOrDefault(t => t.Language == language)?.Name;
+    public string? FindName(string language) => Translations.FindName(language);
 
-    public void SetName(string language, string name)
-    {
-        var existing = Translations.FirstOrDefault(t => t.Language == language);
-        if (existing is null)
-        {
-            Translations.Add(new SpaceTypeTranslation(Id, language, name));
-        }
-        else
-        {
-            existing.SetName(name);
-        }
-    }
+    public void SetName(string language, string name) => Translations.SetName(language, name, NewTranslation);
 
-    public void RemoveName(string language)
-    {
-        var existing = Translations.FirstOrDefault(t => t.Language == language);
-        if (existing is not null)
-        {
-            Translations.Remove(existing);
-        }
-    }
+    public void RemoveName(string language) => Translations.RemoveName(language);
+
+    private SpaceTypeTranslation NewTranslation(string language, string name) => new(Id, language, name);
 
     public void SetIconKey(IconKey iconKey)
     {

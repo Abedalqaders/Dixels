@@ -1,10 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using Dixels.Localization;
 
-namespace Dixels.SpaceManagement;
+namespace Dixels.Localization;
 
-/// <summary>A space type's name in one language, e.g. { language: "ar", name: "غرفة اجتماعات" }.</summary>
-public class SpaceTypeNameDto
+/// <summary>A name in one language, e.g. { language: "ar", name: "غرفة اجتماعات" } — for space types, buildings, floors and spaces.</summary>
+public class LocalizedNameDto
 {
     /// <summary>ABP culture name, one of the app's languages ("en", "ar").</summary>
     [Required]
@@ -12,6 +11,6 @@ public class SpaceTypeNameDto
     public string Language { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(SpaceTypeConsts.MaxNameLength)]
+    [StringLength(LocalizedNameConsts.MaxNameLength)]
     public string Name { get; set; } = string.Empty;
 }

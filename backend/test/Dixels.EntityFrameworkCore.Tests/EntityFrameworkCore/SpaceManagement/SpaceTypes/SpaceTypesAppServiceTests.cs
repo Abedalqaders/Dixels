@@ -1,3 +1,4 @@
+using Dixels.Localization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,8 +36,8 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     }
 
     /// <summary>Names as the form sends them: ("en", "Desk"), ("ar", "مكتب")…</summary>
-    private static List<SpaceTypeNameDto> Names(params (string Language, string Name)[] names) =>
-        names.Select(n => new SpaceTypeNameDto { Language = n.Language, Name = n.Name }).ToList();
+    private static List<LocalizedNameDto> Names(params (string Language, string Name)[] names) =>
+        names.Select(n => new LocalizedNameDto { Language = n.Language, Name = n.Name }).ToList();
 
     private Task<SpaceTypeDto> CreateAsync(params (string Language, string Name)[] names) =>
         _spaceTypesAppService.CreateAsync(new CreateSpaceTypeDto { Names = Names(names), IconKey = IconKey.Generic });
@@ -348,6 +349,7 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     {
         var building = new Building(
             Guid.NewGuid(),
+            "en",
             "Test Building",
             null,
             "UTC",
@@ -358,10 +360,10 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
             minLeadMinutes: 0);
         await _buildingRepository.InsertAsync(building);
 
-        var floor = new Floor(Guid.NewGuid(), building.Id, "Test Floor", null);
+        var floor = new Floor(Guid.NewGuid(), building.Id, "en", "Test Floor", null);
         await _floorRepository.InsertAsync(floor);
 
-        var space = new Space(Guid.NewGuid(), floor.Id, "Test Space", spaceTypeId, capacity: 4);
+        var space = new Space(Guid.NewGuid(), floor.Id, "en", "Test Space", spaceTypeId, capacity: 4);
         await _spaceRepository.InsertAsync(space);
     }
 }

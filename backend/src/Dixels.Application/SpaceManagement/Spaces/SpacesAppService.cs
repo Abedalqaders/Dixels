@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,8 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly LocalizedNameValidator _nameValidator;
+    private readonly LocalizedNameReader _nameReader;
 
     public SpacesAppService(
         IRepository<Space, Guid> spaceRepository,
@@ -32,7 +35,9 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         IRepository<SpaceType, Guid> spaceTypeRepository,
         ConstraintResolver constraintResolver,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        LocalizedNameValidator nameValidator,
+        LocalizedNameReader nameReader)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -41,12 +46,14 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         _constraintResolver = constraintResolver;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _nameValidator = nameValidator;
+        _nameReader = nameReader;
     }
 
     public async Task<SpaceDto> GetAsync(Guid id)
     {
         var space = await _spaceRepository.GetAsync(id);
-        return MapToDto(space);
+        return await MapToDtoAsync(space);
     }
 
     public async Task<PagedResultDto<SpaceDto>> GetListAsync(GetSpacesInput input)
@@ -56,9 +63,15 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         // query, not one lookup per row. Joined unconditionally for the same reason as
         // FloorsAppService's own GetListAsync: one code path for both the standalone Spaces
         // page and the drill-down Spaces-of-a-floor page.
+        //
+        // Names: search matches a name in any language, ignoring case; rows are sorted by the
+        // names the reader sees (theirs, else the default language's), worked out in the query.
+        var (shown, fallback) = await _nameReader.GetLanguagesAsync();
+        var term = input.Filter.IsNullOrWhiteSpace() ? null : NameTranslation.Normalize(input.Filter!);
+
         async Task<PagedResultDto<SpaceDto>> QueryAsync()
         {
-            var spacesQueryable = await _spaceRepository.GetQueryableAsync();
+            var spacesQueryable = await _spaceRepository.WithDetailsAsync();
             var floorsQueryable = await _floorRepository.GetQueryableAsync();
             var buildingsQueryable = await _buildingRepository.GetQueryableAsync();
 
@@ -66,7 +79,21 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
                 from s in spacesQueryable
                 join f in floorsQueryable on s.FloorId equals f.Id
                 join b in buildingsQueryable on f.BuildingId equals b.Id
-                select new { Space = s, FloorName = f.Name, BuildingName = b.Name, BuildingId = b.Id };
+                where term == null
+                    || s.Translations.Any(t => t.NormalizedName.Contains(term))
+                    || f.Translations.Any(t => t.NormalizedName.Contains(term))
+                    || b.Translations.Any(t => t.NormalizedName.Contains(term))
+                select new
+                {
+                    Space = s,
+                    SpaceName = s.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? s.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault(),
+                    FloorName = f.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? f.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault(),
+                    BuildingName = b.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? b.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault(),
+                    BuildingId = b.Id,
+                };
 
             if (input.FloorId.HasValue)
             {
@@ -83,26 +110,19 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
                 joined = joined.Where(x => x.Space.SpaceTypeId == input.SpaceTypeId.Value);
             }
 
-            if (!input.Filter.IsNullOrWhiteSpace())
-            {
-                joined = joined.Where(x =>
-                    x.Space.Name.Contains(input.Filter!) ||
-                    x.FloorName.Contains(input.Filter!) ||
-                    x.BuildingName.Contains(input.Filter!));
-            }
-
             var totalCount = await AsyncExecuter.CountAsync(joined);
             var page = await AsyncExecuter.ToListAsync(
-                joined.OrderBy(x => x.BuildingName).ThenBy(x => x.FloorName).ThenBy(x => x.Space.Name)
+                joined.OrderBy(x => x.BuildingName).ThenBy(x => x.FloorName).ThenBy(x => x.SpaceName)
                     .Skip(input.SkipCount).Take(input.MaxResultCount));
 
-            var items = page.Select(x =>
+            var items = new List<SpaceDto>();
+            foreach (var x in page)
             {
-                var dto = MapToDto(x.Space);
+                var dto = await MapToDtoAsync(x.Space);
                 dto.FloorName = x.FloorName;
                 dto.BuildingName = x.BuildingName;
-                return dto;
-            }).ToList();
+                items.Add(dto);
+            }
 
             return new PagedResultDto<SpaceDto>(totalCount, items);
         }
@@ -128,10 +148,12 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         await _floorRepository.GetAsync(input.FloorId);
         await _spaceTypeRepository.GetAsync(input.SpaceTypeId);
 
-        var space = new Space(GuidGenerator.Create(), input.FloorId, input.Name, input.SpaceTypeId, input.Capacity);
+        var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
+        var space = new Space(GuidGenerator.Create(), input.FloorId, names[0].Language, names[0].Name, input.SpaceTypeId, input.Capacity);
+        space.SetNames(names);
         await _spaceRepository.InsertAsync(space);
 
-        return MapToDto(space);
+        return await MapToDtoAsync(space);
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]
@@ -144,7 +166,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
             ? await FindBookingsOverCapacityAsync(space, input.Capacity)
             : Array.Empty<BookingImpact>();
 
-        space.SetName(input.Name);
+        space.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
         if (space.SpaceTypeId != input.SpaceTypeId)
         {
             await _spaceTypeRepository.GetAsync(input.SpaceTypeId); // 404 for unknown or deleted
@@ -155,7 +177,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         await _spaceRepository.UpdateAsync(space, autoSave: true);
         await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
 
-        return MapToDto(space);
+        return await MapToDtoAsync(space);
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]
@@ -181,7 +203,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
         var parent = _constraintResolver.Resolve(building, floor);
 
-        var proposed = new Space(space.Id, space.FloorId, space.Name, space.SpaceTypeId, space.Capacity);
+        var proposed = UntrackedCopy(space);
         proposed.SetOwnOperatingDays(space.Days, parent.Days.Value);
         proposed.SetOwnOperatingHours(space.Hours, parent.Hours.Value);
         proposed.SetOwnMaxDuration(space.MaxDurationMinutes);
@@ -259,7 +281,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, Space space, UpdateSpaceConstraintsDto input)
     {
         var resolvedParent = _constraintResolver.Resolve(building, floor);
-        var proposed = new Space(space.Id, space.FloorId, space.Name, space.SpaceTypeId, space.Capacity);
+        var proposed = UntrackedCopy(space);
         proposed.SetOwnOperatingDays(ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days), resolvedParent.Days.Value);
         proposed.SetOwnOperatingHours(ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours), resolvedParent.Hours.Value);
         proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
@@ -300,9 +322,9 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
             MinAttendees = resolved.MinAttendees,
             Capacity = resolved.Capacity,
             BuildingId = building.Id,
-            BuildingName = building.Name,
+            BuildingName = await _nameReader.ShownAsync(building),
             FloorId = floor.Id,
-            FloorName = floor.Name,
+            FloorName = await _nameReader.ShownAsync(floor),
         };
     }
 
@@ -355,9 +377,19 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         return Task.CompletedTask;
     }
 
-    private SpaceDto MapToDto(Space space)
+    // A fresh, untracked copy to check a proposed change against — checking it can never save
+    // anything. Its name plays no part in the check, so any one of them will do.
+    private static Space UntrackedCopy(Space space)
+    {
+        var name = space.Translations.First();
+        return new Space(space.Id, space.FloorId, name.Language, name.Name, space.SpaceTypeId, space.Capacity);
+    }
+
+    private async Task<SpaceDto> MapToDtoAsync(Space space)
     {
         var dto = ObjectMapper.Map<Space, SpaceDto>(space);
+        dto.Name = await _nameReader.ShownAsync(space);
+        dto.Names = space.Translations.ToNameDtos();
         dto.Days = ConstraintDtoConversions.ToDayArrayOrNull(space.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDtoOrNull(space.Hours);
         dto.HasOverrides = space.Days is not null || space.Hours is not null

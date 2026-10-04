@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Dixels.Localization;
 
 namespace Dixels.SpaceManagement;
 
 public class CreateBuildingDto
 {
+    /// <summary>One per language; the default language's is required.</summary>
     [Required]
-    [StringLength(BuildingConsts.MaxNameLength)]
-    public string Name { get; set; } = string.Empty;
+    [MinLength(1)]
+    public List<LocalizedNameDto> Names { get; set; } = [];
 
     [StringLength(BuildingConsts.MaxBuildingNumberLength)]
     public string? BuildingNumber { get; set; }

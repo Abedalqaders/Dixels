@@ -8,13 +8,13 @@ namespace Dixels.SpaceManagement.Tests;
 public class SpaceTests
 {
     private static Space CreateSpace(int capacity = 8)
-        => new(Guid.NewGuid(), Guid.NewGuid(), "Meeting Room 3B", Guid.NewGuid(), capacity);
+        => new(Guid.NewGuid(), Guid.NewGuid(), "en", "Meeting Room 3B", Guid.NewGuid(), capacity);
 
     [Fact]
     public void Constructor_rejects_zero_or_negative_capacity()
     {
         var exception = Should.Throw<BusinessException>(() =>
-            new Space(Guid.NewGuid(), Guid.NewGuid(), "Desk 1", Guid.NewGuid(), capacity: 0));
+            new Space(Guid.NewGuid(), Guid.NewGuid(), "en", "Desk 1", Guid.NewGuid(), capacity: 0));
 
         exception.Code.ShouldBe(DixelsDomainErrorCodes.CapacityMustBePositive);
     }

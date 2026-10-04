@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { fromMinutes, toMinutes } from '@/lib/time/buildingTime'
 import type { HhMm } from '@/lib/time/buildingTime'
@@ -38,6 +39,7 @@ export function FromToFields({
   errorId,
   onChange,
 }: FromToFieldsProps) {
+  const { t } = useTranslation()
   const latestEndFor = (s: number) => Math.min(DAY_MINUTES, s + maxLength, latestEnd)
 
   function changeStart(next: HhMm) {
@@ -52,7 +54,7 @@ export function FromToFields({
   return (
     <>
       <div className="grid gap-2">
-        <Label htmlFor={`${idPrefix}-from`}>From</Label>
+        <Label htmlFor={`${idPrefix}-from`}>{t('Booking:From')}</Label>
         <TimePicker
           id={`${idPrefix}-from`}
           value={start}
@@ -65,7 +67,7 @@ export function FromToFields({
         />
       </div>
       <div className="grid gap-2">
-        <Label htmlFor={`${idPrefix}-to`}>To</Label>
+        <Label htmlFor={`${idPrefix}-to`}>{t('Booking:To')}</Label>
         <TimePicker
           id={`${idPrefix}-to`}
           value={end}

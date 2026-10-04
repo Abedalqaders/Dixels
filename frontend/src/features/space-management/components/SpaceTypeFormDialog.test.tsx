@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { configureLanguages } from '@/i18n'
@@ -21,6 +21,13 @@ configureLanguages({
   defaultLanguage: 'en',
 })
 
+// Radix Select calls these, which jsdom doesn't have.
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false
+  Element.prototype.releasePointerCapture ??= () => {}
+  Element.prototype.scrollIntoView ??= () => {}
+})
+
 const phoneBooth: SpaceTypeDto = {
   id: 'st1',
   name: 'Phone booth',
@@ -37,20 +44,26 @@ function renderDialog(spaceType: SpaceTypeDto | null = null) {
   return { onSaved }
 }
 
+const nameBox = () => screen.getByLabelText('Name')
+
+async function pickLanguage(user: ReturnType<typeof userEvent.setup>, language: string) {
+  await user.click(screen.getByRole('combobox', { name: 'Language of the name' }))
+  await user.click(screen.getByRole('option', { name: new RegExp(language) }))
+}
+
 describe('SpaceTypeFormDialog', () => {
   beforeEach(() => {
     vi.mocked(createSpaceType).mockReset().mockResolvedValue(phoneBooth)
     vi.mocked(updateSpaceType).mockReset().mockResolvedValue(phoneBooth)
   })
 
-  it('sends the English name and every translation added', async () => {
+  it('sends the name in every language typed', async () => {
     const user = userEvent.setup()
     const { onSaved } = renderDialog()
 
-    await user.type(screen.getByLabelText('Name (English)'), '  Phone booth ')
-    await user.click(screen.getByRole('button', { name: /Add translation/ }))
-    await user.click(screen.getByRole('menuitem', { name: 'العربية' }))
-    await user.type(screen.getByLabelText('العربية'), 'كابينة هاتف')
+    await user.type(nameBox(), '  Phone booth ')
+    await pickLanguage(user, 'العربية')
+    await user.type(nameBox(), 'كابينة هاتف')
     await user.click(screen.getByRole('button', { name: 'Add type' }))
 
     expect(createSpaceType).toHaveBeenCalledWith('t', {
@@ -63,54 +76,38 @@ describe('SpaceTypeFormDialog', () => {
     expect(onSaved).toHaveBeenCalledWith('Space type added.')
   })
 
-  it("doesn't send a translation row left empty", async () => {
+  it("can't be added without the English name", async () => {
     const user = userEvent.setup()
     renderDialog()
 
-    await user.type(screen.getByLabelText('Name (English)'), 'Phone booth')
-    await user.click(screen.getByRole('button', { name: /Add translation/ }))
-    await user.click(screen.getByRole('menuitem', { name: 'العربية' }))
-    await user.click(screen.getByRole('button', { name: 'Add type' }))
+    await pickLanguage(user, 'العربية')
+    await user.type(nameBox(), 'كابينة هاتف')
 
-    expect(createSpaceType).toHaveBeenCalledWith('t', { names: [{ language: 'en', name: 'Phone booth' }], iconKey: 0 })
+    expect(screen.getByRole('button', { name: 'Add type' })).toBeDisabled()
   })
 
-  it('opens an existing type with each name in its field, and saves nothing unchanged', () => {
+  it('opens an existing type with its names, and saves nothing unchanged', async () => {
+    const user = userEvent.setup()
     renderDialog(phoneBooth)
 
-    expect(screen.getByLabelText('Name (English)')).toHaveValue('Phone booth')
-    expect(screen.getByLabelText('العربية')).toHaveValue('كابينة هاتف')
+    expect(nameBox()).toHaveValue('Phone booth')
+    await pickLanguage(user, 'العربية')
+    expect(nameBox()).toHaveValue('كابينة هاتف')
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
-  it('counts a changed translation as a change, and sends every name', async () => {
+  it('clearing a language removes its name', async () => {
     const user = userEvent.setup()
     renderDialog(phoneBooth)
 
-    await user.clear(screen.getByLabelText('العربية'))
-    await user.type(screen.getByLabelText('العربية'), 'كشك هاتف')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-
-    expect(updateSpaceType).toHaveBeenCalledWith('t', 'st1', {
-      names: [
-        { language: 'en', name: 'Phone booth' },
-        { language: 'ar', name: 'كشك هاتف' },
-      ],
-      iconKey: 1,
-    })
-  })
-
-  it('removing a translation saves the type without it', async () => {
-    const user = userEvent.setup()
-    renderDialog(phoneBooth)
-
-    await user.click(screen.getByRole('button', { name: 'Remove the العربية name' }))
+    await pickLanguage(user, 'العربية')
+    await user.clear(nameBox())
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(updateSpaceType).toHaveBeenCalledWith('t', 'st1', { names: [{ language: 'en', name: 'Phone booth' }], iconKey: 1 })
   })
 
-  it('shows a duplicate name under the language it clashes in', async () => {
+  it('a duplicate switches the box to the language it clashes in, with the message under it', async () => {
     const user = userEvent.setup()
     vi.mocked(updateSpaceType).mockRejectedValue(
       new ApiError(403, {
@@ -123,32 +120,11 @@ describe('SpaceTypeFormDialog', () => {
     )
     renderDialog(phoneBooth)
 
-    await user.clear(screen.getByLabelText('العربية'))
-    await user.type(screen.getByLabelText('العربية'), 'كشك')
+    await user.type(nameBox(), ' 2')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
-    const arabic = await screen.findByLabelText('العربية')
-    expect(arabic).toHaveAccessibleDescription("A space type named 'كشك' already exists.")
-    expect(arabic).toHaveFocus()
-    expect(screen.getByLabelText('Name (English)')).not.toHaveAttribute('aria-invalid')
-  })
-
-  it('shows an English duplicate under the English name', async () => {
-    const user = userEvent.setup()
-    vi.mocked(createSpaceType).mockRejectedValue(
-      new ApiError(403, {
-        error: {
-          code: 'Dixels:SpaceManagement:SpaceTypeNameAlreadyExists',
-          message: "A space type named 'Desk' already exists.",
-          data: { name: 'Desk', language: 'en' },
-        },
-      }),
-    )
-    renderDialog()
-
-    await user.type(screen.getByLabelText('Name (English)'), 'Desk')
-    await user.click(screen.getByRole('button', { name: 'Add type' }))
-
-    expect(await screen.findByLabelText('Name (English)')).toHaveAccessibleDescription("A space type named 'Desk' already exists.")
+    expect(await screen.findByText("A space type named 'كشك' already exists.")).toBeInTheDocument()
+    expect(nameBox()).toHaveValue('كابينة هاتف')
+    expect(nameBox()).toHaveAccessibleDescription("A space type named 'كشك' already exists.")
   })
 })

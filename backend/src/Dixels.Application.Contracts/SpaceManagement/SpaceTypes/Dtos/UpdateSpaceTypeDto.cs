@@ -1,3 +1,4 @@
+using Dixels.Localization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -11,7 +12,7 @@ public class UpdateSpaceTypeDto
     /// </summary>
     [Required]
     [MinLength(1)]
-    public List<SpaceTypeNameDto> Names { get; set; } = [];
+    public List<LocalizedNameDto> Names { get; set; } = [];
 
     public IconKey IconKey { get; set; }
 }

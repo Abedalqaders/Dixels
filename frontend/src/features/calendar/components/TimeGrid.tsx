@@ -1,12 +1,14 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Repeat } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
 import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
-import { dayOfMonth, shortWeekday, weekday } from '@/features/calendar/calendarDates'
+import { dayOfMonth, shortWeekday, weekdayName } from '@/features/calendar/calendarDates'
 import { formatClock } from '@/lib/time/format'
+import { formatDuration } from '@/features/bookings/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { DAY_MINUTES, HOUR_PX, itemMinutes, itemsByDay, layoutDay, openWindow } from '@/features/calendar/dayLayout'
 import { dragHint } from '@/features/calendar/durationLimits'
@@ -16,7 +18,6 @@ import type { DurationLimits } from '@/features/calendar/durationLimits'
 const DRAG_THRESHOLD_PX = 4
 
 const NO_ITEMS: CalendarItem[] = []
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 // Diagonal hatching for the hours the building is shut — the same idea as the closed
 // stretches on Find a space's day bars.
@@ -88,10 +89,13 @@ export function TimeGrid({
   onOpenDay,
   readOnly = false,
 }: TimeGridProps) {
+  const { t } = useTranslation()
   const scrollRef = useRef<HTMLDivElement>(null)
   // The body scrolls (native scrollbar); the day headings don't, so without this the
   // scrollbar's width would push the body's columns out of line with the headings above
   // them. Matched via ResizeObserver, since it comes and goes with the viewport's height.
+  // The scrollbar sits at the inline end — the right in English, the left in Arabic — so
+  // the headings are padded on that side, not always the right.
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
   const height = 24 * HOUR_PX
   const showsToday = days.includes(today)
@@ -140,7 +144,7 @@ export function TimeGrid({
       {/* Day headings */}
       <div
         className="grid border-b"
-        style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))`, paddingRight: scrollbarWidth }}
+        style={{ gridTemplateColumns: `64px repeat(${days.length}, minmax(0, 1fr))`, paddingInlineEnd: scrollbarWidth }}
       >
         <span aria-hidden="true" />
         {days.map((d) => {
@@ -162,15 +166,15 @@ export function TimeGrid({
             <button
               key={d}
               type="button"
-              className="flex items-center justify-center gap-1.5 border-l bg-transparent py-2.5 hover:bg-muted"
-              aria-label={`Open ${shortWeekday(d)} ${dayOfMonth(d)}`}
+              className="flex items-center justify-center gap-1.5 border-s bg-transparent py-2.5 hover:bg-muted"
+              aria-label={t('Calendar:OpenDay', { day: `${shortWeekday(d)} ${dayOfMonth(d)}` })}
               aria-current={isToday ? 'date' : undefined}
               onClick={() => onOpenDay(d)}
             >
               {label}
             </button>
           ) : (
-            <div key={d} className="flex items-center justify-center gap-1.5 border-l py-2.5" aria-current={isToday ? 'date' : undefined}>
+            <div key={d} className="flex items-center justify-center gap-1.5 border-s py-2.5" aria-current={isToday ? 'date' : undefined}>
               {label}
             </div>
           )
@@ -278,6 +282,7 @@ const DayColumn = memo(function DayColumn({
   onPickRange,
   readOnly,
 }: DayColumnProps) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<{ anchor: number; startY: number; moved: boolean } | null>(null)
   const [draft, setDraft] = useState<{ start: number; end: number } | null>(null)
@@ -324,12 +329,12 @@ const DayColumn = memo(function DayColumn({
   const earliest = Math.ceil(firstBookableMinute / slotMinutes) * slotMinutes
 
   function whyBlocked(minute: number): string {
-    if (past) return 'This day has passed.'
-    if (!open) return `The building is closed on ${DAY_NAMES[weekday(date)]}s.`
-    if (minute < nowMinute) return 'That time has passed.'
-    if (minute < openFrom) return `The building opens at ${fromMinutes(openFrom)}.`
-    if (minute + slotMinutes > openTo) return `The building closes at ${fromMinutes(openTo)}.`
-    return `Too soon: bookings need ${leadMinutes} min notice. The earliest you can start today is ${fromMinutes(earliest)}.`
+    if (past) return t('Calendar:DayPassed')
+    if (!open) return t('Calendar:ClosedOnWeekday', { weekday: weekdayName(date) })
+    if (minute < nowMinute) return t('Calendar:TimePassed')
+    if (minute < openFrom) return t('Calendar:OpensAt', { time: fromMinutes(openFrom) })
+    if (minute + slotMinutes > openTo) return t('Calendar:ClosesAt', { time: fromMinutes(openTo) })
+    return t('Calendar:TooSoon', { notice: formatDuration(leadMinutes), time: fromMinutes(earliest) })
   }
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
@@ -389,7 +394,7 @@ const DayColumn = memo(function DayColumn({
   return (
     <div
       ref={ref}
-      className={cn('relative touch-pan-y border-l select-none', readOnly ? 'cursor-default' : hover === 'blocked' ? 'cursor-not-allowed' : 'cursor-pointer')}
+      className={cn('relative touch-pan-y border-s select-none', readOnly ? 'cursor-default' : hover === 'blocked' ? 'cursor-not-allowed' : 'cursor-pointer')}
       style={{
         // Hour lines, with a fainter half-hour line between them.
         backgroundImage: `repeating-linear-gradient(to bottom, var(--border-subtle) 0 1px, transparent 1px ${HOUR_PX / 2}px, color-mix(in srgb, var(--border-subtle) 45%, transparent) ${HOUR_PX / 2}px ${HOUR_PX / 2 + 1}px, transparent ${HOUR_PX / 2 + 1}px ${HOUR_PX}px)`,
@@ -411,7 +416,7 @@ const DayColumn = memo(function DayColumn({
           aria-hidden="true"
         >
           {openFrom >= 30 && (
-            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{open ? 'Closed' : 'Closed all day'}</span>
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{open ? t('Calendar:Closed') : t('Calendar:ClosedAllDay')}</span>
           )}
         </div>
       )}
@@ -422,7 +427,7 @@ const DayColumn = memo(function DayColumn({
           aria-hidden="true"
         >
           {DAY_MINUTES - openTo >= 30 && (
-            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Closed</span>
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{t('Calendar:Closed')}</span>
           )}
         </div>
       )}
@@ -434,7 +439,7 @@ const DayColumn = memo(function DayColumn({
           aria-hidden="true"
         >
           {pastUntil >= 30 && (
-            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Past</span>
+            <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{t('Calendar:Past')}</span>
           )}
         </div>
       )}
@@ -450,7 +455,7 @@ const DayColumn = memo(function DayColumn({
           }}
           aria-hidden="true"
         >
-          {noticeUntil - pastUntil >= 10 && `${leadMinutes} min notice`}
+          {noticeUntil - pastUntil >= 10 && t('Calendar:Notice', { notice: formatDuration(leadMinutes) })}
         </div>
       )}
 
@@ -482,16 +487,22 @@ const DayColumn = memo(function DayColumn({
             style={{
               top: top(start) + 1,
               height: Math.max(top(end) - top(start) - 2, 18),
-              left: `calc(${(lane / lanes) * 100}% + 2px)`,
+              // From the start side, so side-by-side bookings read in the language's direction.
+              insetInlineStart: `calc(${(lane / lanes) * 100}% + 2px)`,
               width: `calc(${100 / lanes}% - 4px)`,
               ...(started && !b.cancelled ? { backgroundImage: STARTED_HATCH } : {}),
             }}
-            aria-label={`${b.cancelled ? 'Cancelled: ' : ''}${b.title}, ${timeOf(b.localStart)}–${timeOf(b.localEnd)}, ${b.location}`}
+            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : 'Calendar:Item', {
+              title: b.title,
+              start: timeOf(b.localStart),
+              end: timeOf(b.localEnd),
+              location: b.location,
+            })}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => onOpenItem(b)}
           >
             <span className={cn('flex min-w-0 items-center gap-1 font-semibold', !b.cancelled && 'text-brand')}>
-              {b.repeats && <Repeat className="size-3 flex-none" aria-label="Repeats" />}
+              {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
               <span className="truncate">{b.title}</span>
             </span>
             {showTime && (

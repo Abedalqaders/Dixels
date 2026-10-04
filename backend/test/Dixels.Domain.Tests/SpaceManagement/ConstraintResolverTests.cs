@@ -16,6 +16,7 @@ public class ConstraintResolverTests
         int maxDurationMinutes = 480)
         => new(
             Guid.NewGuid(),
+            "en",
             "Ridge House",
             "RH-01",
             "Asia/Amman",
@@ -26,10 +27,10 @@ public class ConstraintResolverTests
             minLeadMinutes: 15);
 
     private static Floor CreateFloor(Guid buildingId, string name = "Level 3")
-        => new(Guid.NewGuid(), buildingId, name, floorNumber: 3);
+        => new(Guid.NewGuid(), buildingId, "en", name, floorNumber: 3);
 
     private static Space CreateSpace(Guid floorId, string name = "Meeting Room 3B", int capacity = 8)
-        => new(Guid.NewGuid(), floorId, name, Guid.NewGuid(), capacity);
+        => new(Guid.NewGuid(), floorId, "en", name, Guid.NewGuid(), capacity);
 
     [Fact]
     public void Resolve_falls_back_to_building_when_nothing_overrides()

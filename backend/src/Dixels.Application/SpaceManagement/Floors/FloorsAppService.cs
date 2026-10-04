@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly LocalizedNameValidator _nameValidator;
+    private readonly LocalizedNameReader _nameReader;
 
     public FloorsAppService(
         IRepository<Floor, Guid> floorRepository,
@@ -35,7 +38,9 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        LocalizedNameValidator nameValidator,
+        LocalizedNameReader nameReader)
     {
         _floorRepository = floorRepository;
         _buildingRepository = buildingRepository;
@@ -44,13 +49,15 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _nameValidator = nameValidator;
+        _nameReader = nameReader;
     }
 
     public async Task<FloorDto> GetAsync(Guid id)
     {
         await CheckAnyPermissionAsync(DixelsPermissions.Readers.Floors);
         var floor = await _floorRepository.GetAsync(id);
-        return MapToDto(floor);
+        return await MapToDtoAsync(floor);
     }
 
     public async Task<PagedResultDto<FloorDto>> GetListAsync(GetFloorsInput input)
@@ -62,38 +69,44 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // row. Joining unconditionally (even when BuildingId scopes to one building) keeps a
         // single code path instead of branching on whether the caller is the standalone
         // Floors page or the drill-down Floors-of-a-building page.
+        //
+        // Names: search matches a name in any language, ignoring case; rows are sorted by the
+        // names the reader sees (theirs, else the default language's), worked out in the query.
+        var (shown, fallback) = await _nameReader.GetLanguagesAsync();
+        var term = input.Filter.IsNullOrWhiteSpace() ? null : NameTranslation.Normalize(input.Filter!);
+
         async Task<PagedResultDto<FloorDto>> QueryAsync()
         {
-            var floorsQueryable = await _floorRepository.GetQueryableAsync();
+            var floorsQueryable = await _floorRepository.WithDetailsAsync();
             var buildingsQueryable = await _buildingRepository.GetQueryableAsync();
 
             var joined =
                 from f in floorsQueryable
                 join b in buildingsQueryable on f.BuildingId equals b.Id
-                select new { Floor = f, BuildingName = b.Name };
-
-            if (input.BuildingId.HasValue)
-            {
-                joined = joined.Where(x => x.Floor.BuildingId == input.BuildingId.Value);
-            }
-
-            if (!input.Filter.IsNullOrWhiteSpace())
-            {
-                joined = input.FloorNameOnly
-                    ? joined.Where(x => x.Floor.Name.Contains(input.Filter!))
-                    : joined.Where(x => x.Floor.Name.Contains(input.Filter!) || x.BuildingName.Contains(input.Filter!));
-            }
+                where input.BuildingId == null || f.BuildingId == input.BuildingId
+                where term == null
+                    || f.Translations.Any(t => t.NormalizedName.Contains(term))
+                    || (!input.FloorNameOnly && b.Translations.Any(t => t.NormalizedName.Contains(term)))
+                select new
+                {
+                    Floor = f,
+                    BuildingName = b.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? b.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault(),
+                    FloorName = f.Translations.Where(t => t.Language == shown).Select(t => t.Name).FirstOrDefault()
+                        ?? f.Translations.Where(t => t.Language == fallback).Select(t => t.Name).FirstOrDefault(),
+                };
 
             var totalCount = await AsyncExecuter.CountAsync(joined);
             var page = await AsyncExecuter.ToListAsync(
-                joined.OrderBy(x => x.BuildingName).ThenBy(x => x.Floor.Name).Skip(input.SkipCount).Take(input.MaxResultCount));
+                joined.OrderBy(x => x.BuildingName).ThenBy(x => x.FloorName).Skip(input.SkipCount).Take(input.MaxResultCount));
 
-            var items = page.Select(x =>
+            var items = new List<FloorDto>();
+            foreach (var x in page)
             {
-                var dto = MapToDto(x.Floor);
+                var dto = await MapToDtoAsync(x.Floor);
                 dto.BuildingName = x.BuildingName;
-                return dto;
-            }).ToList();
+                items.Add(dto);
+            }
 
             return new PagedResultDto<FloorDto>(totalCount, items);
         }
@@ -117,10 +130,12 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // 404 for an unknown or deleted building, instead of a foreign-key failure (500).
         await _buildingRepository.GetAsync(input.BuildingId);
 
-        var floor = new Floor(GuidGenerator.Create(), input.BuildingId, input.Name, input.FloorNumber);
+        var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
+        var floor = new Floor(GuidGenerator.Create(), input.BuildingId, names[0].Language, names[0].Name, input.FloorNumber);
+        floor.SetNames(names);
         await _floorRepository.InsertAsync(floor);
 
-        return MapToDto(floor);
+        return await MapToDtoAsync(floor);
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]
@@ -129,12 +144,12 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
 
-        floor.SetName(input.Name);
+        floor.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
         floor.SetFloorNumber(input.FloorNumber);
 
         await _floorRepository.UpdateAsync(floor);
 
-        return MapToDto(floor);
+        return await MapToDtoAsync(floor);
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]
@@ -199,7 +214,9 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     // The proposed floor is a fresh, untracked copy — checking it can never save anything.
     private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
     {
-        var proposed = new Floor(floor.Id, floor.BuildingId, floor.Name, floor.FloorNumber);
+        // Its name plays no part in the check — any one of them will do.
+        var name = floor.Translations.First();
+        var proposed = new Floor(floor.Id, floor.BuildingId, name.Language, name.Name, floor.FloorNumber);
         proposed.SetOwnOperatingDays(ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days), building.Days);
         proposed.SetOwnOperatingHours(ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours), building.Hours);
         proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
@@ -242,7 +259,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
             MinAttendees = resolved.MinAttendees,
             Capacity = resolved.Capacity,
             BuildingId = building.Id,
-            BuildingName = building.Name,
+            BuildingName = await _nameReader.ShownAsync(building),
         };
     }
 
@@ -326,11 +343,11 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
     private async Task<List<string>> FindNarrowingConflictsAsync(Guid floorId, OperatingDays? proposedDays, OperatingWindow? proposedHours)
     {
-        var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == floorId);
-        var candidates = spaces
+        var spaces = (await _spaceRepository.GetListAsync(s => s.FloorId == floorId, includeDetails: true))
             .Where(s => s.Days is not null || s.Hours is not null)
-            .Select(s => new NarrowingCandidate(s.Name, s.Days, s.Hours))
             .ToList();
+        var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+        var candidates = spaces.Select(s => new NarrowingCandidate(names[s.Id], s.Days, s.Hours)).ToList();
 
         return _constraintResolver.FindNarrowingConflicts(candidates, proposedDays, proposedHours).ToList();
     }
@@ -345,9 +362,11 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         return Task.CompletedTask;
     }
 
-    private FloorDto MapToDto(Floor floor)
+    private async Task<FloorDto> MapToDtoAsync(Floor floor)
     {
         var dto = ObjectMapper.Map<Floor, FloorDto>(floor);
+        dto.Name = await _nameReader.ShownAsync(floor);
+        dto.Names = floor.Translations.ToNameDtos();
         dto.Days = ConstraintDtoConversions.ToDayArrayOrNull(floor.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDtoOrNull(floor.Hours);
         dto.HasOverrides = floor.Days is not null || floor.Hours is not null || floor.MaxDurationMinutes is not null;

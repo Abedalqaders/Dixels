@@ -29,6 +29,14 @@ export interface PagedListInput {
 
 // ---- Shared shapes -------------------------------------------------------
 
+/** A name in one language: { language: 'ar', name: 'غرفة اجتماعات' } — space types,
+ * buildings, floors and spaces are all named once per language. */
+export interface LocalizedNameDto {
+  /** ABP culture name, one of the app's languages. */
+  language: string
+  name: string
+}
+
 export interface OperatingWindowDto {
   isOpen24Hours: boolean
   open: string
@@ -96,7 +104,11 @@ export type OwnOverlapPolicy = (typeof OwnOverlapPolicy)[keyof typeof OwnOverlap
 
 export interface BuildingDto {
   id: string
+  /** The name to show — the server picks it for the request's language (Accept-Language),
+   * falling back to the default language's. */
   name: string
+  /** Every name it has, one per language — what the edit form shows. */
+  names: LocalizedNameDto[]
   buildingNumber: string | null
   timezone: string
   days: number[]
@@ -112,7 +124,8 @@ export interface BuildingDto {
 }
 
 export interface CreateBuildingDto {
-  name: string
+  /** One per language; the default language's is required. */
+  names: LocalizedNameDto[]
   buildingNumber?: string | null
   timezone: string
   days: number[]
@@ -127,7 +140,8 @@ export interface CreateBuildingDto {
 }
 
 export interface UpdateBuildingDto {
-  name: string
+  /** Every name it should have — a language left out loses its name. */
+  names: LocalizedNameDto[]
   buildingNumber?: string | null
   timezone: string
 }
@@ -191,7 +205,11 @@ export function restoreBuilding(token: string, id: string) {
 export interface FloorDto {
   id: string
   buildingId: string
+  /** The name to show — the server picks it for the request's language (Accept-Language),
+   * falling back to the default language's. */
   name: string
+  /** Every name it has, one per language — what the edit form shows. */
+  names: LocalizedNameDto[]
   /** Set on every list result (the standalone Floors page needs it) — null from a plain
    * single-floor fetch. */
   buildingName: string | null
@@ -206,12 +224,14 @@ export interface FloorDto {
 
 export interface CreateFloorDto {
   buildingId: string
-  name: string
+  /** One per language; the default language's is required. */
+  names: LocalizedNameDto[]
   floorNumber?: number | null
 }
 
 export interface UpdateFloorDto {
-  name: string
+  /** Every name it should have — a language left out loses its name. */
+  names: LocalizedNameDto[]
   floorNumber?: number | null
 }
 
@@ -280,7 +300,11 @@ export function restoreFloor(token: string, id: string) {
 export interface SpaceDto {
   id: string
   floorId: string
+  /** The name to show — the server picks it for the request's language (Accept-Language),
+   * falling back to the default language's. */
   name: string
+  /** Every name it has, one per language — what the edit form shows. */
+  names: LocalizedNameDto[]
   /** Set on every list result (the standalone Spaces page needs these) — null from a plain
    * single-space fetch. */
   floorName: string | null
@@ -298,13 +322,15 @@ export interface SpaceDto {
 
 export interface CreateSpaceDto {
   floorId: string
-  name: string
+  /** One per language; the default language's is required. */
+  names: LocalizedNameDto[]
   spaceTypeId: string
   capacity: number
 }
 
 export interface UpdateSpaceDto {
-  name: string
+  /** Every name it should have — a language left out loses its name. */
+  names: LocalizedNameDto[]
   spaceTypeId: string
   capacity: number
   /** Also cancel upcoming bookings for more people than the new capacity (default: keep them). */
@@ -380,13 +406,6 @@ export function restoreSpace(token: string, id: string) {
 
 // ---- Space types --------------------------------------------------------
 
-/** A space type's name in one language: { language: 'ar', name: 'غرفة اجتماعات' }. */
-export interface SpaceTypeNameDto {
-  /** ABP culture name, one of the app's languages. */
-  language: string
-  name: string
-}
-
 export interface SpaceTypeDto {
   id: string
   /** The name to show — the server picks it for the request's language (Accept-Language),
@@ -394,18 +413,18 @@ export interface SpaceTypeDto {
   name: string
   iconKey: IconKey
   /** Every name it has, one per language — what the edit form shows. */
-  names: SpaceTypeNameDto[]
+  names: LocalizedNameDto[]
 }
 
 export interface CreateSpaceTypeDto {
   /** One per language; the default language's is required. */
-  names: SpaceTypeNameDto[]
+  names: LocalizedNameDto[]
   iconKey: IconKey
 }
 
 export interface UpdateSpaceTypeDto {
   /** Every name the type should have — a language left out loses its name. */
-  names: SpaceTypeNameDto[]
+  names: LocalizedNameDto[]
   iconKey: IconKey
 }
 

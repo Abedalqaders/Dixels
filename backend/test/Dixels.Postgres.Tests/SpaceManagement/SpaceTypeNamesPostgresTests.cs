@@ -15,9 +15,10 @@ using Xunit;
 namespace Dixels.Postgres.SpaceManagement;
 
 /// <summary>
-/// What only a real Postgres can prove about space type names: the migration that moved
-/// Name into the translations table keeps every existing name, and the unique index (not
-/// just SpaceTypeManager's check) stops two admins who save the same name at once.
+/// What only a real Postgres can prove about names stored per language: the migrations that
+/// moved Name into the translations tables (space types, then buildings, floors and spaces)
+/// keep every existing name, and the unique index on space type names (not just
+/// SpaceTypeManager's check) stops two admins who save the same name at once.
 /// </summary>
 [Collection(PostgresCollection.Name)]
 public class SpaceTypeNamesPostgresTests : DixelsApplicationTestBase<DixelsPostgresTestModule>
@@ -25,10 +26,12 @@ public class SpaceTypeNamesPostgresTests : DixelsApplicationTestBase<DixelsPostg
     /// <summary>The migration just before SpaceTypeNamesToTranslations.</summary>
     private const string MigrationBeforeTranslations = "20260928100619_Add_BookingSeries";
 
-    [PostgresFact]
-    public async Task The_migration_keeps_each_existing_name_as_an_English_row()
+    /// <summary>The migration just before HierarchyNamesToTranslations.</summary>
+    private const string MigrationBeforeHierarchyTranslations = "20261004063833_SpaceTypeNamesToTranslations";
+
+    /// <summary>A database of its own, migrated only up to <paramref name="migration"/>.</summary>
+    private static async Task<DixelsDbContext> DatabaseMigratedToAsync(string migration)
     {
-        // A database of its own, migrated only up to the old schema (Name on AppSpaceTypes).
         var database = "migration_" + Guid.NewGuid().ToString("N")[..8];
         await using (var admin = new NpgsqlConnection(PostgresFixture.ConnectionString))
         {
@@ -38,9 +41,17 @@ public class SpaceTypeNamesPostgresTests : DixelsApplicationTestBase<DixelsPostg
         }
 
         var connectionString = new NpgsqlConnectionStringBuilder(PostgresFixture.ConnectionString) { Database = database }.ConnectionString;
-        await using var dbContext = new DixelsDbContext(new DbContextOptionsBuilder<DixelsDbContext>().UseNpgsql(connectionString).Options);
+        var dbContext = new DixelsDbContext(new DbContextOptionsBuilder<DixelsDbContext>().UseNpgsql(connectionString).Options);
+        await dbContext.GetService<IMigrator>().MigrateAsync(migration);
+        return dbContext;
+    }
+
+    [PostgresFact]
+    public async Task The_migration_keeps_each_existing_name_as_an_English_row()
+    {
+        // The old schema: Name on AppSpaceTypes.
+        await using var dbContext = await DatabaseMigratedToAsync(MigrationBeforeTranslations);
         var migrator = dbContext.GetService<IMigrator>();
-        await migrator.MigrateAsync(MigrationBeforeTranslations);
 
         var live = Guid.NewGuid();
         var deleted = Guid.NewGuid();
@@ -64,6 +75,42 @@ public class SpaceTypeNamesPostgresTests : DixelsApplicationTestBase<DixelsPostg
             // The old index let these two differ by case; now they'd clash, so the later is numbered.
             (sameIgnoringCase, "en", "phone BOOTH (2)", "PHONE BOOTH (2)", false),
         });
+    }
+
+    [PostgresFact]
+    public async Task The_hierarchy_migration_keeps_each_building_floor_and_space_name_as_an_English_row()
+    {
+        // The old schema: Name on AppBuildings, AppFloors and AppSpaces.
+        await using var dbContext = await DatabaseMigratedToAsync(MigrationBeforeHierarchyTranslations);
+
+        var building = Guid.NewGuid();
+        var floor = Guid.NewGuid();
+        var space = Guid.NewGuid();
+        var spaceType = Guid.NewGuid();
+        await dbContext.Database.ExecuteSqlRawAsync(
+            """
+            INSERT INTO "AppSpaceTypes" ("Id", "IconKey", "ExtraProperties", "ConcurrencyStamp", "CreationTime", "IsDeleted")
+            VALUES ({3}, 'Desk', '{{}}', 'a', now(), false);
+            INSERT INTO "AppBuildings" ("Id", "Name", "Timezone", "Days", "Hours_IsOpen24Hours", "Hours_Open", "Hours_Close",
+                "MaxDurationMinutes", "MaxHorizonDays", "MaxSeriesHorizonDays", "MinLeadMinutes", "OwnOverlapPolicy",
+                "ExtraProperties", "ConcurrencyStamp", "CreationTime", "IsDeleted")
+            VALUES ({0}, ' Riverside HQ ', 'UTC', 127, true, '00:00', '00:00', 60, 30, 90, 0, 'Warn', '{{}}', 'b', now(), false);
+            INSERT INTO "AppFloors" ("Id", "BuildingId", "Name", "ExtraProperties", "ConcurrencyStamp", "CreationTime", "IsDeleted")
+            VALUES ({1}, {0}, 'Level 1', '{{}}', 'c', now(), false);
+            INSERT INTO "AppSpaces" ("Id", "FloorId", "Name", "SpaceTypeId", "Capacity", "ExtraProperties", "ConcurrencyStamp", "CreationTime", "IsDeleted")
+            VALUES ({2}, {1}, 'Room 101', {3}, 4, '{{}}', 'd', now(), true);
+            """,
+            building, floor, space, spaceType);
+
+        await dbContext.GetService<IMigrator>().MigrateAsync();
+
+        (await dbContext.Set<BuildingTranslation>().AsNoTracking().ToListAsync())
+            .Select(t => (t.BuildingId, t.Language, t.Name, t.NormalizedName)).ShouldBe(new[] { (building, "en", "Riverside HQ", "RIVERSIDE HQ") });
+        (await dbContext.Set<FloorTranslation>().AsNoTracking().ToListAsync())
+            .Select(t => (t.FloorId, t.Language, t.Name)).ShouldBe(new[] { (floor, "en", "Level 1") });
+        // A deleted space keeps its name too: it can be restored.
+        (await dbContext.Set<SpaceTranslation>().AsNoTracking().ToListAsync())
+            .Select(t => (t.SpaceId, t.Language, t.Name)).ShouldBe(new[] { (space, "en", "Room 101") });
     }
 
     [PostgresFact]

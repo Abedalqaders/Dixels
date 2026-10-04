@@ -32,6 +32,9 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
     public const string EnabledPropertyName = "Dixels:DemoData";
 
     private const string BuildingName = "Riverside HQ";
+
+    // The demo's names are English (the default language); an admin can add Arabic ones.
+    private const string English = "en";
     private const int DaysAhead = 5;
 
     private readonly SpaceManagementHierarchyDataSeedContributor _hierarchySeeder;
@@ -87,7 +90,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         await _hierarchySeeder.SeedAsync(context);
         await _employeeSeeder.SeedAsync(context);
 
-        var building = await _buildingRepository.FirstOrDefaultAsync(b => b.Name == BuildingName);
+        var building = await _buildingRepository.FirstOrDefaultAsync(b => b.Translations.Any(t => t.Language == English && t.Name == BuildingName));
         if (building is null)
         {
             return;
@@ -269,7 +272,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         List<Floor> matches;
         using (_dataFilter.Disable<ISoftDelete>())
         {
-            matches = await _floorRepository.GetListAsync(f => f.BuildingId == buildingId && f.Name == name);
+            matches = await _floorRepository.GetListAsync(f => f.BuildingId == buildingId && f.Translations.Any(t => t.Language == English && t.Name == name));
         }
 
         if (matches.Count > 0)
@@ -278,7 +281,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
             return matches.FirstOrDefault(m => !m.IsDeleted);
         }
 
-        return await _floorRepository.InsertAsync(new Floor(_guidGenerator.Create(), buildingId, name, floorNumber), autoSave: true);
+        return await _floorRepository.InsertAsync(new Floor(_guidGenerator.Create(), buildingId, English, name, floorNumber), autoSave: true);
     }
 
     private async Task<Space?> GetOrCreateSpaceAsync(Floor? floor, string name, Guid spaceTypeId, int capacity, Action<Space>? configure = null)
@@ -291,7 +294,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         List<Space> matches;
         using (_dataFilter.Disable<ISoftDelete>())
         {
-            matches = await _spaceRepository.GetListAsync(sp => sp.FloorId == floor.Id && sp.Name == name);
+            matches = await _spaceRepository.GetListAsync(sp => sp.FloorId == floor.Id && sp.Translations.Any(t => t.Language == English && t.Name == name));
         }
 
         if (matches.Count > 0)
@@ -300,7 +303,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
             return matches.FirstOrDefault(m => !m.IsDeleted);
         }
 
-        var space = new Space(_guidGenerator.Create(), floor.Id, name, spaceTypeId, capacity);
+        var space = new Space(_guidGenerator.Create(), floor.Id, English, name, spaceTypeId, capacity);
         configure?.Invoke(space);
         return await _spaceRepository.InsertAsync(space, autoSave: true);
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
@@ -30,6 +31,7 @@ public partial class BookingManager : DomainService
     private readonly BookingAccessChecker _accessChecker;
     private readonly IJsonSerializer _jsonSerializer;
     private readonly BookingOptions _options;
+    private readonly LocalizedNameReader _nameReader;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -42,7 +44,8 @@ public partial class BookingManager : DomainService
         BookingPolicyValidator validator,
         BookingAccessChecker accessChecker,
         IJsonSerializer jsonSerializer,
-        IOptions<BookingOptions> options)
+        IOptions<BookingOptions> options,
+        LocalizedNameReader nameReader)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -55,6 +58,7 @@ public partial class BookingManager : DomainService
         _accessChecker = accessChecker;
         _jsonSerializer = jsonSerializer;
         _options = options.Value;
+        _nameReader = nameReader;
     }
 
     /// <summary>
@@ -200,12 +204,13 @@ public partial class BookingManager : DomainService
             throw new BusinessException(DixelsDomainErrorCodes.BookingInvalidTimeRange);
         }
 
+        // With details: their names, which the results show.
         var floors = await _floorRepository.GetListAsync(f =>
-            f.BuildingId == building.Id && (floorId == null || f.Id == floorId));
+            f.BuildingId == building.Id && (floorId == null || f.Id == floorId), includeDetails: true);
         var floorIds = floors.Select(f => f.Id).ToList();
 
         var spaces = await _spaceRepository.GetListAsync(s =>
-            floorIds.Contains(s.FloorId) && (spaceTypeId == null || s.SpaceTypeId == spaceTypeId));
+            floorIds.Contains(s.FloorId) && (spaceTypeId == null || s.SpaceTypeId == spaceTypeId), includeDetails: true);
         var spaceIds = spaces.Select(s => s.Id).ToList();
 
         var dayOverrides = await _overrideRepository.GetListAsync(o =>
@@ -383,12 +388,19 @@ public partial class BookingManager : DomainService
         }
 
         // FindAsync, not GetAsync: the other room may have been deleted since — still a clash.
-        var spaceName = (await _spaceRepository.FindAsync(clash.SpaceId))?.Name ?? "another room";
+        var spaceName = await RoomNameAsync(clash.SpaceId);
         var blocks = building.OwnOverlapPolicy == OwnOverlapPolicy.Block;
 
         var violation = OwnClashViolation(clash, spaceName, clock, blocks);
 
         return new OwnClash(violation, clash.SpaceId, blocks);
+    }
+
+    /// <summary>A room's name in the reader's language — "another room" if it has since been deleted.</summary>
+    private async Task<string> RoomNameAsync(Guid spaceId)
+    {
+        var space = await _spaceRepository.FindAsync(spaceId);
+        return space is null ? "another room" : await _nameReader.ShownAsync(space);
     }
 
     // Closures union across levels, so overrides on the space, its floor and its building

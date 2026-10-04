@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -27,10 +28,10 @@ interface CancelBookingDialogProps {
 
 // Teams' wording for which bookings of a series to cancel.
 const SCOPES = [
-  { value: CancelScope.This, label: 'This event' },
-  { value: CancelScope.ThisAndFollowing, label: 'This and all following events' },
-  { value: CancelScope.Series, label: 'All events in the series' },
-]
+  { value: CancelScope.This, label: 'Booking:CancelScopeThis' },
+  { value: CancelScope.ThisAndFollowing, label: 'Booking:CancelScopeFollowing' },
+  { value: CancelScope.Series, label: 'Booking:CancelScopeSeries' },
+] as const
 
 /**
  * "Are you sure?" with an optional reason — and, for a recurring booking, which ones: this
@@ -38,6 +39,7 @@ const SCOPES = [
  * cancelled). Stays open, showing the server's message, if it fails.
  */
 export function CancelBookingDialog({ token, booking, onClose, onCancelled }: CancelBookingDialogProps) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState('')
   const [scope, setScope] = useState<CancelScope>(CancelScope.This)
   const isSeries = Boolean(booking.seriesId)
@@ -50,7 +52,7 @@ export function CancelBookingDialog({ token, booking, onClose, onCancelled }: Ca
     try {
       onCancelled(await cancelBooking(token, booking.id, reason, isSeries ? scope : CancelScope.This))
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Couldn't cancel the booking — please try again.")
+      setError(err instanceof ApiError ? err.message : t('Booking:CancelFailed'))
       setBusy(false)
     }
   }
@@ -59,16 +61,20 @@ export function CancelBookingDialog({ token, booking, onClose, onCancelled }: Ca
     <AlertDialog open onOpenChange={(open) => !open && !busy && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{isSeries ? 'Cancel recurring booking?' : `Cancel “${booking.title}”?`}</AlertDialogTitle>
+          <AlertDialogTitle>{isSeries ? t('Booking:CancelSeriesTitle') : t('Booking:CancelTitle', { title: booking.title })}</AlertDialogTitle>
           <AlertDialogDescription>
-            {booking.spaceName}, {formatDate(dateOf(booking.localStart))} {timeOf(booking.localStart)}–{timeOf(booking.localEnd)}.
-            The room is released straight away, so someone else can book it.
+            {t('Booking:CancelSummary', {
+              space: booking.spaceName,
+              date: formatDate(dateOf(booking.localStart)),
+              start: timeOf(booking.localStart),
+              end: timeOf(booking.localEnd),
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {isSeries && (
           <fieldset className="grid gap-2 text-sm">
-            <legend className="mb-2 font-medium">Cancel</legend>
+            <legend className="mb-2 font-medium">{t('Booking:CancelScope')}</legend>
             {SCOPES.map((s) => (
               <label key={s.value} className="flex cursor-pointer items-center gap-2">
                 <input
@@ -78,22 +84,22 @@ export function CancelBookingDialog({ token, booking, onClose, onCancelled }: Ca
                   checked={scope === s.value}
                   onChange={() => setScope(s.value)}
                 />
-                {s.label}
+                {t(s.label)}
               </label>
             ))}
-            <p className="text-xs text-muted-foreground">Only upcoming ones are cancelled — past ones stay in your history.</p>
+            <p className="text-xs text-muted-foreground">{t('Booking:CancelOnlyUpcoming')}</p>
           </fieldset>
         )}
 
         <div className="grid gap-2">
           <Label htmlFor="cancel-reason">
-            Reason <span className="font-normal text-muted-foreground">(optional)</span>
+            {t('Booking:Reason')} <span className="font-normal text-muted-foreground">{t('Common:Optional')}</span>
           </Label>
           <textarea
             id="cancel-reason"
             className="min-h-20 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             maxLength={MAX_REASON_LENGTH}
-            placeholder="e.g. Meeting moved online"
+            placeholder={t('Booking:ReasonPlaceholder')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -106,9 +112,9 @@ export function CancelBookingDialog({ token, booking, onClose, onCancelled }: Ca
         )}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Keep booking</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t('Booking:Keep')}</AlertDialogCancel>
           <Button variant="destructive" disabled={busy} onClick={confirm}>
-            {busy ? 'Cancelling…' : 'Cancel booking'}
+            {busy ? t('Booking:Cancelling') : t('Booking:Cancel')}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -52,11 +52,14 @@ public class DixelsEntityFrameworkCoreModule : AbpModule
             options.AddRepository<SpaceType, EfCoreSpaceTypeRepository>();
         });
 
-        // A space type is never useful without its names: GetAsync/FindAsync (and
+        // A named entity is never shown without its names: GetAsync/FindAsync (and
         // GetListAsync(includeDetails: true)) load them.
         Configure<AbpEntityOptions>(options =>
         {
             options.Entity<SpaceType>(o => o.DefaultWithDetailsFunc = q => q.Include(t => t.Translations));
+            options.Entity<Building>(o => o.DefaultWithDetailsFunc = q => q.Include(b => b.Translations));
+            options.Entity<Floor>(o => o.DefaultWithDetailsFunc = q => q.Include(f => f.Translations));
+            options.Entity<Space>(o => o.DefaultWithDetailsFunc = q => q.Include(s => s.Translations));
         });
 
         Configure<AbpDbContextOptions>(options =>

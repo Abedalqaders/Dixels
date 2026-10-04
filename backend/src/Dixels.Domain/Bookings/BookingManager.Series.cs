@@ -218,7 +218,7 @@ public partial class BookingManager
         var otherRoomNames = new Dictionary<Guid, string>();
         foreach (var id in myOtherBookings.Select(b => b.SpaceId).Distinct())
         {
-            otherRoomNames[id] = (await _spaceRepository.FindAsync(id))?.Name ?? "another room";
+            otherRoomNames[id] = await RoomNameAsync(id);
         }
 
         var blocks = building.OwnOverlapPolicy == OwnOverlapPolicy.Block;
