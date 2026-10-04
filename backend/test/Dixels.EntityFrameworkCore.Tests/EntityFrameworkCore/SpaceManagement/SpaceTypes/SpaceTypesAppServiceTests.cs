@@ -43,8 +43,9 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     private Task<SpaceTypeDto> CreateAsync(params (string Language, string Name)[] names) =>
         _spaceTypesAppService.CreateAsync(new CreateSpaceTypeDto { Names = Names(names), IconKey = IconKey.Generic });
 
-    // In names, so a search here never finds another test's types.
-    private static readonly string Tag = Guid.NewGuid().ToString("N")[..6];
+    // In names, so a search here never finds another test's types. Capitals, so it's a code
+    // an Arabic name may hold too (NameAlphabet).
+    private static readonly string Tag = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
 
     /// <summary>Every type, as the space pickers ask for them.</summary>
     private Task<PagedResultDto<SpaceTypeDto>> ListAllAsync() =>
@@ -236,12 +237,41 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     [Fact]
     public async Task The_Same_Text_In_Different_Languages_Is_Not_A_Duplicate()
     {
-        await CreateAsync(("en", "Lounge"));
+        // Only a name without letters can be the same text in English and Arabic.
+        await CreateAsync(("en", "2040"));
 
-        // Another type whose Arabic name happens to be the same word.
-        var other = await CreateAsync(("en", "Lounge area"), ("ar", "Lounge"));
+        // Another type whose Arabic name happens to be the same text.
+        var other = await CreateAsync(("en", "Lounge area"), ("ar", "2040"));
 
-        other.Names.ShouldContain(n => n.Language == "ar" && n.Name == "Lounge");
+        other.Names.ShouldContain(n => n.Language == "ar" && n.Name == "2040");
+    }
+
+    // ---- each name in its own language's letters ----
+
+    [Fact]
+    public async Task An_Arabic_Name_In_English_Letters_Is_Rejected()
+    {
+        var ex = await Should.ThrowAsync<BusinessException>(() => CreateAsync(("en", "Phone booth"), ("ar", "Phone booth")));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.NameHasForeignLettersExceptCodes);
+        ex.Data["languageCode"].ShouldBe("ar");
+    }
+
+    [Fact]
+    public async Task An_English_Name_In_Arabic_Letters_Is_Rejected()
+    {
+        var ex = await Should.ThrowAsync<BusinessException>(() => CreateAsync(("en", "كابينة هاتف")));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.NameHasForeignLetters);
+        ex.Data["languageCode"].ShouldBe("en");
+    }
+
+    [Fact]
+    public async Task An_Arabic_Name_May_Hold_A_Short_Code()
+    {
+        var created = await CreateAsync(("en", "IT room"), ("ar", "غرفة IT"));
+
+        created.Names.ShouldContain(n => n.Language == "ar" && n.Name == "غرفة IT");
     }
 
     [Fact]
