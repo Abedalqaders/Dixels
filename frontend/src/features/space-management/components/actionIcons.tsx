@@ -12,12 +12,6 @@ export function PencilIcon() {
   )
 }
 
-export function PlusIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M10 4.5v11M4.5 10h11" /></svg>
-  )
-}
-
 export function ChevronIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5.5 8 10 12.5 14.5 8" /></svg>
@@ -33,11 +27,5 @@ export function TrashIcon() {
 export function RestoreIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10a6 6 0 1 0 1.8-4.3" /><path d="M3.5 3.5v3h3" /></svg>
-  )
-}
-
-export function MoreIcon() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="4.5" r="1.5" /><circle cx="10" cy="10" r="1.5" /><circle cx="10" cy="15.5" r="1.5" /></svg>
   )
 }

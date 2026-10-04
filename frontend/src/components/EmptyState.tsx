@@ -36,19 +36,25 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   )
 }
 
-/** The empty state for a search or filter that matched nothing, with a button that clears them. */
-export function NoResults({ onClear }: { onClear: () => void }) {
+/**
+ * The empty state for a search or filter that matched nothing. Its button is `action` when
+ * given (an admin list's "Add building": what they searched for may simply not exist yet),
+ * otherwise one that clears the search and filters.
+ */
+export function NoResults({ onClear, action }: { onClear: () => void; action?: ReactNode }) {
   const { t } = useTranslation()
   return (
     <EmptyState
       icon={<SearchXIcon />}
       title={t('Common:NoResults')}
-      description={t('Common:NoResultsHint')}
+      description={t(action ? 'Common:NoResultsAddHint' : 'Common:NoResultsHint')}
       action={
-        <Button variant="outline" size="sm" onClick={onClear}>
-          <XIcon />
-          {t('Common:ClearFilters')}
-        </Button>
+        action ?? (
+          <Button variant="outline" size="sm" onClick={onClear}>
+            <XIcon />
+            {t('Common:ClearFilters')}
+          </Button>
+        )
       }
     />
   )

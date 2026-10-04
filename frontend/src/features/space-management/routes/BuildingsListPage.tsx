@@ -42,6 +42,7 @@ export function BuildingsListPage() {
   // A building opens into its floors — a link only for someone who may see them, otherwise
   // the name is just a name rather than a click that ends on "you can't see this".
   const canOpenFloors = usePermission(HierarchyViewers.Floors)
+  const canAdd = usePermission(Permissions.Buildings.Create)
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -102,6 +103,14 @@ export function BuildingsListPage() {
     runAction(action, successMessage)
   }
 
+  // What an empty list and a search that found nothing both offer. Without the permission
+  // there's no Add, so a search that found nothing falls back to Clear filters.
+  const addAction = canAdd ? (
+    <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'building' })}>
+      <PlusIcon /> {t('Hierarchy:AddBuilding')}
+    </Button>
+  ) : undefined
+
   return (
     <>
       <div className="main">
@@ -154,19 +163,13 @@ export function BuildingsListPage() {
 
               {status === 'success' && data.buildings.length === 0 &&
                 (list.search ? (
-                  <NoResults onClear={() => list.clearFilters()} />
+                  <NoResults onClear={() => list.clearFilters()} action={addAction} />
                 ) : (
                   <EmptyState
                     icon={ICONS.building}
                     title={t('Hierarchy:NoBuildings')}
                     description={t('Hierarchy:NoBuildingsHint')}
-                    action={
-                      <Can permission={Permissions.Buildings.Create}>
-                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'building' })}>
-                          <PlusIcon /> {t('Hierarchy:AddBuilding')}
-                        </Button>
-                      </Can>
-                    }
+                    action={addAction}
                   />
                 ))}
 

@@ -34,7 +34,7 @@ const DEFAULT_BUILDING_MAX_DURATION_MINUTES = 120
 const DEFAULT_BUILDING_MAX_HORIZON_DAYS = 30
 const DEFAULT_BUILDING_MIN_LEAD_MINUTES = 0
 
-/** BuildingConsts/FloorConsts/SpaceConsts.MaxNameLength on the backend. */
+/** LocalizedNameConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
 
 interface AddNodeModalProps {

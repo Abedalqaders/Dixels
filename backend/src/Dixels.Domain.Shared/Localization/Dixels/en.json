@@ -3,8 +3,6 @@
   "texts": {
     "AppName": "Dixels",
     "Menu:Home": "Home",
-    "Welcome": "Welcome",
-    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
 
     "Dixels:SpaceManagement:InvalidTimezone": "'{timezone}' isn't a recognized timezone.",
     "Dixels:SpaceManagement:MaxDurationMustBePositive": "The longest booking allowed must be greater than zero minutes.",
@@ -106,6 +104,7 @@
     "Common:Cancel": "Cancel",
     "Common:NoResults": "No results found",
     "Common:NoResultsHint": "Nothing matches your search and filters. Try changing them, or clear them to see everything.",
+    "Common:NoResultsAddHint": "Nothing matches your search and filters. Try changing them, or add it if it isn't here yet.",
     "Common:ClearFilters": "Clear filters",
     "Common:TryAgain": "Try again",
     "Common:Reload": "Reload",

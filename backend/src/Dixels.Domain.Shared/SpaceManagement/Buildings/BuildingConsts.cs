@@ -6,7 +6,6 @@ namespace Dixels.SpaceManagement;
 /// </summary>
 public static class BuildingConsts
 {
-    public const int MaxNameLength = 128;
     public const int MaxBuildingNumberLength = 32;
     public const int MaxTimezoneLength = 64;
 }

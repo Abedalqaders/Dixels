@@ -1,11 +1,12 @@
-// Users go through ABP's own Identity endpoints (/api/identity/users); the building a user
+// The user list is ABP's own Identity endpoint (/api/identity/users); the building a user
 // can see is an ABP extra property on the user — extraProperties.BuildingId — which the
-// backend's DixelsIdentityUserAppService also lets the list filter by. Only my-building is
-// a Dixels endpoint. Same request/ApiError plumbing as spaceManagementApi.ts.
+// backend's DixelsIdentityUserAppService also lets the list filter by. Moving someone and
+// the Roles column are Dixels endpoints (/api/app/users). Same request/ApiError plumbing as
+// spaceManagementApi.ts.
 
 import { request, query } from '@/lib/api/httpClient'
 import type { PagedResultDto } from '@/lib/api/httpClient'
-import type { BookingImpactDto, BuildingDto } from '@/features/space-management/api/spaceManagementApi'
+import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
 
 export { ApiError } from '@/lib/api/httpClient'
 
@@ -64,12 +65,6 @@ export function getUsers(token: string, { buildingId, role, permission, ...input
 }
 
 /**
- * Sets (or, with null, clears) a user's building through ABP's own user update. That
- * endpoint replaces the whole user, so this sends the user back exactly as ABP just
- * returned it with only the building changed. roleNames is left out, which ABP reads as
- * "keep the current roles"; the concurrency stamp stops it overwriting someone else's edit.
- */
-/**
  * Sets (or clears, with null) a user's building. Their upcoming bookings in the
  * building they're leaving are cancelled in the same step — they can only book in one.
  */
@@ -83,12 +78,6 @@ export function assignUserBuilding(token: string, userId: string, buildingId: st
 /** A user's upcoming bookings in their current building — what moving them would leave behind. */
 export function getReassignImpact(token: string, userId: string) {
   return request<BookingImpactDto>(`/api/app/users/${userId}/reassign-impact`, token)
-}
-
-/** The current user's own assigned building, or null if they haven't been assigned one
- * yet. Scoped to whoever the token belongs to — never the full admin list. */
-export function getMyBuilding(token: string) {
-  return request<BuildingDto | null>('/api/app/users/my-building', token)
 }
 
 export interface UserRolesDto {

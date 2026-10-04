@@ -30,7 +30,7 @@ export type EditDetailsState =
   | { kind: 'space'; id: string; names: LocalizedNameDto[]; spaceTypeId: string; capacity: number }
   | null
 
-/** BuildingConsts/FloorConsts/SpaceConsts.MaxNameLength on the backend. */
+/** LocalizedNameConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
 
 interface EditDetailsModalProps {

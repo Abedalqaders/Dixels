@@ -11,6 +11,7 @@ import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/spac
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
 import { Can } from '@/features/auth/components/Can'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { usePermission } from '@/features/auth/permissions/usePermission'
 import { SpaceTypeFilter } from '@/features/space-management/components/SpaceTypeFilter'
 import { HighlightedText } from '@/features/space-management/components/HighlightedText'
 import { Pager } from '@/components/Pager'
@@ -39,6 +40,7 @@ export function SpacesListPage() {
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const canEditRules = useCanEditRules('space')
+  const canAdd = usePermission(Permissions.Spaces.Create)
   const navigate = useNavigate()
 
   const list = useListParams()
@@ -111,6 +113,15 @@ export function SpacesListPage() {
     runAction(action, successMessage)
   }
 
+  // What an empty list and a search that found nothing both offer. Without the permission
+  // there's no Add, so a search that found nothing falls back to Clear filters.
+  const addAction =
+    canAdd && status === 'success' ? (
+      <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}>
+        <PlusIcon /> {t('Hierarchy:AddSpace')}
+      </Button>
+    ) : undefined
+
   return (
     <>
       <div className="main">
@@ -171,19 +182,13 @@ export function SpacesListPage() {
 
               {status === 'success' && data.spaces.length === 0 &&
                 (list.search || spaceTypeId ? (
-                  <NoResults onClear={() => list.clearFilters(['type'])} />
+                  <NoResults onClear={() => list.clearFilters(['type'])} action={addAction} />
                 ) : (
                   <EmptyState
                     icon={ICONS['meeting-room']}
                     title={t('Hierarchy:NoSpaces')}
                     description={t('Hierarchy:NoSpacesHint')}
-                    action={
-                      <Can permission={Permissions.Spaces.Create}>
-                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}>
-                          <PlusIcon /> {t('Hierarchy:AddSpace')}
-                        </Button>
-                      </Can>
-                    }
+                    action={addAction}
                   />
                 ))}
 
