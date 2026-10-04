@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Dixels.Bookings;
 using Dixels.MultiTenancy;
 using Volo.Abp.AuditLogging;
@@ -10,6 +9,7 @@ using Volo.Abp.Timing;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
+using Volo.Abp.MailKit;
 using Volo.Abp.Modularity;
 using Volo.Abp.MultiLingualObjects;
 using Volo.Abp.MultiTenancy;
@@ -33,6 +33,9 @@ namespace Dixels;
     typeof(AbpSettingManagementDomainModule),
     typeof(AbpTenantManagementDomainModule),
     typeof(AbpEmailingModule),
+    // Sends ABP's emails over SMTP with MailKit. Server and sender come from the
+    // Abp.Mailing.* settings (env vars, see backend/.env.example); in dev that's smtp4dev.
+    typeof(AbpMailKitModule),
     typeof(AbpMultiLingualObjectsModule)
 )]
 public class DixelsDomainModule : AbpModule
@@ -65,9 +68,5 @@ public class DixelsDomainModule : AbpModule
         {
             options.Kind = DateTimeKind.Utc;
         });
-
-#if DEBUG
-        context.Services.Replace(ServiceDescriptor.Singleton<IEmailSender, NullEmailSender>());
-#endif
     }
 }

@@ -1,4 +1,5 @@
-﻿using Volo.Abp.Settings;
+using Volo.Abp.Emailing;
+using Volo.Abp.Settings;
 
 namespace Dixels.Settings;
 
@@ -6,7 +7,9 @@ public class DixelsSettingDefinitionProvider : SettingDefinitionProvider
 {
     public override void Define(ISettingDefinitionContext context)
     {
-        //Define your own settings here. Example:
-        //context.Add(new SettingDefinition(DixelsSettings.MySetting1));
+        // ABP stores the SMTP password encrypted, so it decrypts whatever value it reads.
+        // Ours comes as plain text from an env var (SMTP_PASSWORD) and is never stored in
+        // the database, so there's nothing to decrypt.
+        context.GetOrNull(EmailSettingNames.Smtp.Password)!.IsEncrypted = false;
     }
 }

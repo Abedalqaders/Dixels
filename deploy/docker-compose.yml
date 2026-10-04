@@ -22,6 +22,14 @@ name: dixels
 x-backend-env: &backend-env
   ConnectionStrings__Default: "Host=db;Port=5432;Database=Dixels;User ID=postgres;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
   StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE:?set STRING_ENCRYPTION_PASSPHRASE in .env}
+  Settings__Abp.Mailing.Smtp.Host: ${SMTP_HOST:?set SMTP_HOST in .env}
+  Settings__Abp.Mailing.Smtp.Port: ${SMTP_PORT:?set SMTP_PORT in .env}
+  Settings__Abp.Mailing.Smtp.EnableSsl: ${SMTP_ENABLE_SSL:?set SMTP_ENABLE_SSL in .env}
+  Settings__Abp.Mailing.Smtp.UseDefaultCredentials: "false"
+  Settings__Abp.Mailing.Smtp.UserName: ${SMTP_USER:?set SMTP_USER in .env}
+  Settings__Abp.Mailing.Smtp.Password: ${SMTP_PASSWORD:?set SMTP_PASSWORD in .env}
+  Settings__Abp.Mailing.DefaultFromAddress: ${SMTP_FROM:?set SMTP_FROM in .env}
+  Settings__Abp.Mailing.DefaultFromDisplayName: Dixels
 
 services:
   db:
