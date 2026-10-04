@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Dixels.Bookings;
+using Dixels.Emails;
 using Dixels.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
@@ -18,6 +19,7 @@ using Volo.Abp.PermissionManagement.Identity;
 using Volo.Abp.PermissionManagement.OpenIddict;
 using Volo.Abp.SettingManagement;
 using Volo.Abp.TenantManagement;
+using Volo.Abp.VirtualFileSystem;
 
 namespace Dixels;
 
@@ -59,6 +61,15 @@ public class DixelsDomainModule : AbpModule
 
         // "Bookings" section in appsettings (install-time settings, see BookingOptions).
         Configure<BookingOptions>(context.Services.GetConfiguration().GetSection("Bookings"));
+
+        // "Emails" section: where the links in emails point (see EmailOptions).
+        Configure<EmailOptions>(context.Services.GetConfiguration().GetSection("Emails"));
+
+        // The email templates (Emails/Templates/*.tpl) are embedded in this assembly.
+        Configure<AbpVirtualFileSystemOptions>(options =>
+        {
+            options.FileSets.AddEmbedded<DixelsDomainModule>();
+        });
 
         // BRS: every stored timestamp is UTC. With Kind = Utc, ABP's IClock returns UTC and
         // audit columns (CreationTime etc.) are written as UTC. Wall-clock values that must

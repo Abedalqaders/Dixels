@@ -46,6 +46,11 @@ public static class BookingsModelBuilderExtensions
             // "My bookings" lists by user + time.
             b.HasIndex(x => new { x.UserId, x.StartsAt });
 
+            // The reminder job's lookup, every minute: only rows still waiting for one.
+            b.HasIndex(x => x.StartsAt)
+                .HasDatabaseName("IX_AppBookings_ReminderDue")
+                .HasFilter("\"ReminderSentAt\" IS NULL AND \"Status\" = 'Confirmed'");
+
             // Restrict, not cascade: booking history outlives the space (spaces are only
             // ever soft-deleted, so this never blocks a normal delete).
             b.HasOne<Space>().WithMany().HasForeignKey(x => x.SpaceId)

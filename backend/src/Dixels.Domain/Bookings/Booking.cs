@@ -51,6 +51,9 @@ public class Booking : AuditedAggregateRoot<Guid>
     /// <summary>True when an administrator cancelled someone else's booking (force cancel).</summary>
     public bool CancelledByAdmin { get; private set; }
 
+    /// <summary>When the "starts soon" reminder email was queued; null until then (see BookingReminders).</summary>
+    public DateTimeOffset? ReminderSentAt { get; private set; }
+
     private Booking()
     {
         // EF Core
@@ -122,6 +125,11 @@ public class Booking : AuditedAggregateRoot<Guid>
         CancelledAt = cancelledAt.ToUniversalTime();
         CancelReason = Check.Length(reason?.Trim(), nameof(reason), BookingConsts.MaxCancelReasonLength);
         CancelledByAdmin = byAdmin;
+    }
+
+    public void MarkReminderSent(DateTimeOffset at)
+    {
+        ReminderSentAt = at.ToUniversalTime();
     }
 
     private static string NormalizeTitle(string? title)
