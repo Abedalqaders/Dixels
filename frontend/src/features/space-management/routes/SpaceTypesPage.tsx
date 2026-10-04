@@ -33,7 +33,7 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TableSkeleton } from '@/components/LoadingSkeletons'
-import { availableLanguages, currentLanguage, getDefaultLanguage } from '@/i18n'
+import { currentLanguage } from '@/i18n'
 import { TopBar } from '@/components/TopBar'
 
 // Space types aren't part of the Building → Floor hierarchy, so this page sits outside
@@ -69,12 +69,6 @@ export function SpaceTypesPage() {
       .filter((st) => !term || [st.name, ...st.names.map((n) => n.name)].some((n) => n.toLocaleLowerCase(language).includes(term)))
       .sort((a, b) => a.name.localeCompare(b.name, language))
   }, [data, list.search, language])
-
-  // The languages besides the default one, which a type may still lack a name in.
-  const defaultLanguage = getDefaultLanguage()
-  const translatable = availableLanguages().filter((l) => l.code !== defaultLanguage)
-  const missingIn = (st: SpaceTypeDto) =>
-    translatable.filter((l) => !st.names.some((n) => n.language === l.code)).map((l) => l.name)
 
   const pageRows = filtered.slice(list.page * list.pageSize, (list.page + 1) * list.pageSize)
 
@@ -157,23 +151,14 @@ export function SpaceTypesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pageRows.map((st) => {
-                      const missing = missingIn(st)
-                      return (
+                    {pageRows.map((st) => (
                       <TableRow key={st.id}>
                         <TableCell className="py-3 ps-4">
                           <span className="grid size-9 place-items-center rounded-md bg-accent text-accent-foreground [&_svg]:size-5">
                             {ICONS[iconKeyToIconName(st.iconKey)]}
                           </span>
                         </TableCell>
-                        <TableCell className="py-3">
-                          <span className="font-medium">{st.name}</span>
-                          {missing.length > 0 && (
-                            <span className="block text-xs text-muted-foreground">
-                              {t('Translations:Missing', { languages: missing.join(', ') })}
-                            </span>
-                          )}
-                        </TableCell>
+                        <TableCell className="py-3 font-medium">{st.name}</TableCell>
                         <TableCell className="hidden py-3 text-muted-foreground sm:table-cell">
                           {t(ICON_OPTIONS.find((o) => o.value === st.iconKey)?.labelKey ?? 'Enum:IconKey.Generic')}
                         </TableCell>
@@ -193,8 +178,7 @@ export function SpaceTypesPage() {
                           />
                         </TableCell>
                       </TableRow>
-                      )
-                    })}
+                    ))}
                   </TableBody>
                 </Table>
               )}

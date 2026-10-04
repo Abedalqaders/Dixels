@@ -188,7 +188,6 @@
     "Names:Required": "required",
     "Names:HasName": "has a name",
     "Names:DefaultRequired": "A name in {language} is required — it shows in every language without its own.",
-    "Translations:Missing": "Missing: {languages}",
     "SpaceTypes:Title": "Space types",
     "SpaceTypes:Lead": "Shared across every building — renaming or re-icon-ing a type updates it everywhere it's used.",
     "SpaceTypes:Add": "Add type",

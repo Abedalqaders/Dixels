@@ -70,7 +70,7 @@ describe('LocalizedNameField', () => {
     expect(screen.getByLabelText('Name')).toHaveAttribute('lang', 'ar')
   })
 
-  it('says the default language is required until it has a name, then which are missing', async () => {
+  it('says the default language is required until it has a name — and nothing about the others', async () => {
     const user = userEvent.setup()
     render(<Harness />)
 
@@ -78,7 +78,8 @@ describe('LocalizedNameField', () => {
 
     await user.type(screen.getByLabelText('Name'), 'Desk')
 
-    expect(screen.getByText('Missing: العربية, Français')).toBeInTheDocument()
+    expect(screen.queryByText(/required/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/العربية|Français/, { selector: 'p' })).not.toBeInTheDocument()
   })
 
   it('ticks the languages that have a name in the dropdown', async () => {

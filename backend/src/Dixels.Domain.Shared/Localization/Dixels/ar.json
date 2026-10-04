@@ -188,7 +188,6 @@
     "Names:Required": "مطلوب",
     "Names:HasName": "له اسم",
     "Names:DefaultRequired": "الاسم بلغة {language} مطلوب — يظهر في كل لغة ليس لها اسم خاص بها.",
-    "Translations:Missing": "ناقصة: {languages}",
     "SpaceTypes:Title": "أنواع المساحات",
     "SpaceTypes:Lead": "مشتركة بين كل المباني — تغيير اسم النوع أو أيقونته يحدّثه في كل مكان يُستخدم فيه.",
     "SpaceTypes:Add": "إضافة نوع",

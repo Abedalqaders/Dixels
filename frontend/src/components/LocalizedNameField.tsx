@@ -47,8 +47,8 @@ interface LocalizedNameFieldProps {
  * languages come from the backend (ABP), so a new one appears here with no frontend change.
  *
  * The default language's name is required (every language without its own name shows it);
- * the others are optional. The dropdown ticks the languages that have a name, and the line
- * under the box says which are still missing. The box types in the chosen language's
+ * the others are optional, so a missing one isn't flagged — only the default language's,
+ * until it's filled in. The dropdown ticks the languages that have a name. The box types in the chosen language's
  * direction — Arabic right to left, even on an English screen.
  */
 export function LocalizedNameField({
@@ -70,7 +70,6 @@ export function LocalizedNameField({
   const defaultLanguage = getDefaultLanguage()
   const current = languageInfo(language)
   const filled = (code: string) => Boolean(value[code]?.trim())
-  const missing = languages.filter((l) => !filled(l.code))
 
   return (
     <div className="flex flex-col gap-2">
@@ -113,11 +112,9 @@ export function LocalizedNameField({
         />
       </div>
       {error}
-      {languages.length > 1 && missing.length > 0 && (
+      {languages.length > 1 && !filled(defaultLanguage) && (
         <p className="text-xs text-muted-foreground">
-          {filled(defaultLanguage)
-            ? t('Translations:Missing', { languages: missing.map((l) => l.name).join(', ') })
-            : t('Names:DefaultRequired', { language: languageInfo(defaultLanguage).name })}
+          {t('Names:DefaultRequired', { language: languageInfo(defaultLanguage).name })}
         </p>
       )}
     </div>
