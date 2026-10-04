@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useFieldErrors } from '@/components/FieldError'
-import { LocalizedNameField, fromNameList, toNameList } from '@/components/LocalizedNameField'
+import { LocalizedNameField, languageWithForeignLetters, fromNameList, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
 import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
@@ -80,9 +80,12 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const errors = validate()
-    if (Object.keys(errors).length > 0) {
+    // A name in another language's letters: the box says so itself, once it shows that language.
+    const misspelt = languageWithForeignLetters(names)
+    if (Object.keys(errors).length > 0 || misspelt) {
       // The missing name is the default language's: show that one.
       if (errors.name) setLanguage(defaultLanguage)
+      else if (misspelt) setLanguage(misspelt)
       f.setErrors(errors)
       return
     }

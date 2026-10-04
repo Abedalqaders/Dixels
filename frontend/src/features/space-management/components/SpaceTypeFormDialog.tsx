@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useFieldErrors } from '@/components/FieldError'
-import { LocalizedNameField, fromNameList, toNameList } from '@/components/LocalizedNameField'
+import { LocalizedNameField, fromNameList, languageWithForeignLetters, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
 import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { ApiError, createSpaceType, updateSpaceType } from '@/features/space-management/api/spaceManagementApi'
@@ -20,6 +20,8 @@ const MAX_NAME_LENGTH = 128
 const NAME_ERROR_CODES = new Set([
   'Dixels:SpaceManagement:SpaceTypeNameAlreadyExists',
   'Dixels:Localization:DefaultLanguageNameRequired',
+  'Dixels:Localization:NameHasForeignLetters',
+  'Dixels:Localization:NameHasForeignLettersExceptCodes',
 ])
 
 interface SpaceTypeFormDialogProps {
@@ -67,6 +69,12 @@ export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: Spac
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!hasDefault || unchanged) return
+    // A name in another language's letters: the box says so itself, once it shows that language.
+    const misspelt = languageWithForeignLetters(names)
+    if (misspelt) {
+      setLanguage(misspelt)
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -81,7 +89,7 @@ export function SpaceTypeFormDialog({ token, spaceType, onClose, onSaved }: Spac
       }
     } catch (err) {
       if (err instanceof ApiError && NAME_ERROR_CODES.has(err.code ?? '')) {
-        const clash = err.data?.language
+        const clash = err.data?.languageCode ?? err.data?.language
         if (typeof clash === 'string' && clash in names) setLanguage(clash)
         f.setErrors({ name: err.message })
       } else {

@@ -248,6 +248,8 @@ export interface TextKeys {
   "Dixels:Bookings:TooSoon:Short": string
   "Dixels:Localization:DefaultLanguageNameRequired": string
   "Dixels:Localization:LanguageListedTwice": string
+  "Dixels:Localization:NameHasForeignLetters": string
+  "Dixels:Localization:NameHasForeignLettersExceptCodes": string
   "Dixels:Localization:UnsupportedLanguage": string
   "Dixels:SpaceManagement:CapacityBelowMinAttendees": string
   "Dixels:SpaceManagement:CapacityMustBePositive": string
@@ -455,6 +457,7 @@ export interface TextKeys {
   "Names:DefaultRequired": string
   "Names:HasName": string
   "Names:Language": string
+  "Names:NeedsFixing": string
   "Names:Required": string
   "Nav:Administration": string
   "Nav:Bookings": string

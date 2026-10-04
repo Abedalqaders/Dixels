@@ -34,6 +34,8 @@ public static class DixelsDomainErrorCodes
     public const string DefaultLanguageNameRequired = LocalizationPrefix + "DefaultLanguageNameRequired";
     public const string UnsupportedLanguage = LocalizationPrefix + "UnsupportedLanguage";
     public const string LanguageListedTwice = LocalizationPrefix + "LanguageListedTwice";
+    public const string NameHasForeignLetters = LocalizationPrefix + "NameHasForeignLetters";
+    public const string NameHasForeignLettersExceptCodes = LocalizationPrefix + "NameHasForeignLettersExceptCodes";
 
     // Booking rule violations. Each message names the rule, quotes the real limit, the level
     // that set it ({level}, read from the resolved value's provenance), and what to do next.
