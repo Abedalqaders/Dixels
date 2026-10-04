@@ -279,6 +279,28 @@ export interface TextKeys {
   "Duration:MinutesShort_other": string
   "Duration:Minutes_one": string
   "Duration:Minutes_other": string
+  "Email:Attendees": string
+  "Email:BookingCancelled:Intro": string
+  "Email:BookingCancelled:Subject": string
+  "Email:BookingConfirmed:Intro": string
+  "Email:BookingConfirmed:Subject": string
+  "Email:BookingReminder:Intro": string
+  "Email:BookingReminder:Subject": string
+  "Email:Bookings": string
+  "Email:Dates": string
+  "Email:Footer": string
+  "Email:Greeting": string
+  "Email:OpenDixels": string
+  "Email:Reason": string
+  "Email:SeriesCancelled:Intro": string
+  "Email:SeriesCancelled:Subject": string
+  "Email:SeriesConfirmed:Intro": string
+  "Email:SeriesConfirmed:Subject": string
+  "Email:Space": string
+  "Email:Time": string
+  "Email:Title": string
+  "Email:When": string
+  "Email:Where": string
   "Enum:ConstraintSource.Building": string
   "Enum:ConstraintSource.Floor": string
   "Enum:ConstraintSource.Space": string

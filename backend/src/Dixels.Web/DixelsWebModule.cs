@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.DataProtection;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Dixels.Bookings;
 using Dixels.EntityFrameworkCore;
 using Dixels.Localization;
 using Dixels.MultiTenancy;
@@ -32,6 +34,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
+using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity.Web;
@@ -361,6 +364,13 @@ public class DixelsWebModule : AbpModule
                 Predicate = check => check.Tags.Contains(HealthCheckTags.Ready)
             });
         });
+    }
+
+    // Here rather than in the domain module, so only the API host sends reminders — the
+    // migrator loads the domain too and must not.
+    public override async Task OnPostApplicationInitializationAsync(ApplicationInitializationContext context)
+    {
+        await context.AddBackgroundWorkerAsync<BookingReminderWorker>();
     }
 
     private static class HealthCheckTags

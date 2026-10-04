@@ -78,6 +78,18 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        return await bookings
+            .Where(b => b.Status == BookingStatus.Confirmed
+                        && b.ReminderSentAt == null
+                        && b.StartsAt > after
+                        && b.StartsAt <= until)
+            .OrderBy(b => b.StartsAt)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
     public async Task<List<Booking>> GetConfirmedForUserAsync(
         Guid userId,
         DateTimeOffset start,

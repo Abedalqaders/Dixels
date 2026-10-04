@@ -20,3 +20,12 @@ services:
       ASPNETCORE_Kestrel__Certificates__Default__Path: /https/dixels.pfx
     volumes:
       - ${USERPROFILE}/.aspnet/https:/https:ro
+    depends_on:
+      - smtp4dev
+
+  # Fake mail server: catches every email the backend sends, delivers none of them.
+  # Inbox: http://localhost:5000. The backend reaches its SMTP port as smtp4dev:25.
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    ports:
+      - "5000:80"

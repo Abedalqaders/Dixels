@@ -57,6 +57,12 @@ public interface IBookingRepository : IRepository<Booking, Guid>
         Guid? buildingId = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Confirmed bookings starting in <c>(after, until]</c> whose reminder hasn't been sent,
+    /// earliest first — what the reminder job sends next.
+    /// </summary>
+    Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default);
+
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 
     /// <summary>

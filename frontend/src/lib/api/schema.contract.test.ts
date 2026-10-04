@@ -58,6 +58,7 @@ import type {
   SpaceAvailabilityDto,
 } from '@/features/bookings/api/bookingsApi'
 import type { UserRolesDto } from '@/features/users/api/usersApi'
+import type { UpdateMyLanguageDto } from '@/features/auth/language/myLanguageApi'
 
 type S = components['schemas']
 
@@ -132,6 +133,7 @@ void ({} satisfies Same<UpdateSpaceConstraintsDto, S['Dixels.SpaceManagement.Upd
 void ({} satisfies Same<CreateSpaceTypeDto, S['Dixels.SpaceManagement.CreateSpaceTypeDto']>)
 void ({} satisfies Same<UpdateSpaceTypeDto, S['Dixels.SpaceManagement.UpdateSpaceTypeDto']>)
 void ({} satisfies Same<CreateAvailabilityOverrideDto, S['Dixels.SpaceManagement.CreateAvailabilityOverrideDto']>)
+void ({} satisfies Same<UpdateMyLanguageDto, S['Dixels.Users.UpdateMyLanguageDto']>)
 
 describe('API contract', () => {
   it('is enforced by the type checker (see the `satisfies` checks above)', () => {
