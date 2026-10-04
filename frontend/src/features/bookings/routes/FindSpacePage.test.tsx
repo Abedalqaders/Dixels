@@ -7,6 +7,7 @@ import { useAuth } from 'react-oidc-context'
 import { getMyBookableBuilding, searchAvailability } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { TestProviders } from '@/test/providers'
+import { setLanguage } from '@/i18n'
 import { granted, WithPermissions } from '@/test/permissions'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { FindSpacePage } from './FindSpacePage'
@@ -164,6 +165,23 @@ describe('FindSpacePage', () => {
     expect(within(dialog).getByLabelText('From')).toHaveTextContent('10:00')
     expect(within(dialog).getByLabelText('To')).toHaveTextContent('11:00')
     expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
+  })
+
+  it('reads in Arabic, with Arabic plural forms and day names', async () => {
+    await setLanguage('ar')
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: /^مساحة واحدة متاحة · الخميس 1 أكتوبر، 10:00–11:00$/ })).toBeInTheDocument()
+    expect(screen.getByText(/يمكن الحجز قبل 30 يومًا كحد أقصى/)).toBeInTheDocument()
+    expect(screen.getAllByText('متاحة حتى 14:00').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'مساحتان غير متاحتين في هذا الوقت' }))
+    expect(screen.getByRole('button', { name: 'جرّب 12:00 في Desk 12' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'احجز Meeting Room 201' }))
+    const dialog = screen.getByRole('dialog', { name: 'حجز Meeting Room 201' })
+    expect(within(dialog).getByLabelText('عدد الحاضرين')).toHaveValue(4)
+    expect(within(dialog).getByText(/^مفتوحة 07:00–20:00، كل يوم · حتى ساعتين · 12 مقعدًا$/)).toBeInTheDocument()
   })
 
   describe('floor filter', () => {

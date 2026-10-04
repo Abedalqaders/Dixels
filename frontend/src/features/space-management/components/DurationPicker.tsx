@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 // Maximum duration is booking policy, not physical access, so unlike days/hours it's a
 // plain override with no narrow-only check against the parent (see CONSTRAINTS.md).
 // Displayed in hours to match the mock, stored/submitted in minutes to match the API.
@@ -9,6 +11,7 @@ interface DurationPickerProps {
 }
 
 export function DurationPicker({ hours, disabled, onChange }: DurationPickerProps) {
+  const { t } = useTranslation()
   return (
     <div className="pair narrow">
       <input
@@ -20,7 +23,7 @@ export function DurationPicker({ hours, disabled, onChange }: DurationPickerProp
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <span className="unit">hours</span>
+      <span className="unit">{t('Rules:UnitHours')}</span>
     </div>
   )
 }

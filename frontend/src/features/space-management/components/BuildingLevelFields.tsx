@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { OperatingDays } from '@/features/space-management/operatingDays'
 import { OperatingWindow } from '@/features/space-management/operatingWindow'
 import { DayChipPicker } from './DayChipPicker'
@@ -30,17 +31,20 @@ interface BuildingLevelFieldsProps {
 }
 
 export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingLevelFieldsProps) {
+  const { t } = useTranslation()
+  const overlapHint = OWN_OVERLAP_OPTIONS.find((o) => o.value === draft.ownOverlapPolicy)?.hintKey
+
   return (
     <div className="level">
       <div className="levelhead">
         <h3>
-          Building level — <span>{buildingName}</span>
+          {t('Rules:BuildingLevel')} — <span>{buildingName}</span>
         </h3>
-        <span className="sc">Base layer — every value is required</span>
+        <span className="sc">{t('Rules:BaseLayer')}</span>
       </div>
       <div className="fields">
         <div className="field">
-          <span className="lbl">Maximum booking horizon</span>
+          <span className="lbl">{t('Rules:MaxBookingHorizon')}</span>
           <div className="pair">
             <input
               className="ctrl mono"
@@ -53,12 +57,12 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
                 onChange({ ...draft, maxHorizonDays, maxSeriesHorizonDays: Math.max(draft.maxSeriesHorizonDays, maxHorizonDays) })
               }}
             />
-            <span className="unit">days</span>
+            <span className="unit">{t('Rules:UnitDays')}</span>
           </div>
         </div>
         <div className="field">
           <label className="lbl" htmlFor="series-horizon">
-            Recurring bookings horizon
+            {t('Rules:SeriesHorizon')}
           </label>
           <div className="pair">
             <input
@@ -70,16 +74,16 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
               onChange={(e) => onChange({ ...draft, maxSeriesHorizonDays: Number(e.target.value) })}
               aria-describedby="series-horizon-hint"
             />
-            <span className="unit">days</span>
+            <span className="unit">{t('Rules:UnitDays')}</span>
           </div>
           <span id="series-horizon-hint" className={draft.maxSeriesHorizonDays < draft.maxHorizonDays ? 'hint text-destructive' : 'hint'}>
             {draft.maxSeriesHorizonDays < draft.maxHorizonDays
-              ? `Must be at least the booking horizon (${draft.maxHorizonDays} days).`
-              : 'How far ahead the last date of a repeating booking may be.'}
+              ? t('Rules:SeriesHorizonTooShort', { days: t('Rules:DayCount', { count: draft.maxHorizonDays }) })
+              : t('Rules:SeriesHorizonHint')}
           </span>
         </div>
         <div className="field">
-          <span className="lbl">Minimum lead time</span>
+          <span className="lbl">{t('Rules:MinLeadTime')}</span>
           <div className="pair">
             <input
               className="ctrl mono"
@@ -88,11 +92,11 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
               value={draft.minLeadMinutes}
               onChange={(e) => onChange({ ...draft, minLeadMinutes: Number(e.target.value) })}
             />
-            <span className="unit">minutes</span>
+            <span className="unit">{t('Rules:UnitMinutes')}</span>
           </div>
         </div>
         <div className="field">
-          <span className="lbl">Maximum duration</span>
+          <span className="lbl">{t('Rules:MaxDuration')}</span>
           <DurationPicker
             hours={minutesToHours(draft.maxDurationMinutes)}
             disabled={false}
@@ -102,7 +106,7 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
       </div>
       <div className="field stacked">
         <label className="lbl" htmlFor="own-overlap-policy">
-          Overlapping bookings per person
+          {t('Rules:OverlapPerPerson')}
         </label>
         <select
           id="own-overlap-policy"
@@ -112,14 +116,14 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
         >
           {OWN_OVERLAP_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {t(o.labelKey)}
             </option>
           ))}
         </select>
-        <span className="hint">{OWN_OVERLAP_OPTIONS.find((o) => o.value === draft.ownOverlapPolicy)?.hint}</span>
+        <span className="hint">{overlapHint && t(overlapHint)}</span>
       </div>
       <div className="field stacked">
-        <span className="lbl">Operating days</span>
+        <span className="lbl">{t('Rules:OperatingDays')}</span>
         <DayChipPicker
           value={draft.days}
           parent={OperatingDays.Everyday}
@@ -128,7 +132,7 @@ export function BuildingLevelFields({ draft, buildingName, onChange }: BuildingL
         />
       </div>
       <div className="field stacked">
-        <span className="lbl">Operating hours</span>
+        <span className="lbl">{t('Rules:OperatingHours')}</span>
         <HoursRangeInput
           value={draft.hours}
           parent={OperatingWindow.FullDay}

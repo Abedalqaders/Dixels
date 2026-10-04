@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import { setLanguage } from '@/i18n'
 import { BookingImpactDialog } from './BookingImpactDialog'
 
 const impact: BookingImpactDto = {
@@ -93,5 +94,19 @@ describe('BookingImpactDialog', () => {
     expect(screen.queryByRole('button', { name: /keep/i })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Move and cancel 2' }))
     expect(onChoose).toHaveBeenLastCalledWith('cancel')
+  })
+
+  it('counts in Arabic with the right plural form', async () => {
+    await setLanguage('ar')
+    const { rerender } = render(<BookingImpactDialog mode="change" impact={impact} onChoose={vi.fn()} />)
+
+    // Two is its own form in Arabic (the dual), not "2 bookings".
+    expect(screen.getByRole('alertdialog', { name: 'يؤثر هذا التغيير في حجزين قادمين' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'الإبقاء عليها والحفظ' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'إلغاء الحجوزات (2) والحفظ' })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Room 1 · Level 2')
+
+    rerender(<BookingImpactDialog mode="change" impact={{ ...impact, count: 11 }} onChoose={vi.fn()} />)
+    expect(screen.getByRole('alertdialog', { name: 'يؤثر هذا التغيير في 11 حجزًا قادمًا' })).toBeInTheDocument()
   })
 })

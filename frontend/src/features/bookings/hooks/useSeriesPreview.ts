@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import i18n from '@/i18n'
 import { ApiError, previewSeries } from '@/features/bookings/api/bookingsApi'
 import type { SeriesPreviewDto, SeriesRequestDto } from '@/features/bookings/api/bookingsApi'
 
@@ -36,7 +37,7 @@ export function useSeriesPreview(token: string, request: SeriesRequestDto | null
             round,
             state: {
               status: 'error',
-              message: err instanceof ApiError ? err.message : "Couldn't check the dates — please try again.",
+              message: err instanceof ApiError ? err.message : i18n.t('BookingForm:DatesCheckFailed'),
             },
           }),
         )

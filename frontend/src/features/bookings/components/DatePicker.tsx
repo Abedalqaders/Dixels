@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import { formatDay } from '@/lib/time/format'
+import { formatDay, formatMonthYear, formatWeekday } from '@/lib/time/format'
+import { languageInfo } from '@/i18n'
 
 interface DatePickerProps {
   id: string
@@ -30,8 +32,11 @@ function toIso(date: Date): IsoDate {
 
 /** shadcn's basic date picker — a button that opens a plain month calendar (‹ › arrows),
  * limited to the booking horizon: dates outside it are disabled and the arrows stop at its
- * first and last months. */
+ * first and last months. Month and weekday names (and what a screen reader hears) come
+ * from the app's own formatting, in the reader's language; the month runs right to left
+ * in Arabic. */
 export function DatePicker({ id, value, min, max, onChange, errorId }: DatePickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
   return (
@@ -51,6 +56,19 @@ export function DatePicker({ id, value, min, max, onChange, errorId }: DatePicke
       <PopoverContent className="w-auto overflow-hidden p-0" align="start">
         <Calendar
           mode="single"
+          dir={languageInfo().dir}
+          formatters={{
+            formatCaption: (m) => formatMonthYear(toIso(m)),
+            formatWeekdayName: (d) => formatWeekday(toIso(d), 'narrow'),
+          }}
+          labels={{
+            labelPrevious: () => t('Calendar:PreviousMonth'),
+            labelNext: () => t('Calendar:NextMonth'),
+            labelGrid: (m) => formatMonthYear(toIso(m)),
+            labelWeekday: (d) => formatWeekday(toIso(d), 'long'),
+            labelDayButton: (d) => formatDay(toIso(d), 'long'),
+          }}
+          weekStartsOn={0}
           startMonth={toDate(min)}
           endMonth={toDate(max)}
           selected={toDate(value)}

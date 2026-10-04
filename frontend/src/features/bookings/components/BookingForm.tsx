@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -61,6 +62,7 @@ export function BookingForm({
   initialSlot,
   initialAttendees,
 }: BookingFormProps) {
+  const { t } = useTranslation()
   const [initial] = useState(() => initialSlot ?? suggestSlot(building, space))
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(initial.date)
@@ -90,9 +92,9 @@ export function BookingForm({
   // A problem with the one field is said under it; the rules that need the room and the
   // time together (too long, closed, taken, too few people) are the verdict panel's job.
   const attendeesError = !Number.isInteger(attendees) || attendees < 1
-    ? 'Enter how many people are coming.'
+    ? t('BookingForm:AttendeesRequired')
     : attendees > space.capacity
-      ? `This room seats ${space.capacity}.`
+      ? t('BookingForm:RoomSeats', { count: space.capacity })
       : null
 
   // The rule the Repeat field stands for on the current date: a quick choice follows the
@@ -179,7 +181,7 @@ export function BookingForm({
         recheck()
         recheckSeries()
       } else {
-        setSubmitError('Something went wrong — please try again.')
+        setSubmitError(t('Error:Generic'))
       }
     } finally {
       setSubmitting(false)
@@ -190,15 +192,14 @@ export function BookingForm({
     ? toBook.length > 0 && !submitting
     : preview.status === 'done' && preview.preview.isValid && !submitting
   const seriesTotal = seriesPreview.status === 'done' ? seriesPreview.preview.occurrences.length : 0
-  const rules = space.minAttendees
-    ? `${space.capacity} seats · at least ${space.minAttendees}`
-    : `${space.capacity} seats`
+  const seats = t('Booking:Seats', { count: space.capacity })
+  const limits = space.minAttendees ? `${seats} · ${t('BookingForm:AtLeast', { min: space.minAttendees })}` : seats
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Book {space.name}</DialogTitle>
+          <DialogTitle>{t('BookingForm:Title', { space: space.name })}</DialogTitle>
           <DialogDescription>
             {floorName} · {space.spaceTypeName}
           </DialogDescription>
@@ -206,15 +207,19 @@ export function BookingForm({
 
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <p className="font-mono text-xs text-muted-foreground">
-            Open {formatHours(space.hours.value)}, {formatDays(space.days.value)} · up to{' '}
-            {formatDuration(space.maxDurationMinutes.value)} · {rules}
+            {t('BookingForm:Rules', {
+              hours: formatHours(space.hours.value),
+              days: formatDays(space.days.value),
+              duration: formatDuration(space.maxDurationMinutes.value),
+              limits,
+            })}
           </p>
 
           <div className="grid gap-2">
-            <Label htmlFor="bk-title">Title</Label>
+            <Label htmlFor="bk-title">{t('BookingForm:TitleLabel')}</Label>
             <Input
               id="bk-title"
-              placeholder="Booking"
+              placeholder={t('BookingForm:TitlePlaceholder')}
               maxLength={128}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -223,7 +228,7 @@ export function BookingForm({
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="bk-date">Date</Label>
+              <Label htmlFor="bk-date">{t('Booking:Date')}</Label>
               <DatePicker
                 id="bk-date"
                 value={date}
@@ -266,7 +271,7 @@ export function BookingForm({
           />
 
           <div className="grid gap-2">
-            <Label htmlFor="bk-attendees">Attendees</Label>
+            <Label htmlFor="bk-attendees">{t('BookingForm:Attendees')}</Label>
             <div className="flex max-w-64 items-center gap-2">
               <Input
                 id="bk-attendees"
@@ -280,13 +285,13 @@ export function BookingForm({
                 aria-describedby={attendeesMessage ? 'bk-attendees-error' : undefined}
                 required
               />
-              <span className="whitespace-nowrap text-sm text-muted-foreground">of {space.capacity} seats</span>
+              <span className="whitespace-nowrap text-sm text-muted-foreground">{t('BookingForm:OfSeats', { count: space.capacity })}</span>
             </div>
             {attendeesMessage && <FieldError id="bk-attendees-error" message={attendeesMessage} />}
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Times are in {building.timezone} ({building.name}'s local time). You can book up to {formatDate(lastDate)}.
+            {t('BookingForm:TimesNote', { timezone: building.timezone, building: building.name, date: formatDate(lastDate) })}
           </p>
 
           {rule ? (
@@ -303,7 +308,11 @@ export function BookingForm({
               }
             />
           ) : (
-            <VerdictPanel state={panelState} slotLabel={`${formatDate(date)}, ${start}–${end}`} timezone={building.timezone} />
+            <VerdictPanel
+              state={panelState}
+              slotLabel={t('BookingForm:Slot', { date: formatDate(date), start, end })}
+              timezone={building.timezone}
+            />
           )}
 
           {submitError && (
@@ -314,10 +323,14 @@ export function BookingForm({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t('Common:Cancel')}
             </Button>
             <Button type="submit" disabled={!canBook}>
-              {submitting ? 'Booking…' : rule ? `Book ${toBook.length} of ${seriesTotal}` : 'Book'}
+              {submitting
+                ? t('BookingForm:Booking')
+                : rule
+                  ? t('BookingForm:BookSome', { booked: toBook.length, total: seriesTotal })
+                  : t('BookingForm:Book')}
             </Button>
           </DialogFooter>
         </form>

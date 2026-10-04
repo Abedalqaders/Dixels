@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { allowedHoursRange, OperatingWindow } from '@/features/space-management/operatingWindow'
 
 // Building has no HoursRangeInput of its own in the mock (it's the one level with no
@@ -15,6 +16,7 @@ interface HoursRangeInputProps {
 }
 
 export function HoursRangeInput({ value, parent, disabled, onChange }: HoursRangeInputProps) {
+  const { t } = useTranslation()
   const allowed = allowedHoursRange(parent)
   const parentWraps = !allowed.isOpen24Hours && allowed.open > allowed.close
 
@@ -46,7 +48,7 @@ export function HoursRangeInput({ value, parent, disabled, onChange }: HoursRang
           disabled={disabled || !allowed.isOpen24Hours}
           onChange={(e) => setOpen24Hours(e.target.checked)}
         />
-        Open 24 hours
+        {t('Rules:Open24Hours')}
       </label>
       {!value.isOpen24Hours && (
         <div className="pair narrow">

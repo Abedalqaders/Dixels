@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ import { TreeSkeleton } from '@/components/LoadingSkeletons'
 
 export function SpacesListPage() {
   const { buildingId = '', floorId = '' } = useParams()
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const canEditRules = useCanEditRules('space')
@@ -77,7 +79,7 @@ export function SpacesListPage() {
       showToast(successMessage)
       refetch()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
     }
   }
 
@@ -88,22 +90,22 @@ export function SpacesListPage() {
     try {
       affected = await impact()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
       return
     }
     if (affected.count === 0 && !affected.assignedEmployees) {
-      confirmAndRun(name, confirmMessage, remove, ` deleted.`)
+      confirmAndRun(name, confirmMessage, remove, t('Hierarchy:Deleted', { name }))
       return
     }
     if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
     runAction(
       remove,
-      affected.count > 0 ? `${name} deleted · ${affected.count} ${affected.count === 1 ? 'booking' : 'bookings'} cancelled.` : `${name} deleted.`,
+      affected.count > 0 ? t('Hierarchy:DeletedWithBookings', { name, count: affected.count }) : t('Hierarchy:Deleted', { name }),
     )
   }
 
   async function confirmAndRun(name: string, confirmMessage: string, action: () => Promise<unknown>, successMessage: string) {
-    if (!(await confirm({ title: `Delete “${name}”?`, description: confirmMessage, confirmLabel: 'Delete', destructive: true }))) return
+    if (!(await confirm({ title: t('Hierarchy:DeleteTitle', { name }), description: confirmMessage, confirmLabel: t('Common:Delete'), destructive: true }))) return
     runAction(action, successMessage)
   }
 
@@ -114,12 +116,12 @@ export function SpacesListPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="breadcrumb">
-                <Link to={`/admin/buildings/${buildingId}/floors`}>‹ Floors</Link>
+                <Link to={`/admin/buildings/${buildingId}/floors`}>‹ {t('Hierarchy:Floors')}</Link>
               </p>
-              <h1 className="pagetitle">{status === 'success' ? data.floor.name : 'Spaces'}</h1>
+              <h1 className="pagetitle">{status === 'success' ? data.floor.name : t('Hierarchy:Spaces')}</h1>
               <p className="lead">
-                {status === 'success' ? `${data.totalCount} space${data.totalCount === 1 ? '' : 's'}. ` : ''}
-                Bookable spaces on this floor.
+                {status === 'success' ? `${t('Hierarchy:SpaceCount', { count: data.totalCount })} ` : ''}
+                {t('Hierarchy:SpacesLead')}
               </p>
             </div>
             <Can permission={Permissions.Spaces.Create}>
@@ -127,22 +129,22 @@ export function SpacesListPage() {
                 disabled={status !== 'success'}
                 onClick={() => status === 'success' && setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}
               >
-                <PlusIcon /> Add space
+                <PlusIcon /> {t('Hierarchy:AddSpace')}
               </Button>
             </Can>
           </div>
 
           <section className="card" id="spaces">
             <div className="cardhead">
-              <h2 className="sectiontitle">Spaces</h2>
+              <h2 className="sectiontitle">{t('Hierarchy:Spaces')}</h2>
               <div className="treetools">
                 <div className="searchbox">
                   <SearchIcon />
                   <input
                     type="text"
-                    placeholder="Search spaces…"
+                    placeholder={t('Hierarchy:SearchSpaces')}
                     autoComplete="off"
-                    aria-label="Search spaces"
+                    aria-label={t('Hierarchy:SearchSpacesLabel')}
                     value={list.searchInput}
                     onChange={(e) => list.setSearchInput(e.target.value)}
                   />
@@ -154,19 +156,19 @@ export function SpacesListPage() {
                     checked={list.showDeleted}
                     onChange={(e) => list.setShowDeleted(e.target.checked)}
                   />
-                  Show deleted
+                  {t('Hierarchy:ShowDeleted')}
                 </label>
               </div>
             </div>
 
 
             <div className={`tree${isRefreshing ? ' refreshing' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <TreeSkeleton label="Loading spaces…" />}
-              {status === 'error' && <p className="treeempty">Couldn't load spaces: {error.message}</p>}
+              {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingSpaces')} />}
+              {status === 'error' && <p className="treeempty">{t('Hierarchy:SpacesLoadFailed', { error: error.message })}</p>}
 
               {status === 'success' && data.spaces.length === 0 && (
                 <p className="treeempty">
-                  {list.search || spaceTypeId ? 'Nothing matches the current filters.' : 'No spaces yet — add one to get started.'}
+                  {list.search || spaceTypeId ? t('Hierarchy:NoFilterMatch') : t('Hierarchy:NoSpaces')}
                 </p>
               )}
 
@@ -180,19 +182,17 @@ export function SpacesListPage() {
                     {spaceTypeById.get(space.spaceTypeId)?.name && (
                       <span className="badge type">{spaceTypeById.get(space.spaceTypeId)?.name}</span>
                     )}
-                    <span className="m">
-                      {space.capacity} seat{space.capacity === 1 ? '' : 's'}
-                    </span>
-                    {space.hasOverrides && <span className="badge completed">Custom</span>}
-                    {space.isDeleted && <span className="badge cancelled">Deleted</span>}
+                    <span className="m">{t('Booking:Seats', { count: space.capacity })}</span>
+                    {space.hasOverrides && <span className="badge completed">{t('Hierarchy:CustomBadge')}</span>}
+                    {space.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                     <span className="actions">
                       {space.isDeleted ? (
                         <Can permission={Permissions.Spaces.Edit}>
                           <button
                             className="rowbtn"
-                            title={`Restore ${space.name}`}
-                            aria-label={`Restore ${space.name}`}
-                            onClick={() => runAction(() => restoreSpace(token, space.id), `${space.name} restored.`)}
+                            title={t('Hierarchy:Restore', { name: space.name })}
+                            aria-label={t('Hierarchy:Restore', { name: space.name })}
+                            onClick={() => runAction(() => restoreSpace(token, space.id), t('Hierarchy:Restored', { name: space.name }))}
                           >
                             <RestoreIcon />
                           </button>
@@ -202,7 +202,7 @@ export function SpacesListPage() {
                           label={space.name}
                           actions={[
                             {
-                              label: 'Edit details',
+                              label: t('Hierarchy:EditDetails'),
                               permission: Permissions.Spaces.Edit,
                               icon: <DetailsIcon />,
                               onClick: () =>
@@ -215,20 +215,20 @@ export function SpacesListPage() {
                                 }),
                             },
                             {
-                              label: canEditRules ? 'Edit constraints' : 'View constraints',
+                              label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
                               permission: Permissions.Spaces.Default,
                               icon: <PencilIcon />,
                               onClick: () => navigate(`/admin/constraints/space/${space.id}`),
                             },
                             {
-                              label: 'Delete',
+                              label: t('Common:Delete'),
                               permission: Permissions.Spaces.Delete,
                               icon: <TrashIcon />,
                               destructive: true,
                               onClick: () =>
                                 confirmDelete(
                                   space.name,
-                                  `Delete "${space.name}"?`,
+                                  t('Hierarchy:DeleteSpaceConfirm', { name: space.name }),
                                   () => getSpaceDeleteImpact(token, space.id),
                                   () => deleteSpace(token, space.id),
                                 ),
@@ -261,7 +261,7 @@ export function SpacesListPage() {
           spaceTypes={data?.spaceTypes ?? []}
           onClose={() => setModal(null)}
           onCreated={() => {
-            showToast('Space added.')
+            showToast(t('Hierarchy:SpaceAdded'))
             refetch()
           }}
           onError={(message) => showToast(message, 'error')}
@@ -274,7 +274,7 @@ export function SpacesListPage() {
           spaceTypes={data?.spaceTypes ?? []}
           onClose={() => setEditState(null)}
           onSaved={() => {
-            showToast('Details saved.')
+            showToast(t('Hierarchy:DetailsSaved'))
             refetch()
           }}
           onError={(message) => showToast(message, 'error')}

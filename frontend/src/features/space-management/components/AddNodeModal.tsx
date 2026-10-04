@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,7 @@ interface AddNodeModalProps {
 type Field = 'name' | 'meta' | 'type'
 
 export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onError }: AddNodeModalProps) {
+  const { t } = useTranslation()
   // A name per language, typed in one box (LocalizedNameField); the default language's is required.
   const defaultLanguage = getDefaultLanguage()
   const [names, setNames] = useState<LocalizedNames>({})
@@ -58,22 +60,28 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   const [submitting, setSubmitting] = useState(false)
   const f = useFieldErrors<Field>('add')
 
-  const titles = { building: 'Add building', floor: 'Add floor', space: 'Add space' }
-  const metaLabel = state.kind === 'building' ? 'Building number' : state.kind === 'floor' ? 'Floor number' : 'Capacity'
-  const metaPlaceholder = state.kind === 'building' ? 'e.g. RH-02' : state.kind === 'floor' ? 'e.g. 5' : 'e.g. 6'
+  const titles = { building: t('Hierarchy:AddBuilding'), floor: t('Hierarchy:AddFloor'), space: t('Hierarchy:AddSpace') }
+  const metaLabel =
+    state.kind === 'building' ? t('Hierarchy:BuildingNumber') : state.kind === 'floor' ? t('Hierarchy:FloorNumber') : t('Hierarchy:Capacity')
+  const metaPlaceholder =
+    state.kind === 'building'
+      ? t('Hierarchy:BuildingNumberPlaceholder')
+      : state.kind === 'floor'
+        ? t('Hierarchy:FloorNumberPlaceholder')
+        : t('Hierarchy:CapacityPlaceholder')
   const metaRequired = state.kind === 'space' // Building/Floor number are optional; Capacity is required.
 
   // Every problem at once, each under its own field — not the first one found.
   function validate(): Partial<Record<Field, string>> {
     const errors: Partial<Record<Field, string>> = {}
-    if (!names[defaultLanguage]?.trim()) errors.name = 'Name is required.'
+    if (!names[defaultLanguage]?.trim()) errors.name = t('Hierarchy:NameRequired')
     if (state.kind === 'floor' && meta.trim() && !Number.isInteger(Number(meta))) {
-      errors.meta = 'Floor number must be a whole number.'
+      errors.meta = t('Hierarchy:FloorNumberWhole')
     }
     if (state.kind === 'space') {
       const capacity = Number(meta)
-      if (!meta.trim() || !Number.isFinite(capacity) || capacity <= 0) errors.meta = 'Capacity must be a positive number.'
-      if (!spaceTypeId) errors.type = 'Choose a space type.'
+      if (!meta.trim() || !Number.isFinite(capacity) || capacity <= 0) errors.meta = t('Hierarchy:CapacityPositive')
+      if (!spaceTypeId) errors.type = t('Hierarchy:ChooseSpaceType')
     }
     return errors
   }
@@ -115,7 +123,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
       onCreated()
       onClose()
     } catch (err) {
-      onError(err instanceof ApiError ? err.message : 'Something went wrong — please try again.')
+      onError(err instanceof ApiError ? err.message : t('Error:Generic'))
     } finally {
       setSubmitting(false)
     }
@@ -127,7 +135,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
         <form {...f.form} onSubmit={handleSubmit} noValidate>
           <DialogHeader>
             <DialogTitle>{titles[state.kind]}</DialogTitle>
-            {state.kind !== 'building' && <DialogDescription>Added under {state.parentName}.</DialogDescription>}
+            {state.kind !== 'building' && <DialogDescription>{t('Hierarchy:AddedUnder', { name: state.parentName })}</DialogDescription>}
           </DialogHeader>
 
           <div className="grid gap-4 py-4 sm:grid-cols-2">
@@ -136,7 +144,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
                 id={f.id('name')}
                 label={
                   <>
-                    Name<span className="text-destructive">*</span>
+                    {t('Hierarchy:Name')}<span className="text-destructive">*</span>
                   </>
                 }
                 value={names}
@@ -145,7 +153,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
                 onLanguageChange={setLanguage}
                 inputProps={f.field('name')}
                 error={f.error('name')}
-                placeholder={state.kind === 'floor' ? 'e.g. Level 5' : 'Name'}
+                placeholder={state.kind === 'floor' ? t('Hierarchy:FloorNamePlaceholder') : t('Hierarchy:Name')}
                 maxLength={MAX_NAME_LENGTH}
                 autoFocus
               />
@@ -168,7 +176,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
             {state.kind === 'building' && (
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor="add-timezone">
-                  Timezone<span className="text-destructive">*</span>
+                  {t('Timezone:Label')}<span className="text-destructive">*</span>
                 </Label>
                 <TimezonePicker id="add-timezone" value={timezone} onChange={setTimezone} />
               </div>
@@ -177,7 +185,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
             {state.kind === 'space' && (
               <div className="grid gap-2 sm:col-span-2">
                 <Label htmlFor={f.id('type')}>
-                  Type<span className="text-destructive">*</span>
+                  {t('Hierarchy:Type')}<span className="text-destructive">*</span>
                 </Label>
                 <Select value={spaceTypeId} onValueChange={setSpaceTypeId}>
                   <SelectTrigger {...f.field('type')} className="w-full">
@@ -198,10 +206,10 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t('Common:Cancel')}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Adding…' : 'Add'}
+              {submitting ? t('Hierarchy:Adding') : t('Hierarchy:Add')}
             </Button>
           </DialogFooter>
         </form>

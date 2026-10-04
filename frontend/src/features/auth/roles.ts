@@ -1,4 +1,22 @@
 import type { User } from 'oidc-client-ts'
+import i18n from '@/i18n'
+
+/** ABP's built-in admin role, and the employee role Dixels seeds (RoleDataSeedContributor). */
+export const ADMIN_ROLE = 'admin'
+export const EMPLOYEE_ROLE = 'employee'
+
+/** A role's name as people read it: the two roles Dixels creates, in the reader's language;
+ * any other role (one an administrator added in ABP) exactly as it was named. */
+export function roleLabel(roleName: string): string {
+  switch (roleName.toLowerCase()) {
+    case ADMIN_ROLE:
+      return i18n.t('Nav:RoleAdministrator')
+    case EMPLOYEE_ROLE:
+      return i18n.t('Nav:RoleEmployee')
+    default:
+      return roleName
+  }
+}
 
 // OpenIddict maps the "roles" scope onto a `role` claim. With one role it's
 // a single string; with more than one, oidc-client-ts gives back an array -

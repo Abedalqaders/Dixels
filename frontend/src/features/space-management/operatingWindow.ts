@@ -7,6 +7,9 @@
 // midnight (e.g. 22:00-02:00) — a real, supported case (reception desks, night-shift
 // studios). Times are "HH:mm" strings, matching shared/test-fixtures' JSON shape.
 
+import i18n from '@/i18n'
+import { formatClock } from '@/lib/time/format'
+
 const MINUTES_PER_DAY = 24 * 60
 
 export class OperatingWindow {
@@ -67,6 +70,16 @@ export interface AllowedHoursRange {
  */
 export function allowedHoursRange(parentHours: OperatingWindow): AllowedHoursRange {
   return { isOpen24Hours: parentHours.isOpen24Hours, open: parentHours.open, close: parentHours.close }
+}
+
+// ---- display (not part of the backend port) ----
+
+/** "24 hours" or "09:00 – 17:00". The Arabic text keeps the range in left-to-right order
+ * (it wraps it in a direction isolate), so it never reads "17:00 – 09:00". */
+export function describeHours(hours: OperatingWindow): string {
+  return hours.isOpen24Hours
+    ? i18n.t('Rules:AllDay')
+    : i18n.t('Rules:HoursRange', { open: formatClock(hours.open), close: formatClock(hours.close) })
 }
 
 function toMinutes(time: string): number {

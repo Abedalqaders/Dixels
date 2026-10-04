@@ -10,6 +10,7 @@ import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
 import { granted, WithPermissions } from '@/test/permissions'
 import { stubMatchMedia } from '@/test/matchMedia'
+import { setLanguage } from '@/i18n'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 vi.mock('@/features/space-management/api/spaceManagementApi', async (importOriginal) => ({
@@ -63,6 +64,19 @@ describe('SpaceExplorer permissions', () => {
 
     expect(await screen.findByRole('link', { name: 'Level 1' })).toBeInTheDocument()
     expect(getFloors).toHaveBeenCalledWith('t', expect.objectContaining({ buildingId: 'b1' }))
+  })
+
+  it('speaks Arabic', async () => {
+    await setLanguage('ar')
+    const user = userEvent.setup()
+    renderExplorer(granted(Permissions.Floors.Default))
+
+    expect(await screen.findByRole('link', { name: 'HQ' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'المباني والطوابق' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'ابحث عن مبنى أو طابق' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /كل المباني/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'توسيع HQ' }))
+    expect(screen.getByRole('button', { name: 'طي HQ' })).toBeInTheDocument()
   })
 })
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Localization;
 using Dixels.SpaceManagement;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -32,6 +33,7 @@ public partial class BookingManager : DomainService
     private readonly IJsonSerializer _jsonSerializer;
     private readonly BookingOptions _options;
     private readonly LocalizedNameReader _nameReader;
+    private readonly IStringLocalizer<DixelsResource> _localizer;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -45,7 +47,8 @@ public partial class BookingManager : DomainService
         BookingAccessChecker accessChecker,
         IJsonSerializer jsonSerializer,
         IOptions<BookingOptions> options,
-        LocalizedNameReader nameReader)
+        LocalizedNameReader nameReader,
+        IStringLocalizer<DixelsResource> localizer)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -59,6 +62,7 @@ public partial class BookingManager : DomainService
         _jsonSerializer = jsonSerializer;
         _options = options.Value;
         _nameReader = nameReader;
+        _localizer = localizer;
     }
 
     /// <summary>
@@ -400,7 +404,7 @@ public partial class BookingManager : DomainService
     private async Task<string> RoomNameAsync(Guid spaceId)
     {
         var space = await _spaceRepository.FindAsync(spaceId);
-        return space is null ? "another room" : await _nameReader.ShownAsync(space);
+        return space is null ? _localizer["Dixels:Bookings:AnotherRoom"].Value : await _nameReader.ShownAsync(space);
     }
 
     // Closures union across levels, so overrides on the space, its floor and its building

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { setLanguage } from '@/i18n'
 import { formatWhen } from './ClosuresList'
 
 // Local-time (no "Z") ISO strings on purpose: formatWhen reads hours/minutes in the
@@ -27,5 +28,13 @@ describe('formatWhen', () => {
   it('falls back to full date+time when only the start is midnight (a real time boundary)', () => {
     const result = formatWhen('2026-10-05T00:00:00', '2026-10-05T13:00:00')
     expect(result).toContain('→')
+  })
+})
+
+describe('formatWhen in Arabic', () => {
+  it('uses Arabic month names, and the arrow points the way Arabic reads', async () => {
+    await setLanguage('ar')
+    expect(formatWhen('2026-12-25T00:00:00', '2026-12-26T00:00:00')).toBe('25 ديسمبر')
+    expect(formatWhen('2026-10-05T09:00:00', '2026-10-05T13:00:00')).toBe('5 أكتوبر 09:00 ← 5 أكتوبر 13:00')
   })
 })

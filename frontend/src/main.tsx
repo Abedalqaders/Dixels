@@ -32,12 +32,17 @@ function renderApp() {
 }
 
 // The texts come from the backend (see src/i18n). Only a first visit with the backend down
-// has none at all — the one screen that can't be translated, so it says it in English.
+// has none at all — the one screen that can't be translated, and before any language has
+// been picked. So it's written here in English and Arabic, both at once.
 function renderUnreachable() {
   root.render(
     <AuthStatusScreen state="error" title="Couldn't reach the server" detail="Check your connection, then try again.">
+      <div lang="ar" dir="rtl" className="mt-5">
+        <p className="authtitle">تعذّر الوصول إلى الخادم</p>
+        <p className="authdetail">تحقق من اتصالك، ثم حاول مرة أخرى.</p>
+      </div>
       <button type="button" className="btn" onClick={boot}>
-        Retry
+        Retry · <span lang="ar">إعادة المحاولة</span>
       </button>
     </AuthStatusScreen>,
   )

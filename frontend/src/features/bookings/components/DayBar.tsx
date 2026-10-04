@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { fromMinutes } from '@/lib/time/buildingTime'
 import type { DayRangeDto } from '@/features/bookings/api/bookingsApi'
@@ -44,8 +45,11 @@ const DRAG_THRESHOLD_PX = 4
  * straight from it: drag across free time to choose any length (it snaps to the grid and
  * stops at bookings, closures and the room's maximum), click for the usual length, or
  * focus it and use ←/→ and Enter. All rows share one axis, so rooms line up by time.
+ * Time runs in the reading direction: left to right, or right to left in Arabic (where →
+ * steps back in time and ← forward, as the bar reads).
  */
 export function DayBar({ axis, open, closed, busy, selection, label, pick }: DayBarProps) {
+  const { t } = useTranslation()
   const trackRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ anchor: number; stretch: MinuteRange; startX: number; moved: boolean; range: MinuteRange } | null>(null)
   const [draft, setDraft] = useState<MinuteRange | null>(null)
@@ -57,14 +61,18 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
     const start = Math.max(startMinute, axis.from)
     const end = Math.min(endMinute, axis.to)
     return {
-      left: `${((start - axis.from) / span) * 100}%`,
+      insetInlineStart: `${((start - axis.from) / span) * 100}%`,
       width: `${(Math.max(end - start, 0) / span) * 100}%`,
     }
   }
 
+  const isRtl = (el: Element) => getComputedStyle(el).direction === 'rtl'
+
   function minuteAt(clientX: number): number {
-    const rect = trackRef.current!.getBoundingClientRect()
-    const ratio = Math.min(Math.max((clientX - rect.left) / Math.max(rect.width, 1), 0), 0.9999)
+    const track = trackRef.current!
+    const rect = track.getBoundingClientRect()
+    const fromStart = isRtl(track) ? rect.right - clientX : clientX - rect.left
+    const ratio = Math.min(Math.max(fromStart / Math.max(rect.width, 1), 0), 0.9999)
     return axis.from + ratio * span
   }
 
@@ -128,7 +136,10 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
     const slot = pick.rules.slotMinutes
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault()
-      const next = nextFree(cursor + (e.key === 'ArrowRight' ? slot : -slot), e.key === 'ArrowRight' ? slot : -slot)
+      // The arrow pointing the way the bar reads moves later.
+      const later = (e.key === 'ArrowRight') !== isRtl(e.currentTarget)
+      const step = later ? slot : -slot
+      const next = nextFree(cursor + step, step)
       if (next !== null) setCursor(next)
     } else if (e.key === 'Enter' && cursorRange) {
       e.preventDefault()
@@ -145,8 +156,8 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
     <div className="relative min-w-0" data-daybar>
       {preview && (
         <span
-          className="pointer-events-none absolute -top-6 z-10 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap text-background"
-          style={{ left: `${(((preview.start + preview.end) / 2 - axis.from) / span) * 100}%` }}
+          className="pointer-events-none absolute -top-6 z-10 -translate-x-1/2 rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap text-background rtl:translate-x-1/2"
+          style={{ insetInlineStart: `${(((preview.start + preview.end) / 2 - axis.from) / span) * 100}%` }}
           aria-hidden="true"
         >
           {fromMinutes(preview.start)}–{fromMinutes(preview.end)}
@@ -164,7 +175,7 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
           ? {
               role: 'group',
               tabIndex: 0,
-              'aria-label': `${label}. Pick a time for ${pick.roomName}: drag across free time, or use the arrow keys and Enter.`,
+              'aria-label': t('FindSpace:DayBarPick', { label, space: pick.roomName }),
               onPointerDown: handlePointerDown,
               onPointerMove: handlePointerMove,
               onPointerUp: handlePointerUp,
@@ -202,13 +213,17 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
 
       {preview && (
         <span className="sr-only" aria-live="polite">
-          {fromMinutes(preview.start)} to {fromMinutes(preview.end)}
+          {t('FindSpace:DayBarRange', { start: fromMinutes(preview.start), end: fromMinutes(preview.end) })}
         </span>
       )}
 
       <div className="relative mt-0.5 h-3.5 font-mono text-[10px] text-muted-foreground" aria-hidden="true">
         {ticks.map((m) => (
-          <span key={m} className="absolute -translate-x-1/2" style={{ left: `${((m - axis.from) / span) * 100}%` }}>
+          <span
+            key={m}
+            className="absolute -translate-x-1/2 rtl:translate-x-1/2"
+            style={{ insetInlineStart: `${((m - axis.from) / span) * 100}%` }}
+          >
             {fromMinutes(m).slice(0, 2)}
           </span>
         ))}

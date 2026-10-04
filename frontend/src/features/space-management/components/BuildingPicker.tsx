@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
@@ -32,6 +33,7 @@ interface Option {
 // usable past a few dozen buildings. cmdk's own filtering is off (shouldFilter={false})
 // because the server already did it.
 export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabel, onChange, className }: BuildingPickerProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const debouncedQuery = useDebouncedValue(query, 200).trim()
@@ -46,11 +48,11 @@ export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabe
     let cancelled = false
     getBuilding(token, value)
       .then((b) => !cancelled && setFetchedName({ id: value, name: b.name }))
-      .catch(() => !cancelled && setFetchedName({ id: value, name: 'Unknown building' }))
+      .catch(() => !cancelled && setFetchedName({ id: value, name: t('Hierarchy:UnknownBuilding') }))
     return () => {
       cancelled = true
     }
-  }, [token, value, selectedName, fetchedName])
+  }, [token, value, selectedName, fetchedName, t])
 
   useEffect(() => {
     if (!open) return
@@ -100,10 +102,10 @@ export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabe
       </PopoverTrigger>
       <PopoverContent className="w-[min(16rem,calc(100vw-2rem))] p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandInput placeholder="Search buildings…" value={query} onValueChange={setQuery} />
+          <CommandInput placeholder={t('Hierarchy:SearchBuildings')} value={query} onValueChange={setQuery} />
           <CommandList>
             {results === null ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">Searching…</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">{t('Hierarchy:Searching')}</p>
             ) : (
               <>
                 <CommandGroup>
@@ -121,11 +123,11 @@ export function BuildingPicker({ token, value, selectedName, noneLabel, ariaLabe
                 </CommandGroup>
                 {/* Not CommandEmpty: the "none" option is always listed, so cmdk never sees an empty list. */}
                 {results.items.length === 0 && debouncedQuery && (
-                  <p className="border-t px-3 py-2 text-xs text-muted-foreground">No buildings match “{debouncedQuery}”.</p>
+                  <p className="border-t px-3 py-2 text-xs text-muted-foreground">{t('Hierarchy:NoBuildingsMatchQuery', { query: debouncedQuery })}</p>
                 )}
                 {hiddenCount > 0 && (
                   <p className="border-t px-3 py-2 text-xs text-muted-foreground">
-                    {hiddenCount} more — keep typing to narrow down.
+                    {t('Hierarchy:MoreKeepTyping', { more: hiddenCount })}
                   </p>
                 )}
               </>

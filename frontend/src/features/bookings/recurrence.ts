@@ -1,12 +1,15 @@
+import i18n from '@/i18n'
 import { MonthlyRepeat, RecurrenceFrequency } from './api/bookingsApi'
 import { addDays, formatDate } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { RecurrenceDto } from '@/features/bookings/api/bookingsApi'
-import { formatDays } from '@/features/bookings/format'
+import { formatDays, joinNames, weekdayName } from '@/features/bookings/format'
 
 // Teams-style repeat options for the booking form: the quick choices in the Repeat
 // dropdown, the "Occurs every…" sentence under it, and sensible default end dates. All on
-// "YYYY-MM-DD" building-local dates, so no timezone math.
+// "YYYY-MM-DD" building-local dates, so no timezone math. The wording is in the reader's
+// language: each sentence is one text with the pieces ({every}, {until}…) slotted in, so a
+// language can put them in its own order, and counts use its own plural forms.
 
 // The API module owns these (they mirror the C# enums); this is the name the form code uses.
 export const Frequency = RecurrenceFrequency
@@ -24,8 +27,14 @@ export interface RepeatValue {
 
 export const NO_REPEAT: RepeatValue = { choice: 'none', endDate: null, custom: null }
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const ORDINALS = ['', '1st', '2nd', '3rd', '4th', 'last']
+/** "the 2nd Tuesday" by week of the month (1–4; 5, a date in the 5th week, is "the last"). */
+const POSITIONS = {
+  1: 'Repeat:First',
+  2: 'Repeat:Second',
+  3: 'Repeat:Third',
+  4: 'Repeat:Fourth',
+  5: 'Repeat:Last',
+} as const
 
 function parts(date: IsoDate) {
   const [y, m, d] = date.split('-').map(Number)
@@ -113,12 +122,12 @@ export interface RepeatPreset {
 export function repeatPresets(date: IsoDate, openDays: number[]): RepeatPreset[] {
   const weekday = weekdayOf(date)
   const workdays = [...openDays].sort((a, b) => a - b)
-  const presets: RepeatPreset[] = [{ choice: 'none', label: 'Does not repeat', rule: null }]
+  const presets: RepeatPreset[] = [{ choice: 'none', label: i18n.t('Repeat:None'), rule: null }]
 
   if (workdays.length >= 2 && workdays.length < 7) {
     presets.push({
       choice: 'workdays',
-      label: `Every workday (${formatDays(workdays)})`,
+      label: i18n.t('Repeat:Workdays', { days: formatDays(workdays) }),
       rule: (endDate) => ({ frequency: Frequency.Weekly, interval: 1, weekdays: workdays, monthlyRepeat: 0, endDate }),
     })
   }
@@ -126,32 +135,27 @@ export function repeatPresets(date: IsoDate, openDays: number[]): RepeatPreset[]
   presets.push(
     {
       choice: 'daily',
-      label: 'Daily',
+      label: i18n.t('Repeat:Daily'),
       rule: (endDate) => ({ frequency: Frequency.Daily, interval: 1, weekdays: [], monthlyRepeat: 0, endDate }),
     },
     {
       choice: 'weekly',
-      label: `Weekly on ${DAY_NAMES[weekday]}`,
+      label: i18n.t('Repeat:WeeklyOn', { weekday: weekdayName(weekday) }),
       rule: (endDate) => ({ frequency: Frequency.Weekly, interval: 1, weekdays: [weekday], monthlyRepeat: 0, endDate }),
     },
     {
       choice: 'monthly',
-      label: `Monthly on day ${parts(date).d}`,
+      label: i18n.t('Repeat:MonthlyOnDay', { day: parts(date).d }),
       rule: (endDate) => ({ frequency: Frequency.Monthly, interval: 1, weekdays: [], monthlyRepeat: MonthlyRepeat.OnDay, endDate }),
     },
-    { choice: 'custom', label: 'Custom…', rule: null },
+    { choice: 'custom', label: i18n.t('Repeat:CustomChoice'), rule: null },
   )
   return presets
 }
 
-function joinNames(names: string[]): string {
-  if (names.length <= 1) return names.join('')
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
-}
-
 /** "the 2nd Tuesday" / "the last Thursday" for a date. */
 export function weekdayPosition(date: IsoDate): string {
-  return `the ${ORDINALS[weekOfMonth(date)]} ${DAY_NAMES[weekdayOf(date)]}`
+  return i18n.t(POSITIONS[weekOfMonth(date) as keyof typeof POSITIONS], { weekday: weekdayName(weekdayOf(date)) })
 }
 
 /**
@@ -159,29 +163,32 @@ export function weekdayPosition(date: IsoDate): string {
  * "Occurs every 2 weeks on Tuesday until …", "Occurs on the 2nd Tuesday of every month until …".
  */
 export function describeRecurrence(rule: RecurrenceDto, date: IsoDate, openDays: number[] = []): string {
-  const until = ` until ${formatDate(rule.endDate)}`
+  const until = formatDate(rule.endDate)
   const n = rule.interval
+  const occurs = (every: string) => i18n.t('Repeat:Occurs', { every, until })
 
   if (rule.frequency === Frequency.Daily) {
-    return `Occurs ${n === 1 ? 'every day' : `every ${n} days`}${until}`
+    return occurs(i18n.t('Repeat:EveryNDays', { count: n }))
   }
 
   if (rule.frequency === Frequency.Weekly) {
     const days = [...rule.weekdays].sort((a, b) => a - b)
     const workdays = [...openDays].sort((a, b) => a - b)
     if (n === 1 && workdays.length >= 2 && workdays.length < 7 && days.join() === workdays.join()) {
-      return `Occurs every workday (${formatDays(workdays)})${until}`
+      return occurs(i18n.t('Repeat:EveryWorkday', { days: formatDays(workdays) }))
+    }
+    if (days.length === 7) {
+      return occurs(n === 1 ? i18n.t('Repeat:EveryNDays', { count: 1 }) : i18n.t('Repeat:EveryNWeeksEveryDay', { count: n }))
     }
     // Three or more days in a row read as a range, like Teams' "every weekday": "every Sun–Thu".
-    const isRun = days.length >= 3 && days.length < 7 && days[days.length - 1] - days[0] === days.length - 1
-    const names = isRun ? formatDays(days) : joinNames(days.map((d) => DAY_NAMES[d]))
-    if (days.length === 7) return `Occurs ${n === 1 ? 'every day' : `every ${n} weeks, every day`}${until}`
-    return `Occurs ${n === 1 ? `every ${names}` : `every ${n} weeks on ${names}`}${until}`
+    const isRun = days.length >= 3 && days[days.length - 1] - days[0] === days.length - 1
+    const names = isRun ? formatDays(days) : joinNames(days.map((d) => weekdayName(d)))
+    return occurs(n === 1 ? i18n.t('Repeat:EveryWeekdays', { days: names }) : i18n.t('Repeat:EveryNWeeksOn', { count: n, days: names }))
   }
 
-  const every = n === 1 ? 'every month' : `every ${n} months`
-  const on = rule.monthlyRepeat === MonthlyRepeat.OnWeekday ? weekdayPosition(date) : `day ${parts(date).d}`
-  return `Occurs on ${on} of ${every}${until}`
+  const every = i18n.t('Repeat:EveryNMonths', { count: n })
+  const on = rule.monthlyRepeat === MonthlyRepeat.OnWeekday ? weekdayPosition(date) : i18n.t('Repeat:DayOfMonth', { day: parts(date).d })
+  return i18n.t('Repeat:OccursMonthly', { on, every, until })
 }
 
 /** Which dropdown choice a rule is — a preset if it matches one exactly (ignoring the end date), else "Custom…". */

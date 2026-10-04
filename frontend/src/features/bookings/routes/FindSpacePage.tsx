@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useAuth } from 'react-oidc-context'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
@@ -38,6 +40,7 @@ import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/L
  * booked and, where it's only the time, when it's free next.
  */
 export function FindSpacePage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   // keepPreviousData: a refetch on returning to the tab swaps in the fresh building (rules,
@@ -50,25 +53,25 @@ export function FindSpacePage() {
     <TooltipProvider>
       <div className="top">
         <span className="pick">
-          <span className="picklbl">{status === 'loading' ? <TextSkeleton label="Loading your building…" /> : building?.name}</span>
+          <span className="picklbl">{status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}</span>
         </span>
       </div>
 
       <div className="content" data-compact-top="">
-        <h1 className="pagetitle">Find a space</h1>
+        <h1 className="pagetitle">{t('Nav:FindSpace')}</h1>
 
         {status === 'loading' && <FindSpaceSkeleton />}
 
         {status === 'error' && (
           <p className="lead" role="alert">
-            {error instanceof ApiError ? error.message : "Couldn't load your building — please refresh."}
+            {error instanceof ApiError ? error.message : t('Calendar:BuildingLoadFailed')}
           </p>
         )}
 
         {status === 'success' && !building && (
           <Card className="mt-6 gap-1 p-6">
-            <p>You haven't been assigned to a building yet, so there's nothing to book.</p>
-            <p className="text-sm text-muted-foreground">Ask an administrator to assign you to your building.</p>
+            <p>{t('FindSpace:NoBuilding')}</p>
+            <p className="text-sm text-muted-foreground">{t('Calendar:NoBuildingDetail')}</p>
           </Card>
         )}
 
@@ -81,6 +84,7 @@ export function FindSpacePage() {
 }
 
 function SpaceSearch({ token, building }: { token: string; building: BookableBuildingDto }) {
+  const { t } = useTranslation()
   // The page opens with Bookings.Default; booking from it (Book, drag on a bar) needs Create.
   const canBook = usePermission(Permissions.Bookings.Create)
   const { showToast } = useToast()
@@ -137,11 +141,13 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
   function handleBooked(created: BookingDto, count = 1) {
     setBooking(null)
-    showToast(
-      count > 1
-        ? `Booked ${created.spaceName} on ${count} dates from ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`
-        : `Booked ${created.spaceName} — ${formatDate(dateOf(created.localStart))}, ${timeOf(created.localStart)}–${timeOf(created.localEnd)}`,
-    )
+    const booked = {
+      space: created.spaceName,
+      date: formatDate(dateOf(created.localStart)),
+      start: timeOf(created.localStart),
+      end: timeOf(created.localEnd),
+    }
+    showToast(count > 1 ? t('Calendar:BookedSeries', { ...booked, count }) : t('Calendar:Booked', booked))
   }
 
   function tryTime(start: string) {
@@ -182,12 +188,12 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
   const free = spaces.filter((s) => s.isAvailable)
   const taken = spaces.filter((s) => !s.isAvailable)
   const axis = dayAxis(spaces, selection)
-  const windowLabel = `${formatDate(values.date)}, ${values.start}–${values.end}`
+  const windowLabel = t('BookingForm:Slot', { date: formatDate(values.date), start: values.start, end: values.end })
 
   return (
     <>
       <p className="lead">
-        {building.name} · times in {building.timezone} · book up to {building.maxHorizonDays} days ahead
+        {t('FindSpace:Lead', { building: building.name, timezone: building.timezone, count: building.maxHorizonDays })}
       </p>
 
       <SearchBar building={building} value={values} onChange={update} />
@@ -196,11 +202,11 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
         className={cn('mt-6 transition-opacity', results.isRefreshing && 'opacity-60')}
         aria-busy={results.status === 'loading' || results.isRefreshing}
       >
-        {results.status === 'loading' && <ResultsSkeleton label="Checking every space…" />}
+        {results.status === 'loading' && <ResultsSkeleton label={t('FindSpace:Checking')} />}
 
         {results.status === 'error' && (
           <p role="alert" className="rounded-md bg-slot-closed px-4 py-3 text-sm">
-            {results.error instanceof ApiError ? results.error.message : "Couldn't check availability — please try again."}
+            {results.error instanceof ApiError ? results.error.message : t('BookingForm:AvailabilityCheckFailed')}
           </p>
         )}
 
@@ -221,18 +227,18 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold" aria-live="polite">
                 {free.length > 0
-                  ? `${free.length} ${free.length === 1 ? 'space' : 'spaces'} free · ${windowLabel}`
-                  : `Nothing free · ${windowLabel}`}
+                  ? t('FindSpace:SpacesFree', { count: free.length, window: windowLabel })
+                  : t('FindSpace:NothingFree', { window: windowLabel })}
               </h2>
               <Legend />
             </div>
 
             <p className="mt-1 text-sm text-muted-foreground">
               {!canBook
-                ? "Availability only: your account can't make bookings."
+                ? t('FindSpace:AvailabilityOnly')
                 : free.length === 0
-                  ? "Try another time — or drag on a room's bar below to book any free time it has."
-                  : "Book for this time, or drag on a room's bar to pick a different time."}
+                  ? t('FindSpace:TryAnotherTime')
+                  : t('FindSpace:BookOrDrag')}
             </p>
 
             {free.length > 0 && (
@@ -246,13 +252,13 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                         closed={room.closed}
                         busy={room.busy}
                         selection={selection}
-                        label={freeLabel(room)}
+                        label={freeLabel(room, t)}
                         pick={canBook ? pickerFor(room) : undefined}
                       />
-                      <span className="text-sm font-medium">{freeLabel(room)}</span>
+                      <span className="text-sm font-medium">{freeLabel(room, t)}</span>
                       {canBook && (
-                        <Button size="sm" aria-label={`Book ${room.space.name}`} onClick={() => bookSearched(room)}>
-                          Book
+                        <Button size="sm" aria-label={t('FindSpace:BookRoom', { space: room.space.name })} onClick={() => bookSearched(room)}>
+                          {t('BookingForm:Book')}
                         </Button>
                       )}
                     </ResultRow>
@@ -265,8 +271,8 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
               <Collapsible defaultOpen={free.length === 0} className="mt-6">
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" className="group -ms-3 text-muted-foreground">
-                    <ChevronDown className="transition-transform group-data-[state=closed]:-rotate-90" />
-                    {taken.length} not available at this time
+                    <ChevronDown className="transition-transform ltr:group-data-[state=closed]:-rotate-90 rtl:group-data-[state=closed]:rotate-90" />
+                    {t('FindSpace:NotAvailable', { count: taken.length })}
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
@@ -287,7 +293,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                             <TooltipTrigger asChild>
                               <span className="cursor-help text-sm text-muted-foreground underline decoration-dotted underline-offset-4">
                                 {room.violations[0]?.shortMessage}
-                                {room.nextFreeStart && ` · free from ${room.nextFreeStart}`}
+                                {room.nextFreeStart && ` · ${t('FindSpace:FreeFrom', { time: room.nextFreeStart })}`}
                               </span>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
@@ -300,10 +306,10 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                             <Button
                               size="sm"
                               variant="outline"
-                              aria-label={`Try ${room.nextFreeStart} for ${room.space.name}`}
+                              aria-label={t('FindSpace:TryTimeFor', { time: room.nextFreeStart, space: room.space.name })}
                               onClick={() => tryTime(room.nextFreeStart!)}
                             >
-                              Try {room.nextFreeStart}
+                              {t('FindSpace:TryTime', { time: room.nextFreeStart })}
                             </Button>
                           ) : (
                             <span />
@@ -318,7 +324,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
             {spaces.length === 0 && (
               <Card className="mt-4 p-6">
-                <p>No spaces match these filters.</p>
+                <p>{t('FindSpace:NoMatch')}</p>
               </Card>
             )}
           </>
@@ -344,6 +350,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
 /** Room name/meta on the left, then the day bar, the status and the action — stacking on narrow screens. */
 function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; muted?: boolean; children: React.ReactNode }) {
+  const { t } = useTranslation()
   const { space } = room
   return (
     <Card
@@ -361,7 +368,7 @@ function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; mute
         <div className="min-w-0">
           <div className="truncate font-semibold">{space.name}</div>
           <div className="truncate text-sm text-muted-foreground">
-            {room.floorName} · {space.spaceTypeName} · {space.capacity} {space.capacity === 1 ? 'seat' : 'seats'}
+            {room.floorName} · {space.spaceTypeName} · {t('Booking:Seats', { count: space.capacity })}
           </div>
         </div>
       </div>
@@ -371,6 +378,7 @@ function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; mute
 }
 
 function Legend() {
+  const { t } = useTranslation()
   const item = (swatch: string, label: string) => (
     <span className="inline-flex items-center gap-1.5">
       <span className={cn('size-2.5 rounded-sm', swatch)} aria-hidden="true" />
@@ -379,16 +387,16 @@ function Legend() {
   )
   return (
     <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-      {item('bg-slot-open', 'Open')}
-      {item('bg-slot-busy', 'Booked')}
-      {item('bg-slot-mine', 'Yours')}
-      {item('bg-slot-closed', 'Closed')}
-      {item('border-2 border-solid border-foreground', 'Your time')}
+      {item('bg-slot-open', t('FindSpace:LegendOpen'))}
+      {item('bg-slot-busy', t('FindSpace:LegendBooked'))}
+      {item('bg-slot-mine', t('FindSpace:LegendYours'))}
+      {item('bg-slot-closed', t('Calendar:Closed'))}
+      {item('border-2 border-solid border-foreground', t('FindSpace:LegendYourTime'))}
     </p>
   )
 }
 
-function freeLabel(room: SpaceAvailabilityDto): string {
-  if (!room.freeUntil) return 'Free'
-  return room.freeUntil === '24:00' ? 'Free the rest of the day' : `Free until ${room.freeUntil}`
+function freeLabel(room: SpaceAvailabilityDto, t: TFunction): string {
+  if (!room.freeUntil) return t('FindSpace:Free')
+  return room.freeUntil === '24:00' ? t('FindSpace:FreeRestOfDay') : t('QuickBook:FreeUntil', { time: room.freeUntil })
 }

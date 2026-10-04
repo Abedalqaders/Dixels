@@ -1,5 +1,7 @@
-import { OperatingDays } from '@/features/space-management/operatingDays'
-import { OperatingWindow } from '@/features/space-management/operatingWindow'
+import { useTranslation } from 'react-i18next'
+import { describeDays, OperatingDays } from '@/features/space-management/operatingDays'
+import { describeHours, OperatingWindow } from '@/features/space-management/operatingWindow'
+import { formatDuration } from '@/features/bookings/format'
 import { DayChipPicker } from './DayChipPicker'
 import { HoursRangeInput } from './HoursRangeInput'
 import { DurationPicker, minutesToHours, hoursToMinutes } from './DurationPicker'
@@ -31,26 +33,28 @@ export function FloorLevelFields({
   parentMaxDurationMinutes,
   onChange,
 }: FloorLevelFieldsProps) {
+  const { t } = useTranslation()
   const overrideCount = [draft.days, draft.hours, draft.maxDurationMinutes].filter((v) => v !== null).length
+  // "Overrides Building (Mon, Tue)" / "Inherited from Building — Mon, Tue"
+  const note = (overridden: boolean, value: string) =>
+    overridden
+      ? t('Rules:OverridesParent', { level: t('Enum:ConstraintSource.Building'), value })
+      : t('Rules:InheritedFrom', { level: t('Enum:ConstraintSource.Building'), value })
 
   return (
     <div className="level">
       <div className="levelhead">
         <h3>
-          Floor level — <span>{floorName}</span>
+          {t('Rules:FloorLevel')} — <span>{floorName}</span>
         </h3>
-        <span className="ovr">{overrideCount ? `${overrideCount} override${overrideCount === 1 ? '' : 's'}` : 'Inherits everything'}</span>
+        <span className="ovr">{overrideCount ? t('Rules:OverrideCount', { count: overrideCount }) : t('Rules:InheritsEverything')}</span>
       </div>
 
       <InheritOverrideField
-        label="Operating days"
+        label={t('Rules:OperatingDays')}
         isOverridden={draft.days !== null}
         onToggle={() => onChange({ ...draft, days: draft.days !== null ? null : parentDays })}
-        note={
-          draft.days !== null
-            ? `Overrides Building (${describeDays(parentDays)})`
-            : `Inherited from Building — ${describeDays(parentDays)}`
-        }
+        note={note(draft.days !== null, describeDays(parentDays))}
       >
         <DayChipPicker
           value={draft.days ?? parentDays}
@@ -61,14 +65,10 @@ export function FloorLevelFields({
       </InheritOverrideField>
 
       <InheritOverrideField
-        label="Operating hours"
+        label={t('Rules:OperatingHours')}
         isOverridden={draft.hours !== null}
         onToggle={() => onChange({ ...draft, hours: draft.hours !== null ? null : parentHours })}
-        note={
-          draft.hours !== null
-            ? `Overrides Building (${describeHours(parentHours)})`
-            : `Inherited from Building — ${describeHours(parentHours)}`
-        }
+        note={note(draft.hours !== null, describeHours(parentHours))}
       >
         <HoursRangeInput
           value={draft.hours ?? parentHours}
@@ -79,16 +79,12 @@ export function FloorLevelFields({
       </InheritOverrideField>
 
       <InheritOverrideField
-        label="Maximum duration"
+        label={t('Rules:MaxDuration')}
         isOverridden={draft.maxDurationMinutes !== null}
         onToggle={() =>
           onChange({ ...draft, maxDurationMinutes: draft.maxDurationMinutes !== null ? null : parentMaxDurationMinutes })
         }
-        note={
-          draft.maxDurationMinutes !== null
-            ? `Overrides Building (${minutesToHours(parentMaxDurationMinutes)}h)`
-            : `Inherited from Building — ${minutesToHours(parentMaxDurationMinutes)}h`
-        }
+        note={note(draft.maxDurationMinutes !== null, formatDuration(parentMaxDurationMinutes))}
       >
         <DurationPicker
           hours={minutesToHours(draft.maxDurationMinutes ?? parentMaxDurationMinutes)}
@@ -98,15 +94,4 @@ export function FloorLevelFields({
       </InheritOverrideField>
     </div>
   )
-}
-
-function describeDays(days: OperatingDays): string {
-  const names = days.toDayNames()
-  if (names.length === 7) return 'Every day'
-  if (names.length === 0) return 'None'
-  return names.map((n) => n.slice(0, 3)).join(', ')
-}
-
-function describeHours(hours: OperatingWindow): string {
-  return hours.isOpen24Hours ? '24 hours' : `${hours.open} – ${hours.close}`
 }

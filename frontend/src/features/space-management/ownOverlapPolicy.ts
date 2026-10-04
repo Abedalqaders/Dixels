@@ -1,20 +1,10 @@
 import { OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
+import type { TextKeys } from '@/i18n/keys'
 
-// What each choice means to the people booking — shown under the picker.
-export const OWN_OVERLAP_OPTIONS: { value: OwnOverlapPolicy; label: string; hint: string }[] = [
-  {
-    value: OwnOverlapPolicy.Allow,
-    label: 'Allow',
-    hint: 'People can hold several bookings at once (a desk and a meeting room) without being told.',
-  },
-  {
-    value: OwnOverlapPolicy.Warn,
-    label: 'Allow with a warning',
-    hint: 'People can hold several bookings at once, but are told about the clash before they book.',
-  },
-  {
-    value: OwnOverlapPolicy.Block,
-    label: 'One booking at a time',
-    hint: 'A second booking that overlaps one someone already has is refused.',
-  },
+// What each choice means to the people booking — shown under the picker. Keys, not texts,
+// so the words follow the reader's language: t(option.labelKey).
+export const OWN_OVERLAP_OPTIONS: { value: OwnOverlapPolicy; labelKey: keyof TextKeys; hintKey: keyof TextKeys }[] = [
+  { value: OwnOverlapPolicy.Allow, labelKey: 'Rules:OverlapAllow', hintKey: 'Rules:OverlapAllowHint' },
+  { value: OwnOverlapPolicy.Warn, labelKey: 'Rules:OverlapWarn', hintKey: 'Rules:OverlapWarnHint' },
+  { value: OwnOverlapPolicy.Block, labelKey: 'Rules:OverlapBlock', hintKey: 'Rules:OverlapBlockHint' },
 ]

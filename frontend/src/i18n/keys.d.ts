@@ -8,6 +8,25 @@ export interface TextKeys {
   "Access:NothingSetUpDetail": string
   "Access:NothingSetUpTitle": string
   "Access:Unreachable": string
+  "App:DeniedFindSpaceDetail": string
+  "App:DeniedFindSpaceTitle": string
+  "App:DeniedFloorsDetail": string
+  "App:DeniedFloorsTitle": string
+  "App:DeniedHierarchyDetail": string
+  "App:DeniedHierarchyTitle": string
+  "App:DeniedMyCalendarDetail": string
+  "App:DeniedMyCalendarTitle": string
+  "App:DeniedRulesDetailBuilding": string
+  "App:DeniedRulesDetailFloor": string
+  "App:DeniedRulesDetailOther": string
+  "App:DeniedRulesDetailSpace": string
+  "App:DeniedRulesTitle": string
+  "App:DeniedSpaceTypesDetail": string
+  "App:DeniedSpaceTypesTitle": string
+  "App:DeniedSpacesDetail": string
+  "App:DeniedSpacesTitle": string
+  "App:DeniedUsersDetail": string
+  "App:DeniedUsersTitle": string
   "AppName": string
   "Auth:CheckFailed": string
   "Auth:CheckingAccount": string
@@ -25,6 +44,9 @@ export interface TextKeys {
   "Auth:TakingYouBack": string
   "Auth:TakingYouHome": string
   "Booking:AlreadyStarted": string
+  "Booking:BuildingRemovedDetail": string
+  "Booking:BuildingRemovedDetailCalendar": string
+  "Booking:BuildingRemovedTitle": string
   "Booking:Cancel": string
   "Booking:CancelFailed": string
   "Booking:CancelOnlyUpcoming": string
@@ -41,15 +63,21 @@ export interface TextKeys {
   "Booking:Cancelling": string
   "Booking:CloseDetails": string
   "Booking:Date": string
+  "Booking:DayRange": string
   "Booking:Details": string
   "Booking:Done": string
+  "Booking:EveryDay": string
   "Booking:FewerPeople": string
   "Booking:From": string
   "Booking:InProgress": string
   "Booking:Keep": string
+  "Booking:ListAnd": string
+  "Booking:ListSeparator": string
   "Booking:MinPeople_one": string
   "Booking:MinPeople_other": string
   "Booking:MorePeople": string
+  "Booking:NoDays": string
+  "Booking:Open24Hours": string
   "Booking:OtherRooms": string
   "Booking:Over": string
   "Booking:People": string
@@ -65,6 +93,38 @@ export interface TextKeys {
   "Booking:To": string
   "Booking:Upcoming": string
   "Booking:Where": string
+  "BookingForm:AllDatesFree": string
+  "BookingForm:AppliesToEveryDate": string
+  "BookingForm:AtLeast": string
+  "BookingForm:Attendees": string
+  "BookingForm:AttendeesRequired": string
+  "BookingForm:AvailabilityCheckFailed": string
+  "BookingForm:Available": string
+  "BookingForm:Book": string
+  "BookingForm:BookSome": string
+  "BookingForm:Booking": string
+  "BookingForm:CheckingAvailability": string
+  "BookingForm:CheckingDates": string
+  "BookingForm:DateFree": string
+  "BookingForm:DateNotAvailable": string
+  "BookingForm:Dates": string
+  "BookingForm:DatesCheckFailed": string
+  "BookingForm:Free": string
+  "BookingForm:Midnight": string
+  "BookingForm:NoTimesLeft": string
+  "BookingForm:Now": string
+  "BookingForm:OfSeats_one": string
+  "BookingForm:OfSeats_other": string
+  "BookingForm:RoomSeats_one": string
+  "BookingForm:RoomSeats_other": string
+  "BookingForm:Rules": string
+  "BookingForm:Slot": string
+  "BookingForm:SomeDatesFree": string
+  "BookingForm:TimesNote": string
+  "BookingForm:Title": string
+  "BookingForm:TitleLabel": string
+  "BookingForm:TitlePlaceholder": string
+  "BookingForm:UntickHint": string
   "Calendar:BookARoom": string
   "Calendar:BookOnDay": string
   "Calendar:Booked": string
@@ -131,6 +191,7 @@ export interface TextKeys {
   "Common:Saving": string
   "Common:TryAgain": string
   "Dixels:Bookings:AlreadyStarted": string
+  "Dixels:Bookings:AnotherRoom": string
   "Dixels:Bookings:AttendeesMustBePositive": string
   "Dixels:Bookings:BelowMinAttendees": string
   "Dixels:Bookings:BelowMinAttendees:Short": string
@@ -228,6 +289,162 @@ export interface TextKeys {
   "Error:Network": string
   "Error:PermissionDenied": string
   "Error:RequestFailed": string
+  "FindSpace:AllFloorsFree": string
+  "FindSpace:AnyType": string
+  "FindSpace:AvailabilityOnly": string
+  "FindSpace:BookOrDrag": string
+  "FindSpace:BookRoom": string
+  "FindSpace:Checking": string
+  "FindSpace:DayBarPick": string
+  "FindSpace:DayBarRange": string
+  "FindSpace:Floor": string
+  "FindSpace:FloorFree": string
+  "FindSpace:Free": string
+  "FindSpace:FreeFrom": string
+  "FindSpace:FreeRestOfDay": string
+  "FindSpace:Lead_one": string
+  "FindSpace:Lead_other": string
+  "FindSpace:LegendBooked": string
+  "FindSpace:LegendOpen": string
+  "FindSpace:LegendYourTime": string
+  "FindSpace:LegendYours": string
+  "FindSpace:NoBuilding": string
+  "FindSpace:NoMatch": string
+  "FindSpace:NotAvailable_one": string
+  "FindSpace:NotAvailable_other": string
+  "FindSpace:NothingFree": string
+  "FindSpace:SearchLabel": string
+  "FindSpace:SpacesFree_one": string
+  "FindSpace:SpacesFree_other": string
+  "FindSpace:TryAnotherTime": string
+  "FindSpace:TryTime": string
+  "FindSpace:TryTimeFor": string
+  "FindSpace:Type": string
+  "Hierarchy:Add": string
+  "Hierarchy:AddBuilding": string
+  "Hierarchy:AddFloor": string
+  "Hierarchy:AddSpace": string
+  "Hierarchy:AddedUnder": string
+  "Hierarchy:Adding": string
+  "Hierarchy:AffectedBookings": string
+  "Hierarchy:AllBuildings": string
+  "Hierarchy:AllTypes": string
+  "Hierarchy:BuildingAdded": string
+  "Hierarchy:BuildingCount_one": string
+  "Hierarchy:BuildingCount_other": string
+  "Hierarchy:BuildingNumber": string
+  "Hierarchy:BuildingNumberPlaceholder": string
+  "Hierarchy:Buildings": string
+  "Hierarchy:BuildingsLead": string
+  "Hierarchy:BuildingsLoadFailed": string
+  "Hierarchy:BuildingsLoadFailedShort": string
+  "Hierarchy:CancelAndAddClosure": string
+  "Hierarchy:CancelAndSave": string
+  "Hierarchy:Capacity": string
+  "Hierarchy:CapacityPlaceholder": string
+  "Hierarchy:CapacityPositive": string
+  "Hierarchy:ChooseSpaceType": string
+  "Hierarchy:Collapse": string
+  "Hierarchy:CustomBadge": string
+  "Hierarchy:DeleteAndCancel": string
+  "Hierarchy:DeleteBuildingConfirm": string
+  "Hierarchy:DeleteFloorConfirm": string
+  "Hierarchy:DeleteSpaceConfirm": string
+  "Hierarchy:DeleteTitle": string
+  "Hierarchy:Deleted": string
+  "Hierarchy:DeletedBadge": string
+  "Hierarchy:DeletedWithBookings_one": string
+  "Hierarchy:DeletedWithBookings_other": string
+  "Hierarchy:DetailsSaved": string
+  "Hierarchy:EditBuildingTitle": string
+  "Hierarchy:EditConstraints": string
+  "Hierarchy:EditDetails": string
+  "Hierarchy:EditDetailsDetail": string
+  "Hierarchy:EditFloorTitle": string
+  "Hierarchy:EditSpaceTitle": string
+  "Hierarchy:Expand": string
+  "Hierarchy:ExplorerLabel": string
+  "Hierarchy:FilterByType": string
+  "Hierarchy:FindBuilding": string
+  "Hierarchy:FindBuildingLabel": string
+  "Hierarchy:FindBuildingOrFloor": string
+  "Hierarchy:FindBuildingOrFloorLabel": string
+  "Hierarchy:FloorAdded": string
+  "Hierarchy:FloorCount_one": string
+  "Hierarchy:FloorCount_other": string
+  "Hierarchy:FloorNamePlaceholder": string
+  "Hierarchy:FloorNumber": string
+  "Hierarchy:FloorNumberBadge": string
+  "Hierarchy:FloorNumberPlaceholder": string
+  "Hierarchy:FloorNumberWhole": string
+  "Hierarchy:Floors": string
+  "Hierarchy:FloorsLead": string
+  "Hierarchy:FloorsLoadFailed": string
+  "Hierarchy:FloorsLoadFailedShort": string
+  "Hierarchy:GoBack": string
+  "Hierarchy:HidePanel": string
+  "Hierarchy:ImpactAssignedDetail": string
+  "Hierarchy:ImpactAssigned_one": string
+  "Hierarchy:ImpactAssigned_other": string
+  "Hierarchy:ImpactChangeDetail": string
+  "Hierarchy:ImpactChangeTitle_one": string
+  "Hierarchy:ImpactChangeTitle_other": string
+  "Hierarchy:ImpactClosureTitle_one": string
+  "Hierarchy:ImpactClosureTitle_other": string
+  "Hierarchy:ImpactDeleteDetail": string
+  "Hierarchy:ImpactDeleteNoneDetail": string
+  "Hierarchy:ImpactDeleteTitle_one": string
+  "Hierarchy:ImpactDeleteTitle_other": string
+  "Hierarchy:ImpactReassignDetail": string
+  "Hierarchy:ImpactReassignTitle_one": string
+  "Hierarchy:ImpactReassignTitle_other": string
+  "Hierarchy:KeepAndAddClosure": string
+  "Hierarchy:KeepAndSave": string
+  "Hierarchy:Loading": string
+  "Hierarchy:LoadingBuildings": string
+  "Hierarchy:LoadingFloors": string
+  "Hierarchy:LoadingSpaces": string
+  "Hierarchy:MoreKeepTyping": string
+  "Hierarchy:MoveAndCancel": string
+  "Hierarchy:Name": string
+  "Hierarchy:NameRequired": string
+  "Hierarchy:NoBuildings": string
+  "Hierarchy:NoBuildingsMatch": string
+  "Hierarchy:NoBuildingsMatchQuery": string
+  "Hierarchy:NoBuildingsYet": string
+  "Hierarchy:NoFilterMatch": string
+  "Hierarchy:NoFloors": string
+  "Hierarchy:NoFloorsMatch": string
+  "Hierarchy:NoFloorsYet": string
+  "Hierarchy:NoSearchMatch": string
+  "Hierarchy:NoSpaces": string
+  "Hierarchy:Restore": string
+  "Hierarchy:Restored": string
+  "Hierarchy:Retry": string
+  "Hierarchy:RowActions": string
+  "Hierarchy:SaveDetails": string
+  "Hierarchy:SearchBuildings": string
+  "Hierarchy:SearchBuildingsLabel": string
+  "Hierarchy:SearchFloors": string
+  "Hierarchy:SearchFloorsLabel": string
+  "Hierarchy:SearchSpaces": string
+  "Hierarchy:SearchSpacesLabel": string
+  "Hierarchy:Searching": string
+  "Hierarchy:ShowDeleted": string
+  "Hierarchy:ShowMoreFloors_one": string
+  "Hierarchy:ShowMoreFloors_other": string
+  "Hierarchy:ShowMoreLeft": string
+  "Hierarchy:ShowPanel": string
+  "Hierarchy:SpaceAdded": string
+  "Hierarchy:SpaceCount_one": string
+  "Hierarchy:SpaceCount_other": string
+  "Hierarchy:Spaces": string
+  "Hierarchy:SpacesLead": string
+  "Hierarchy:SpacesLoadFailed": string
+  "Hierarchy:Title": string
+  "Hierarchy:Type": string
+  "Hierarchy:UnknownBuilding": string
+  "Hierarchy:ViewConstraints": string
   "Language:Label": string
   "LongWelcomeMessage": string
   "Menu:Home": string
@@ -284,6 +501,163 @@ export interface TextKeys {
   "QuickBook:ShortenTo": string
   "QuickBook:UpTo": string
   "QuickBook:WhyNoneFree": string
+  "Repeat:Custom": string
+  "Repeat:CustomChoice": string
+  "Repeat:CustomTitle": string
+  "Repeat:Daily": string
+  "Repeat:DayClosed": string
+  "Repeat:DayN": string
+  "Repeat:DayOfMonth": string
+  "Repeat:End": string
+  "Repeat:Ends": string
+  "Repeat:Every": string
+  "Repeat:EveryNDays_one": string
+  "Repeat:EveryNDays_other": string
+  "Repeat:EveryNMonths_one": string
+  "Repeat:EveryNMonths_other": string
+  "Repeat:EveryNWeeksEveryDay_one": string
+  "Repeat:EveryNWeeksEveryDay_other": string
+  "Repeat:EveryNWeeksOn_one": string
+  "Repeat:EveryNWeeksOn_other": string
+  "Repeat:EveryWeekdays": string
+  "Repeat:EveryWorkday": string
+  "Repeat:First": string
+  "Repeat:Fourth": string
+  "Repeat:IntervalRange": string
+  "Repeat:Label": string
+  "Repeat:Last": string
+  "Repeat:MonthlyOn": string
+  "Repeat:MonthlyOnDay": string
+  "Repeat:MonthsUpTo_one": string
+  "Repeat:MonthsUpTo_other": string
+  "Repeat:None": string
+  "Repeat:NumberOfMonths": string
+  "Repeat:NumberOfWeeks": string
+  "Repeat:Occurs": string
+  "Repeat:OccursMonthly": string
+  "Repeat:On": string
+  "Repeat:OnPosition": string
+  "Repeat:PickADay": string
+  "Repeat:Second": string
+  "Repeat:Starting": string
+  "Repeat:Third": string
+  "Repeat:Unit": string
+  "Repeat:UnitDay_one": string
+  "Repeat:UnitDay_other": string
+  "Repeat:UnitMonth_one": string
+  "Repeat:UnitMonth_other": string
+  "Repeat:UnitWeek_one": string
+  "Repeat:UnitWeek_other": string
+  "Repeat:WeeklyOn": string
+  "Repeat:WeeksUpTo_one": string
+  "Repeat:WeeksUpTo_other": string
+  "Repeat:Workdays": string
+  "Rules:AddClosure": string
+  "Rules:Adding": string
+  "Rules:AllDay": string
+  "Rules:Back": string
+  "Rules:BackShort": string
+  "Rules:BaseLayer": string
+  "Rules:BookingHorizon": string
+  "Rules:BuildingLevel": string
+  "Rules:Capacity": string
+  "Rules:ChangedElsewhere": string
+  "Rules:ClosureAdded": string
+  "Rules:ClosureAddedCancelled_one": string
+  "Rules:ClosureAddedCancelled_other": string
+  "Rules:ClosureRemoved": string
+  "Rules:ClosureSpan": string
+  "Rules:Closures": string
+  "Rules:CurrentlyClosed": string
+  "Rules:DayCount_one": string
+  "Rules:DayCount_other": string
+  "Rules:DeleteClosure": string
+  "Rules:DiscardConfirm": string
+  "Rules:DiscardDetail": string
+  "Rules:DiscardTitle": string
+  "Rules:Effect": string
+  "Rules:EffectClosed": string
+  "Rules:EffectOpen": string
+  "Rules:EffectOpenSpecial": string
+  "Rules:Ends": string
+  "Rules:EndsTime": string
+  "Rules:EveryDay": string
+  "Rules:FloorLevel": string
+  "Rules:FromLevel": string
+  "Rules:Grandfathered": string
+  "Rules:HoursRange": string
+  "Rules:Inherit": string
+  "Rules:InheritedFrom": string
+  "Rules:InheritsEverything": string
+  "Rules:InvalidLevel": string
+  "Rules:KeepEditing": string
+  "Rules:LeadBuilding": string
+  "Rules:LeadFloor": string
+  "Rules:LeadSpace": string
+  "Rules:ListSeparator": string
+  "Rules:LoadFailed": string
+  "Rules:Loading": string
+  "Rules:MaxBookingHorizon": string
+  "Rules:MaxDuration": string
+  "Rules:MinAboveCapacity": string
+  "Rules:MinAttendees": string
+  "Rules:MinAttendeesNote_one": string
+  "Rules:MinAttendeesNote_other": string
+  "Rules:MinLeadTime": string
+  "Rules:NoClosures": string
+  "Rules:NoDays": string
+  "Rules:NoLongerFitsDays": string
+  "Rules:NoLongerFitsHours": string
+  "Rules:NoMinimum": string
+  "Rules:NoMinimumNote": string
+  "Rules:NoneSet": string
+  "Rules:NotSet": string
+  "Rules:OfSeats_one": string
+  "Rules:OfSeats_other": string
+  "Rules:Open24Hours": string
+  "Rules:OperatingDays": string
+  "Rules:OperatingHours": string
+  "Rules:OverlapAllow": string
+  "Rules:OverlapAllowHint": string
+  "Rules:OverlapBlock": string
+  "Rules:OverlapBlockHint": string
+  "Rules:OverlapPerPerson": string
+  "Rules:OverlapWarn": string
+  "Rules:OverlapWarnHint": string
+  "Rules:OverlappingBookings": string
+  "Rules:Override": string
+  "Rules:OverrideCount_one": string
+  "Rules:OverrideCount_other": string
+  "Rules:OverridesParent": string
+  "Rules:PickDate": string
+  "Rules:Reason": string
+  "Rules:ReasonDetail": string
+  "Rules:RemoveClosure": string
+  "Rules:RemoveClosureDetail": string
+  "Rules:RemoveClosureTitle": string
+  "Rules:ResetDetail": string
+  "Rules:ResetTitle": string
+  "Rules:ResetToParent": string
+  "Rules:Save": string
+  "Rules:SaveClosure": string
+  "Rules:Saved": string
+  "Rules:SavedCancelled_one": string
+  "Rules:SavedCancelled_other": string
+  "Rules:SeriesHorizon": string
+  "Rules:SeriesHorizonHint": string
+  "Rules:SeriesHorizonTooShort": string
+  "Rules:Set": string
+  "Rules:SpaceLevel": string
+  "Rules:Starts": string
+  "Rules:StartsTime": string
+  "Rules:Timezone": string
+  "Rules:Title": string
+  "Rules:UnitDays": string
+  "Rules:UnitHours": string
+  "Rules:UnitMinutes": string
+  "Rules:ViewOnly": string
+  "Rules:WhatApplies": string
+  "Rules:WhatAppliesHint": string
   "SignIn:Button": string
   "SignIn:Foot": string
   "SignIn:PointNoDoubleBooking": string
@@ -331,5 +705,35 @@ export interface TextKeys {
   "Unavailable:SpaceClosed": string
   "Unavailable:TooLong": string
   "Unavailable:TooSoon": string
+  "Users:AllBuildings": string
+  "Users:AllRoles": string
+  "Users:Assigned": string
+  "Users:AssignedCancelled_one": string
+  "Users:AssignedCancelled_other": string
+  "Users:BuildingFor": string
+  "Users:CanBook_one": string
+  "Users:CanBook_other": string
+  "Users:ColumnBuilding": string
+  "Users:ColumnEmail": string
+  "Users:ColumnRoles": string
+  "Users:ColumnUser": string
+  "Users:DeletedBuilding": string
+  "Users:Empty": string
+  "Users:FilterBuilding": string
+  "Users:FilterRole": string
+  "Users:LeadAssign": string
+  "Users:LeadReadOnly": string
+  "Users:LoadFailed": string
+  "Users:Loading": string
+  "Users:NoMatch": string
+  "Users:NotAssigned": string
+  "Users:RemovedBuilding": string
+  "Users:RemovedBuildingPick": string
+  "Users:Search": string
+  "Users:SearchLabel": string
+  "Users:Title": string
+  "Users:Unassigned": string
+  "Users:UnassignedCancelled_one": string
+  "Users:UnassignedCancelled_other": string
   "Welcome": string
 }

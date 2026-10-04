@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useConfirm } from '@/components/ConfirmDialog'
 
 // Clears every overridable field on the current level back to Inherit in one click, rather
@@ -10,13 +11,14 @@ interface ResetToParentButtonProps {
 }
 
 export function ResetToParentButton({ onReset, disabled }: ResetToParentButtonProps) {
+  const { t } = useTranslation()
   const { confirm, dialog } = useConfirm()
 
   async function handleClick() {
     const yes = await confirm({
-      title: 'Reset every field on this level to Inherit?',
-      description: "This discards all of this level's own overrides. Nothing is saved until you press Save.",
-      confirmLabel: 'Reset to parent',
+      title: t('Rules:ResetTitle'),
+      description: t('Rules:ResetDetail'),
+      confirmLabel: t('Rules:ResetToParent'),
     })
     if (yes) onReset()
   }
@@ -25,7 +27,7 @@ export function ResetToParentButton({ onReset, disabled }: ResetToParentButtonPr
     <>
       {dialog}
       <button type="button" className="btn sec" onClick={handleClick} disabled={disabled}>
-        Reset to parent
+        {t('Rules:ResetToParent')}
       </button>
     </>
   )

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import i18n from '@/i18n'
 import { ApiError, previewBooking } from '@/features/bookings/api/bookingsApi'
 import type { BookingPreviewDto, BookingRequestDto } from '@/features/bookings/api/bookingsApi'
 
@@ -44,7 +45,7 @@ export function useBookingPreview(token: string, request: BookingRequestDto | nu
             round,
             state: {
               status: 'error',
-              message: err instanceof ApiError ? err.message : "Couldn't check availability — please try again.",
+              message: err instanceof ApiError ? err.message : i18n.t('BookingForm:AvailabilityCheckFailed'),
             },
           }),
         )

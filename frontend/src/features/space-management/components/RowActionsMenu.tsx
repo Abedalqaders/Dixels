@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MoreHorizontalIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -26,6 +27,7 @@ interface RowActionsMenuProps {
 }
 
 export function RowActionsMenu({ label, actions: allActions }: RowActionsMenuProps) {
+  const { t } = useTranslation()
   const can = useCan()
   const actions = allActions.filter((a) => can(a.permission))
   // Nothing this user may do to the row: no empty menu behind a button.
@@ -37,7 +39,7 @@ export function RowActionsMenu({ label, actions: allActions }: RowActionsMenuPro
     // lock — a known Radix pitfall when a menu item opens a dialog.
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" title={`${label} actions`} aria-label={`${label} actions`}>
+        <Button variant="ghost" size="icon-sm" title={t('Hierarchy:RowActions', { name: label })} aria-label={t('Hierarchy:RowActions', { name: label })}>
           <MoreHorizontalIcon />
         </Button>
       </DropdownMenuTrigger>

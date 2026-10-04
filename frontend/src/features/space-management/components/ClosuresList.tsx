@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDownIcon } from 'lucide-react'
+import i18n from '@/i18n'
+import type { TextKeys } from '@/i18n/keys'
 import { formatClock, formatDay, localDateToIso } from '@/lib/time/format'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -17,6 +20,7 @@ import { ChevronIcon, TrashIcon } from './actionIcons'
 function DateTimeField({
   id,
   label,
+  timeLabel,
   date,
   time,
   onDateChange,
@@ -24,11 +28,14 @@ function DateTimeField({
 }: {
   id: string
   label: string
+  /** The time input's accessible name: "Starts time". */
+  timeLabel: string
   date: Date | undefined
   time: string
   onDateChange: (date: Date | undefined) => void
   onTimeChange: (time: string) => void
 }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
   return (
@@ -38,7 +45,7 @@ function DateTimeField({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button id={id} type="button" variant="outline" className="flex-1 justify-between font-normal">
-              {date ? formatDay(localDateToIso(date), 'long') : 'Pick a date'}
+              {date ? formatDay(localDateToIso(date), 'long') : t('Rules:PickDate')}
               <ChevronDownIcon className="text-muted-foreground" />
             </Button>
           </PopoverTrigger>
@@ -57,7 +64,7 @@ function DateTimeField({
         <Input
           type="time"
           className="w-28 font-mono"
-          aria-label={`${label} time`}
+          aria-label={timeLabel}
           value={time}
           onChange={(e) => onTimeChange(e.target.value)}
         />
@@ -88,12 +95,15 @@ function combine(date: Date | undefined, time: string): Date | null {
 // tooltip), the add form hides behind a button, and the whole section collapses to a
 // one-line summary when there's genuinely nothing in it.
 
-const EFFECT_LABELS: Record<OverrideEffect, string> = { [OverrideEffect.Closed]: 'Closed', [OverrideEffect.Open]: 'Open' }
-const REASON_LABELS: Record<ReasonCategory, string> = {
-  [ReasonCategory.Maintenance]: 'Maintenance',
-  [ReasonCategory.Holiday]: 'Holiday',
-  [ReasonCategory.Event]: 'Event',
-  [ReasonCategory.Other]: 'Other',
+const EFFECT_LABELS: Record<OverrideEffect, keyof TextKeys> = {
+  [OverrideEffect.Closed]: 'Rules:EffectClosed',
+  [OverrideEffect.Open]: 'Rules:EffectOpen',
+}
+const REASON_LABELS: Record<ReasonCategory, keyof TextKeys> = {
+  [ReasonCategory.Maintenance]: 'Enum:ReasonCategory.Maintenance',
+  [ReasonCategory.Holiday]: 'Enum:ReasonCategory.Holiday',
+  [ReasonCategory.Event]: 'Enum:ReasonCategory.Event',
+  [ReasonCategory.Other]: 'Enum:ReasonCategory.Other',
 }
 
 const SHORT_DETAIL_MAX = 40
@@ -120,12 +130,13 @@ export function formatWhen(startsAt: string, endsAt: string): string {
 
   const pad = (n: number) => String(n).padStart(2, '0')
   const dateTimeFmt = (d: Date) => `${dateFmt(d)} ${formatClock(`${pad(d.getHours())}:${pad(d.getMinutes())}`)}`
-  return `${dateTimeFmt(start)} → ${dateTimeFmt(end)}`
+  // The arrow points the way the language reads: "→" in English, "←" in Arabic.
+  return i18n.t('Rules:ClosureSpan', { start: dateTimeFmt(start), end: dateTimeFmt(end) })
 }
 
 interface AncestorClosure {
   override: AvailabilityOverrideDto
-  levelLabel: string
+  level: 'Building' | 'Floor'
 }
 
 interface ClosuresListProps {
@@ -153,6 +164,7 @@ export function ClosuresList({
   canCreate,
   canDelete,
 }: ClosuresListProps) {
+  const { t } = useTranslation()
   const hasAnyClosures = ownOverrides.length > 0 || ancestorOverrides.length > 0
   const [sectionOpen, setSectionOpen] = useState(hasAnyClosures)
   const [formOpen, setFormOpen] = useState(false)
@@ -203,9 +215,9 @@ export function ClosuresList({
         aria-expanded={sectionOpen}
         onClick={() => setSectionOpen((v) => !v)}
       >
-        <h3>Closures</h3>
-        {isCurrentlyClosed && <span className="badge blocked">Currently closed</span>}
-        {!hasAnyClosures && <span className="ovr">None set</span>}
+        <h3>{t('Rules:Closures')}</h3>
+        {isCurrentlyClosed && <span className="badge blocked">{t('Rules:CurrentlyClosed')}</span>}
+        {!hasAnyClosures && <span className="ovr">{t('Rules:NoneSet')}</span>}
         <span className="chevicon" aria-hidden="true">
           <ChevronIcon />
         </span>
@@ -213,7 +225,7 @@ export function ClosuresList({
 
       {sectionOpen && (
         <>
-          {!hasAnyClosures && <p className="inhnote">No closures set — in service.</p>}
+          {!hasAnyClosures && <p className="inhnote">{t('Rules:NoClosures')}</p>}
 
           {ownOverrides.map((o) => {
             const detail = o.reasonDetail && o.reasonDetail.length <= SHORT_DETAIL_MAX ? o.reasonDetail : null
@@ -221,11 +233,17 @@ export function ClosuresList({
               <div className="closurerow" key={o.id} title={o.reasonDetail ?? undefined}>
                 <span className={`closuredot ${o.effect === OverrideEffect.Closed ? 'closed' : 'open'}`} />
                 <span className="closurelabel">
-                  {EFFECT_LABELS[o.effect]} — {REASON_LABELS[o.reasonCategory]} · {formatWhen(o.startsAt, o.endsAt)}
+                  {t(EFFECT_LABELS[o.effect])} — {t(REASON_LABELS[o.reasonCategory])} · {formatWhen(o.startsAt, o.endsAt)}
                   {detail ? ` — ${detail}` : ''}
                 </span>
                 {canDelete && (
-                  <button type="button" className="rowbtn" title="Delete closure" aria-label="Delete closure" onClick={() => onDelete(o.id)}>
+                  <button
+                    type="button"
+                    className="rowbtn"
+                    title={t('Rules:DeleteClosure')}
+                    aria-label={t('Rules:DeleteClosure')}
+                    onClick={() => onDelete(o.id)}
+                  >
                     <TrashIcon />
                   </button>
                 )}
@@ -233,62 +251,79 @@ export function ClosuresList({
             )
           })}
 
-          {ancestorOverrides.map(({ override: o, levelLabel }) => (
+          {ancestorOverrides.map(({ override: o, level }) => (
             <div className="closurerow" key={o.id} title={o.reasonDetail ?? undefined}>
               <span className={`closuredot ${o.effect === OverrideEffect.Closed ? 'closed' : 'open'}`} />
               <span className="closurelabel">
-                {EFFECT_LABELS[o.effect]} — {REASON_LABELS[o.reasonCategory]} · {formatWhen(o.startsAt, o.endsAt)}
+                {t(EFFECT_LABELS[o.effect])} — {t(REASON_LABELS[o.reasonCategory])} · {formatWhen(o.startsAt, o.endsAt)}
               </span>
-              <span className="ovr">From {levelLabel}</span>
+              <span className="ovr">{t('Rules:FromLevel', { level: t(`Enum:ConstraintSource.${level}`) })}</span>
             </div>
           ))}
 
           {canCreate && !formOpen && (
             <button type="button" className="btn sm sec" style={{ marginTop: 'var(--space-3)' }} onClick={() => setFormOpen(true)}>
-              + Add closure
+              {t('Rules:AddClosure')}
             </button>
           )}
 
           {canCreate && formOpen && (
             <form className="fields" onSubmit={handleSubmit} style={{ marginTop: 'var(--space-3)' }}>
               <div className="grid gap-2">
-                <Label htmlFor="closure-effect">Effect</Label>
+                <Label htmlFor="closure-effect">{t('Rules:Effect')}</Label>
                 <Select value={String(effect)} onValueChange={(v) => setEffect(Number(v) as OverrideEffect)}>
                   <SelectTrigger id="closure-effect" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={String(OverrideEffect.Closed)}>Closed</SelectItem>
-                    <SelectItem value={String(OverrideEffect.Open)}>Open (special opening)</SelectItem>
+                    <SelectItem value={String(OverrideEffect.Closed)}>{t('Rules:EffectClosed')}</SelectItem>
+                    <SelectItem value={String(OverrideEffect.Open)}>{t('Rules:EffectOpenSpecial')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="closure-reason">Reason</Label>
+                <Label htmlFor="closure-reason">{t('Rules:Reason')}</Label>
                 <Select value={String(reasonCategory)} onValueChange={(v) => setReasonCategory(Number(v) as ReasonCategory)}>
                   <SelectTrigger id="closure-reason" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={String(ReasonCategory.Maintenance)}>Maintenance</SelectItem>
-                    <SelectItem value={String(ReasonCategory.Holiday)}>Holiday</SelectItem>
-                    <SelectItem value={String(ReasonCategory.Event)}>Event</SelectItem>
-                    <SelectItem value={String(ReasonCategory.Other)}>Other</SelectItem>
+                    {Object.values(ReasonCategory).map((category) => (
+                      <SelectItem key={category} value={String(category)}>
+                        {t(REASON_LABELS[category])}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <DateTimeField id="closure-starts" label="Starts" date={startDate} time={startTime} onDateChange={setStartDate} onTimeChange={setStartTime} />
-              <DateTimeField id="closure-ends" label="Ends" date={endDate} time={endTime} onDateChange={setEndDate} onTimeChange={setEndTime} />
+              <DateTimeField
+                id="closure-starts"
+                label={t('Rules:Starts')}
+                timeLabel={t('Rules:StartsTime')}
+                date={startDate}
+                time={startTime}
+                onDateChange={setStartDate}
+                onTimeChange={setStartTime}
+              />
+              <DateTimeField
+                id="closure-ends"
+                label={t('Rules:Ends')}
+                timeLabel={t('Rules:EndsTime')}
+                date={endDate}
+                time={endTime}
+                onDateChange={setEndDate}
+                onTimeChange={setEndTime}
+              />
               <div className="grid gap-2 field stacked">
-                <Label htmlFor="closure-detail">Reason detail (shown to staff)</Label>
+                <Label htmlFor="closure-detail">{t('Rules:ReasonDetail')}</Label>
                 <Input id="closure-detail" value={reasonDetail} onChange={(e) => setReasonDetail(e.target.value)} />
               </div>
               <div className="modalfoot" style={{ justifyContent: 'flex-start' }}>
                 <Button type="button" variant="outline" onClick={() => setFormOpen(false)} disabled={submitting}>
-                  Cancel
+                  {t('Common:Cancel')}
                 </Button>
                 <Button type="submit" variant="outline" disabled={submitting || !startsAt || !endsAt}>
-                  {submitting ? 'Adding…' : 'Save closure'}
+                  {submitting ? t('Rules:Adding') : t('Rules:SaveClosure')}
                 </Button>
               </div>
             </form>

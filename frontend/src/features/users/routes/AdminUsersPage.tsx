@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { SearchIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -23,6 +24,7 @@ import {
 } from '@/features/users/api/usersApi'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
+import { ADMIN_ROLE, roleLabel } from '@/features/auth/roles'
 import type { IdentityUserDto } from '@/features/users/api/usersApi'
 import { getBuilding, getBuildings } from '@/features/space-management/api/spaceManagementApi'
 import { BuildingPicker } from '@/features/space-management/components/BuildingPicker'
@@ -54,7 +56,9 @@ interface UserRow {
   user: IdentityUserDto
   buildingId: string | null
   buildingName: string | null
-  /** The building they were assigned to was deleted: its name, so the admin can see who to reassign. */
+  /** The building they were assigned to was deleted, so the admin can see who to reassign. */
+  buildingRemoved: boolean
+  /** That deleted building's name, when it could still be found. */
   removedBuildingName: string | null
   roles: string[]
 }
@@ -65,6 +69,7 @@ interface UserRow {
 // where someone books, so they're the ones who need one. ABP's list doesn't carry building
 // names, so each building is fetched once however many users share it.
 export function AdminUsersPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
   const { showToast } = useToast()
@@ -118,12 +123,13 @@ export function AdminUsersPage() {
       const rows: UserRow[] = usersResult.items.map((user) => {
         const buildingId = buildingIdOf(user)
         const buildingName = buildingId ? (nameById.get(buildingId) ?? null) : null
-        const removedBuildingName = buildingId && !buildingName ? (removedNames.get(buildingId) ?? 'A deleted building') : null
+        const buildingRemoved = buildingId !== null && !buildingName
         return {
           user,
           buildingId: buildingName ? buildingId : null,
           buildingName,
-          removedBuildingName,
+          buildingRemoved,
+          removedBuildingName: buildingRemoved ? (removedNames.get(buildingId) ?? null) : null,
           roles: rolesByUserId.get(user.id) ?? [],
         }
       })
@@ -139,11 +145,18 @@ export function AdminUsersPage() {
       if (impact.count > 0 && !(await askImpact({ mode: 'reassign', impact, subject: userLabel }))) return
 
       await assignUserBuilding(token, userId, buildingId === UNASSIGNED ? null : buildingId)
-      const cancelled = impact.count > 0 ? ` · ${impact.count} ${impact.count === 1 ? 'booking' : 'bookings'} cancelled` : ''
-      showToast(buildingId === UNASSIGNED ? `${userLabel} unassigned${cancelled}.` : `${userLabel} assigned to a building${cancelled}.`)
+      // Whole sentences per case (not a "· N cancelled" tail glued on) so each language
+      // can word and order them its own way.
+      const name = userLabel
+      const count = impact.count
+      if (buildingId === UNASSIGNED) {
+        showToast(count > 0 ? t('Users:UnassignedCancelled', { name, count }) : t('Users:Unassigned', { name }))
+      } else {
+        showToast(count > 0 ? t('Users:AssignedCancelled', { name, count }) : t('Users:Assigned', { name }))
+      }
       refetch()
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Something went wrong — please try again.', 'error')
+      showToast(err instanceof ApiError ? err.message : t('Error:Generic'), 'error')
     }
   }
 
@@ -153,12 +166,10 @@ export function AdminUsersPage() {
       <div className="main">
         <div className="content">
           <div>
-            <h1 className="pagetitle">Users</h1>
+            <h1 className="pagetitle">{t('Users:Title')}</h1>
             <p className="lead">
-              {status === 'success' ? `${data.totalCount} ${data.totalCount === 1 ? 'person' : 'people'} can book. ` : ''}
-              {canAssign
-                ? 'Choose the single building each of them books in — they never see any other.'
-                : 'The building each of them books in. Your account can view these but not change them.'}
+              {status === 'success' ? `${t('Users:CanBook', { count: data.totalCount })} ` : ''}
+              {canAssign ? t('Users:LeadAssign') : t('Users:LeadReadOnly')}
             </p>
           </div>
 
@@ -169,8 +180,8 @@ export function AdminUsersPage() {
                   <SearchIcon className="pointer-events-none absolute top-1/2 inset-s-3 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     className="w-full rounded-full sm:w-64 border-transparent bg-muted/40 ps-9 focus-visible:border-ring focus-visible:bg-background"
-                    placeholder="Search by name, username or email…"
-                    aria-label="Search users"
+                    placeholder={t('Users:Search')}
+                    aria-label={t('Users:SearchLabel')}
                     autoComplete="off"
                     value={list.searchInput}
                     onChange={(e) => list.setSearchInput(e.target.value)}
@@ -179,22 +190,22 @@ export function AdminUsersPage() {
                 <BuildingPicker
                   token={token}
                   value={buildingFilter}
-                  noneLabel="All buildings"
-                  ariaLabel="Filter by building"
+                  noneLabel={t('Users:AllBuildings')}
+                  ariaLabel={t('Users:FilterBuilding')}
                   onChange={(id) => list.setFilter('building', id)}
                 />
                 <Select
                   value={roleFilter || ALL_ROLES}
                   onValueChange={(v) => list.setFilter('role', v === ALL_ROLES ? '' : v)}
                 >
-                  <SelectTrigger className="w-full sm:w-40" aria-label="Filter by role">
-                    <SelectValue placeholder="All roles" />
+                  <SelectTrigger className="w-full sm:w-40" aria-label={t('Users:FilterRole')}>
+                    <SelectValue placeholder={t('Users:AllRoles')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={ALL_ROLES}>All roles</SelectItem>
+                    <SelectItem value={ALL_ROLES}>{t('Users:AllRoles')}</SelectItem>
                     {roleNames.data?.map((name) => (
                       <SelectItem key={name} value={name}>
-                        {name}
+                        {roleLabel(name)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -203,13 +214,13 @@ export function AdminUsersPage() {
             </CardHeader>
 
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
-              {status === 'loading' && <TableSkeleton label="Loading users…" columns={4} />}
-              {status === 'error' && <p className="treeempty">Couldn't load users: {error.message}</p>}
+              {status === 'loading' && <TableSkeleton label={t('Users:Loading')} columns={4} />}
+              {status === 'error' && <p className="treeempty">{t('Users:LoadFailed', { error: error.message })}</p>}
               {status === 'success' && data.rows.length === 0 && (
                 <p className="treeempty">
                   {list.search || buildingFilter || roleFilter
-                    ? 'No one matches the current search and filters.'
-                    : 'No one can book yet.'}
+                    ? t('Users:NoMatch')
+                    : t('Users:Empty')}
                 </p>
               )}
 
@@ -217,14 +228,14 @@ export function AdminUsersPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="ps-4 font-semibold">User</TableHead>
-                      <TableHead className="hidden font-semibold md:table-cell">Email</TableHead>
-                      <TableHead className="hidden font-semibold lg:table-cell">Roles</TableHead>
-                      <TableHead className="pe-4 font-semibold sm:w-60">Building</TableHead>
+                      <TableHead className="ps-4 font-semibold">{t('Users:ColumnUser')}</TableHead>
+                      <TableHead className="hidden font-semibold md:table-cell">{t('Users:ColumnEmail')}</TableHead>
+                      <TableHead className="hidden font-semibold lg:table-cell">{t('Users:ColumnRoles')}</TableHead>
+                      <TableHead className="pe-4 font-semibold sm:w-60">{t('Users:ColumnBuilding')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data.rows.map(({ user, buildingId, buildingName, removedBuildingName, roles }) => {
+                    {data.rows.map(({ user, buildingId, buildingName, buildingRemoved, removedBuildingName, roles }) => {
                       const label = labelFor(user)
                       return (
                         <TableRow key={user.id}>
@@ -249,8 +260,8 @@ export function AdminUsersPage() {
                             {roles.length > 0 ? (
                               <div className="flex flex-wrap gap-1.5">
                                 {roles.map((role) => (
-                                  <Badge key={role} variant={role.toLowerCase() === 'admin' ? 'default' : 'secondary'}>
-                                    {role}
+                                  <Badge key={role} variant={role.toLowerCase() === ADMIN_ROLE ? 'default' : 'secondary'}>
+                                    {roleLabel(role)}
                                   </Badge>
                                 ))}
                               </div>
@@ -264,17 +275,19 @@ export function AdminUsersPage() {
                                 token={token}
                                 value={buildingId ?? UNASSIGNED}
                                 selectedName={buildingName}
-                                noneLabel="Not assigned"
-                                ariaLabel={`Building for ${label}`}
+                                noneLabel={t('Users:NotAssigned')}
+                                ariaLabel={t('Users:BuildingFor', { name: label })}
                                 className="w-full sm:w-56"
                                 onChange={(id) => handleAssign(user.id, label, id)}
                               />
                             ) : (
-                              <span className={buildingName ? undefined : 'text-muted-foreground'}>{buildingName ?? 'Not assigned'}</span>
+                              <span className={buildingName ? undefined : 'text-muted-foreground'}>{buildingName ?? t('Users:NotAssigned')}</span>
                             )}
-                            {removedBuildingName && (
+                            {buildingRemoved && (
                               <p className="mt-1 text-xs text-[var(--state-expired-ink)]">
-                                {removedBuildingName} (deleted){canAssign ? ' — pick another building' : ''}
+                                {t(canAssign ? 'Users:RemovedBuildingPick' : 'Users:RemovedBuilding', {
+                                  name: removedBuildingName ?? t('Users:DeletedBuilding'),
+                                })}
                               </p>
                             )}
                           </TableCell>

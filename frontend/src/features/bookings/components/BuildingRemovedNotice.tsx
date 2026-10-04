@@ -1,4 +1,5 @@
 import { TriangleAlert } from 'lucide-react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 interface BuildingRemovedNoticeProps {
@@ -13,6 +14,7 @@ interface BuildingRemovedNoticeProps {
  * were cancelled and are still visible (struck through) on My calendar.
  */
 export function BuildingRemovedNotice({ buildingName, onCalendar = false }: BuildingRemovedNoticeProps) {
+  const { t } = useTranslation()
   return (
     <div
       role="status"
@@ -20,20 +22,18 @@ export function BuildingRemovedNotice({ buildingName, onCalendar = false }: Buil
     >
       <TriangleAlert />
       <div className="grid gap-1">
-        <p className="font-semibold">{buildingName} is no longer available.</p>
+        <p className="font-semibold">{t('Booking:BuildingRemovedTitle', { building: buildingName })}</p>
         <p>
-          An administrator removed it, and your upcoming bookings there were cancelled
-          {onCalendar ? ' — they are shown struck through below.' : '. '}
-          {!onCalendar && (
-            <>
-              You can still see them on{' '}
-              <Link to="/my-calendar" className="font-medium underline underline-offset-4">
-                My calendar
-              </Link>
-              .
-            </>
-          )}{' '}
-          Ask an administrator to assign you to another building.
+          {onCalendar ? (
+            t('Booking:BuildingRemovedDetailCalendar')
+          ) : (
+            // <calendar>…</calendar> in the text becomes the link, so each language places it.
+            // (Not <link>: that's an HTML void element, and the parser would drop its text.)
+            <Trans
+              i18nKey="Booking:BuildingRemovedDetail"
+              components={{ calendar: <Link to="/my-calendar" className="font-medium underline underline-offset-4" /> }}
+            />
+          )}
         </p>
       </div>
     </div>

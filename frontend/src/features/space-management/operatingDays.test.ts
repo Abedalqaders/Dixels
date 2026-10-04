@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadSharedFixture } from '@/test/sharedFixtures'
-import { allowedDays, OperatingDays } from './operatingDays'
+import { setLanguage } from '@/i18n'
+import { allowedDays, describeDays, OperatingDays } from './operatingDays'
 import type { DayName } from './operatingDays'
 
 interface OperatingDaysCase {
@@ -34,5 +35,21 @@ describe('allowedDays', () => {
 
   it('returns no days when the parent is None', () => {
     expect(allowedDays(OperatingDays.None)).toEqual([])
+  })
+})
+
+describe('describeDays', () => {
+  const weekdays = OperatingDays.fromDayNames(['Monday', 'Tuesday', 'Wednesday'])
+
+  it('names the days in English', () => {
+    expect(describeDays(OperatingDays.Everyday)).toBe('Every day')
+    expect(describeDays(OperatingDays.None)).toBe('None')
+    expect(describeDays(weekdays)).toBe('Mon, Tue, Wed')
+  })
+
+  it('names the days in Arabic, with the Arabic comma', async () => {
+    await setLanguage('ar')
+    expect(describeDays(OperatingDays.Everyday)).toBe('كل يوم')
+    expect(describeDays(weekdays)).toBe('الاثنين، الثلاثاء، الأربعاء')
   })
 })

@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { setLanguage } from '@/i18n'
 import { AddNodeModal } from './AddNodeModal'
 
 function renderSpaceModal() {
@@ -40,5 +41,17 @@ describe('AddNodeModal', () => {
 
     expect(screen.getByLabelText(/Name/)).not.toHaveAttribute('aria-invalid')
     expect(screen.getByLabelText(/Capacity/)).toHaveFocus()
+  })
+
+  it('speaks Arabic, problems included', async () => {
+    await setLanguage('ar')
+    const user = userEvent.setup()
+    renderSpaceModal()
+
+    expect(screen.getByRole('dialog', { name: 'إضافة مساحة' })).toHaveAccessibleDescription('ستُضاف ضمن Level 1.')
+    await user.click(screen.getByRole('button', { name: 'إضافة' }))
+
+    expect(screen.getByLabelText(/^الاسم/)).toHaveAccessibleDescription('الاسم مطلوب.')
+    expect(screen.getByLabelText(/السعة/)).toHaveAccessibleDescription('يجب أن تكون السعة عددًا موجبًا.')
   })
 })
