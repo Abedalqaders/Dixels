@@ -45,6 +45,7 @@ import type { Prefetch } from '@/features/calendar/hooks/useMonthBookings'
 import type { CalendarView } from '@/features/calendar/calendarDates'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { buildDurationLimits } from '@/features/calendar/durationLimits'
+import { canBookOn } from '@/features/bookings/buildingRules'
 import { BookingDetailDialog } from '@/features/calendar/components/BookingDetailDialog'
 import { BookingDetailPanel } from '@/features/calendar/components/BookingDetailPanel'
 import { CancelBookingDialog } from '@/features/calendar/components/CancelBookingDialog'
@@ -370,6 +371,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
                 onOpenItem={setDetail}
                 onOpenDay={(d) => go({ view: 'day', date: d })}
                 onQuickBook={readOnly ? undefined : quickBookDay}
+                canBookDay={(d) => canBookOn(building, d, now)}
               />
             ) : (
               <TimeGrid
@@ -380,6 +382,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
                 today={now.date}
                 nowMinute={now.minutes}
                 firstBookableMinute={firstBookableMinute}
+                lastBookableDate={addDays(now.date, building.maxHorizonDays)}
                 leadMinutes={building.minLeadMinutes}
                 slotMinutes={building.slotMinutes}
                 defaultLength={defaultLength}
@@ -450,9 +453,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         <QuickBookDialog
           token={token}
           window={quickBook}
-          slotMinutes={building.slotMinutes}
-          today={now.date}
-          firstBookableMinute={firstBookableMinute}
+          building={building}
           onClose={() => setQuickBook(null)}
           onPick={(room, attendees, picked) => {
             setForm({ room, window: picked, attendees })

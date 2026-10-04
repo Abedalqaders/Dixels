@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { BookableBuildingDto, BookableSpaceDto } from '@/features/bookings/api/bookingsApi'
-import { suggestSlot, suggestWindow } from './suggestSlot'
+import { suggestSlot, suggestWindow, suggestWindowForDay } from './suggestSlot'
 
+// Open every day 08:00–18:00; its one room allows up to 3h.
 const building = {
   timezone: 'Asia/Amman', // UTC+3
   slotMinutes: 15,
   minLeadMinutes: 15,
-} as BookableBuildingDto
+  maxHorizonDays: 30,
+  days: [0, 1, 2, 3, 4, 5, 6],
+  hours: { isOpen24Hours: false, open: '08:00', close: '18:00' },
+  floors: [{ id: 'f', name: 'L1', floorNumber: 1, spaces: [{ capacity: 8, maxDurationMinutes: { value: 180, source: 'Space' } }] }],
+} as unknown as BookableBuildingDto
 
 function spaceWith(open: string, close: string, maxDurationMinutes = 120): BookableSpaceDto {
   return {
@@ -54,12 +59,30 @@ describe('suggestWindow', () => {
     })
   })
 
-  it('moves to tomorrow morning late in the evening', () => {
-    // 23:30 in Amman.
-    expect(suggestWindow(building, new Date('2026-09-29T20:30:00Z'))).toEqual({
+  it("moves to tomorrow's opening once today has no hour left", () => {
+    // 17:30 in Amman; the building closes at 18:00.
+    expect(suggestWindow(building, new Date('2026-09-29T14:30:00Z'))).toEqual({
       date: '2026-09-30',
-      start: '09:00',
-      end: '10:00',
+      start: '08:00',
+      end: '09:00',
+    })
+  })
+
+  it('skips the days the building is closed', () => {
+    // Thursday 1 Oct, 17:30 in Amman; closed Friday and Saturday.
+    const sunToThu = { ...building, days: [0, 1, 2, 3, 4] }
+    expect(suggestWindow(sunToThu, new Date('2026-10-01T14:30:00Z'))).toEqual({
+      date: '2026-10-04',
+      start: '08:00',
+      end: '09:00',
+    })
+  })
+
+  it('starts a picked future day at opening time', () => {
+    expect(suggestWindowForDay(building, '2026-10-05', new Date('2026-09-29T06:07:00Z'), 60)).toEqual({
+      date: '2026-10-05',
+      start: '08:00',
+      end: '09:00',
     })
   })
 })

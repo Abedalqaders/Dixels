@@ -37,6 +37,15 @@ export function fieldFor(code: string): IssueField {
   return FIELD_BY_CODE[code] ?? 'other'
 }
 
+/**
+ * Whether another time the same day could fix every problem — booked, closed for a while,
+ * outside hours, too long. Too few seats, too many people or too far ahead can't be fixed by
+ * picking a time, so such a room isn't offered for picking.
+ */
+export function onlyTimeIssues(violations: BookingViolationDto[]): boolean {
+  return violations.every((v) => fieldFor(v.code) === 'time')
+}
+
 /** The violations by field, each list in the order the server gave (most fundamental first). */
 export function groupViolations(violations: BookingViolationDto[]): FieldIssues {
   const issues: FieldIssues = { date: [], time: [], attendees: [], other: [] }

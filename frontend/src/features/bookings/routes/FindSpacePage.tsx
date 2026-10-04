@@ -30,6 +30,7 @@ import { dayAxis } from '@/features/bookings/dayAxis'
 import { suggestWindow } from '@/features/bookings/suggestSlot'
 import type { Slot } from '@/features/bookings/suggestSlot'
 import { readLastDuration } from '@/features/bookings/preferences'
+import { onlyTimeIssues } from '@/features/bookings/violationFields'
 import type { DayBarPick } from '@/features/bookings/components/DayBar'
 import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/LoadingSkeletons'
 import { TopBar } from '@/components/TopBar'
@@ -288,7 +289,7 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                             busy={room.busy}
                             selection={selection}
                             label={room.violations[0]?.shortMessage ?? ''}
-                            pick={canBook ? pickerFor(room) : undefined}
+                            pick={canBook && onlyTimeIssues(room.violations) ? pickerFor(room) : undefined}
                           />
                           <Tooltip>
                             <TooltipTrigger asChild>

@@ -2,6 +2,8 @@ import { addDays, fromMinutes, nextSlot, nowInZone, toMinutes } from '@/lib/time
 import type { HhMm, IsoDate } from '@/lib/time/buildingTime'
 import type { BookableBuildingDto, BookableSpaceDto } from '@/features/bookings/api/bookingsApi'
 import { readLastDuration } from './preferences'
+import { buildingRules, longestRoomLength } from './buildingRules'
+import { firstFreeRange } from './freeTimes'
 
 const DAY_MINUTES = 24 * 60
 /** Used until the employee has booked once; after that, their last booking's length. */
@@ -46,41 +48,45 @@ export function suggestSlot(
   return { date, start: fromMinutes(start), end: fromMinutes(start + length) }
 }
 
-/**
- * The window a search starts with before the employee picks one: the next slot after the
- * building's minimum notice, today on the building's clock, for the employee's usual
- * length (their last booking's, else an hour) — or 09:00 tomorrow once today has no room
- * left for it.
- */
-export function suggestWindow(
-  building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>,
-  now = new Date(),
-  length = readLastDuration() ?? DEFAULT_LENGTH_MINUTES,
-): Slot {
-  const zoned = nowInZone(building.timezone, now)
-  const start = nextSlot(zoned.minutes + building.minLeadMinutes, building.slotMinutes)
+type WindowBuilding = Pick<
+  BookableBuildingDto,
+  'timezone' | 'slotMinutes' | 'minLeadMinutes' | 'maxHorizonDays' | 'days' | 'hours' | 'floors'
+>
 
-  if (start + length > DAY_MINUTES) {
-    const morning = 9 * 60
-    return { date: addDays(zoned.date, 1), start: fromMinutes(morning), end: fromMinutes(Math.min(morning + length, DAY_MINUTES)) }
+/**
+ * The window a search starts with before the employee picks one: the first time the
+ * building is open, from now + its minimum notice, for the employee's usual length (their
+ * last booking's, else an hour) — on a later day when today has no room left for it.
+ */
+export function suggestWindow(building: WindowBuilding, now = new Date(), length = readLastDuration() ?? DEFAULT_LENGTH_MINUTES): Slot {
+  const zoned = nowInZone(building.timezone, now)
+  for (let i = 0; i <= building.maxHorizonDays; i++) {
+    const date = addDays(zoned.date, i)
+    const range = firstFreeRange(length, buildingRules(building, date, zoned))
+    // Today's leftover scrap (a few minutes before closing) isn't a suggestion; a later day is.
+    if (range && (range.end - range.start >= Math.min(length, longestRoomLength(building)) || i === building.maxHorizonDays)) {
+      return { date, start: fromMinutes(range.start), end: fromMinutes(range.end) }
+    }
   }
 
-  return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(start + length) }
+  // Shut for the whole booking window: the next slot, which the search then explains.
+  const start = Math.min(nextSlot(zoned.minutes + building.minLeadMinutes, building.slotMinutes), DAY_MINUTES - building.slotMinutes)
+  return { date: zoned.date, start: fromMinutes(start), end: fromMinutes(Math.min(start + length, DAY_MINUTES)) }
 }
 
 /**
- * The window offered for a day picked directly, e.g. the month view's "+": today gets the
- * usual next-slot suggestion; any other day (it can only be a future one) gets a plain
- * 09:00 start, for the employee's usual length.
+ * The window offered for a day picked directly, e.g. the month view's "+": the first time
+ * the building is open that day (from now + notice on today), for the employee's usual length.
  */
 export function suggestWindowForDay(
-  building: Pick<BookableBuildingDto, 'timezone' | 'slotMinutes' | 'minLeadMinutes'>,
+  building: WindowBuilding,
   date: IsoDate,
   now = new Date(),
   length = readLastDuration() ?? DEFAULT_LENGTH_MINUTES,
 ): Slot {
   const zoned = nowInZone(building.timezone, now)
-  if (date === zoned.date) return suggestWindow(building, now, length)
+  const range = firstFreeRange(length, buildingRules(building, date, zoned))
+  if (range) return { date, start: fromMinutes(range.start), end: fromMinutes(range.end) }
 
   const morning = 9 * 60
   return { date, start: fromMinutes(morning), end: fromMinutes(Math.min(morning + length, DAY_MINUTES)) }

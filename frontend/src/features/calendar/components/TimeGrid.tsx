@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Repeat } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
-import { fromMinutes, timeOf } from '@/lib/time/buildingTime'
+import { formatDate, fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
 import { dayOfMonth, shortWeekday, weekdayName } from '@/features/calendar/calendarDates'
@@ -51,6 +51,8 @@ interface TimeGridProps {
   nowMinute: number
   /** The earliest minute on `today` a new booking may start (now + notice). Past days can't be picked at all. */
   firstBookableMinute: number
+  /** The last date that can be booked (today + the building's booking window); later days can't be picked. */
+  lastBookableDate: IsoDate
   /** The building's minimum notice, to explain the band between "now" and the first bookable minute. */
   leadMinutes: number
   slotMinutes: number
@@ -80,6 +82,7 @@ export function TimeGrid({
   today,
   nowMinute,
   firstBookableMinute,
+  lastBookableDate,
   leadMinutes,
   slotMinutes,
   defaultLength,
@@ -232,7 +235,8 @@ export function TimeGrid({
               // Only today's column cares what time it is — the others get a constant, so the
               // 30-second clock tick re-renders one column, not the whole week.
               nowMinute={d === today ? nowMinute : 0}
-              firstBookableMinute={d === today ? firstBookableMinute : d < today ? Infinity : 0}
+              firstBookableMinute={d === today ? firstBookableMinute : d < today || d > lastBookableDate ? Infinity : 0}
+              bookableUntil={d > lastBookableDate ? lastBookableDate : null}
               readOnly={readOnly}
               leadMinutes={leadMinutes}
               slotMinutes={slotMinutes}
@@ -254,6 +258,8 @@ interface DayColumnProps {
   /** When the building is open on this day; null when it's shut all day. */
   open: OpenWindow
   past: boolean
+  /** Set on a day past the booking window: the last date that can be booked. */
+  bookableUntil: IsoDate | null
   isToday: boolean
   nowMinute: number
   firstBookableMinute: number
@@ -271,6 +277,7 @@ const DayColumn = memo(function DayColumn({
   items,
   open,
   past,
+  bookableUntil,
   isToday,
   nowMinute,
   firstBookableMinute,
@@ -330,6 +337,7 @@ const DayColumn = memo(function DayColumn({
 
   function whyBlocked(minute: number): string {
     if (past) return t('Calendar:DayPassed')
+    if (bookableUntil) return t('Dixels:Bookings:BeyondHorizon:Short', { lastDate: formatDate(bookableUntil) })
     if (!open) return t('Calendar:ClosedOnWeekday', { weekday: weekdayName(date) })
     if (minute < nowMinute) return t('Calendar:TimePassed')
     if (minute < openFrom) return t('Calendar:OpensAt', { time: fromMinutes(openFrom) })
@@ -441,6 +449,16 @@ const DayColumn = memo(function DayColumn({
           {pastUntil >= 30 && (
             <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{t('Calendar:Past')}</span>
           )}
+        </div>
+      )}
+
+      {bookableUntil && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-start justify-end bg-muted/40 px-1.5 pt-0.5"
+          style={{ backgroundImage: CLOSED_HATCH }}
+          aria-hidden="true"
+        >
+          <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{t('Unavailable:BeyondHorizon')}</span>
         </div>
       )}
 

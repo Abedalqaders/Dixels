@@ -43,6 +43,18 @@ export function hasFreeTime(rules: FreeTimeRules): boolean {
   return startTimes(rules).length > 0
 }
 
+/**
+ * The earliest free range that's `length` long (capped at the maximum) — else the earliest
+ * free range at all, shorter. Null when the day has no free time.
+ */
+export function firstFreeRange(length: number, rules: FreeTimeRules): { start: number; end: number } | null {
+  const wanted = Math.min(length, rules.maxDuration)
+  for (const s of startTimes(rules)) {
+    if (endTimes(s, rules).includes(s + wanted)) return { start: s, end: s + wanted }
+  }
+  return nearestFreeRange(0, length, rules)
+}
+
 /** Whether `start`–`end` is one of the ranges the From/To lists offer. */
 export function fitsFreeTime(start: number, end: number, rules: FreeTimeRules): boolean {
   return startTimes(rules).includes(start) && endTimes(start, rules).includes(end)
