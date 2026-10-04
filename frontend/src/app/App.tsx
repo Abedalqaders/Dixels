@@ -20,6 +20,7 @@ import { HomePage } from '@/features/auth/routes/HomePage'
 import { EmployeeLayout } from '@/components/EmployeeLayout'
 import { FindSpacePage } from '@/features/bookings/routes/FindSpacePage'
 import { MyCalendarPage } from '@/features/calendar/routes/MyCalendarPage'
+import { ProfilePage } from '@/features/profile/routes/ProfilePage'
 
 // Every page is gated by the permission its API needs (see DixelsPermissions.cs), so what
 // someone can open follows their ABP grants — change a grant and the page follows it.
@@ -100,6 +101,8 @@ export const router = createBrowserRouter(
             </Gate>
           }
         />
+        {/* Everyone signed in has a profile: no permission beyond that. */}
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
       <Route
         element={

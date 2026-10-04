@@ -75,16 +75,24 @@
 /* The first section label sits under the logo, which already leaves room above it. */
 .brand + .grp { padding-top: 0; }
 .spacer { flex: 1; }
-.acct { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-top: 1px solid var(--border-subtle); }
+/* Who's signed in (AccountMenu): one button opening My profile / Sign out. */
+.acct {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3);
+  border: none; border-top: 1px solid var(--border-subtle); background: none; font: inherit; color: inherit;
+  text-align: start; cursor: pointer; border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.acct:hover, .acct[aria-expanded="true"] { background: var(--surface-sunken); }
+.acctwho { display: flex; flex-direction: column; min-width: 0; }
+.acctwho > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acctchev { margin-inline-start: auto; width: 16px; height: 16px; flex: none; color: var(--ink-secondary); }
 .av {
   width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--gradient-accent); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none;
 }
+/* The big one heading My profile. */
+.av.lg { width: 88px; height: 88px; font-size: 30px; }
 .nm { font-size: 13px; line-height: 18px; font-weight: 600; }
 .rl { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
-.out { margin-inline-start: auto; color: var(--ink-secondary); background: none; border: none; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
-.out svg { width: 18px; height: 18px; display: block; }
-.out:hover { background: var(--surface-sunken); color: var(--ink-primary); }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .top {
@@ -311,7 +319,7 @@ body { overflow-x: clip; }
 /* Touch screens: every small hand-styled control is at least 44x44, the size a fingertip
    can hit reliably. (shadcn buttons get the same through pointer-coarse: in button.tsx.) */
 @media (pointer: coarse) {
-  .rowbtn, .xtoggle, .xpanelbtn, .out, .segbtn, .chipset button, .menubtn, .themebtn, .topbtn {
+  .rowbtn, .xtoggle, .xpanelbtn, .segbtn, .chipset button, .menubtn, .themebtn, .topbtn {
     min-width: 44px; min-height: 44px;
   }
 }
@@ -334,5 +342,4 @@ body { overflow-x: clip; }
   [dir="rtl"] .side { transform: translateX(100%); }
   [dir="rtl"] .side.open { transform: translateX(0); }
 }
-[dir="rtl"] .out svg { transform: scaleX(-1); }
 :lang(ar), :lang(ar) * { letter-spacing: normal !important; }

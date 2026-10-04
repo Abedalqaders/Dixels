@@ -7,6 +7,8 @@ interface UseApiQueryOptions {
    * form drafts are seeded from `data` (the constraints page) must never show the previous
    * record's values while the next one loads. */
   keepPreviousData?: boolean
+  /** False holds the fetch back (it stays 'loading') — say, until there's a token to send. */
+  enabled?: boolean
 }
 
 export type ApiQueryResult<T> = (
@@ -35,6 +37,7 @@ export function useApiQuery<T>(key: QueryKey, fetcher: () => Promise<T>, options
     queryKey: key,
     queryFn: fetcher,
     placeholderData: options.keepPreviousData ? keepPreviousData : undefined,
+    enabled: options.enabled,
   })
 
   const refetch = () => void query.refetch()

@@ -8,6 +8,8 @@ export interface TextKeys {
   "Access:NothingSetUpDetail": string
   "Access:NothingSetUpTitle": string
   "Access:Unreachable": string
+  "Account:MenuLabel": string
+  "Account:MyProfile": string
   "App:DeniedFindSpaceDetail": string
   "App:DeniedFindSpaceTitle": string
   "App:DeniedFloorsDetail": string
@@ -270,6 +272,7 @@ export interface TextKeys {
   "Dixels:SpaceManagement:TimezoneChangeWithBookings": string
   "Dixels:TooManyRequests": string
   "Dixels:Users:InvalidBuildingId": string
+  "Dixels:Users:WrongCurrentPassword": string
   "Duration:HoursMinutes": string
   "Duration:Hours_one": string
   "Duration:Hours_other": string
@@ -487,6 +490,33 @@ export interface TextKeys {
   "Permission:SpaceTypes": string
   "Permission:Spaces": string
   "PermissionGroup:Dixels": string
+  "Profile:ChangePassword": string
+  "Profile:ConfirmPassword": string
+  "Profile:CurrentPassword": string
+  "Profile:CurrentPasswordRequired": string
+  "Profile:DiscardDetail": string
+  "Profile:Email": string
+  "Profile:FirstName": string
+  "Profile:LastName": string
+  "Profile:Lead": string
+  "Profile:LoadFailed": string
+  "Profile:Loading": string
+  "Profile:NewPassword": string
+  "Profile:NewPasswordRequired": string
+  "Profile:NoPasswordLead": string
+  "Profile:Password": string
+  "Profile:PasswordChanged": string
+  "Profile:PasswordLead": string
+  "Profile:PasswordsDontMatch": string
+  "Profile:PersonalInfo": string
+  "Profile:PersonalInfoLead": string
+  "Profile:Phone": string
+  "Profile:PhoneInvalid": string
+  "Profile:SaveChanges": string
+  "Profile:Saved": string
+  "Profile:SetPassword": string
+  "Profile:SignInDetailsNote": string
+  "Profile:UserName": string
   "QuickBook:AllowUpTo": string
   "QuickBook:CheckFailed": string
   "QuickBook:Checking": string

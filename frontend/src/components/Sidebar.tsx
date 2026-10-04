@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from 'react-oidc-context'
+import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { getDisplayName } from '@/features/auth/roles'
-import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { up } from '@/lib/breakpoints'
-import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, SignOutIcon, TagIcon } from './icons'
+import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, TagIcon } from './icons'
+import { AccountMenu } from './AccountMenu'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import logo from '@/assets/logo.png'
@@ -52,10 +50,7 @@ function ChevronDownIcon() {
 
 export function Sidebar() {
   const { t } = useTranslation()
-  const auth = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
-  const { isAdmin } = useAuthRole()
   // Every item follows the user's ABP grants, not their role — the same permission its page
   // (and API) needs, so taking a grant away takes the item with it.
   const canViewBookings = usePermission(Permissions.Bookings.Default)
@@ -71,7 +66,6 @@ export function Sidebar() {
   // Section labels only earn their place when there are two sections to tell apart —
   // an employee's menu stays a plain list.
   const labelSections = showBookings && showAdministration
-  const displayName = getDisplayName(auth.user)
   // Below lg (src/lib/breakpoints.ts) the sidebar is a drawer behind the menu button.
   const [mobileOpen, setMobileOpen] = useState(false)
   const closeMobile = () => setMobileOpen(false)
@@ -122,13 +116,6 @@ export function Sidebar() {
     location.pathname.startsWith('/admin/buildings/') ||
     location.pathname === '/admin/space-types'
   const spaceManagementOpen = spaceManagementManualOpen ?? isSpaceManagementRoute
-
-  const initials = displayName
-    .split(/[\s._-]+/)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 
   return (
     <>
@@ -232,23 +219,7 @@ export function Sidebar() {
       )}
 
       <div className="spacer"></div>
-      <div className="acct">
-        <span className="av">{initials}</span>
-        <span>
-          <span className="nm">{displayName}</span>
-          <br />
-          <span className="rl">{isAdmin ? t('Nav:RoleAdministrator') : t('Nav:RoleEmployee')}</span>
-        </span>
-        <button
-          type="button"
-          className="out"
-          title={t('Nav:SignOut')}
-          aria-label={t('Nav:SignOut')}
-          onClick={() => navigate('/signing-out')}
-        >
-          <SignOutIcon />
-        </button>
-      </div>
+      <AccountMenu />
       </nav>
     </>
   )
