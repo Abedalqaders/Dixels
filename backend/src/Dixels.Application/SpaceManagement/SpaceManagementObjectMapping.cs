@@ -36,6 +36,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreSource(nameof(SpaceType.IsDeleted))]
     [MapperIgnoreSource(nameof(SpaceType.DeleterId))]
     [MapperIgnoreSource(nameof(SpaceType.DeletionTime))]
+    // The names: which one is shown depends on the reader's language (ABP's
+    // IMultiLingualObjectManager), so SpaceTypesAppService fills Name and Names itself.
+    [MapperIgnoreSource(nameof(SpaceType.Translations))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Name))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Names))]
     public partial SpaceTypeDto Map(SpaceType source);
 
     [MapperIgnoreSource(nameof(SpaceType.ExtraProperties))]
@@ -47,6 +52,11 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreSource(nameof(SpaceType.IsDeleted))]
     [MapperIgnoreSource(nameof(SpaceType.DeleterId))]
     [MapperIgnoreSource(nameof(SpaceType.DeletionTime))]
+    // The names: which one is shown depends on the reader's language (ABP's
+    // IMultiLingualObjectManager), so SpaceTypesAppService fills Name and Names itself.
+    [MapperIgnoreSource(nameof(SpaceType.Translations))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Name))]
+    [MapperIgnoreTarget(nameof(SpaceTypeDto.Names))]
     public partial void Map(SpaceType source, SpaceTypeDto destination);
 
     public void BeforeMap(SpaceType source)

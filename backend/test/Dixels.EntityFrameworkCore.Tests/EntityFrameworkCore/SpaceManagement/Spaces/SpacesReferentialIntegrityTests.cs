@@ -43,7 +43,7 @@ public class SpacesReferentialIntegrityTests : DixelsApplicationTestBase<DixelsE
     }
 
     private Task<SpaceType> CreateSpaceTypeAsync() =>
-        _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Type " + Guid.NewGuid().ToString("N")[..6], IconKey.Desk));
+        _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Type " + Guid.NewGuid().ToString("N")[..6], IconKey.Desk));
 
     [Fact]
     public async Task Create_Under_An_Unknown_Floor_Is_Not_Found()

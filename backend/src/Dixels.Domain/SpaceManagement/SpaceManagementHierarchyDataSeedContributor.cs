@@ -26,7 +26,7 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<AvailabilityOverride, Guid> _overrideRepository;
-    private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
+    private readonly SpaceTypeManager _spaceTypeManager;
     private readonly IGuidGenerator _guidGenerator;
 
     public SpaceManagementHierarchyDataSeedContributor(
@@ -34,14 +34,14 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
         IRepository<Floor, Guid> floorRepository,
         IRepository<Space, Guid> spaceRepository,
         IRepository<AvailabilityOverride, Guid> overrideRepository,
-        IRepository<SpaceType, Guid> spaceTypeRepository,
+        SpaceTypeManager spaceTypeManager,
         IGuidGenerator guidGenerator)
     {
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
         _spaceRepository = spaceRepository;
         _overrideRepository = overrideRepository;
-        _spaceTypeRepository = spaceTypeRepository;
+        _spaceTypeManager = spaceTypeManager;
         _guidGenerator = guidGenerator;
     }
 
@@ -57,9 +57,10 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
         // Looked up by name rather than assumed to already exist — contributor execution
         // order across IDataSeedContributor implementations isn't guaranteed, so this can't
         // rely on SpaceTypeDataSeedContributor having run first.
-        var meetingRoom = await GetOrCreateSpaceTypeAsync("Meeting room", IconKey.MeetingRoom);
-        var focusPod = await GetOrCreateSpaceTypeAsync("Focus pod", IconKey.FocusPod);
-        var desk = await GetOrCreateSpaceTypeAsync("Desk", IconKey.Desk);
+        // The same built-in types SpaceTypeDataSeedContributor seeds (order isn't guaranteed).
+        var meetingRoom = await _spaceTypeManager.EnsureBuiltInAsync(BuiltInSpaceTypes.MeetingRoom);
+        var focusPod = await _spaceTypeManager.EnsureBuiltInAsync(BuiltInSpaceTypes.FocusPod);
+        var desk = await _spaceTypeManager.EnsureBuiltInAsync(BuiltInSpaceTypes.Desk);
 
         // Each Building gets its own OperatingDays/OperatingWindow instance rather than the
         // OperatingDays.Everyday / OperatingWindow.FullDay singletons — EF Core can't track
@@ -129,24 +130,6 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
     private static OperatingDays EverydayDays() => new(OperatingDays.AllDaysMask);
 
     private static OperatingWindow FullDayWindow() => new(isOpen24Hours: true, TimeOnly.MinValue, TimeOnly.MinValue);
-
-    private async Task<SpaceType> GetOrCreateSpaceTypeAsync(string name, IconKey iconKey)
-    {
-        var existing = await _spaceTypeRepository.FirstOrDefaultAsync(t => t.Name == name);
-        if (existing is not null)
-        {
-            return existing;
-        }
-
-        // autoSave: true — flushed immediately, not just queued for the ambient unit of
-        // work's own eventual SaveChanges. SpaceTypeDataSeedContributor seeds these same 3
-        // names too, and contributor execution order isn't guaranteed; without an immediate
-        // flush here, a plain LINQ query (real SQL, not the change tracker) from whichever
-        // contributor runs second won't see the first one's still-pending insert, and both
-        // end up trying to insert the same name — a real UNIQUE constraint violation this hit
-        // the moment both contributors ran together in one seeding pass (e.g. a fresh test DB).
-        return await _spaceTypeRepository.InsertAsync(new SpaceType(_guidGenerator.Create(), name, iconKey), autoSave: true);
-    }
 
     private async Task<Building> CreateBuildingAsync(
         string name, string buildingNumber, string timezone,

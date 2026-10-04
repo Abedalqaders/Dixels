@@ -1,12 +1,14 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace Dixels.SpaceManagement;
 
 public class CreateSpaceTypeDto
 {
+    /// <summary>One per language; the default language's is required.</summary>
     [Required]
-    [StringLength(SpaceTypeConsts.MaxNameLength)]
-    public string Name { get; set; } = string.Empty;
+    [MinLength(1)]
+    public List<SpaceTypeNameDto> Names { get; set; } = [];
 
     public IconKey IconKey { get; set; } = IconKey.Generic;
 }

@@ -181,7 +181,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = await CreateBuildingAsync();
         var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
-        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
         var space = new Space(Guid.NewGuid(), floor.Id, "Room A", spaceType.Id, capacity: 4);
         space.SetOwnOperatingHours(
@@ -217,7 +217,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = await CreateBuildingAsync();
         var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
-        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
         var space = new Space(Guid.NewGuid(), floor.Id, "Room A", spaceType.Id, capacity: 4);
         await _spaceRepository.InsertAsync(space);
@@ -241,7 +241,7 @@ public class FloorsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var building = await CreateBuildingAsync();
         var floor = await _floorsAppService.CreateAsync(new CreateFloorDto { BuildingId = building.Id, Name = "Level 1" });
-        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
         var independentlyDeletedSpace = new Space(Guid.NewGuid(), floor.Id, "Already Gone", spaceType.Id, capacity: 2);
         await _spaceRepository.InsertAsync(independentlyDeletedSpace);

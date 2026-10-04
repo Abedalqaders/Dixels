@@ -1,8 +1,11 @@
 ﻿using System;
 using Dixels.Bookings;
+using Dixels.SpaceManagement;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Uow;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
+using Volo.Abp.EntityFrameworkCore.DependencyInjection;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.PostgreSql;
@@ -46,6 +49,14 @@ public class DixelsEntityFrameworkCoreModule : AbpModule
                  * default repositories only for aggregate roots */
             options.AddDefaultRepositories(includeAllEntities: true);
             options.AddRepository<Booking, EfCoreBookingRepository>();
+            options.AddRepository<SpaceType, EfCoreSpaceTypeRepository>();
+        });
+
+        // A space type is never useful without its names: GetAsync/FindAsync (and
+        // GetListAsync(includeDetails: true)) load them.
+        Configure<AbpEntityOptions>(options =>
+        {
+            options.Entity<SpaceType>(o => o.DefaultWithDetailsFunc = q => q.Include(t => t.Translations));
         });
 
         Configure<AbpDbContextOptions>(options =>

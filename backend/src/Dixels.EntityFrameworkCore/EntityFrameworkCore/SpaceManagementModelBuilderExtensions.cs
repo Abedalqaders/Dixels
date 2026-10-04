@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Volo.Abp.EntityFrameworkCore.Modeling;
@@ -38,13 +39,27 @@ public static class SpaceManagementModelBuilderExtensions
             b.ToTable(DixelsConsts.DbTablePrefix + "SpaceTypes", DixelsConsts.DbSchema);
             b.ConfigureByConvention();
 
-            b.Property(x => x.Name).HasMaxLength(SpaceTypeConsts.MaxNameLength).IsRequired();
             b.Property(x => x.IconKey).HasConversion<string>().HasMaxLength(32).IsRequired();
 
-            // A plain unique index would still block re-using "Desk" after an old "Desk" row
-            // was soft-deleted, since the row still physically exists — the filter is what
-            // makes a soft-deleted name reusable.
-            b.HasIndex(x => x.Name).IsUnique().HasFilter("\"IsDeleted\" = false");
+            // The names, one row per language (ABP MultiLingualObjects).
+            b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceTypeId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<SpaceTypeTranslation>(b =>
+        {
+            b.ToTable(DixelsConsts.DbTablePrefix + "SpaceTypeTranslations", DixelsConsts.DbSchema);
+            b.ConfigureByConvention();
+
+            b.HasKey(x => new { x.SpaceTypeId, x.Language });
+            b.Property(x => x.Language).HasMaxLength(LocalizedNameConsts.MaxLanguageLength).IsRequired();
+            b.Property(x => x.Name).HasMaxLength(SpaceTypeConsts.MaxNameLength).IsRequired();
+            b.Property(x => x.NormalizedName).HasMaxLength(SpaceTypeConsts.MaxNameLength).IsRequired();
+
+            // No two live space types share a name in the same language ("Desk" = "desk ").
+            // A plain unique index would still block re-using "Desk" after an old "Desk" type
+            // was soft-deleted, since its rows still physically exist — the filter on the
+            // copied IsDeleted flag is what makes a deleted type's names reusable.
+            b.HasIndex(x => new { x.Language, x.NormalizedName }).IsUnique().HasFilter("\"IsDeleted\" = false");
         });
 
         builder.Entity<Building>(b =>

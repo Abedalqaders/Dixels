@@ -5774,7 +5774,7 @@ export interface components {
         };
         "Dixels.SpaceManagement.CreateSpaceTypeDto": {
             iconKey: components["schemas"]["Dixels.SpaceManagement.IconKey"];
-            name: string;
+            names: components["schemas"]["Dixels.SpaceManagement.SpaceTypeNameDto"][];
         };
         "Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             source: string;
@@ -5883,6 +5883,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
+            names: components["schemas"]["Dixels.SpaceManagement.SpaceTypeNameDto"][];
+        };
+        "Dixels.SpaceManagement.SpaceTypeNameDto": {
+            language: string;
+            name: string;
         };
         "Dixels.SpaceManagement.UpdateBuildingConstraintsDto": {
             cancelAffectedBookings: boolean;
@@ -5937,7 +5942,7 @@ export interface components {
         };
         "Dixels.SpaceManagement.UpdateSpaceTypeDto": {
             iconKey: components["schemas"]["Dixels.SpaceManagement.IconKey"];
-            name: string;
+            names: components["schemas"]["Dixels.SpaceManagement.SpaceTypeNameDto"][];
         };
         "Dixels.Users.AssignUserBuildingDto": {
             /** Format: uuid */
@@ -6043,6 +6048,7 @@ export type SchemaDixelsSpaceManagementReasonCategory = components['schemas']['D
 export type SchemaDixelsSpaceManagementResolvedConstraintsDto = components['schemas']['Dixels.SpaceManagement.ResolvedConstraintsDto'];
 export type SchemaDixelsSpaceManagementSpaceDto = components['schemas']['Dixels.SpaceManagement.SpaceDto'];
 export type SchemaDixelsSpaceManagementSpaceTypeDto = components['schemas']['Dixels.SpaceManagement.SpaceTypeDto'];
+export type SchemaDixelsSpaceManagementSpaceTypeNameDto = components['schemas']['Dixels.SpaceManagement.SpaceTypeNameDto'];
 export type SchemaDixelsSpaceManagementUpdateBuildingConstraintsDto = components['schemas']['Dixels.SpaceManagement.UpdateBuildingConstraintsDto'];
 export type SchemaDixelsSpaceManagementUpdateBuildingDto = components['schemas']['Dixels.SpaceManagement.UpdateBuildingDto'];
 export type SchemaDixelsSpaceManagementUpdateFloorConstraintsDto = components['schemas']['Dixels.SpaceManagement.UpdateFloorConstraintsDto'];

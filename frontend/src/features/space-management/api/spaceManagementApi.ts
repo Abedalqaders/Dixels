@@ -380,19 +380,32 @@ export function restoreSpace(token: string, id: string) {
 
 // ---- Space types --------------------------------------------------------
 
+/** A space type's name in one language: { language: 'ar', name: 'غرفة اجتماعات' }. */
+export interface SpaceTypeNameDto {
+  /** ABP culture name, one of the app's languages. */
+  language: string
+  name: string
+}
+
 export interface SpaceTypeDto {
   id: string
+  /** The name to show — the server picks it for the request's language (Accept-Language),
+   * falling back to the default language's. */
   name: string
   iconKey: IconKey
+  /** Every name it has, one per language — what the edit form shows. */
+  names: SpaceTypeNameDto[]
 }
 
 export interface CreateSpaceTypeDto {
-  name: string
+  /** One per language; the default language's is required. */
+  names: SpaceTypeNameDto[]
   iconKey: IconKey
 }
 
 export interface UpdateSpaceTypeDto {
-  name: string
+  /** Every name the type should have — a language left out loses its name. */
+  names: SpaceTypeNameDto[]
   iconKey: IconKey
 }
 

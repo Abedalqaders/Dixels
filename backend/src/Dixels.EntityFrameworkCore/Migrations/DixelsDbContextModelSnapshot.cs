@@ -595,18 +595,40 @@ namespace Dixels.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.HasKey("Id");
+
+                    b.ToTable("AppSpaceTypes", (string)null);
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTypeTranslation", b =>
+                {
+                    b.Property<Guid>("SpaceTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Language")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.HasKey("Id");
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
-                    b.HasIndex("Name")
+                    b.HasKey("SpaceTypeId", "Language");
+
+                    b.HasIndex("Language", "NormalizedName")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.ToTable("AppSpaceTypes", (string)null);
+                    b.ToTable("AppSpaceTypeTranslations", (string)null);
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>
@@ -2689,6 +2711,15 @@ namespace Dixels.Migrations
                     b.Navigation("Hours");
                 });
 
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceTypeTranslation", b =>
+                {
+                    b.HasOne("Dixels.SpaceManagement.SpaceType", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("SpaceTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLogAction", b =>
                 {
                     b.HasOne("Volo.Abp.AuditLogging.AuditLog", null)
@@ -2885,6 +2916,11 @@ namespace Dixels.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Dixels.SpaceManagement.SpaceType", b =>
+                {
+                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Volo.Abp.AuditLogging.AuditLog", b =>

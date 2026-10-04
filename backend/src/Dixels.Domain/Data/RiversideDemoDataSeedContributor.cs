@@ -39,7 +39,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
-    private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
+    private readonly ISpaceTypeRepository _spaceTypeRepository;
     private readonly IRepository<AvailabilityOverride, Guid> _overrideRepository;
     private readonly IdentityUserManager _userManager;
     private readonly BookingManager _bookingManager;
@@ -53,7 +53,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         IRepository<Building, Guid> buildingRepository,
         IRepository<Floor, Guid> floorRepository,
         IRepository<Space, Guid> spaceRepository,
-        IRepository<SpaceType, Guid> spaceTypeRepository,
+        ISpaceTypeRepository spaceTypeRepository,
         IRepository<AvailabilityOverride, Guid> overrideRepository,
         IdentityUserManager userManager,
         BookingManager bookingManager,
@@ -104,11 +104,18 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         Space? Room301, Space? Room302, Space? BoardRoom, Space? Pod301, Space? Pod302,
         Space? Training401, Space? Room402);
 
+    // SeedAsync runs the hierarchy seeder first, which ensures the built-in types exist.
+    private async Task<SpaceType> GetBuiltInAsync(BuiltInSpaceType builtIn)
+    {
+        return await _spaceTypeRepository.FindByNameAsync("en", builtIn.EnglishName)
+            ?? throw new InvalidOperationException($"The built-in space type '{builtIn.EnglishName}' hasn't been seeded.");
+    }
+
     private async Task<DemoSpaces> SeedSpacesAsync(Building building)
     {
-        var meetingRoom = await _spaceTypeRepository.GetAsync(t => t.Name == "Meeting room");
-        var focusPod = await _spaceTypeRepository.GetAsync(t => t.Name == "Focus pod");
-        var desk = await _spaceTypeRepository.GetAsync(t => t.Name == "Desk");
+        var meetingRoom = await GetBuiltInAsync(BuiltInSpaceTypes.MeetingRoom);
+        var focusPod = await GetBuiltInAsync(BuiltInSpaceTypes.FocusPod);
+        var desk = await GetBuiltInAsync(BuiltInSpaceTypes.Desk);
 
         var level1 = await GetOrCreateFloorAsync(building.Id, "Level 1", 1);
         var level2 = await GetOrCreateFloorAsync(building.Id, "Level 2", 2);

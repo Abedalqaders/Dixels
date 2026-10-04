@@ -13,6 +13,7 @@ using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using Volo.Abp.Localization;
 using Volo.Abp.Security.Claims;
 using Xunit;
 
@@ -339,6 +340,36 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         room.Violations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
         room.Violations[0].ShortMessage.ShouldBe("Already booked at that time");
         room.NextFreeStart.ShouldBe("12:00");
+    }
+
+    [Fact]
+    public async Task Search_names_the_space_type_in_the_readers_language()
+    {
+        var s = await CreateScenarioAsync();
+        var spaceType = await GetRequiredService<ISpaceTypesAppService>().CreateAsync(new CreateSpaceTypeDto
+        {
+            Names =
+            [
+                new() { Language = "en", Name = "Phone booth" },
+                new() { Language = "ar", Name = "كابينة هاتف" },
+            ],
+        });
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var space = await _spaceRepository.GetAsync(s.Space.Id);
+            space.SetSpaceType(spaceType.Id);
+        });
+        using var _ = ActAs(s.UserId);
+
+        using (CultureHelper.Use("ar"))
+        {
+            (await _availabilityAppService.SearchAsync(Search(10, 11))).Spaces.ShouldHaveSingleItem().Space.SpaceTypeName.ShouldBe("كابينة هاتف");
+        }
+
+        using (CultureHelper.Use("en"))
+        {
+            (await _availabilityAppService.SearchAsync(Search(10, 11))).Spaces.ShouldHaveSingleItem().Space.SpaceTypeName.ShouldBe("Phone booth");
+        }
     }
 
     [Fact]

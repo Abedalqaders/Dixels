@@ -19,6 +19,7 @@ WORKDIR /src
 
 # Restore in its own layer so a code change doesn't re-download every package.
 COPY common.props NuGet.Config ./
+COPY src/Volo.Abp.MultiLingualObjects/*.csproj src/Volo.Abp.MultiLingualObjects/
 COPY src/Dixels.Domain.Shared/*.csproj src/Dixels.Domain.Shared/
 COPY src/Dixels.Domain/*.csproj src/Dixels.Domain/
 COPY src/Dixels.Application.Contracts/*.csproj src/Dixels.Application.Contracts/

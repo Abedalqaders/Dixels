@@ -20,10 +20,20 @@ public static class DixelsDomainErrorCodes
     public const string OverrideEndsAtMustBeAfterStartsAt = Prefix + "OverrideEndsAtMustBeAfterStartsAt";
     public const string ReasonDetailTooLong = Prefix + "ReasonDetailTooLong";
     public const string SpaceTypeNameAlreadyExists = Prefix + "SpaceTypeNameAlreadyExists";
+    // The same, found by the database's unique index after two saves raced: which name it
+    // was isn't known, so the message can't quote it.
+    public const string SpaceTypeNameAlreadyExistsConcurrently = Prefix + "SpaceTypeNameAlreadyExistsConcurrently";
     public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
     public const string ParentIsDeleted = Prefix + "ParentIsDeleted";
 
     public const string InvalidBuildingId = "Dixels:Users:InvalidBuildingId";
+
+    // Names typed in several languages (space types, and later buildings, floors, spaces).
+    private const string LocalizationPrefix = "Dixels:Localization:";
+
+    public const string DefaultLanguageNameRequired = LocalizationPrefix + "DefaultLanguageNameRequired";
+    public const string UnsupportedLanguage = LocalizationPrefix + "UnsupportedLanguage";
+    public const string LanguageListedTwice = LocalizationPrefix + "LanguageListedTwice";
 
     // Booking rule violations. Each message names the rule, quotes the real limit, the level
     // that set it ({level}, read from the resolved value's provenance), and what to do next.

@@ -48,7 +48,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     }
 
     private async Task<SpaceType> CreateSpaceTypeAsync() =>
-        await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
     [Fact]
     public async Task Create_Then_Get_Defaults_To_Inherit_Everything()
@@ -78,7 +78,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var spaceType1 = await CreateSpaceTypeAsync();
-        var spaceType2 = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Meeting-ish", IconKey.MeetingRoom));
+        var spaceType2 = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Meeting-ish", IconKey.MeetingRoom));
 
         var created = await _spacesAppService.CreateAsync(new CreateSpaceDto
         {
@@ -316,7 +316,7 @@ public class SpacesAppServiceTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var floor = await CreateFloorAsync();
         var deskType = await CreateSpaceTypeAsync();
-        var meetingType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Meeting-ish", IconKey.MeetingRoom));
+        var meetingType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Meeting-ish", IconKey.MeetingRoom));
 
         var desk = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Desk 1", SpaceTypeId = deskType.Id, Capacity = 1 });
         var meetingRoom = await _spacesAppService.CreateAsync(new CreateSpaceDto { FloorId = floor.Id, Name = "Meeting Room 1", SpaceTypeId = meetingType.Id, Capacity = 8 });

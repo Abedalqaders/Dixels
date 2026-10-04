@@ -32,7 +32,7 @@ public class SpaceTypeInUseBySoftDeletedSpaceTests : DixelsApplicationTestBase<D
     [Fact]
     public async Task Delete_When_Only_A_SoftDeleted_Space_Uses_It_Still_Throws()
     {
-        var spaceType = await _spaceTypesAppService.CreateAsync(new CreateSpaceTypeDto { Name = "Booth " + Guid.NewGuid().ToString("N")[..6] });
+        var spaceType = await _spaceTypesAppService.CreateAsync(new CreateSpaceTypeDto { Names = [new() { Language = "en", Name = "Booth " + Guid.NewGuid().ToString("N")[..6] }] });
         var building = await _buildingRepository.InsertAsync(new Building(
             Guid.NewGuid(), "HQ", null, "UTC", OperatingDays.Everyday, OperatingWindow.FullDay,
             maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));

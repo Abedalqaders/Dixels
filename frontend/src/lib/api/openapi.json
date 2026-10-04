@@ -9845,14 +9845,16 @@
       "Dixels.SpaceManagement.CreateSpaceTypeDto": {
         "required": [
           "iconKey",
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.SpaceTypeNameDto"
+            }
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
@@ -10176,7 +10178,8 @@
         "required": [
           "iconKey",
           "id",
-          "name"
+          "name",
+          "names"
         ],
         "type": "object",
         "properties": {
@@ -10189,6 +10192,32 @@
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.SpaceTypeNameDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.SpaceManagement.SpaceTypeNameDto": {
+        "required": [
+          "language",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "maxLength": 10,
+            "minLength": 0,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -10393,14 +10422,16 @@
       "Dixels.SpaceManagement.UpdateSpaceTypeDto": {
         "required": [
           "iconKey",
-          "name"
+          "names"
         ],
         "type": "object",
         "properties": {
-          "name": {
-            "maxLength": 128,
-            "minLength": 0,
-            "type": "string"
+          "names": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.SpaceTypeNameDto"
+            }
           },
           "iconKey": {
             "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"

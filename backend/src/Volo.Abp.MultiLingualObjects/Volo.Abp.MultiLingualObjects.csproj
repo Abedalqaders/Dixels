@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A verbatim copy of ABP's Volo.Abp.MultiLingualObjects (framework/src/Volo.Abp.MultiLingualObjects
+    at tag 10.6.1). ABP doesn't publish it on NuGet; its docs say to copy the source. See README.md.
+  -->
+  <Import Project="..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <WarningsAsErrors>Nullable</WarningsAsErrors>
+    <RootNamespace />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Volo.Abp.Localization" Version="10.6.1" />
+  </ItemGroup>
+
+</Project>

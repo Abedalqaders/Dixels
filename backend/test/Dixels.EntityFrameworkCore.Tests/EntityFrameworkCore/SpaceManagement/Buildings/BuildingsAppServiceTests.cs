@@ -160,7 +160,7 @@ public class BuildingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFr
     public async Task Delete_Cascades_To_Floors_And_Spaces_With_A_Shared_Batch_Then_Restore_Brings_Them_Back()
     {
         var building = await _buildingsAppService.CreateAsync(NewBuildingInput());
-        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "Desk-ish", IconKey.Desk));
+        var spaceType = await _spaceTypeRepository.InsertAsync(new SpaceType(Guid.NewGuid(), "en", "Desk-ish", IconKey.Desk));
 
         var floor = new Floor(Guid.NewGuid(), building.Id, "Level 1", 1);
         await _floorRepository.InsertAsync(floor);

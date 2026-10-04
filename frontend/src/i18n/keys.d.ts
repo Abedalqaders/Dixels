@@ -24,12 +24,18 @@ export interface TextKeys {
   "Auth:SigningOutDetail": string
   "Auth:TakingYouBack": string
   "Auth:TakingYouHome": string
+  "Common:Actions": string
   "Common:BackToSignIn": string
   "Common:Cancel": string
+  "Common:Delete": string
+  "Common:Deleting": string
   "Common:Dismiss": string
+  "Common:Edit": string
   "Common:GoHome": string
   "Common:LoadingBuilding": string
   "Common:Reload": string
+  "Common:Save": string
+  "Common:Saving": string
   "Common:TryAgain": string
   "Dixels:Bookings:AlreadyStarted": string
   "Dixels:Bookings:AttendeesMustBePositive": string
@@ -81,6 +87,9 @@ export interface TextKeys {
   "Dixels:Bookings:TooLong:Short": string
   "Dixels:Bookings:TooSoon": string
   "Dixels:Bookings:TooSoon:Short": string
+  "Dixels:Localization:DefaultLanguageNameRequired": string
+  "Dixels:Localization:LanguageListedTwice": string
+  "Dixels:Localization:UnsupportedLanguage": string
   "Dixels:SpaceManagement:CapacityBelowMinAttendees": string
   "Dixels:SpaceManagement:CapacityMustBePositive": string
   "Dixels:SpaceManagement:DaysNotNarrower": string
@@ -98,18 +107,24 @@ export interface TextKeys {
   "Dixels:SpaceManagement:ReasonDetailTooLong": string
   "Dixels:SpaceManagement:SpaceTypeInUse": string
   "Dixels:SpaceManagement:SpaceTypeNameAlreadyExists": string
+  "Dixels:SpaceManagement:SpaceTypeNameAlreadyExistsConcurrently": string
   "Dixels:SpaceManagement:TimezoneChangeWithBookings": string
   "Dixels:TooManyRequests": string
   "Dixels:Users:InvalidBuildingId": string
   "Enum:ConstraintSource.Building": string
   "Enum:ConstraintSource.Floor": string
   "Enum:ConstraintSource.Space": string
+  "Enum:IconKey.Desk": string
+  "Enum:IconKey.FocusPod": string
+  "Enum:IconKey.Generic": string
+  "Enum:IconKey.MeetingRoom": string
   "Enum:ReasonCategory.Event": string
   "Enum:ReasonCategory.Holiday": string
   "Enum:ReasonCategory.Maintenance": string
   "Enum:ReasonCategory.Other": string
   "Error:BoundaryDetail": string
   "Error:BoundaryTitle": string
+  "Error:Generic": string
   "Error:Network": string
   "Error:PermissionDenied": string
   "Error:RequestFailed": string
@@ -157,9 +172,38 @@ export interface TextKeys {
   "SignIn:Subtitle": string
   "SignIn:Tagline": string
   "SignIn:Title": string
+  "SpaceTypes:Add": string
+  "SpaceTypes:AddTitle": string
+  "SpaceTypes:Added": string
+  "SpaceTypes:ColumnIcon": string
+  "SpaceTypes:ColumnIconStyle": string
+  "SpaceTypes:ColumnName": string
+  "SpaceTypes:DeleteDetail": string
+  "SpaceTypes:DeleteTitle": string
+  "SpaceTypes:Deleted": string
+  "SpaceTypes:EditTitle": string
+  "SpaceTypes:Empty": string
+  "SpaceTypes:FormDetail": string
+  "SpaceTypes:Icon": string
+  "SpaceTypes:Lead": string
+  "SpaceTypes:LoadFailed": string
+  "SpaceTypes:Loading": string
+  "SpaceTypes:NameIn": string
+  "SpaceTypes:NamePlaceholder": string
+  "SpaceTypes:NoMatch": string
+  "SpaceTypes:Search": string
+  "SpaceTypes:SearchLabel": string
+  "SpaceTypes:Title": string
+  "SpaceTypes:Updated": string
   "Timezone:Choose": string
   "Timezone:Label": string
   "Timezone:NoMatch": string
   "Timezone:Search": string
+  "Translations:Add": string
+  "Translations:Count": string
+  "Translations:Hint": string
+  "Translations:Missing": string
+  "Translations:Remove": string
+  "Translations:Title": string
   "Welcome": string
 }
