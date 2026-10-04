@@ -5,6 +5,7 @@ import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
+import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
@@ -168,11 +169,23 @@ export function SpacesListPage() {
               {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingSpaces')} />}
               {status === 'error' && <p className="treeempty">{t('Hierarchy:SpacesLoadFailed', { error: error.message })}</p>}
 
-              {status === 'success' && data.spaces.length === 0 && (
-                <p className="treeempty">
-                  {list.search || spaceTypeId ? t('Hierarchy:NoFilterMatch') : t('Hierarchy:NoSpaces')}
-                </p>
-              )}
+              {status === 'success' && data.spaces.length === 0 &&
+                (list.search || spaceTypeId ? (
+                  <NoResults onClear={() => list.clearFilters(['type'])} />
+                ) : (
+                  <EmptyState
+                    icon={ICONS['meeting-room']}
+                    title={t('Hierarchy:NoSpaces')}
+                    description={t('Hierarchy:NoSpacesHint')}
+                    action={
+                      <Can permission={Permissions.Spaces.Create}>
+                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'space', parentId: floorId, parentName: data.floor.name })}>
+                          <PlusIcon /> {t('Hierarchy:AddSpace')}
+                        </Button>
+                      </Can>
+                    }
+                  />
+                ))}
 
               {status === 'success' &&
                 data.spaces.map((space) => (

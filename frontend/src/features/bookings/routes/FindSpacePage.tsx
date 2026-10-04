@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/Toast'
+import { EmptyState, NoResults } from '@/components/EmptyState'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -325,8 +326,13 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
             )}
 
             {spaces.length === 0 && (
-              <Card className="mt-4 p-6">
-                <p>{t('FindSpace:NoMatch')}</p>
+              <Card className="mt-4 py-0">
+                {/* The date and time stay: they're what the person came to book. */}
+                {people > 1 || spaceTypeId || floorId ? (
+                  <NoResults onClear={() => writeParams({ ...values, people: 1, spaceTypeId: '' }, '')} />
+                ) : (
+                  <EmptyState icon={ICONS['meeting-room']} title={t('Hierarchy:NoSpaces')} />
+                )}
               </Card>
             )}
           </>

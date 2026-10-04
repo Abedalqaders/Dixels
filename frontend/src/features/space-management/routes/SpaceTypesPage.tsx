@@ -17,6 +17,8 @@ import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Sidebar } from '@/components/Sidebar'
+import { EmptyState, NoResults } from '@/components/EmptyState'
+import { TagIcon } from '@/components/icons'
 import { TablePagination } from '@/components/TablePagination'
 import { useToast } from '@/components/Toast'
 import { useApiQuery } from '@/hooks/useApiQuery'
@@ -131,11 +133,24 @@ export function SpaceTypesPage() {
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <TableSkeleton label={t('SpaceTypes:Loading')} columns={3} />}
               {status === 'error' && <p className="treeempty">{t('SpaceTypes:LoadFailed', { error: error.message })}</p>}
-              {status === 'success' && pageRows.length === 0 && (
-                <p className="treeempty">
-                  {list.search ? t('SpaceTypes:NoMatch') : t('SpaceTypes:Empty')}
-                </p>
-              )}
+              {status === 'success' && pageRows.length === 0 &&
+                (list.search ? (
+                  <NoResults onClear={() => list.clearFilters()} />
+                ) : (
+                  <EmptyState
+                    icon={<TagIcon />}
+                    title={t('SpaceTypes:Empty')}
+                    description={t('SpaceTypes:EmptyHint')}
+                    action={
+                      <Can permission={Permissions.SpaceTypes.Create}>
+                        <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
+                          <PlusIcon />
+                          {t('SpaceTypes:Add')}
+                        </Button>
+                      </Can>
+                    }
+                  />
+                ))}
 
               {status === 'success' && pageRows.length > 0 && (
                 <Table>

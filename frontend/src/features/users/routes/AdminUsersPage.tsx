@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Sidebar } from '@/components/Sidebar'
+import { EmptyState, NoResults } from '@/components/EmptyState'
+import { PeopleIcon } from '@/components/icons'
 import { TablePagination } from '@/components/TablePagination'
 import { useToast } from '@/components/Toast'
 import { useApiQuery } from '@/hooks/useApiQuery'
@@ -218,13 +220,12 @@ export function AdminUsersPage() {
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <TableSkeleton label={t('Users:Loading')} columns={4} />}
               {status === 'error' && <p className="treeempty">{t('Users:LoadFailed', { error: error.message })}</p>}
-              {status === 'success' && data.rows.length === 0 && (
-                <p className="treeempty">
-                  {list.search || buildingFilter || roleFilter
-                    ? t('Users:NoMatch')
-                    : t('Users:Empty')}
-                </p>
-              )}
+              {status === 'success' && data.rows.length === 0 &&
+                (list.search || buildingFilter || roleFilter ? (
+                  <NoResults onClear={() => list.clearFilters(['building', 'role'])} />
+                ) : (
+                  <EmptyState icon={<PeopleIcon />} title={t('Users:Empty')} />
+                ))}
 
               {status === 'success' && data.rows.length > 0 && (
                 <Table>
