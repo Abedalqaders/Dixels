@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Localization;
@@ -20,28 +19,48 @@ public class SpaceTypesAppService : DixelsAppService, ISpaceTypesAppService
     private readonly ISpaceTypeRepository _spaceTypeRepository;
     private readonly SpaceTypeManager _spaceTypeManager;
     private readonly IMultiLingualObjectManager _multiLingualObjectManager;
+    private readonly LocalizedNameReader _nameReader;
 
     public SpaceTypesAppService(
         ISpaceTypeRepository spaceTypeRepository,
         SpaceTypeManager spaceTypeManager,
-        IMultiLingualObjectManager multiLingualObjectManager)
+        IMultiLingualObjectManager multiLingualObjectManager,
+        LocalizedNameReader nameReader)
     {
         _spaceTypeRepository = spaceTypeRepository;
         _spaceTypeManager = spaceTypeManager;
         _multiLingualObjectManager = multiLingualObjectManager;
+        _nameReader = nameReader;
     }
 
-    public async Task<ListResultDto<SpaceTypeDto>> GetListAsync()
+    public async Task<PagedResultDto<SpaceTypeDto>> GetListAsync(GetSpaceTypesInput input)
     {
         await CheckAnyPermissionAsync(DixelsPermissions.Readers.SpaceTypes);
-        var spaceTypes = await _spaceTypeRepository.GetListAsync(includeDetails: true);
+
+        // Search matches a name in any language, ignoring case; the page is sorted by the name
+        // the reader sees (theirs, else the default language's) — all in the database, like
+        // the Buildings list.
+        var (shown, fallback) = await _nameReader.GetLanguagesAsync();
+        var queryable = await _spaceTypeRepository.WithDetailsAsync();
+
+        if (!input.Filter.IsNullOrWhiteSpace())
+        {
+            var term = NameTranslation.Normalize(input.Filter!);
+            queryable = queryable.Where(t => t.Translations.Any(n => n.NormalizedName.Contains(term)));
+        }
+
+        var totalCount = await AsyncExecuter.CountAsync(queryable);
+        var spaceTypes = await AsyncExecuter.ToListAsync(
+            queryable
+                .OrderBy(t => t.Translations.Where(n => n.Language == shown).Select(n => n.Name).FirstOrDefault()
+                    ?? t.Translations.Where(n => n.Language == fallback).Select(n => n.Name).FirstOrDefault())
+                .Skip(input.SkipCount)
+                .Take(input.MaxResultCount));
 
         // Each type's name in the reader's language (else the default language's), in one pass.
         var named = await _multiLingualObjectManager.GetBulkTranslationsAsync<SpaceType, SpaceTypeTranslation>(spaceTypes);
-        var byShownName = StringComparer.Create(CultureInfo.CurrentUICulture, ignoreCase: true);
 
-        return new ListResultDto<SpaceTypeDto>(
-            named.Select(pair => ToDto(pair.entity, pair.translation)).OrderBy(dto => dto.Name, byShownName).ToList());
+        return new PagedResultDto<SpaceTypeDto>(totalCount, named.Select(pair => ToDto(pair.entity, pair.translation)).ToList());
     }
 
     [Authorize(DixelsPermissions.SpaceTypes.Create)]

@@ -8,6 +8,7 @@ using Dixels.SpaceManagement.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Volo.Abp;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EntityFrameworkCore;
@@ -42,11 +43,21 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     private Task<SpaceTypeDto> CreateAsync(params (string Language, string Name)[] names) =>
         _spaceTypesAppService.CreateAsync(new CreateSpaceTypeDto { Names = Names(names), IconKey = IconKey.Generic });
 
+    // In names, so a search here never finds another test's types.
+    private static readonly string Tag = Guid.NewGuid().ToString("N")[..6];
+
+    /// <summary>Every type, as the space pickers ask for them.</summary>
+    private Task<PagedResultDto<SpaceTypeDto>> ListAllAsync() =>
+        _spaceTypesAppService.GetListAsync(new GetSpaceTypesInput { MaxResultCount = 1000 });
+
+    private Task<PagedResultDto<SpaceTypeDto>> SearchAsync(string filter) =>
+        _spaceTypesAppService.GetListAsync(new GetSpaceTypesInput { Filter = filter, MaxResultCount = 1000 });
+
     private async Task<SpaceTypeDto> GetListItemAsync(Guid id, string culture)
     {
         using (CultureHelper.Use(culture))
         {
-            return (await _spaceTypesAppService.GetListAsync()).Items.Single(t => t.Id == id);
+            return (await ListAllAsync()).Items.Single(t => t.Id == id);
         }
     }
 
@@ -59,7 +70,7 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
             IconKey = IconKey.FocusPod
         });
 
-        var list = await _spaceTypesAppService.GetListAsync();
+        var list = await ListAllAsync();
 
         list.Items.ShouldContain(t => t.Id == created.Id && t.Name == "Phone Booth" && t.IconKey == IconKey.FocusPod);
     }
@@ -104,13 +115,55 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
     [Fact]
     public async Task The_List_Is_Sorted_By_The_Name_Shown()
     {
-        await CreateAsync(("en", "Zz last in English"), ("ar", "أأ أول بالعربية"));
+        var zeta = await CreateAsync(("en", "Zeta booth " + Tag), ("ar", "أ كابينة " + Tag));
+        var alpha = await CreateAsync(("en", "Alpha booth " + Tag), ("ar", "ي كابينة " + Tag));
 
+        using (CultureHelper.Use("en"))
+        {
+            (await SearchAsync(Tag)).Items.Select(t => t.Id).ShouldBe(new[] { alpha.Id, zeta.Id });
+        }
+
+        // In Arabic, by the Arabic names: أ before ي.
         using (CultureHelper.Use("ar"))
         {
-            var names = (await _spaceTypesAppService.GetListAsync()).Items.Select(t => t.Name).ToList();
-            names.ShouldBe(names.OrderBy(n => n, StringComparer.Create(new System.Globalization.CultureInfo("ar"), ignoreCase: true)).ToList());
+            (await SearchAsync(Tag)).Items.Select(t => t.Id).ShouldBe(new[] { zeta.Id, alpha.Id });
         }
+    }
+
+    // ---- search and paging (in the database) ----
+
+    [Fact]
+    public async Task Search_Finds_A_Name_In_Any_Language_Ignoring_Case()
+    {
+        var booth = await CreateAsync(("en", "Search booth " + Tag), ("ar", "كابينة بحث " + Tag));
+        await CreateAsync(("en", "Quiet room " + Tag));
+
+        using (CultureHelper.Use("en"))
+        {
+            // Arabic search while reading English: matched, shown in English.
+            var byArabic = (await SearchAsync("بحث " + Tag)).Items.ShouldHaveSingleItem();
+            byArabic.Id.ShouldBe(booth.Id);
+            byArabic.Name.ShouldBe("Search booth " + Tag);
+
+            (await SearchAsync("SEARCH BOOTH " + Tag.ToUpperInvariant())).Items.ShouldHaveSingleItem().Id.ShouldBe(booth.Id);
+            (await SearchAsync("  booth " + Tag + "  ")).Items.ShouldHaveSingleItem().Id.ShouldBe(booth.Id);
+        }
+
+        (await SearchAsync("no such type")).Items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_Page_Holds_Only_Its_Rows_And_The_Total_Counts_Every_Match()
+    {
+        for (var i = 1; i <= 5; i++)
+        {
+            await CreateAsync(("en", $"Paged pod {Tag} {i}"));
+        }
+
+        var page = await _spaceTypesAppService.GetListAsync(new GetSpaceTypesInput { Filter = "paged pod " + Tag, SkipCount = 2, MaxResultCount = 2 });
+
+        page.TotalCount.ShouldBe(5);
+        page.Items.Select(t => t.Name).ShouldBe(new[] { $"Paged pod {Tag} 3", $"Paged pod {Tag} 4" });
     }
 
     // ---- what names are accepted ----
@@ -253,7 +306,7 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
 
         await _spaceTypesAppService.DeleteAsync(created.Id);
 
-        var list = await _spaceTypesAppService.GetListAsync();
+        var list = await ListAllAsync();
         list.Items.ShouldNotContain(t => t.Id == created.Id);
     }
 

@@ -17,7 +17,7 @@ import type { ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 export { ApiError } from '@/lib/api/httpClient'
 export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 
-/** Shared shape for the paged/searchable list endpoints (Buildings/Floors/Spaces).
+/** Shared shape for the paged/searchable list endpoints (Buildings/Floors/Spaces/Space types).
  * `sorting` is left out on purpose — none of the list pages expose sortable columns yet, so
  * the backend always sorts by Name and there's nothing here to pass for it. */
 export interface PagedListInput {
@@ -428,8 +428,11 @@ export interface UpdateSpaceTypeDto {
   iconKey: IconKey
 }
 
-export function getSpaceTypes(token: string) {
-  return request<ListResultDto<SpaceTypeDto>>('/api/app/space-types', token)
+/** Every space type — for pickers and icons. A company has tens, well under ABP's 1000 cap. */
+export const ALL_SPACE_TYPES = { maxResultCount: 1000 }
+
+export function getSpaceTypes(token: string, input: Omit<PagedListInput, 'includeDeleted'> = ALL_SPACE_TYPES) {
+  return request<PagedResultDto<SpaceTypeDto>>(`/api/app/space-types${query({ ...input })}`, token)
 }
 
 export function createSpaceType(token: string, input: CreateSpaceTypeDto) {
