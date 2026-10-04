@@ -109,8 +109,8 @@ public class BookingPolicyValidatorTests
 
         violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingTooLong);
         violation.Level.ShouldBe(ConstraintSource.Space);
-        violation.Data["maxDuration"].ShouldBe("2h");
-        violation.Data["requested"].ShouldBe("2h 30m");
+        violation.Data["maxDuration"].ShouldBe(TimeSpan.FromHours(2));
+        violation.Data["requested"].ShouldBe(TimeSpan.FromMinutes(150));
     }
 
     [Fact]
@@ -121,8 +121,11 @@ public class BookingPolicyValidatorTests
 
         violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingClosedDay);
         violation.Level.ShouldBe(ConstraintSource.Floor);
-        violation.Data["day"].ShouldBe("Friday");
-        violation.Data["openDays"].ShouldBe("Sun–Thu");
+        violation.Data["day"].ShouldBe(DayOfWeek.Friday);
+        ((OperatingDays)violation.Data["openDays"]).ToDayOfWeeks().ShouldBe(new[]
+        {
+            DayOfWeek.Sunday, DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+        });
     }
 
     [Fact]
@@ -131,7 +134,9 @@ public class BookingPolicyValidatorTests
         var violation = Validate(Local(2026, 9, 29, 19), Local(2026, 9, 29, 20, 30)).ShouldHaveSingleItem();
 
         violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingOutsideHours);
-        violation.Data["hours"].ShouldBe("07:00–20:00");
+        var hours = (OperatingWindow)violation.Data["hours"];
+        hours.Open.ShouldBe(new TimeOnly(7, 0));
+        hours.Close.ShouldBe(new TimeOnly(20, 0));
     }
 
     [Fact]
@@ -196,7 +201,7 @@ public class BookingPolicyValidatorTests
         var violation = Validate(Local(2026, 10, 13, 10), Local(2026, 10, 13, 11)).ShouldHaveSingleItem();
         violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingBeyondHorizon);
         violation.Level.ShouldBe(ConstraintSource.Building);
-        violation.Data["lastDate"].ShouldBe("Mon 12 Oct 2026");
+        violation.Data["lastDate"].ShouldBe(new DateOnly(2026, 10, 12));
     }
 
     [Fact]

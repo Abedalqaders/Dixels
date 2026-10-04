@@ -1,71 +1,69 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Dixels.SpaceManagement.ValueObjects;
 
 namespace Dixels.Bookings;
 
 /// <summary>
-/// Display formatting for the values quoted inside rejection messages ("at most 2h",
-/// "open Sun–Thu", "07:00–20:00"). Invariant culture and a 24-hour clock, matching the rest
-/// of the app.
+/// Dates and weekday names in the reader's language (the request's UI culture), worded the
+/// way the frontend's <c>lib/time/format.ts</c> words them: "Fri 2 Oct 2026" in English,
+/// "الجمعة 2 أكتوبر 2026" in Arabic — always the Gregorian calendar, Western digits and a
+/// 24-hour clock. English uses the invariant names, as the frontend's fixed table does (ICU's
+/// English short month for September is "Sep" or "Sept" depending on the version).
+///
+/// Rejection rules don't word their values here: a <see cref="BookingViolation"/> carries the
+/// raw values and the application layer words them when it builds the message. This is for
+/// the few messages the domain throws as text itself.
 /// </summary>
 public static class BookingFormat
 {
-    private static readonly string[] ShortDayNames = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+    private static readonly ConcurrentDictionary<string, DateTimeFormatInfo> NamesByCulture = new();
 
-    public static string Duration(int minutes)
-    {
-        var hours = minutes / 60;
-        var rest = minutes % 60;
+    public static string Weekday(DayOfWeek day) => Names().GetDayName(day);
 
-        return (hours, rest) switch
-        {
-            (0, _) => $"{rest} min",
-            (_, 0) => $"{hours}h",
-            _ => $"{hours}h {rest}m",
-        };
-    }
+    /// <summary>"Sun"; in Arabic the full name — it has no three-letter abbreviations.</summary>
+    public static string ShortWeekday(DayOfWeek day) => Names().GetAbbreviatedDayName(day);
 
-    public static string Hours(OperatingWindow window)
-    {
-        return window.IsOpen24Hours
-            ? "24 hours"
-            : $"{window.Open:HH\\:mm}–{window.Close:HH\\:mm}";
-    }
+    public static string Date(DateOnly date) => date.ToString("ddd d MMM yyyy", Names());
 
-    /// <summary>"every day", a run like "Sun–Thu", or a list like "Sun, Tue, Thu".</summary>
-    public static string Days(OperatingDays days)
-    {
-        var list = days.ToDayOfWeeks().Select(d => (int)d).ToList();
+    public static string DateTime(DateTime local) => local.ToString("ddd d MMM HH:mm", Names());
 
-        if (list.Count == 7)
-        {
-            return "every day";
-        }
-
-        if (list.Count == 0)
-        {
-            return "no days";
-        }
-
-        if (list.Count >= 3 && list[^1] - list[0] == list.Count - 1)
-        {
-            return $"{ShortDayNames[list[0]]}–{ShortDayNames[list[^1]]}";
-        }
-
-        return string.Join(", ", list.Select(d => ShortDayNames[d]));
-    }
-
-    public static string Day(DayOfWeek day) => CultureInfo.InvariantCulture.DateTimeFormat.GetDayName(day);
-
-    public static string Date(DateOnly date) => date.ToString("ddd d MMM yyyy", CultureInfo.InvariantCulture);
-
-    public static string DateTime(DateTime local) => local.ToString("ddd d MMM HH:mm", CultureInfo.InvariantCulture);
+    public static string Clock(TimeOnly time) => time.ToString("HH:mm", CultureInfo.InvariantCulture);
 
     internal static IReadOnlyDictionary<string, object> Data(params (string Key, object Value)[] pairs)
     {
         return pairs.ToDictionary(p => p.Key, p => p.Value);
+    }
+
+    private static DateTimeFormatInfo Names()
+    {
+        var culture = CultureInfo.CurrentUICulture;
+        if (culture.TwoLetterISOLanguageName is "en" or "iv")
+        {
+            return CultureInfo.InvariantCulture.DateTimeFormat;
+        }
+
+        return NamesByCulture.GetOrAdd(culture.Name, _ => Gregorian(culture));
+    }
+
+    // Some cultures default to another calendar (ar-SA to Umm al-Qura); dates in this app are
+    // Gregorian everywhere, so switch to the culture's own Gregorian names.
+    private static DateTimeFormatInfo Gregorian(CultureInfo culture)
+    {
+        var format = (DateTimeFormatInfo)culture.DateTimeFormat.Clone();
+        if (format.Calendar is not GregorianCalendar)
+        {
+            var gregorian = culture.OptionalCalendars.OfType<GregorianCalendar>()
+                .OrderBy(c => c.CalendarType == GregorianCalendarTypes.Localized ? 0 : 1)
+                .FirstOrDefault();
+            if (gregorian is not null)
+            {
+                format.Calendar = gregorian;
+            }
+        }
+
+        return format;
     }
 }
