@@ -23,6 +23,8 @@ interface MonthGridProps {
   onOpenDay: (date: IsoDate) => void
   /** A day's "+", shown on hover — books straight from the month view. Omitted when read-only. */
   onQuickBook?: (date: IsoDate) => void
+  /** Whether a day can be booked at all (open, within the booking window) — the "+" shows only then. */
+  canBookDay?: (date: IsoDate) => boolean
 }
 
 /**
@@ -30,7 +32,7 @@ interface MonthGridProps {
  * chips — title on the left, start time on the right; on a narrow one, as dots, since
  * there's no room for words and the Day view is one tap away.
  */
-export function MonthGrid({ date, items, today, compact = false, onOpenItem, onOpenDay, onQuickBook }: MonthGridProps) {
+export function MonthGrid({ date, items, today, compact = false, onOpenItem, onOpenDay, onQuickBook, canBookDay }: MonthGridProps) {
   const { t } = useTranslation()
   const { start, weeks } = monthGrid(date)
   const month = startOfMonth(date).slice(0, 7)
@@ -108,7 +110,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                 >
                   {number}
                 </button>
-                {onQuickBook && d >= today && (
+                {onQuickBook && d >= today && (canBookDay?.(d) ?? true) && (
                   <button
                     type="button"
                     className="grid size-6 flex-none place-items-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground focus-visible:opacity-100 pointer-coarse:size-9 pointer-coarse:opacity-100"

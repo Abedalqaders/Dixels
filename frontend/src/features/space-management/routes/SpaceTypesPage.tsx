@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PencilIcon, PlusIcon, SearchIcon, Trash2Icon } from 'lucide-react'
@@ -33,15 +33,14 @@ import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
 import { TableSkeleton } from '@/components/LoadingSkeletons'
-import { currentLanguage } from '@/i18n'
 import { TopBar } from '@/components/TopBar'
 
 // Space types aren't part of the Building → Floor hierarchy, so this page sits outside
 // SpaceManagementLayout — no explorer tree beside it, just the app nav.
 //
-// Search and paging run in the browser: the endpoint returns every type in one list (the
-// space pickers need them all anyway), and a company has tens of types, not thousands.
-// Page/size/search still live in the URL (useListParams), like every other admin list.
+// Search and paging run in the database, like every other admin list: a name in any language
+// matches (an admin may search in a language other than the screen's), and the page comes
+// sorted by the name shown. Page/size/search live in the URL (useListParams).
 //
 // Each row shows the name in the reader's language (the server picks it), and a muted note
 // naming the languages the type has no name in yet — those readers see the default one.
@@ -57,20 +56,18 @@ export function SpaceTypesPage() {
   const [deleting, setDeleting] = useState<SpaceTypeDto | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
 
-  const { status, data, error, isRefreshing, refetch } = useApiQuery(queryKeys.spaceTypes.list(), async () => (await getSpaceTypes(token)).items, {
-    keepPreviousData: true,
-  })
+  const { status, data, error, isRefreshing, refetch } = useApiQuery(
+    queryKeys.spaceTypes.list({ search: list.search, page: list.page, pageSize: list.pageSize }),
+    () =>
+      getSpaceTypes(token, {
+        filter: list.search || undefined,
+        skipCount: list.page * list.pageSize,
+        maxResultCount: list.pageSize,
+      }),
+    { keepPreviousData: true },
+  )
 
-  const language = currentLanguage()
-  const filtered = useMemo(() => {
-    // Any of its names matches — an admin may search in a language other than the screen's.
-    const term = list.search.toLocaleLowerCase(language)
-    return (data ?? [])
-      .filter((st) => !term || [st.name, ...st.names.map((n) => n.name)].some((n) => n.toLocaleLowerCase(language).includes(term)))
-      .sort((a, b) => a.name.localeCompare(b.name, language))
-  }, [data, list.search, language])
-
-  const pageRows = filtered.slice(list.page * list.pageSize, (list.page + 1) * list.pageSize)
+  const pageRows = data?.items ?? []
 
   function handleSaved(message: string) {
     setEditing(undefined)
@@ -134,13 +131,13 @@ export function SpaceTypesPage() {
             <CardContent className={`px-0${isRefreshing ? ' opacity-55 transition-opacity' : ''}`} aria-busy={isRefreshing}>
               {status === 'loading' && <TableSkeleton label={t('SpaceTypes:Loading')} columns={3} />}
               {status === 'error' && <p className="treeempty">{t('SpaceTypes:LoadFailed', { error: error.message })}</p>}
-              {status === 'success' && filtered.length === 0 && (
+              {status === 'success' && pageRows.length === 0 && (
                 <p className="treeempty">
                   {list.search ? t('SpaceTypes:NoMatch') : t('SpaceTypes:Empty')}
                 </p>
               )}
 
-              {status === 'success' && filtered.length > 0 && (
+              {status === 'success' && pageRows.length > 0 && (
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
@@ -189,7 +186,7 @@ export function SpaceTypesPage() {
                 <TablePagination
                   page={list.page}
                   pageSize={list.pageSize}
-                  totalCount={filtered.length}
+                  totalCount={data.totalCount}
                   onPageChange={list.setPage}
                   onPageSizeChange={list.setPageSize}
                 />

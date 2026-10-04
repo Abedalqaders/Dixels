@@ -248,7 +248,7 @@ describe('MyCalendarPage', () => {
 
   it('calls out rooms ruled out only by length and shortens the time to fit them', async () => {
     const user = userEvent.setup()
-    localStorage.setItem('dixels.bookings.lastDurationMinutes', '150') // New booking suggests 2h30
+    localStorage.setItem('dixels.bookings.lastDurationMinutes', '90') // New booking suggests 1h30
     const pod: BookableSpaceDto = { ...room, id: 's2', name: 'Focus Pod 3-02', maxDurationMinutes: { value: 60, source: 'Space' } }
     const result = (isAvailable: boolean, space: BookableSpaceDto, codes: string[]) => ({
       space,
@@ -270,8 +270,8 @@ describe('MyCalendarPage', () => {
       localStart: '',
       localEnd: '',
       spaces: [
-        result(false, room, ['Dixels:Bookings:TooLong']),
-        result(false, pod, ['Dixels:Bookings:TooLong', 'Dixels:Bookings:Overlap']),
+        result(false, pod, ['Dixels:Bookings:TooLong']),
+        result(false, room, ['Dixels:Bookings:Overlap']),
       ],
     })
     renderPage()
@@ -279,18 +279,18 @@ describe('MyCalendarPage', () => {
     await user.click(await screen.findByRole('button', { name: 'New booking' }))
     const quick = screen.getByRole('dialog', { name: 'Book a room' })
 
-    // Only Meeting Room 301 would fit if shorter; the pod is also booked, so it's grouped as booked.
-    expect(await within(quick).findByText('They allow up to 2h — this is 2h 30m.')).toBeInTheDocument()
+    // The pod would fit if shorter; Meeting Room 301 is booked, so it's grouped as booked.
+    expect(await within(quick).findByText('They allow up to 1h — this is 1h 30m.')).toBeInTheDocument()
     expect(within(quick).getByText('Shorter time limit')).toBeInTheDocument()
     expect(within(quick).getByText('Already booked')).toBeInTheDocument()
 
     const before = vi.mocked(searchAvailability).mock.lastCall![1]
-    await user.click(within(quick).getByRole('button', { name: 'Shorten to 2h' }))
+    await user.click(within(quick).getByRole('button', { name: 'Shorten to 1h' }))
 
     await waitFor(() => {
       const after = vi.mocked(searchAvailability).mock.lastCall![1]
       expect(after.localStart).toBe(before.localStart)
-      expect(new Date(after.localEnd).getTime() - new Date(after.localStart).getTime()).toBe(2 * 60 * 60 * 1000)
+      expect(new Date(after.localEnd).getTime() - new Date(after.localStart).getTime()).toBe(60 * 60 * 1000)
     })
   })
 

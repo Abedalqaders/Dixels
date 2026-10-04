@@ -20,7 +20,8 @@ public class SpaceTypesController : DixelsController, ISpaceTypesAppService
     }
 
     [HttpGet]
-    public virtual Task<ListResultDto<SpaceTypeDto>> GetListAsync() => _spaceTypesAppService.GetListAsync();
+    public virtual Task<PagedResultDto<SpaceTypeDto>> GetListAsync([FromQuery] GetSpaceTypesInput input) =>
+        _spaceTypesAppService.GetListAsync(input);
 
     [HttpPost]
     public virtual Task<SpaceTypeDto> CreateAsync([FromBody] CreateSpaceTypeDto input) =>

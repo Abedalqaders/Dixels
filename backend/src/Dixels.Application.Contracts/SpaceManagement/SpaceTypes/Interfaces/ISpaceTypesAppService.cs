@@ -7,7 +7,7 @@ namespace Dixels.SpaceManagement;
 
 public interface ISpaceTypesAppService : IApplicationService
 {
-    Task<ListResultDto<SpaceTypeDto>> GetListAsync();
+    Task<PagedResultDto<SpaceTypeDto>> GetListAsync(GetSpaceTypesInput input);
 
     Task<SpaceTypeDto> CreateAsync(CreateSpaceTypeDto input);
 

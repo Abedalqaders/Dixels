@@ -401,6 +401,75 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingInvalidTimeRange);
     }
 
+    // ---- One room's days, for the booking form ----
+
+    [Fact]
+    public async Task Space_days_give_the_open_hours_closed_days_closures_and_bookings()
+    {
+        var s = await CreateScenarioAsync();
+        var closedDay = Tomorrow.AddDays(1).DayOfWeek;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            // The room: 08:00–18:00, closed on the day after tomorrow's weekday.
+            var space = await _spaceRepository.GetAsync(s.Space.Id);
+            space.SetOwnOperatingHours(new OperatingWindow(false, new TimeOnly(8, 0), new TimeOnly(18, 0)), s.Building.Hours);
+            space.SetOwnOperatingDays(OperatingDays.FromDayOfWeeks(Enum.GetValues<DayOfWeek>().Where(d => d != closedDay)), s.Building.Days);
+
+            // The whole building closed 12:00–14:00 two days after tomorrow.
+            await GetRequiredService<IRepository<AvailabilityOverride, Guid>>().InsertAsync(new AvailabilityOverride(
+                Guid.NewGuid(), OverrideScope.Building, s.Building.Id,
+                new DateTimeOffset(Tomorrow.AddDays(2).AddHours(12), TimeSpan.Zero),
+                new DateTimeOffset(Tomorrow.AddDays(2).AddHours(14), TimeSpan.Zero),
+                OverrideEffect.Closed, ReasonCategory.Maintenance));
+        });
+        using var _ = ActAs(s.UserId);
+        await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+
+        var days = (await _availabilityAppService.GetSpaceDaysAsync(s.Space.Id, new GetSpaceDaysInput { From = Day(0), To = Day(2) })).Days;
+
+        days.Select(d => d.Date).ShouldBe(new[] { Day(0), Day(1), Day(2) });
+
+        var open = days[0].Open.ShouldHaveSingleItem();
+        (open.StartMinute, open.EndMinute).ShouldBe((8 * 60, 18 * 60));
+        var busy = days[0].Busy.ShouldHaveSingleItem();
+        (busy.StartMinute, busy.EndMinute, busy.IsMine).ShouldBe((10 * 60, 11 * 60, true));
+
+        days[1].Open.ShouldBeEmpty();
+
+        var closed = days[2].Closed.ShouldHaveSingleItem();
+        (closed.StartMinute, closed.EndMinute).ShouldBe((12 * 60, 14 * 60));
+        days[2].Busy.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Space_days_run_from_today_to_the_last_bookable_date_at_most()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var days = (await _availabilityAppService.GetSpaceDaysAsync(s.Space.Id, new GetSpaceDaysInput
+        {
+            From = today.AddDays(-5),
+            To = today.AddDays(100),
+        })).Days;
+
+        days.First().Date.ShouldBe(today);
+        days.Last().Date.ShouldBe(today.AddDays(30));
+    }
+
+    [Fact]
+    public async Task Space_days_are_refused_outside_the_employees_building()
+    {
+        var s = await CreateScenarioAsync(assign: false);
+        using var _ = ActAs(s.UserId);
+
+        var ex = await Should.ThrowAsync<BusinessException>(() =>
+            _availabilityAppService.GetSpaceDaysAsync(s.Space.Id, new GetSpaceDaysInput { From = Day(0), To = Day(1) }));
+
+        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingNotAssignedToBuilding);
+    }
+
     [Fact]
     public void The_employee_role_is_seeded_with_the_real_booking_permission_names()
     {

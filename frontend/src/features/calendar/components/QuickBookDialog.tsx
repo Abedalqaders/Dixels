@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { formatDate, fromMinutes, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
+import { formatDate, fromMinutes, nowInZone, toLocalDateTime, toMinutes } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
 import { formatDuration } from '@/features/bookings/format'
@@ -16,7 +16,8 @@ import { FromToFields } from '@/features/bookings/components/FromToFields'
 import { groupUnavailable } from '@/features/calendar/unavailableGroups'
 import { OwnClashNotice } from '@/features/bookings/components/OwnClashNotice'
 import { ApiError, searchAvailability } from '@/features/bookings/api/bookingsApi'
-import type { SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
+import type { BookableBuildingDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
+import { biggestRoom, buildingRules } from '@/features/bookings/buildingRules'
 
 export interface QuickBookWindow {
   date: IsoDate
@@ -27,10 +28,8 @@ export interface QuickBookWindow {
 interface QuickBookDialogProps {
   token: string
   window: QuickBookWindow
-  slotMinutes: number
-  today: IsoDate
-  /** The earliest minute that may be picked when the window's date is today (now + notice). */
-  firstBookableMinute: number
+  /** Its days, hours and rooms: From/To offer only times some room could take, People no more than the biggest seats. */
+  building: BookableBuildingDto
   onClose: () => void
   /** A room was picked — the page opens the full booking form for it, for this (possibly shortened) window. */
   onPick: (room: SpaceAvailabilityDto, attendees: number, window: QuickBookWindow) => void
@@ -44,13 +43,15 @@ interface QuickBookDialogProps {
  * grouped by why they can't take the time (open a group to see which rooms), and rooms
  * ruled out only by length get a one-click "Shorten to" that trims the window to fit.
  */
-export function QuickBookDialog({ token, window: picked, slotMinutes, today, firstBookableMinute, onClose, onPick }: QuickBookDialogProps) {
+export function QuickBookDialog({ token, window: picked, building, onClose, onPick }: QuickBookDialogProps) {
   const { t } = useTranslation()
   const [attendees, setAttendees] = useState(1)
   const [w, setWindow] = useState(picked)
   const people = useDebouncedValue(attendees, 250)
   const start = fromMinutes(w.start)
   const end = fromMinutes(w.end)
+  const now = nowInZone(building.timezone)
+  const maxPeople = biggestRoom(building)
 
   const results = useApiQuery(
     queryKeys.bookings.search({ date: w.date, start, end, people }),
@@ -81,8 +82,9 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
             idPrefix="qb"
             start={start}
             end={end}
-            slotMinutes={slotMinutes}
-            minStart={w.date === today ? firstBookableMinute : 0}
+            slotMinutes={building.slotMinutes}
+            minStart={w.date === now.date ? now.minutes + building.minLeadMinutes : 0}
+            rules={buildingRules(building, w.date, now)}
             onChange={(range) => setWindow({ ...w, start: toMinutes(range.start), end: toMinutes(range.end) })}
           />
         </div>
@@ -104,7 +106,14 @@ export function QuickBookDialog({ token, window: picked, slotMinutes, today, fir
             <span className="w-8 text-center font-mono tabular-nums" aria-live="polite">
               {attendees}
             </span>
-            <Button variant="outline" size="icon-sm" aria-label={t('Booking:MorePeople')} onClick={() => setAttendees((n) => n + 1)}>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label={t('Booking:MorePeople')}
+              // No room seats more than the biggest one.
+              disabled={attendees >= maxPeople}
+              onClick={() => setAttendees((n) => Math.min(maxPeople, n + 1))}
+            >
               <Plus />
             </Button>
           </div>

@@ -38,6 +38,8 @@ import type {
 } from '@/features/space-management/api/spaceManagementApi'
 import type {
   AvailabilitySearchResultDto,
+  SpaceDaysDto,
+  SpaceDayDto,
   BookableBuildingDto,
   BookableFloorDto,
   BookableSpaceDto,
@@ -92,6 +94,8 @@ void ({} satisfies Same<BookableFloorDto, S['Dixels.Bookings.BookableFloorDto']>
 void ({} satisfies Same<BookableSpaceDto, S['Dixels.Bookings.BookableSpaceDto']>)
 void ({} satisfies Same<SpaceAvailabilityDto, S['Dixels.Bookings.SpaceAvailabilityDto']>)
 void ({} satisfies Same<AvailabilitySearchResultDto, S['Dixels.Bookings.AvailabilitySearchResultDto']>)
+void ({} satisfies Same<SpaceDaysDto, S['Dixels.Bookings.SpaceDaysDto']>)
+void ({} satisfies Same<SpaceDayDto, S['Dixels.Bookings.SpaceDayDto']>)
 void ({} satisfies Same<BookingPreviewDto, S['Dixels.Bookings.BookingPreviewDto']>)
 void ({} satisfies Same<BookingViolationDto, S['Dixels.Bookings.BookingViolationDto']>)
 void ({} satisfies Same<RecurrenceDto, S['Dixels.Bookings.RecurrenceDto']>)

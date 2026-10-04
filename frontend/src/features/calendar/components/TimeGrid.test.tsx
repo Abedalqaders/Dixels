@@ -36,6 +36,7 @@ function renderGrid(day: string, onPickRange = vi.fn(), openDays = WEEK) {
       today="2026-10-01"
       nowMinute={10 * 60}
       firstBookableMinute={10 * 60 + 15}
+      lastBookableDate="2026-10-31"
       leadMinutes={15}
       slotMinutes={15}
       defaultLength={60}
@@ -98,6 +99,13 @@ describe('TimeGrid', () => {
     const { column, onPickRange } = renderGrid('2026-10-02', vi.fn(), [0, 1, 2, 3, 4])
     fireEvent.pointerDown(column, { button: 0, pointerId: 1, clientY: y(11) })
     expect(screen.getByRole('status')).toHaveTextContent('The building is closed on Fridays.')
+    expect(onPickRange).not.toHaveBeenCalled()
+  })
+
+  it('says a day past the booking window is too far ahead', () => {
+    const { column, onPickRange } = renderGrid('2026-11-01')
+    fireEvent.pointerDown(column, { button: 0, pointerId: 1, clientY: y(11) })
+    expect(screen.getByRole('status')).toHaveTextContent(/Bookable up to .*31.*Oct/)
     expect(onPickRange).not.toHaveBeenCalled()
   })
 

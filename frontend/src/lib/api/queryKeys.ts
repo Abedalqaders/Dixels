@@ -11,6 +11,7 @@ export const queryKeys = {
     all: ['bookings'] as const,
     myBuilding: () => ['bookings', 'my-building'] as const,
     search: (input: unknown) => ['bookings', 'search', input] as const,
+    spaceDays: (spaceId: string, from: string, to: string) => ['bookings', 'space-days', spaceId, from, to] as const,
     detail: (id: string | null) => ['bookings', 'detail', id] as const,
   },
   hierarchy: {
@@ -23,7 +24,7 @@ export const queryKeys = {
   },
   spaceTypes: {
     all: ['space-types'] as const,
-    list: () => ['space-types', 'list'] as const,
+    list: (params: unknown) => ['space-types', 'list', params] as const,
   },
   users: {
     all: ['users'] as const,

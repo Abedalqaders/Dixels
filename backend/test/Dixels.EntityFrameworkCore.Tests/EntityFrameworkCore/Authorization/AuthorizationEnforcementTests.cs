@@ -105,7 +105,7 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
         await ShouldAllow(() => _buildings.GetListAsync(new GetBuildingsInput()));
         await ShouldAllow(() => _floors.GetListAsync(new GetFloorsInput()));
         await ShouldAllow(() => _floors.GetAsync(Missing));
-        await ShouldAllow(() => _spaceTypes.GetListAsync()); // every space names one
+        await ShouldAllow(() => _spaceTypes.GetListAsync(new GetSpaceTypesInput())); // every space names one
         await ShouldAllow(() => _spaces.GetListAsync(new GetSpacesInput()));
 
         await ShouldRefuse(() => _floors.GetResolvedConstraintsAsync(Missing)); // a floor's own rules: Floors.Default
@@ -122,7 +122,7 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
 
         await ShouldAllow(() => _buildings.GetListAsync(new GetBuildingsInput()));
         await ShouldRefuse(() => _floors.GetListAsync(new GetFloorsInput()));
-        await ShouldRefuse(() => _spaceTypes.GetListAsync());
+        await ShouldRefuse(() => _spaceTypes.GetListAsync(new GetSpaceTypesInput()));
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
 
         await ShouldRefuse(() => _buildings.RestoreAsync(Missing));
         await ShouldRefuse(() => _floors.GetListAsync(new GetFloorsInput()));
-        await ShouldRefuse(() => _spaceTypes.GetListAsync());
+        await ShouldRefuse(() => _spaceTypes.GetListAsync(new GetSpaceTypesInput()));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
 
         await ShouldRefuse(() => _buildings.GetListAsync(new GetBuildingsInput()));
         await ShouldRefuse(() => _floors.GetListAsync(new GetFloorsInput()));
-        await ShouldRefuse(() => _spaceTypes.GetListAsync());
+        await ShouldRefuse(() => _spaceTypes.GetListAsync(new GetSpaceTypesInput()));
         await ShouldRefuse(() => _bookings.GetAsync(Missing));
         await ShouldRefuse(() => _users.GetListAsync(new GetIdentityUsersInput()));
 

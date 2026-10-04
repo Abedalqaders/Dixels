@@ -267,22 +267,7 @@ public partial class BookingManager : DomainService
                 violations = violations.Append(ownClash.Value.Violation).ToList();
             }
 
-            var open = OpenIntervals.Compute(
-                    rules.Days.Value,
-                    rules.Hours.Value,
-                    clock,
-                    date,
-                    date,
-                    overrides.Where(o => o.Effect == OverrideEffect.Open).Select(o => o.Range))
-                .Select(r => r.ClipTo(day))
-                .OfType<TimeRange>()
-                .ToList();
-
-            var closed = overrides
-                .Where(o => o.Effect == OverrideEffect.Closed)
-                .Select(o => o.Range.ClipTo(day))
-                .OfType<TimeRange>()
-                .ToList();
+            var (open, closed) = OpenAndClosedOn(rules, clock, date, day, overrides);
 
             var blockers = closed.Concat(busy.Select(b => b.Range)).ToList();
 
@@ -304,6 +289,34 @@ public partial class BookingManager : DomainService
 
         var warnings = ownClash is { Blocks: false } ? new[] { ownClash.Value.Violation } : Array.Empty<BookingViolation>();
         return new AvailabilitySearch(building, clock, startUtc, endUtc, day, results, warnings);
+    }
+
+    /// <summary>
+    /// One building-local day of a space: when it's open (its days and hours plus special
+    /// openings) and when an admin closed it, both cut to that day. Closures aren't taken out
+    /// of the open times — they're shown, and refused, as their own thing.
+    /// </summary>
+    private static (List<TimeRange> Open, List<TimeRange> Closed) OpenAndClosedOn(
+        ResolvedConstraints rules, BuildingClock clock, DateOnly date, TimeRange day, IEnumerable<OverrideWindow> overrides)
+    {
+        var open = OpenIntervals.Compute(
+                rules.Days.Value,
+                rules.Hours.Value,
+                clock,
+                date,
+                date,
+                overrides.Where(o => o.Effect == OverrideEffect.Open).Select(o => o.Range))
+            .Select(r => r.ClipTo(day))
+            .OfType<TimeRange>()
+            .ToList();
+
+        var closed = overrides
+            .Where(o => o.Effect == OverrideEffect.Closed)
+            .Select(o => o.Range.ClipTo(day))
+            .OfType<TimeRange>()
+            .ToList();
+
+        return (open, closed);
     }
 
     private async Task<BookingContext> LoadContextAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)

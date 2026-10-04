@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Volo.Abp.Application.Services;
 
@@ -10,4 +11,7 @@ public interface IAvailabilityAppService : IApplicationService
 
     /// <summary>Every space in my building checked against one window, with its day around it.</summary>
     Task<AvailabilitySearchResultDto> SearchAsync(SearchAvailabilityInput input);
+
+    /// <summary>One space's open times, closures and bookings, day by day — for the booking form.</summary>
+    Task<SpaceDaysDto> GetSpaceDaysAsync(Guid spaceId, GetSpaceDaysInput input);
 }

@@ -111,6 +111,7 @@ export interface TextKeys {
   "BookingForm:DatesCheckFailed": string
   "BookingForm:Free": string
   "BookingForm:Midnight": string
+  "BookingForm:NoFreeDays": string
   "BookingForm:NoTimesLeft": string
   "BookingForm:Now": string
   "BookingForm:OfSeats_one": string

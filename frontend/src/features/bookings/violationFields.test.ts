@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupViolations, issueText } from './violationFields'
+import { groupViolations, issueText, onlyTimeIssues } from './violationFields'
 
 const v = (code: string, message = code) => ({ code, level: null, message, shortMessage: message })
 
@@ -24,5 +24,17 @@ describe('groupViolations', () => {
     expect(issues.other.map((x) => x.message)).toEqual(['New rule.'])
     expect(issueText(issues.other)).toBe('New rule.')
     expect(issueText(issues.time)).toBeNull()
+  })
+})
+
+describe('onlyTimeIssues', () => {
+  it('is true when another time could fix every problem', () => {
+    expect(onlyTimeIssues([v('Dixels:Bookings:Overlap'), v('Dixels:Bookings:TooLong'), v('Dixels:Bookings:OwnOverlap')])).toBe(true)
+  })
+
+  it('is false when the room is the wrong size or the date too far ahead', () => {
+    expect(onlyTimeIssues([v('Dixels:Bookings:Overlap'), v('Dixels:Bookings:OverCapacity')])).toBe(false)
+    expect(onlyTimeIssues([v('Dixels:Bookings:BelowMinAttendees')])).toBe(false)
+    expect(onlyTimeIssues([v('Dixels:Bookings:BeyondHorizon')])).toBe(false)
   })
 })

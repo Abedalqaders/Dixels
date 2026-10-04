@@ -881,6 +881,7 @@
     "BookingForm:Free": "متاح",
     "BookingForm:Midnight": "{time} (منتصف الليل)",
     "BookingForm:NoTimesLeft": "لا توجد أوقات متبقية",
+    "BookingForm:NoFreeDays": "لا يوجد وقت متاح في هذه الغرفة حتى {date}.",
     "BookingForm:Now": "الآن",
     "FindSpace:NoBuilding": "لم تُعيَّن لمبنى بعد، لذلك لا يوجد ما يمكن حجزه.",
     "FindSpace:Lead_zero": "{building} · الأوقات بتوقيت {timezone} · يمكن الحجز قبل {count} يوم كحد أقصى",
