@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Sidebar } from '@/components/Sidebar'
+import { TopBar } from '@/components/TopBar'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 
@@ -9,7 +10,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="app">
       <Sidebar />
-      <div className="main">{children}</div>
+      <div className="main">
+        <TopBar />
+        {children}
+      </div>
     </div>
   )
 }

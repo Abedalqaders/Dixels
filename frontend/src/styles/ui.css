@@ -46,8 +46,9 @@
   --color-ring: var(--focus-ring);
   --color-brand: var(--focus-ring);
 
-  /* Day-bar colours for Find a space. Built from the theme's own hue (--focus-ring: purple
-     in light, teal in dark), so the timeline changes with the theme instead of a fixed green. */
+  /* Day-bar colours for Find a space. Built from the theme's own hue (--focus-ring: brand
+     purple in light, a lighter orchid in dark), so the timeline follows the theme instead of
+     a fixed green. */
   --color-slot-open: color-mix(in srgb, var(--focus-ring) 14%, var(--surface-raised));
   --color-slot-busy: color-mix(in srgb, var(--ink-secondary) 55%, var(--surface-raised));
   --color-slot-mine: var(--focus-ring);

@@ -30,6 +30,7 @@ import type { Slot } from '@/features/bookings/suggestSlot'
 import { readLastDuration } from '@/features/bookings/preferences'
 import type { DayBarPick } from '@/features/bookings/components/DayBar'
 import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/LoadingSkeletons'
+import { TopBar } from '@/components/TopBar'
 
 /**
  * Find a space answers one question: "what can I book for this time?". Pick when and for
@@ -48,11 +49,11 @@ export function FindSpacePage() {
 
   return (
     <TooltipProvider>
-      <div className="top">
+      <TopBar>
         <span className="pick">
           <span className="picklbl">{status === 'loading' ? <TextSkeleton label="Loading your building…" /> : building?.name}</span>
         </span>
-      </div>
+      </TopBar>
 
       <div className="content" data-compact-top="">
         <h1 className="pagetitle">Find a space</h1>
