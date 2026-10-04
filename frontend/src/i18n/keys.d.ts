@@ -272,6 +272,8 @@ export interface TextKeys {
   "Dixels:SpaceManagement:TimezoneChangeWithBookings": string
   "Dixels:TooManyRequests": string
   "Dixels:Users:InvalidBuildingId": string
+  "Dixels:Users:ProfilePictureNotAnImage": string
+  "Dixels:Users:ProfilePictureTooLarge": string
   "Dixels:Users:WrongCurrentPassword": string
   "Duration:HoursMinutes": string
   "Duration:Hours_one": string
@@ -491,6 +493,7 @@ export interface TextKeys {
   "Permission:Spaces": string
   "PermissionGroup:Dixels": string
   "Profile:ChangePassword": string
+  "Profile:ChangePhoto": string
   "Profile:ConfirmPassword": string
   "Profile:CurrentPassword": string
   "Profile:CurrentPasswordRequired": string
@@ -512,10 +515,16 @@ export interface TextKeys {
   "Profile:PersonalInfoLead": string
   "Profile:Phone": string
   "Profile:PhoneInvalid": string
+  "Profile:PhotoNotImage": string
+  "Profile:PhotoRemoved": string
+  "Profile:PhotoUnreadable": string
+  "Profile:PhotoUpdated": string
+  "Profile:RemovePhoto": string
   "Profile:SaveChanges": string
   "Profile:Saved": string
   "Profile:SetPassword": string
   "Profile:SignInDetailsNote": string
+  "Profile:UploadPhoto": string
   "Profile:UserName": string
   "QuickBook:AllowUpTo": string
   "QuickBook:CheckFailed": string

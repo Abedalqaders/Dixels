@@ -6,7 +6,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { getMyProfile } from '@/features/profile/api/profileApi'
 import { TestProviders } from '@/test/providers'
-import { AccountMenu, initialsOf } from './AccountMenu'
+import { AccountMenu } from './AccountMenu'
+import { initialsOf } from './UserAvatar'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 

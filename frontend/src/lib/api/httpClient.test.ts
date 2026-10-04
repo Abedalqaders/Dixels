@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, networkErrorMessage, permissionDeniedMessage, request, setTokenRefresher, setUnauthorizedHandler } from './httpClient'
+import { ApiError, networkErrorMessage, permissionDeniedMessage, request, requestBlob, setTokenRefresher, setUnauthorizedHandler } from './httpClient'
 
 const respond = (status: number) =>
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: { message: 'nope' } }), { status }))
@@ -116,5 +116,38 @@ describe('request with a token refresher (an expired token)', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2)
     expect(refresher).toHaveBeenCalledOnce()
     expect(onUnauthorized).toHaveBeenCalledOnce()
+  })
+})
+
+describe('files', () => {
+  it('reads a file the API answers with, and null for 204 (there is none)', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch')
+    fetch.mockResolvedValueOnce(new Response(new Blob(['png-bytes'], { type: 'image/png' }), { status: 200 }))
+    fetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    const picture = await requestBlob('/api/app/profile-picture', 'token')
+    expect(await picture?.text()).toBe('png-bytes')
+    expect(await requestBlob('/api/app/profile-picture', 'token')).toBeNull()
+  })
+
+  it('sends a file as form data, leaving its content type to the browser', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
+    const form = new FormData()
+    form.append('file', new Blob(['x']), 'a.jpg')
+
+    await request('/api/app/profile-picture', 'token', { method: 'PUT', body: form })
+
+    const headers = fetch.mock.calls[0][1]!.headers as Record<string, string>
+    expect(headers['Content-Type']).toBeUndefined()
+    expect(headers.Authorization).toBe('Bearer token')
+  })
+
+  it('still sends JSON as JSON', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }))
+
+    await request('/api/app/x', 'token', { method: 'POST', body: '{}' })
+
+    const headers = fetch.mock.calls[0][1]!.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
   })
 })

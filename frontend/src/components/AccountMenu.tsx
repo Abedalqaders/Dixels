@@ -7,21 +7,12 @@ import { getDisplayName } from '@/features/auth/roles'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { fullNameOf } from '@/features/profile/api/profileApi'
 import { useMyProfile } from '@/features/profile/hooks/useMyProfile'
+import { useMyPictureUrl } from '@/features/profile/hooks/useMyPicture'
 import { SignOutIcon } from './icons'
-
-/** "Sara Haddad" → "SH"; "admin" → "A". */
-export function initialsOf(name: string): string {
-  return name
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-}
+import { UserAvatar } from './UserAvatar'
 
 /**
- * Who's signed in, at the foot of the sidebar: their initials, name and role. A click opens
+ * Who's signed in, at the foot of the sidebar: their picture (or initials), name and role. A click opens
  * My profile and Sign out. The name is the saved profile's, so a change on My profile shows
  * here at once; until it has loaded, the sign-in token's stands in.
  */
@@ -31,15 +22,14 @@ export function AccountMenu() {
   const navigate = useNavigate()
   const { isAdmin } = useAuthRole()
   const { data: profile } = useMyProfile()
+  const pictureUrl = useMyPictureUrl()
   const displayName = profile ? fullNameOf(profile) : getDisplayName(auth.user)
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="acct" aria-label={t('Account:MenuLabel', { name: displayName })}>
-          <span className="av" aria-hidden>
-            {initialsOf(displayName)}
-          </span>
+          <UserAvatar name={displayName} pictureUrl={pictureUrl} />
           <span className="acctwho">
             <span className="nm">{displayName}</span>
             <span className="rl">{isAdmin ? t('Nav:RoleAdministrator') : t('Nav:RoleEmployee')}</span>

@@ -5,12 +5,20 @@ import { clearToasts } from '@/components/Toast'
 import { configureLanguages, registerTexts, setLanguage } from '@/i18n'
 import { backendLanguageFiles } from './backendLocalization'
 
-// Every page with the sidebar asks for the signed-in person's profile (its account menu).
-// No test reaches a real server: by default the answer never comes, so the menu shows the
-// sign-in token's name. A test about the profile mocks its own answer.
+// Every page with the sidebar asks for the signed-in person's profile and picture (its
+// account menu). No test reaches a real server: by default the answer never comes, so the
+// menu shows the sign-in token's name and initials. A test about the profile mocks its own.
 vi.mock('@/features/profile/api/profileApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/profile/api/profileApi')>()
-  return { ...actual, getMyProfile: vi.fn(() => new Promise(() => {})), updateMyProfile: vi.fn(), changeMyPassword: vi.fn() }
+  return {
+    ...actual,
+    getMyProfile: vi.fn(() => new Promise(() => {})),
+    getMyPicture: vi.fn(() => new Promise(() => {})),
+    updateMyProfile: vi.fn(),
+    changeMyPassword: vi.fn(),
+    setMyPicture: vi.fn(),
+    removeMyPicture: vi.fn(),
+  }
 })
 
 // The app gets its texts from the backend at startup; tests read the same backend files

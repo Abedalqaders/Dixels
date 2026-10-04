@@ -5,6 +5,8 @@ using Dixels.Bookings;
 using Dixels.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Database;
 using Volo.Abp.Emailing;
 using Volo.Abp.Timing;
 using Volo.Abp.FeatureManagement;
@@ -25,6 +27,7 @@ namespace Dixels;
     typeof(DixelsDomainSharedModule),
     typeof(AbpAuditLoggingDomainModule),
     typeof(AbpBackgroundJobsDomainModule),
+    typeof(BlobStoringDatabaseDomainModule),
     typeof(AbpFeatureManagementDomainModule),
     typeof(AbpIdentityDomainModule),
     typeof(AbpOpenIddictDomainModule),
@@ -52,6 +55,13 @@ public class DixelsDomainModule : AbpModule
         Configure<AbpMultiTenancyOptions>(options =>
         {
             options.IsEnabled = MultiTenancyConsts.IsEnabled;
+        });
+
+        // Files (profile pictures) are kept in the app's own database: nothing else to run or
+        // back up. A container can be pointed somewhere else here later without code changes.
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container => container.UseDatabase());
         });
 
         // "Bookings" section in appsettings (install-time settings, see BookingOptions).

@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { TopBar } from '@/components/TopBar'
 import { FormSkeleton } from '@/components/LoadingSkeletons'
 import { useToast } from '@/components/Toast'
-import { initialsOf } from '@/components/AccountMenu'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { fullNameOf } from '@/features/profile/api/profileApi'
@@ -13,10 +12,11 @@ import type { ProfileDto } from '@/features/profile/api/profileApi'
 import { useMyProfile } from '@/features/profile/hooks/useMyProfile'
 import { PersonalInfoCard } from '@/features/profile/components/PersonalInfoCard'
 import { PasswordCard } from '@/features/profile/components/PasswordCard'
+import { ProfilePhoto } from '@/features/profile/components/ProfilePhoto'
 
 /**
  * My profile: who you are in Dixels. Anyone signed in can open it (from the account menu at
- * the foot of the sidebar), change their own name and phone, and change their password —
+ * the foot of the sidebar), set their picture, change their own name and phone, and their password —
  * all typed straight into the page. Username and email are shown but only an admin changes them.
  */
 export function ProfilePage() {
@@ -63,9 +63,7 @@ export function ProfilePage() {
             <>
               <Card className="rounded-2xl py-0 shadow-md">
                 <CardContent className="flex items-center gap-5 p-6">
-                  <span className="av lg" aria-hidden>
-                    {initialsOf(fullNameOf(profile))}
-                  </span>
+                  <ProfilePhoto name={fullNameOf(profile)} token={token} />
                   <div className="flex min-w-0 flex-col gap-1">
                     <p className="truncate text-xl font-semibold">{fullNameOf(profile)}</p>
                     <p className="truncate text-sm text-muted-foreground">

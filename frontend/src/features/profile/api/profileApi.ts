@@ -3,7 +3,7 @@
 // so only the name and phone a person sends are saved. The password rules are ABP Identity's
 // own settings, checked on the server. Same request/ApiError plumbing as usersApi.ts.
 
-import { request } from '@/lib/api/httpClient'
+import { request, requestBlob } from '@/lib/api/httpClient'
 
 export { ApiError } from '@/lib/api/httpClient'
 
@@ -52,6 +52,22 @@ export function updateMyProfile(token: string, input: UpdateProfileDto) {
 
 export function changeMyPassword(token: string, input: ChangePasswordInput) {
   return request<void>('/api/account/my-profile/change-password', token, { method: 'POST', body: JSON.stringify(input) })
+}
+
+/** The person's picture as the server keeps it, or null when they have none. */
+export function getMyPicture(token: string) {
+  return requestBlob('/api/app/profile-picture', token)
+}
+
+/** Replaces the picture. Send it already shrunk (shrinkPicture): the server keeps up to 1 MB. */
+export function setMyPicture(token: string, picture: Blob) {
+  const form = new FormData()
+  form.append('file', picture, 'profile-picture.jpg')
+  return request<void>('/api/app/profile-picture', token, { method: 'PUT', body: form })
+}
+
+export function removeMyPicture(token: string) {
+  return request<void>('/api/app/profile-picture', token, { method: 'DELETE' })
 }
 
 /** "Sara Haddad" — or the username when no name is set. */

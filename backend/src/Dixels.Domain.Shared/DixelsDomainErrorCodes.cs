@@ -28,6 +28,8 @@ public static class DixelsDomainErrorCodes
 
     public const string InvalidBuildingId = "Dixels:Users:InvalidBuildingId";
     public const string WrongCurrentPassword = "Dixels:Users:WrongCurrentPassword";
+    public const string ProfilePictureTooLarge = "Dixels:Users:ProfilePictureTooLarge";
+    public const string ProfilePictureNotAnImage = "Dixels:Users:ProfilePictureNotAnImage";
 
     // Names typed in several languages (space types, and later buildings, floors, spaces).
     private const string LocalizationPrefix = "Dixels:Localization:";
