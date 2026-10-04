@@ -67,5 +67,10 @@ export function useListParams() {
     setShowDeleted: (value: boolean) => update({ deleted: value }),
     getFilter: (key: string) => params.get(key) ?? '',
     setFilter: (key: string, value: string) => update({ [key]: value }),
+    /** Empties the search box and the named filters at once ("Clear filters" on an empty result). */
+    clearFilters: (filterKeys: string[] = []) => {
+      setSearchInput('')
+      update({ q: null, ...Object.fromEntries(filterKeys.map((key) => [key, null])) })
+    },
   }
 }

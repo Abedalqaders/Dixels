@@ -5,6 +5,7 @@ import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
+import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
@@ -151,11 +152,23 @@ export function BuildingsListPage() {
               {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingBuildings')} />}
               {status === 'error' && <p className="treeempty">{t('Hierarchy:BuildingsLoadFailed', { error: error.message })}</p>}
 
-              {status === 'success' && data.buildings.length === 0 && (
-                <p className="treeempty">
-                  {list.search ? t('Hierarchy:NoSearchMatch') : t('Hierarchy:NoBuildings')}
-                </p>
-              )}
+              {status === 'success' && data.buildings.length === 0 &&
+                (list.search ? (
+                  <NoResults onClear={() => list.clearFilters()} />
+                ) : (
+                  <EmptyState
+                    icon={ICONS.building}
+                    title={t('Hierarchy:NoBuildings')}
+                    description={t('Hierarchy:NoBuildingsHint')}
+                    action={
+                      <Can permission={Permissions.Buildings.Create}>
+                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'building' })}>
+                          <PlusIcon /> {t('Hierarchy:AddBuilding')}
+                        </Button>
+                      </Can>
+                    }
+                  />
+                ))}
 
               {status === 'success' &&
                 data.buildings.map((building) => (

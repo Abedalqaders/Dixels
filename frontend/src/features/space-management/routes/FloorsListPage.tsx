@@ -5,6 +5,7 @@ import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
+import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS } from '@/features/space-management/components/spaceTypeIcons'
 import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
@@ -161,11 +162,23 @@ export function FloorsListPage() {
               {status === 'loading' && <TreeSkeleton label={t('Hierarchy:LoadingFloors')} />}
               {status === 'error' && <p className="treeempty">{t('Hierarchy:FloorsLoadFailed', { error: error.message })}</p>}
 
-              {status === 'success' && data.floors.length === 0 && (
-                <p className="treeempty">
-                  {list.search ? t('Hierarchy:NoSearchMatch') : t('Hierarchy:NoFloors')}
-                </p>
-              )}
+              {status === 'success' && data.floors.length === 0 &&
+                (list.search ? (
+                  <NoResults onClear={() => list.clearFilters()} />
+                ) : (
+                  <EmptyState
+                    icon={ICONS.floor}
+                    title={t('Hierarchy:NoFloors')}
+                    description={t('Hierarchy:NoFloorsHint')}
+                    action={
+                      <Can permission={Permissions.Floors.Create}>
+                        <Button variant="outline" size="sm" onClick={() => setModal({ kind: 'floor', parentId: buildingId, parentName: data.building.name })}>
+                          <PlusIcon /> {t('Hierarchy:AddFloor')}
+                        </Button>
+                      </Can>
+                    }
+                  />
+                ))}
 
               {status === 'success' &&
                 data.floors.map((floor) => (

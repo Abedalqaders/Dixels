@@ -179,6 +179,7 @@ export interface TextKeys {
   "Common:Actions": string
   "Common:BackToSignIn": string
   "Common:Cancel": string
+  "Common:ClearFilters": string
   "Common:Close": string
   "Common:Delete": string
   "Common:Deleting": string
@@ -186,6 +187,8 @@ export interface TextKeys {
   "Common:Edit": string
   "Common:GoHome": string
   "Common:LoadingBuilding": string
+  "Common:NoResults": string
+  "Common:NoResultsHint": string
   "Common:Optional": string
   "Common:Reload": string
   "Common:Save": string
@@ -310,7 +313,6 @@ export interface TextKeys {
   "FindSpace:LegendYourTime": string
   "FindSpace:LegendYours": string
   "FindSpace:NoBuilding": string
-  "FindSpace:NoMatch": string
   "FindSpace:NotAvailable_one": string
   "FindSpace:NotAvailable_other": string
   "FindSpace:NothingFree": string
@@ -410,15 +412,16 @@ export interface TextKeys {
   "Hierarchy:Name": string
   "Hierarchy:NameRequired": string
   "Hierarchy:NoBuildings": string
+  "Hierarchy:NoBuildingsHint": string
   "Hierarchy:NoBuildingsMatch": string
   "Hierarchy:NoBuildingsMatchQuery": string
   "Hierarchy:NoBuildingsYet": string
-  "Hierarchy:NoFilterMatch": string
   "Hierarchy:NoFloors": string
+  "Hierarchy:NoFloorsHint": string
   "Hierarchy:NoFloorsMatch": string
   "Hierarchy:NoFloorsYet": string
-  "Hierarchy:NoSearchMatch": string
   "Hierarchy:NoSpaces": string
+  "Hierarchy:NoSpacesHint": string
   "Hierarchy:Restore": string
   "Hierarchy:Restored": string
   "Hierarchy:Retry": string
@@ -678,13 +681,13 @@ export interface TextKeys {
   "SpaceTypes:Deleted": string
   "SpaceTypes:EditTitle": string
   "SpaceTypes:Empty": string
+  "SpaceTypes:EmptyHint": string
   "SpaceTypes:FormDetail": string
   "SpaceTypes:Icon": string
   "SpaceTypes:Lead": string
   "SpaceTypes:LoadFailed": string
   "SpaceTypes:Loading": string
   "SpaceTypes:NamePlaceholder": string
-  "SpaceTypes:NoMatch": string
   "SpaceTypes:Search": string
   "SpaceTypes:SearchLabel": string
   "SpaceTypes:Title": string
@@ -727,7 +730,6 @@ export interface TextKeys {
   "Users:LeadReadOnly": string
   "Users:LoadFailed": string
   "Users:Loading": string
-  "Users:NoMatch": string
   "Users:NotAssigned": string
   "Users:RemovedBuilding": string
   "Users:RemovedBuildingPick": string
