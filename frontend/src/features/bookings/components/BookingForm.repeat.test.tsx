@@ -4,6 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createSeries, previewBooking, previewSeries } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto, OccurrencePreviewDto, SeriesPreviewDto } from '@/features/bookings/api/bookingsApi'
+import { TestProviders } from '@/test/providers'
 import { BookingForm } from './BookingForm'
 
 vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
@@ -14,6 +15,8 @@ vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
     createBooking: vi.fn(),
     previewSeries: vi.fn(),
     createSeries: vi.fn(),
+    // The room's days stay loading: the plain time limits apply.
+    getSpaceDays: vi.fn(() => new Promise(() => {})),
   }
 })
 
@@ -86,6 +89,7 @@ function renderForm(onBooked = vi.fn()) {
       onClose={vi.fn()}
       onBooked={onBooked}
     />,
+    { wrapper: TestProviders },
   )
   return onBooked
 }

@@ -11,11 +11,15 @@ import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/viola
 import {
   addDays,
   formatDate,
+  fromMinutes,
   nowInZone,
   toLocalDateTime,
   toMinutes,
 } from '@/lib/time/buildingTime'
-import { ApiError, createBooking, createSeries } from '@/features/bookings/api/bookingsApi'
+import type { IsoDate } from '@/lib/time/buildingTime'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { queryKeys } from '@/lib/api/queryKeys'
+import { ApiError, createBooking, createSeries, getSpaceDays } from '@/features/bookings/api/bookingsApi'
 import type {
   BookableBuildingDto,
   BookableSpaceDto,
@@ -33,6 +37,8 @@ import { closingMinute, rememberDuration } from '@/features/bookings/preferences
 import { emitBookingsChanged } from '@/features/bookings/bookingEvents'
 import { suggestSlot } from '@/features/bookings/suggestSlot'
 import type { Slot } from '@/features/bookings/suggestSlot'
+import type { FreeTimeRules } from '@/features/bookings/dragRange'
+import { dayRules, fitsFreeTime, hasFreeTime, nearestFreeRange } from '@/features/bookings/freeTimes'
 import { DatePicker } from './DatePicker'
 import { FromToFields } from './FromToFields'
 import { RepeatField } from './RepeatField'
@@ -88,6 +94,47 @@ export function BookingForm({
   const lastDate = addDays(today, building.maxHorizonDays)
   const seriesLastDate = addDays(today, Math.max(building.maxSeriesHorizonDays ?? 0, building.maxHorizonDays))
   const openDays = space.days.value
+
+  // The room's days, today … the last bookable date, in one request: the date picker and
+  // both time lists then offer only free times. Until they arrive the plain limits apply —
+  // the preview checks everything either way.
+  const days = useApiQuery(queryKeys.bookings.spaceDays(space.id, today, lastDate), () => getSpaceDays(token, space.id, today, lastDate))
+  const dayByDate = useMemo(() => new Map((days.data?.days ?? []).map((d) => [d.date, d])), [days.data])
+  const minStartOn = (d: IsoDate) => (d === today ? now.minutes + building.minLeadMinutes : 0)
+  const rulesOn = (d: IsoDate): FreeTimeRules | undefined => {
+    if (days.status !== 'success') return undefined
+    const limits = { slotMinutes: slot, minStart: minStartOn(d), maxDuration: space.maxDurationMinutes.value }
+    const day = dayByDate.get(d)
+    return day ? dayRules(day, limits) : { ...limits, open: [], blockers: [] }
+  }
+  const freeOn = (d: IsoDate) => {
+    const r = rulesOn(d)
+    return !r || hasFreeTime(r)
+  }
+  const noFreeDays = days.status === 'success' && !days.data.days.some((d) => freeOn(d.date))
+
+  // When the days arrive or the date changes, a time that isn't free moves to the nearest
+  // free one (keeping the length where it fits), and a date with no free time at all to the
+  // next one that has some. Adjusted while rendering — React's way for state that follows
+  // other state — so a taken time is never shown first.
+  const [fittedFor, setFittedFor] = useState<{ data: unknown; date: IsoDate } | null>(null)
+  if (days.status === 'success' && (fittedFor?.data !== days.data || fittedFor.date !== date)) {
+    setFittedFor({ data: days.data, date })
+    const length = toMinutes(end) - toMinutes(start)
+    const current = rulesOn(date)
+    if (current && !fitsFreeTime(toMinutes(start), toMinutes(end), current)) {
+      const later = days.data.days.filter((d) => d.date > date).map((d) => d.date)
+      for (const d of [date, ...later]) {
+        const range = nearestFreeRange(d === date ? toMinutes(start) : 0, length, rulesOn(d)!)
+        if (range) {
+          setDate(d)
+          setStart(fromMinutes(range.start))
+          setEnd(fromMinutes(range.end))
+          break
+        }
+      }
+    }
+  }
 
   // A problem with the one field is said under it; the rules that need the room and the
   // time together (too long, closed, taken, too few people) are the verdict panel's job.
@@ -177,9 +224,11 @@ export function BookingForm({
         setSubmitError(err.message)
         // The server said no, so what the verdict panel showed is out of date: someone took
         // the slot (409), or an admin changed the room's rules since the preview. Re-check
-        // either way, so the panel never says "valid" next to a rejection.
+        // either way, so the panel never says "valid" next to a rejection — and reload the
+        // room's days, so the lists stop offering what's gone.
         recheck()
         recheckSeries()
+        days.refetch()
       } else {
         setSubmitError(t('Error:Generic'))
       }
@@ -234,19 +283,22 @@ export function BookingForm({
                 value={date}
                 min={today}
                 max={lastDate}
+                isDisabled={(d) => !freeOn(d)}
                 onChange={setDate}
                 errorId={dateMessage ? 'bk-date-error' : undefined}
               />
               {dateMessage && <FieldError id="bk-date-error" message={dateMessage} />}
+              {noFreeDays && <p className="text-sm text-muted-foreground">{t('BookingForm:NoFreeDays', { date: formatDate(lastDate) })}</p>}
             </div>
             <FromToFields
               idPrefix="bk"
               start={start}
               end={end}
               slotMinutes={slot}
-              minStart={date === today ? now.minutes + building.minLeadMinutes : 0}
+              minStart={minStartOn(date)}
               maxLength={space.maxDurationMinutes.value}
               latestEnd={closingMinute(space)}
+              rules={rulesOn(date)}
               errorId={timeMessage ? 'bk-time-error' : undefined}
               onChange={(range) => {
                 setStart(range.start)

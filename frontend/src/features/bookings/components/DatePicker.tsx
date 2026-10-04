@@ -14,6 +14,8 @@ interface DatePickerProps {
   /** First and last bookable dates — everything outside is disabled in the calendar. */
   min: IsoDate
   max: IsoDate
+  /** Also greys out these dates inside min…max — e.g. ones a room has no free time on. */
+  isDisabled?: (date: IsoDate) => boolean
   onChange: (date: IsoDate) => void
   /** The id of a message under the field about a problem with the date; marks the field invalid. */
   errorId?: string
@@ -31,11 +33,11 @@ function toIso(date: Date): IsoDate {
 }
 
 /** shadcn's basic date picker — a button that opens a plain month calendar (‹ › arrows),
- * limited to the booking horizon: dates outside it are disabled and the arrows stop at its
- * first and last months. Month and weekday names (and what a screen reader hears) come
+ * limited to the booking horizon: dates outside it (and any `isDisabled` says no to) are
+ * disabled and the arrows stop at its first and last months. Month and weekday names (and what a screen reader hears) come
  * from the app's own formatting, in the reader's language; the month runs right to left
  * in Arabic. */
-export function DatePicker({ id, value, min, max, onChange, errorId }: DatePickerProps) {
+export function DatePicker({ id, value, min, max, isDisabled, onChange, errorId }: DatePickerProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
 
@@ -73,7 +75,7 @@ export function DatePicker({ id, value, min, max, onChange, errorId }: DatePicke
           endMonth={toDate(max)}
           selected={toDate(value)}
           defaultMonth={toDate(value)}
-          disabled={[{ before: toDate(min) }, { after: toDate(max) }]}
+          disabled={[{ before: toDate(min) }, { after: toDate(max) }, ...(isDisabled ? [(d: Date) => isDisabled(toIso(d))] : [])]}
           onSelect={(date) => {
             if (date) {
               onChange(toIso(date))

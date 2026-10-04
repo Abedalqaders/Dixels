@@ -2,13 +2,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ApiError, createBooking, previewBooking } from '@/features/bookings/api/bookingsApi'
+import { ApiError, createBooking, getSpaceDays, previewBooking } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingPreviewDto } from '@/features/bookings/api/bookingsApi'
+import type { Slot } from '@/features/bookings/suggestSlot'
+import { addDays, nowInZone } from '@/lib/time/buildingTime'
+import { TestProviders } from '@/test/providers'
 import { BookingForm } from './BookingForm'
 
 vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
-  return { ...actual, previewBooking: vi.fn(), createBooking: vi.fn() }
+  // The room's days stay loading unless a test says otherwise: the plain time limits apply.
+  return { ...actual, previewBooking: vi.fn(), createBooking: vi.fn(), getSpaceDays: vi.fn(() => new Promise(() => {})) }
 })
 
 const space: BookableSpaceDto = {
@@ -39,18 +43,76 @@ const building: BookableBuildingDto = {
 
 const valid: BookingPreviewDto = { isValid: true, violations: [], startsAt: '', endsAt: '', timezone: 'UTC' }
 
-function renderForm(onBooked = vi.fn()) {
+function renderForm(onBooked = vi.fn(), initialSlot?: Slot) {
   render(
-    <BookingForm token="t" building={building} space={space} floorName="Level 1" onClose={vi.fn()} onBooked={onBooked} />,
+    <BookingForm token="t" building={building} space={space} floorName="Level 1" onClose={vi.fn()} onBooked={onBooked} initialSlot={initialSlot} />,
+    { wrapper: TestProviders },
   )
   return onBooked
 }
+
+const range = (start: number, end: number) => ({ startMinute: start * 60, endMinute: end * 60, isMine: false })
 
 describe('BookingForm', () => {
   beforeEach(() => {
     vi.mocked(previewBooking).mockReset()
     vi.mocked(createBooking).mockReset()
   })
+
+  it("moves a taken time to the room's next free one and lists only free times", async () => {
+    // Radix Select calls pointer-capture and scrollIntoView, which jsdom doesn't implement.
+    Element.prototype.hasPointerCapture ??= () => false
+    Element.prototype.releasePointerCapture ??= () => {}
+    Element.prototype.scrollIntoView ??= () => {}
+
+    const tomorrow = addDays(nowInZone('UTC').date, 1)
+    vi.mocked(previewBooking).mockResolvedValue(valid)
+    vi.mocked(getSpaceDays).mockResolvedValueOnce({
+      days: [{ date: tomorrow, open: [range(8, 18)], closed: [range(12, 13)], busy: [range(10, 11)] }],
+    })
+    const user = userEvent.setup()
+
+    renderForm(vi.fn(), { date: tomorrow, start: '10:00', end: '11:00' })
+
+    // 10:00–11:00 is booked: the form starts at 11:00 instead, for the same hour.
+    const from = screen.getByLabelText('From')
+    await waitFor(() => expect(from).toHaveTextContent('11:00'))
+    expect(screen.getByLabelText('To')).toHaveTextContent('12:00')
+
+    await user.click(from)
+    const offered = screen.getAllByRole('option').map((o) => o.textContent)
+    expect(offered[0]).toBe('08:00')
+    expect(offered.at(-1)).toBe('17:45')
+    expect(offered).not.toContain('10:00') // booked
+    expect(offered).not.toContain('12:30') // closed
+    expect(offered).not.toContain('18:00') // after closing
+  })
+
+  it('moves To along when From changes, keeping the length', async () => {
+    Element.prototype.hasPointerCapture ??= () => false
+    Element.prototype.releasePointerCapture ??= () => {}
+    Element.prototype.scrollIntoView ??= () => {}
+
+    const tomorrow = addDays(nowInZone('UTC').date, 1)
+    vi.mocked(previewBooking).mockResolvedValue(valid)
+    vi.mocked(getSpaceDays).mockResolvedValueOnce({
+      days: [{ date: tomorrow, open: [range(8, 18)], closed: [], busy: [range(10, 11)] }],
+    })
+    const user = userEvent.setup()
+
+    renderForm(vi.fn(), { date: tomorrow, start: '08:00', end: '09:00' })
+    const from = screen.getByLabelText('From')
+    const to = screen.getByLabelText('To')
+
+    // Once the room's day is in, its booked hour is gone from the list.
+    await user.click(from)
+    await waitFor(() => expect(screen.queryByRole('option', { name: '10:00' })).toBeNull())
+    await user.click(screen.getByRole('option', { name: '14:00' }))
+
+    // To keeps the hour: 15:00, shown in the box.
+    await waitFor(() => expect(to).toHaveTextContent('15:00'))
+    expect(from).toHaveTextContent('14:00')
+  }, 20_000)
 
   it('lists every violation from the server, the most fundamental first, and blocks booking', async () => {
     vi.mocked(previewBooking).mockResolvedValue({

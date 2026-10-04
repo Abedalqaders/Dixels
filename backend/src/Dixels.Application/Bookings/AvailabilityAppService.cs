@@ -148,13 +148,9 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
         var floorNames = await _nameReader.ShownAsync<Floor, FloorTranslation>(search.Spaces.Select(s => s.Floor));
         var spaceNames = await _nameReader.ShownAsync<Space, SpaceTranslation>(search.Spaces.Select(s => s.Space));
         var byName = StringComparer.Create(CultureInfo.CurrentUICulture, ignoreCase: true);
-        var dayStartLocal = search.LocalClock.ToLocal(search.Day.Start);
 
-        // Minutes from local midnight, so the client draws the day without timezone math.
-        int ToMinute(DateTimeOffset utc) => (int)(search.LocalClock.ToLocal(utc) - dayStartLocal).TotalMinutes;
-
-        List<DayRangeDto> ToRanges(IEnumerable<TimeRange> ranges) =>
-            ranges.Select(r => new DayRangeDto { StartMinute = ToMinute(r.Start), EndMinute = ToMinute(r.End) }).ToList();
+        int ToMinute(DateTimeOffset utc) => MinuteOf(search.LocalClock, search.Day, utc);
+        List<DayRangeDto> ToRanges(IEnumerable<TimeRange> ranges) => ToDayRanges(search.LocalClock, search.Day, ranges);
 
         string? ToHhMm(DateTimeOffset? utc)
         {
@@ -191,16 +187,46 @@ public class AvailabilityAppService : DixelsAppService, IAvailabilityAppService
                     NextFreeStart = ToHhMm(s.NextFreeStart),
                     Open = ToRanges(s.Open),
                     Closed = ToRanges(s.Closed),
-                    Busy = s.Busy
-                        .Select(b => b.Range.ClipTo(search.Day) is { } r
-                            ? new DayRangeDto { StartMinute = ToMinute(r.Start), EndMinute = ToMinute(r.End), IsMine = b.IsMine }
-                            : null)
-                        .OfType<DayRangeDto>()
-                        .ToList(),
+                    Busy = ToBusyRanges(search.LocalClock, search.Day, s.Busy),
                 })
                 .ToList(),
         };
     }
+
+    public async Task<SpaceDaysDto> GetSpaceDaysAsync(Guid spaceId, GetSpaceDaysInput input)
+    {
+        var result = await _bookingManager.GetSpaceDaysAsync(CurrentUser.GetId(), spaceId, input.From, input.To);
+
+        return new SpaceDaysDto
+        {
+            Days = result.Days
+                .Select(d => new SpaceDayDto
+                {
+                    Date = d.Date,
+                    Open = ToDayRanges(result.LocalClock, d.Day, d.Open),
+                    Closed = ToDayRanges(result.LocalClock, d.Day, d.Closed),
+                    Busy = ToBusyRanges(result.LocalClock, d.Day, d.Busy),
+                })
+                .ToList(),
+        };
+    }
+
+    // Minutes from the local midnight that starts the day, so the client draws a day without
+    // any timezone math.
+    private static int MinuteOf(BuildingClock clock, TimeRange day, DateTimeOffset utc) =>
+        (int)(clock.ToLocal(utc) - clock.ToLocal(day.Start)).TotalMinutes;
+
+    private static List<DayRangeDto> ToDayRanges(BuildingClock clock, TimeRange day, IEnumerable<TimeRange> ranges) =>
+        ranges.Select(r => new DayRangeDto { StartMinute = MinuteOf(clock, day, r.Start), EndMinute = MinuteOf(clock, day, r.End) }).ToList();
+
+    // A booking may run past the day's edges (overnight): only its part inside the day is drawn.
+    private static List<DayRangeDto> ToBusyRanges(BuildingClock clock, TimeRange day, IEnumerable<BusyRange> busy) =>
+        busy
+            .Select(b => b.Range.ClipTo(day) is { } r
+                ? new DayRangeDto { StartMinute = MinuteOf(clock, day, r.Start), EndMinute = MinuteOf(clock, day, r.End), IsMine = b.IsMine }
+                : null)
+            .OfType<DayRangeDto>()
+            .ToList();
 
     /// <summary>What a result card shows of a space type: its name in the reader's language.</summary>
     private sealed record ShownSpaceType(string Name, IconKey IconKey);

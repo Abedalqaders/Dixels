@@ -151,6 +151,18 @@ export interface AvailabilitySearchResultDto {
   spaces: SpaceAvailabilityDto[]
 }
 
+/** One day of a room: when it's open, closed by an admin, and booked. */
+export interface SpaceDayDto {
+  date: IsoDate
+  open: DayRangeDto[]
+  closed: DayRangeDto[]
+  busy: DayRangeDto[]
+}
+
+export interface SpaceDaysDto {
+  days: SpaceDayDto[]
+}
+
 export interface SearchAvailabilityInput {
   localStart: string
   localEnd: string
@@ -195,6 +207,14 @@ export function searchAvailability(token: string, input: SearchAvailabilityInput
       }),
     token,
   )
+}
+
+/**
+ * One room's days, `from` to `to` (both inclusive, building-local) — the server cuts the
+ * range to today … the last bookable date.
+ */
+export function getSpaceDays(token: string, spaceId: string, from: IsoDate, to: IsoDate): Promise<SpaceDaysDto> {
+  return request<SpaceDaysDto>(`/api/app/bookable-spaces/${spaceId}/days${query({ from, to })}`, token)
 }
 
 /**

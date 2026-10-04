@@ -420,6 +420,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/bookable-spaces/{spaceId}/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query: {
+                    From: string;
+                    To: string;
+                };
+                header?: never;
+                path: {
+                    spaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Dixels.Bookings.SpaceDaysDto"];
+                        "text/json": components["schemas"]["Dixels.Bookings.SpaceDaysDto"];
+                        "text/plain": components["schemas"]["Dixels.Bookings.SpaceDaysDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/app/bookable-spaces/my-building": {
         parameters: {
             query?: never;
@@ -3364,7 +3472,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    Filter?: string;
+                    MaxResultCount?: number;
+                    SkipCount?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -3377,9 +3489,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
-                        "text/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
-                        "text/plain": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "application/json": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/json": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/plain": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
                     };
                 };
                 /** @description Bad Request */
@@ -5687,6 +5799,16 @@ export interface components {
             space: components["schemas"]["Dixels.Bookings.BookableSpaceDto"];
             violations: components["schemas"]["Dixels.Bookings.BookingViolationDto"][];
         };
+        "Dixels.Bookings.SpaceDayDto": {
+            busy: components["schemas"]["Dixels.Bookings.DayRangeDto"][];
+            closed: components["schemas"]["Dixels.Bookings.DayRangeDto"][];
+            /** Format: date */
+            date: string;
+            open: components["schemas"]["Dixels.Bookings.DayRangeDto"][];
+        };
+        "Dixels.Bookings.SpaceDaysDto": {
+            days: components["schemas"]["Dixels.Bookings.SpaceDayDto"][];
+        };
         "Dixels.Localization.LocalizedNameDto": {
             language: string;
             name: string;
@@ -5965,9 +6087,6 @@ export interface components {
         "Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             items: components["schemas"]["Dixels.SpaceManagement.AvailabilityOverrideDto"][];
         };
-        "Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
-            items: components["schemas"]["Dixels.SpaceManagement.SpaceTypeDto"][];
-        };
         "Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.BuildingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             items: components["schemas"]["Dixels.SpaceManagement.BuildingDto"][];
             /** Format: int64 */
@@ -5980,6 +6099,11 @@ export interface components {
         };
         "Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             items: components["schemas"]["Dixels.SpaceManagement.SpaceDto"][];
+            /** Format: int64 */
+            totalCount: number;
+        };
+        "Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
+            items: components["schemas"]["Dixels.SpaceManagement.SpaceTypeDto"][];
             /** Format: int64 */
             totalCount: number;
         };
@@ -6030,6 +6154,8 @@ export type SchemaDixelsBookingsSeriesCreatedDto = components['schemas']['Dixels
 export type SchemaDixelsBookingsSeriesPreviewDto = components['schemas']['Dixels.Bookings.SeriesPreviewDto'];
 export type SchemaDixelsBookingsSeriesRequestDto = components['schemas']['Dixels.Bookings.SeriesRequestDto'];
 export type SchemaDixelsBookingsSpaceAvailabilityDto = components['schemas']['Dixels.Bookings.SpaceAvailabilityDto'];
+export type SchemaDixelsBookingsSpaceDayDto = components['schemas']['Dixels.Bookings.SpaceDayDto'];
+export type SchemaDixelsBookingsSpaceDaysDto = components['schemas']['Dixels.Bookings.SpaceDaysDto'];
 export type SchemaDixelsLocalizationLocalizedNameDto = components['schemas']['Dixels.Localization.LocalizedNameDto'];
 export type SchemaDixelsSpaceManagementAvailabilityOverrideDto = components['schemas']['Dixels.SpaceManagement.AvailabilityOverrideDto'];
 export type SchemaDixelsSpaceManagementBuildingDto = components['schemas']['Dixels.SpaceManagement.BuildingDto'];
@@ -6064,10 +6190,10 @@ export type SchemaDixelsUsersUserRolesDto = components['schemas']['Dixels.Users.
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingSummaryDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingSummaryDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsSpaceManagementAvailabilityOverrideDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
-export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsSpaceManagementSpaceTypeDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementBuildingDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.BuildingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementFloorDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.FloorDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementSpaceDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
+export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementSpaceTypeDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceTypeDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpHttpRemoteServiceErrorInfo = components['schemas']['Volo.Abp.Http.RemoteServiceErrorInfo'];
 export type SchemaVoloAbpHttpRemoteServiceErrorResponse = components['schemas']['Volo.Abp.Http.RemoteServiceErrorResponse'];
 export type SchemaVoloAbpHttpRemoteServiceValidationErrorInfo = components['schemas']['Volo.Abp.Http.RemoteServiceValidationErrorInfo'];

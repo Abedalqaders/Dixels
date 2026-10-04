@@ -35,3 +35,17 @@ public sealed record AvailabilitySearch(
     TimeRange Day,
     IReadOnlyList<SpaceAvailability> Spaces,
     IReadOnlyList<BookingViolation> Warnings);
+
+/// <summary>
+/// One building-local day of a space for the booking form: open times, admin closures and
+/// bookings — what the form needs to offer only times that can be booked.
+/// </summary>
+public sealed record SpaceDay(
+    DateOnly Date,
+    TimeRange Day,
+    IReadOnlyList<TimeRange> Open,
+    IReadOnlyList<TimeRange> Closed,
+    IReadOnlyList<BusyRange> Busy);
+
+/// <summary>A space's bookable days, from today (at the earliest) to the last date the building lets you book.</summary>
+public sealed record SpaceDays(BuildingClock LocalClock, IReadOnlyList<SpaceDay> Days);
