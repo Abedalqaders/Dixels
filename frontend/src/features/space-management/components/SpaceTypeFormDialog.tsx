@@ -13,7 +13,7 @@ import { ApiError, createSpaceType, updateSpaceType } from '@/features/space-man
 import type { IconKey, LocalizedNameDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { ICON_OPTIONS, ICONS, iconKeyToIconName } from './spaceTypeIcons'
 
-/** SpaceTypeConsts.MaxNameLength on the backend. */
+/** LocalizedNameConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
 
 /** The error codes that are about one particular name, so they show under the name field. */

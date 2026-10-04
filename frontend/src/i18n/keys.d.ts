@@ -451,7 +451,6 @@ export interface TextKeys {
   "Hierarchy:UnknownBuilding": string
   "Hierarchy:ViewConstraints": string
   "Language:Label": string
-  "LongWelcomeMessage": string
   "Menu:Home": string
   "Names:DefaultRequired": string
   "Names:HasName": string
@@ -740,5 +739,4 @@ export interface TextKeys {
   "Users:Unassigned": string
   "Users:UnassignedCancelled_one": string
   "Users:UnassignedCancelled_other": string
-  "Welcome": string
 }

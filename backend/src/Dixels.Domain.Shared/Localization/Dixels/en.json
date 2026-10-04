@@ -3,8 +3,6 @@
   "texts": {
     "AppName": "Dixels",
     "Menu:Home": "Home",
-    "Welcome": "Welcome",
-    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
 
     "Dixels:SpaceManagement:InvalidTimezone": "'{timezone}' isn't a recognized timezone.",
     "Dixels:SpaceManagement:MaxDurationMustBePositive": "The longest booking allowed must be greater than zero minutes.",

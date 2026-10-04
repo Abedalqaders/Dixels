@@ -3,8 +3,6 @@
   "texts": {
     "AppName": "Dixels",
     "Menu:Home": "الصفحة الرئيسية",
-    "Welcome": "مرحباً",
-    "LongWelcomeMessage": "مرحبا بكم في التطبيق. هذا مشروع بدء تشغيل يعتمد على إطار عمل ABP. لمزيد من المعلومات ، يرجى زيارة abp.io.",
 
     "Dixels:SpaceManagement:InvalidTimezone": "'{timezone}' ليست منطقة زمنية معروفة.",
     "Dixels:SpaceManagement:MaxDurationMustBePositive": "يجب أن تكون أطول مدة مسموح بها للحجز أكبر من صفر دقيقة.",

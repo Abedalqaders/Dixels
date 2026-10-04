@@ -288,33 +288,6 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
         await Should.ThrowAsync<EntityNotFoundException>(() => SetBuildingAsync(user.Id, Guid.NewGuid().ToString()));
     }
 
-    [Fact]
-    public async Task My_building_returns_the_assigned_one()
-    {
-        var building = await CreateBuildingAsync();
-        var user = await CreateUserAsync(building.Id);
-        using var _ = ActAs(user.Id);
-
-        var mine = await _usersAppService.GetMyBuildingAsync();
-
-        mine.ShouldNotBeNull();
-        mine.Id.ShouldBe(building.Id);
-    }
-
-    [Fact]
-    public async Task My_building_says_it_was_removed_once_the_building_is_soft_deleted()
-    {
-        var building = await CreateBuildingAsync();
-        var user = await CreateUserAsync(building.Id);
-        await WithUnitOfWorkAsync(() => _buildingRepository.DeleteAsync(building.Id));
-        using var _ = ActAs(user.Id);
-
-        // Not "not assigned": the employee is told their building was removed.
-        var mine = (await _usersAppService.GetMyBuildingAsync()).ShouldNotBeNull();
-        mine.Id.ShouldBe(building.Id);
-        mine.IsDeleted.ShouldBeTrue();
-    }
-
     // ---- Roles for the Users page (batch, not one call per row) ----
 
     [Fact]

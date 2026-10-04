@@ -227,7 +227,7 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
         stored.CancelReason.ShouldBe("Moved to another building");
         using (ActAs(s.UserId))
         {
-            (await _users.GetMyBuildingAsync()).ShouldNotBeNull().Id.ShouldBe(elsewhere.Id);
+            (await GetRequiredService<IAvailabilityAppService>().GetMyBuildingAsync()).ShouldNotBeNull().Id.ShouldBe(elsewhere.Id);
         }
     }
 
