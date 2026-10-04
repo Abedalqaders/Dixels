@@ -1,4 +1,3 @@
-using System.Globalization;
 using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Microsoft.Extensions.Localization;
@@ -9,17 +8,20 @@ namespace Dixels.Bookings;
 /// <summary>
 /// Turns a domain <see cref="BookingViolation"/> into the localized text the UI shows — the
 /// full sentence (<c>{code}</c>) and the few-words version (<c>{code}:Short</c>), with the
-/// violation's data filled into the placeholders and the level named in the user's language
+/// violation's data worded into the placeholders (<see cref="BookingValueFormatter"/>) and
+/// the level named in the user's language
 /// (<c>Enum:ConstraintSource.Space</c>). Shared by preview, create and availability search
 /// so a rule reads identically wherever it's reported.
 /// </summary>
 public class BookingViolationLocalizer : ITransientDependency
 {
     private readonly IStringLocalizer<DixelsResource> _localizer;
+    private readonly BookingValueFormatter _formatter;
 
-    public BookingViolationLocalizer(IStringLocalizer<DixelsResource> localizer)
+    public BookingViolationLocalizer(IStringLocalizer<DixelsResource> localizer, BookingValueFormatter formatter)
     {
         _localizer = localizer;
+        _formatter = formatter;
     }
 
     public BookingViolationDto ToDto(BookingViolation violation)
@@ -39,7 +41,7 @@ public class BookingViolationLocalizer : ITransientDependency
     {
         foreach (var (key, value) in violation.Data)
         {
-            template = template.Replace("{" + key + "}", System.Convert.ToString(value, CultureInfo.InvariantCulture));
+            template = template.Replace("{" + key + "}", _formatter.Format(value));
         }
 
         return violation.Level is { } level

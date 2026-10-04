@@ -309,6 +309,6 @@ public partial class BookingManager
             ConstraintSource.Building,
             BookingFormat.Data(
                 ("spaceName", spaceName),
-                ("from", BookingFormat.DateTime(clock.ToLocal(clash.StartsAt))),
-                ("until", clock.ToLocal(clash.EndsAt).ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture))));
+                ("from", clock.ToLocal(clash.StartsAt)),
+                ("until", TimeOnly.FromDateTime(clock.ToLocal(clash.EndsAt)))));
 }

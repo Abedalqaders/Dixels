@@ -91,9 +91,9 @@ public class BookingPolicyValidator : IDomainService
                 DixelsDomainErrorCodes.BookingSpaceClosed,
                 ToSource(closure.Scope),
                 BookingFormat.Data(
-                    ("from", BookingFormat.DateTime(clock.ToLocal(closure.Range.Start))),
-                    ("until", BookingFormat.DateTime(clock.ToLocal(closure.Range.End))),
-                    ("reason", closure.ReasonDetail ?? closure.Reason.ToString()))));
+                    ("from", clock.ToLocal(closure.Range.Start)),
+                    ("until", clock.ToLocal(closure.Range.End)),
+                    ("reason", closure.ReasonDetail ?? (object)closure.Reason))));
         }
     }
 
@@ -130,8 +130,8 @@ public class BookingPolicyValidator : IDomainService
                 DixelsDomainErrorCodes.BookingTooLong,
                 max.Source,
                 BookingFormat.Data(
-                    ("maxDuration", BookingFormat.Duration(max.Value)),
-                    ("requested", BookingFormat.Duration(requestedMinutes)))));
+                    ("maxDuration", TimeSpan.FromMinutes(max.Value)),
+                    ("requested", TimeSpan.FromMinutes(requestedMinutes)))));
         }
     }
 
@@ -172,15 +172,15 @@ public class BookingPolicyValidator : IDomainService
                 DixelsDomainErrorCodes.BookingClosedDay,
                 rules.Days.Source,
                 BookingFormat.Data(
-                    ("day", BookingFormat.Day(uncoveredLocal.DayOfWeek)),
-                    ("openDays", BookingFormat.Days(rules.Days.Value)))));
+                    ("day", uncoveredLocal.DayOfWeek),
+                    ("openDays", rules.Days.Value))));
         }
         else
         {
             violations.Add(new BookingViolation(
                 DixelsDomainErrorCodes.BookingOutsideHours,
                 rules.Hours.Source,
-                BookingFormat.Data(("hours", BookingFormat.Hours(rules.Hours.Value)))));
+                BookingFormat.Data(("hours", rules.Hours.Value))));
         }
     }
 
@@ -199,7 +199,7 @@ public class BookingPolicyValidator : IDomainService
                 ConstraintSource.Building,
                 BookingFormat.Data(
                     ("horizonDays", rules.MaxHorizonDays),
-                    ("lastDate", BookingFormat.Date(lastDate)))));
+                    ("lastDate", lastDate))));
         }
     }
 
