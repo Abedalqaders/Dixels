@@ -29,6 +29,7 @@ export const queryKeys = {
   profile: {
     me: () => ['profile', 'me'] as const,
     picture: () => ['profile', 'picture'] as const,
+    passwordRules: () => ['profile', 'password-rules'] as const,
   },
   users: {
     all: ['users'] as const,

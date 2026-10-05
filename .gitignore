@@ -4,6 +4,9 @@
 Logs/
 logs.txt
 
+# Uploaded files (profile pictures) the backend keeps on disk in development
+App_Data/
+
 # Node
 node_modules/
 

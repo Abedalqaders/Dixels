@@ -523,11 +523,13 @@ export interface TextKeys {
   "Profile:ChangePassword": string
   "Profile:ChangePhoto": string
   "Profile:ConfirmPassword": string
+  "Profile:ConfirmPasswordRequired": string
   "Profile:CurrentPassword": string
   "Profile:CurrentPasswordRequired": string
   "Profile:DiscardDetail": string
   "Profile:Email": string
   "Profile:FirstName": string
+  "Profile:HidePassword": string
   "Profile:LastName": string
   "Profile:Lead": string
   "Profile:LoadFailed": string
@@ -538,6 +540,8 @@ export interface TextKeys {
   "Profile:Password": string
   "Profile:PasswordChanged": string
   "Profile:PasswordLead": string
+  "Profile:PasswordNeeds": string
+  "Profile:PasswordRulesUnmet": string
   "Profile:PasswordsDontMatch": string
   "Profile:PersonalInfo": string
   "Profile:PersonalInfoLead": string
@@ -548,10 +552,26 @@ export interface TextKeys {
   "Profile:PhotoUnreadable": string
   "Profile:PhotoUpdated": string
   "Profile:RemovePhoto": string
+  "Profile:Rule:Digit": string
+  "Profile:Rule:Length": string
+  "Profile:Rule:Lowercase": string
+  "Profile:Rule:Symbol": string
+  "Profile:Rule:UniqueChars": string
+  "Profile:Rule:Uppercase": string
+  "Profile:RuleMet": string
+  "Profile:RuleNotMet": string
   "Profile:SaveChanges": string
   "Profile:Saved": string
+  "Profile:Sections": string
   "Profile:SetPassword": string
+  "Profile:ShowPassword": string
   "Profile:SignInDetailsNote": string
+  "Profile:Strength:Fair": string
+  "Profile:Strength:Good": string
+  "Profile:Strength:Strong": string
+  "Profile:Strength:Weak": string
+  "Profile:TabProfile": string
+  "Profile:TabSecurity": string
   "Profile:UploadPhoto": string
   "Profile:UserName": string
   "QuickBook:AllowUpTo": string

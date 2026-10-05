@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -6,6 +8,7 @@ import { TopBar } from '@/components/TopBar'
 import { FormSkeleton } from '@/components/LoadingSkeletons'
 import { useToast } from '@/components/Toast'
 import { useAuthRole } from '@/features/auth/hooks/useAuthRole'
+import { cn } from '@/lib/utils'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { fullNameOf } from '@/features/profile/api/profileApi'
 import type { ProfileDto } from '@/features/profile/api/profileApi'
@@ -14,12 +17,15 @@ import { PersonalInfoCard } from '@/features/profile/components/PersonalInfoCard
 import { PasswordCard } from '@/features/profile/components/PasswordCard'
 import { ProfilePhoto } from '@/features/profile/components/ProfilePhoto'
 
+export type ProfileSectionName = 'profile' | 'security'
+
 /**
  * My profile: who you are in Dixels. Anyone signed in can open it (from the account menu at
- * the foot of the sidebar), set their picture, change their own name and phone, and their password —
- * all typed straight into the page. Username and email are shown but only an admin changes them.
+ * the foot of the sidebar). Two tabs under the picture, each its own address so it can be
+ * linked to: Profile (/profile) for the picture, name and phone — username and email are
+ * shown but only an admin changes them — and Security (/profile/security) for the password.
  */
-export function ProfilePage() {
+export function ProfilePage({ section }: { section: ProfileSectionName }) {
   const { t } = useTranslation()
   const auth = useAuth()
   const token = auth.user?.access_token ?? ''
@@ -48,7 +54,13 @@ export function ProfilePage() {
 
   return (
     <>
-      <TopBar crumbs={[{ label: t('Account:MyProfile') }]} />
+      <TopBar
+        crumbs={
+          section === 'security'
+            ? [{ label: t('Account:MyProfile'), to: '/profile' }, { label: t('Profile:TabSecurity') }]
+            : [{ label: t('Account:MyProfile') }]
+        }
+      />
       <div className="content">
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
           <div>
@@ -76,13 +88,39 @@ export function ProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Keyed by the stamp: after a save or a reload, the boxes start from what's stored. */}
-              <PersonalInfoCard key={profile.concurrencyStamp} profile={profile} token={token} onSaved={handleSaved} onError={handleError} />
-              <PasswordCard hasPassword={profile.hasPassword} token={token} onChanged={handlePasswordChanged} />
+              <nav aria-label={t('Profile:Sections')} className="flex gap-1 border-b border-border">
+                <SectionTab to="/profile">{t('Profile:TabProfile')}</SectionTab>
+                <SectionTab to="/profile/security">{t('Profile:TabSecurity')}</SectionTab>
+              </nav>
+
+              {section === 'profile' ? (
+                // Keyed by the stamp: after a save or a reload, the boxes start from what's stored.
+                <PersonalInfoCard key={profile.concurrencyStamp} profile={profile} token={token} onSaved={handleSaved} onError={handleError} />
+              ) : (
+                <PasswordCard hasPassword={profile.hasPassword} token={token} onChanged={handlePasswordChanged} />
+              )}
             </>
           )}
         </div>
       </div>
     </>
+  )
+}
+
+/** One tab: a link, underlined in the brand colour while it's the page showing (aria-current). */
+function SectionTab({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      end
+      className={({ isActive }) =>
+        cn(
+          '-mb-px border-b-2 px-4 py-2.5 text-[15px] font-medium transition-colors',
+          isActive ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground',
+        )
+      }
+    >
+      {children}
+    </NavLink>
   )
 }

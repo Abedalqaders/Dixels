@@ -77,9 +77,12 @@ services:
       AuthServer__CertificatePassword: ${OPENIDDICT_CERT_PASSWORD:?set OPENIDDICT_CERT_PASSWORD in .env}
       ForwardedHeaders__Enabled: "true"
       DataProtection__KeysPath: /keys
+      BlobStoring__FileSystem__BasePath: /blobs
     volumes:
       - ./certs:/certs:ro
       - dataprotection:/keys
+      # Uploaded files (profile pictures). Back this volume up along with the database.
+      - blobs:/blobs
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -101,3 +104,4 @@ services:
 volumes:
   pgdata:
   dataprotection:
+  blobs:

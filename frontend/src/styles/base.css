@@ -364,6 +364,10 @@ select.ctrl { appearance: none; cursor: pointer; }
    page alike, so it lives here rather than in login.css. */
 .chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
 
+/* Edge and old IE draw their own eye (and clear) button in password boxes; ours
+   (PasswordInput) is the one to use, so theirs would only be a second eye. */
+input::-ms-reveal, input::-ms-clear { display: none; }
+
 /* Last guard against sideways scrolling on a phone: an element that is still too wide is
    clipped instead of widening the page. clip (not hidden) keeps position: sticky working. */
 body { overflow-x: clip; }

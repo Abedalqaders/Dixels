@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Dixels.Bookings;
 using Dixels.Emails;
@@ -6,7 +7,7 @@ using Dixels.MultiTenancy;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.BlobStoring;
-using Volo.Abp.BlobStoring.Database;
+using Volo.Abp.BlobStoring.FileSystem;
 using Volo.Abp.Emailing;
 using Volo.Abp.Timing;
 using Volo.Abp.FeatureManagement;
@@ -29,7 +30,7 @@ namespace Dixels;
     typeof(DixelsDomainSharedModule),
     typeof(AbpAuditLoggingDomainModule),
     typeof(AbpBackgroundJobsDomainModule),
-    typeof(BlobStoringDatabaseDomainModule),
+    typeof(AbpBlobStoringFileSystemModule),
     typeof(AbpFeatureManagementDomainModule),
     typeof(AbpIdentityDomainModule),
     typeof(AbpOpenIddictDomainModule),
@@ -62,11 +63,19 @@ public class DixelsDomainModule : AbpModule
             options.IsEnabled = MultiTenancyConsts.IsEnabled;
         });
 
-        // Files (profile pictures) are kept in the app's own database: nothing else to run or
-        // back up. A container can be pointed somewhere else here later without code changes.
+        // Files (profile pictures) are kept as files under BlobStoring:FileSystem:BasePath, e.g.
+        // <BasePath>/host/profile-pictures/<user id>. In Docker that folder must be a volume, or
+        // a rebuild loses them. Without the setting: App_Data/blobs next to where the app runs.
+        var blobsPath = context.Services.GetConfiguration()["BlobStoring:FileSystem:BasePath"];
+        if (string.IsNullOrWhiteSpace(blobsPath))
+        {
+            blobsPath = Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "blobs");
+        }
+
         Configure<AbpBlobStoringOptions>(options =>
         {
-            options.Containers.ConfigureDefault(container => container.UseDatabase());
+            options.Containers.ConfigureDefault(container =>
+                container.UseFileSystem(fileSystem => fileSystem.BasePath = blobsPath));
         });
 
         // "Bookings" section in appsettings (install-time settings, see BookingOptions).

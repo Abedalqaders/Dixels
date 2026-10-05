@@ -130,6 +130,12 @@ describe('files', () => {
     expect(await requestBlob('/api/app/profile-picture', 'token')).toBeNull()
   })
 
+  it('reads an empty file as no file', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Blob([]), { status: 200 }))
+
+    expect(await requestBlob('/api/app/profile-picture', 'token')).toBeNull()
+  })
+
   it('sends a file as form data, leaving its content type to the browser', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }))
     const form = new FormData()
