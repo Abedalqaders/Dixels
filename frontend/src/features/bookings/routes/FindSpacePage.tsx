@@ -54,7 +54,7 @@ export function FindSpacePage() {
 
   return (
     <TooltipProvider>
-      <TopBar>
+      <TopBar crumbs={[{ label: t('Nav:Bookings') }, { label: t('Nav:FindSpace') }]}>
         <span className="pick">
           <span className="picklbl">{status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}</span>
         </span>

@@ -15,6 +15,7 @@ import { landingFor } from '@/features/auth/landing'
 import { Permissions as P } from '@/features/auth/permissions/permissionNames'
 import { satisfies } from '@/features/auth/permissions/usePermission'
 import { granted, WithPermissions } from '@/test/permissions'
+import { TestProviders } from '@/test/providers'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 
@@ -81,11 +82,13 @@ function renderSidebar(names: string[]) {
     typeof useAuth
   >)
   return render(
-    <WithPermissions value={granted(...names)}>
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
-    </WithPermissions>,
+    <TestProviders>
+      <WithPermissions value={granted(...names)}>
+        <MemoryRouter>
+          <Sidebar />
+        </MemoryRouter>
+      </WithPermissions>
+    </TestProviders>,
   )
 }
 

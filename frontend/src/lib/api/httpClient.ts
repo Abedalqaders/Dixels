@@ -95,16 +95,35 @@ export function setTokenRefresher(refresher: (() => Promise<string | null>) | un
 }
 
 export function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  return send<T>(path, token, init, false)
+  return send<T>(path, token, init, false, readJson)
 }
 
-async function send<T>(path: string, token: string, init: RequestInit | undefined, retried: boolean): Promise<T> {
+/** A file the API answers with (a picture, say), or null when it answers 204: there is none. */
+export function requestBlob(path: string, token: string, init?: RequestInit): Promise<Blob | null> {
+  return send(path, token, init, false, readBlob)
+}
+
+type ReadBody<T> = (response: Response) => Promise<T>
+
+async function readJson<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T
+  }
+  return (await response.json()) as T
+}
+
+async function readBlob(response: Response): Promise<Blob | null> {
+  return response.status === 204 ? null : response.blob()
+}
+
+async function send<T>(path: string, token: string, init: RequestInit | undefined, retried: boolean, read: ReadBody<T>): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        // A file upload (FormData) leaves it to the browser, which adds the part boundary.
+        ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         // ABP answers in this language: validation and business-rule messages, and later
         // the names of buildings, floors and spaces.
         'Accept-Language': currentLanguage(),
@@ -124,7 +143,7 @@ async function send<T>(path: string, token: string, init: RequestInit | undefine
     // request; only when that fails (or the fresh token is refused too) is the session gone.
     if (!retried) {
       const fresh = await refreshToken?.().catch(() => null)
-      if (fresh && fresh !== token) return send<T>(path, fresh, init, true)
+      if (fresh && fresh !== token) return send<T>(path, fresh, init, true, read)
     }
     onUnauthorized?.()
   }
@@ -140,11 +159,7 @@ async function send<T>(path: string, token: string, init: RequestInit | undefine
     throw new ApiError(response.status, body)
   }
 
-  if (response.status === 204) {
-    return undefined as T
-  }
-
-  return (await response.json()) as T
+  return read(response)
 }
 
 export function query(params: Record<string, string | number | boolean | undefined>): string {

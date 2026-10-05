@@ -75,16 +75,27 @@
 /* The first section label sits under the logo, which already leaves room above it. */
 .brand + .grp { padding-top: 0; }
 .spacer { flex: 1; }
-.acct { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-top: 1px solid var(--border-subtle); }
+/* Who's signed in (AccountMenu): one button opening My profile / Sign out. */
+.acct {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3);
+  border: none; border-top: 1px solid var(--border-subtle); background: none; font: inherit; color: inherit;
+  text-align: start; cursor: pointer; border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+.acct:hover, .acct[aria-expanded="true"] { background: var(--surface-sunken); }
+.acctwho { display: flex; flex-direction: column; min-width: 0; }
+.acctwho > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acctchev { margin-inline-start: auto; width: 16px; height: 16px; flex: none; color: var(--ink-secondary); }
 .av {
   width: 32px; height: 32px; border-radius: var(--radius-pill); background: var(--gradient-accent); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex: none;
 }
+/* A picture fills the circle; initials stand in without one. */
+.av { overflow: hidden; }
+.av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The big one heading My profile. */
+.av.lg { width: 88px; height: 88px; font-size: 30px; }
 .nm { font-size: 13px; line-height: 18px; font-weight: 600; }
 .rl { font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
-.out { margin-inline-start: auto; color: var(--ink-secondary); background: none; border: none; cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
-.out svg { width: 18px; height: 18px; display: block; }
-.out:hover { background: var(--surface-sunken); color: var(--ink-primary); }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .top {
@@ -92,19 +103,36 @@
   padding: 14px var(--space-8); background: var(--surface-raised);
   border-bottom: 1px solid var(--border-subtle);
 }
-/* Light/dark switch (ThemeToggle): at the end of the top bar (right in English, left in Arabic), or — below lg — fixed
-   at the end of the band the menu button sits in (.corner). */
-.themebtn {
-  width: 36px; height: 36px; flex: none; display: flex; align-items: center; justify-content: center;
-  margin-inline-start: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
+/* Breadcrumbs (Breadcrumbs.tsx), at the start of the top bar. A long name is cut short
+   with "…" rather than pushing the switches off the end. */
+.crumbs { min-width: 0; }
+.crumbs ol { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 14px; line-height: 20px; color: var(--ink-secondary); }
+.crumbs li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.crumbs li > a, .crumbs li > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.crumbs a { color: var(--ink-secondary); text-decoration: none; }
+.crumbs a:hover { color: var(--ink-primary); text-decoration: underline; }
+.crumbs [aria-current="page"] { color: var(--ink-primary); font-weight: 600; }
+.crumbs svg { width: 14px; height: 14px; flex: none; }
+[dir="rtl"] .crumbs svg { transform: scaleX(-1); }
+
+/* Language and light/dark switches: at the end of the top bar (right in English, left in
+   Arabic), or — below lg — fixed at the end of the band the menu button sits in (.corner). */
+.topend { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-2); flex: none; }
+.corner {
+  position: fixed; top: var(--space-3); inset-inline-end: var(--space-3); z-index: 110;
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.corner > button { box-shadow: var(--shadow-card); color: var(--ink-primary); }
+.themebtn, .topbtn {
+  height: 36px; flex: none; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-md);
   background: var(--surface-raised); color: var(--ink-secondary); cursor: pointer;
 }
-.themebtn svg { width: 18px; height: 18px; display: block; }
-.themebtn:hover { background: var(--surface-sunken); color: var(--ink-primary); }
-.themebtn.corner {
-  position: fixed; top: var(--space-3); inset-inline-end: var(--space-3); z-index: 110;
-  box-shadow: var(--shadow-card); color: var(--ink-primary);
-}
+.themebtn { width: 36px; }
+.topbtn { min-width: 36px; gap: var(--space-2); padding: 0 var(--space-3); font-family: inherit; font-size: 14px; }
+.corner .topbtn { padding: 0; }
+.themebtn svg, .topbtn > svg:first-child { width: 18px; height: 18px; display: block; flex: none; }
+.themebtn:hover, .topbtn:hover { background: var(--surface-sunken); color: var(--ink-primary); }
 .pick {
   display: inline-flex; align-items: center; gap: var(--space-2); font-size: 15px; font-weight: 600;
   border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 7px var(--space-3);
@@ -283,7 +311,7 @@ select.ctrl { appearance: none; cursor: pointer; }
   .app { flex-direction: column; }
 }
 
-/* A labelled checkbox ("Show deleted", "Remember me"). Used by admin pages and the login
+/* A labelled checkbox ("Open 24 hours", "Remember me"). Used by admin pages and the login
    page alike, so it lives here rather than in login.css. */
 .chk { display: flex; align-items: center; gap: 8px; color: var(--ink-secondary); cursor: pointer; }
 
@@ -294,15 +322,13 @@ body { overflow-x: clip; }
 /* Touch screens: every small hand-styled control is at least 44x44, the size a fingertip
    can hit reliably. (shadcn buttons get the same through pointer-coarse: in button.tsx.) */
 @media (pointer: coarse) {
-  .rowbtn, .xtoggle, .xpanelbtn, .out, .segbtn, .chipset button, .menubtn, .themebtn {
+  .rowbtn, .xtoggle, .xpanelbtn, .segbtn, .chipset button, .menubtn, .themebtn, .topbtn {
     min-width: 44px; min-height: 44px;
   }
 }
 
 /* ---------- Language ---------- */
-/* The sidebar's language button looks like a nav row. */
-.navlang { width: 100%; background: none; border: none; font-family: inherit; text-align: start; }
-/* Language switcher (sidebar and sign-in page): "🌐 English ⌄", and in the list
+/* Language switcher (top bar and sign-in page): "🌐 English ⌄", and in the list
    "العربية  Arabic" — the name in its own language, then in grey in the one showing now. */
 .langtrigger { cursor: pointer; }
 .langlabel { display: inline-flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
@@ -319,5 +345,4 @@ body { overflow-x: clip; }
   [dir="rtl"] .side { transform: translateX(100%); }
   [dir="rtl"] .side.open { transform: translateX(0); }
 }
-[dir="rtl"] .out svg { transform: scaleX(-1); }
 :lang(ar), :lang(ar) * { letter-spacing: normal !important; }

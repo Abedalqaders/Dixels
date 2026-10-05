@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from 'react-oidc-context'
 import { PlusIcon } from 'lucide-react'
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SearchIcon } from '@/components/icons'
 import { EmptyState, NoResults } from '@/components/EmptyState'
 import { ICONS, iconKeyToIconName } from '@/features/space-management/components/spaceTypeIcons'
-import { DetailsIcon, PencilIcon, TrashIcon, RestoreIcon } from '@/features/space-management/components/actionIcons'
+import { DetailsIcon, PencilIcon, TrashIcon } from '@/features/space-management/components/actionIcons'
 import { RowActionsMenu } from '@/features/space-management/components/RowActionsMenu'
 import { Can } from '@/features/auth/components/Can'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
@@ -27,7 +27,7 @@ import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
 import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
-import { ApiError, getFloor, getSpaces, getSpaceTypes, deleteSpace, getSpaceDeleteImpact, restoreSpace } from '@/features/space-management/api/spaceManagementApi'
+import { ApiError, getBuilding, getFloor, getSpaces, getSpaceTypes, deleteSpace, getSpaceDeleteImpact } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/admin.css'
@@ -52,21 +52,22 @@ export function SpacesListPage() {
   const { confirm, dialog: confirmDialog } = useConfirm()
 
   const { status, data, error, isRefreshing, refetch } = useApiQuery(
-    queryKeys.hierarchy.spaces(floorId, { search: list.search, spaceTypeId, showDeleted: list.showDeleted, page: list.page, pageSize: list.pageSize }),
+    queryKeys.hierarchy.spaces(floorId, { search: list.search, spaceTypeId, page: list.page, pageSize: list.pageSize }),
     async () => {
-      const [floor, spaceTypesResult, spacesResult] = await Promise.all([
+      // The building only for its name in the breadcrumbs: a single floor comes back without it.
+      const [building, floor, spaceTypesResult, spacesResult] = await Promise.all([
+        getBuilding(token, buildingId),
         getFloor(token, floorId),
         getSpaceTypes(token),
         getSpaces(token, {
           floorId,
           filter: list.search || undefined,
           spaceTypeId: spaceTypeId || undefined,
-          includeDeleted: list.showDeleted,
           skipCount: list.page * list.pageSize,
           maxResultCount: list.pageSize,
         }),
       ])
-      return { floor, spaceTypes: spaceTypesResult.items, spaces: spacesResult.items, totalCount: spacesResult.totalCount }
+      return { building, floor, spaceTypes: spaceTypesResult.items, spaces: spacesResult.items, totalCount: spacesResult.totalCount }
     },
     { keepPreviousData: true },
   )
@@ -125,13 +126,17 @@ export function SpacesListPage() {
   return (
     <>
       <div className="main">
-        <TopBar />
+        <TopBar
+          crumbs={[
+            { label: t('Nav:SpaceManagement') },
+            { label: t('Nav:Hierarchy'), to: '/admin/buildings' },
+            { label: status === 'success' ? data.building.name : undefined, to: `/admin/buildings/${buildingId}/floors` },
+            { label: status === 'success' ? data.floor.name : undefined },
+          ]}
+        />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="breadcrumb">
-                <Link to={`/admin/buildings/${buildingId}/floors`}>‹ {t('Hierarchy:Floors')}</Link>
-              </p>
               <h1 className="pagetitle">{status === 'success' ? data.floor.name : t('Hierarchy:Spaces')}</h1>
               <p className="lead">
                 {status === 'success' ? `${t('Hierarchy:SpaceCount', { count: data.totalCount })} ` : ''}
@@ -164,14 +169,6 @@ export function SpacesListPage() {
                   />
                 </div>
                 <SpaceTypeFilter spaceTypes={data?.spaceTypes ?? []} value={spaceTypeId} onChange={(id) => list.setFilter('type', id)} />
-                <label className="chk">
-                  <input
-                    type="checkbox"
-                    checked={list.showDeleted}
-                    onChange={(e) => list.setShowDeleted(e.target.checked)}
-                  />
-                  {t('Hierarchy:ShowDeleted')}
-                </label>
               </div>
             </div>
 
@@ -194,7 +191,7 @@ export function SpacesListPage() {
 
               {status === 'success' &&
                 data.spaces.map((space) => (
-                  <div className="node l1" data-level="space" key={space.id} style={space.isDeleted ? { opacity: 0.55 } : undefined}>
+                  <div className="node l1" data-level="space" key={space.id}>
                     <span className="spaceicon">{ICONS[iconKeyToIconName(spaceTypeById.get(space.spaceTypeId)?.iconKey ?? 3)]}</span>
                     <span className="lbl2">
                       <HighlightedText text={space.name} query={list.search} />
@@ -204,58 +201,44 @@ export function SpacesListPage() {
                     )}
                     <span className="m">{t('Booking:Seats', { count: space.capacity })}</span>
                     {space.hasOverrides && <span className="badge completed">{t('Hierarchy:CustomBadge')}</span>}
-                    {space.isDeleted && <span className="badge cancelled">{t('Hierarchy:DeletedBadge')}</span>}
                     <span className="actions">
-                      {space.isDeleted ? (
-                        <Can permission={Permissions.Spaces.Edit}>
-                          <button
-                            className="rowbtn"
-                            title={t('Hierarchy:Restore', { name: space.name })}
-                            aria-label={t('Hierarchy:Restore', { name: space.name })}
-                            onClick={() => runAction(() => restoreSpace(token, space.id), t('Hierarchy:Restored', { name: space.name }))}
-                          >
-                            <RestoreIcon />
-                          </button>
-                        </Can>
-                      ) : (
-                        <RowActionsMenu
-                          label={space.name}
-                          actions={[
-                            {
-                              label: t('Hierarchy:EditDetails'),
-                              permission: Permissions.Spaces.Edit,
-                              icon: <DetailsIcon />,
-                              onClick: () =>
-                                setEditState({
-                                  kind: 'space',
-                                  id: space.id,
-                                  names: space.names,
-                                  spaceTypeId: space.spaceTypeId,
-                                  capacity: space.capacity,
-                                }),
-                            },
-                            {
-                              label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
-                              permission: Permissions.Spaces.Default,
-                              icon: <PencilIcon />,
-                              onClick: () => navigate(`/admin/constraints/space/${space.id}`),
-                            },
-                            {
-                              label: t('Common:Delete'),
-                              permission: Permissions.Spaces.Delete,
-                              icon: <TrashIcon />,
-                              destructive: true,
-                              onClick: () =>
-                                confirmDelete(
-                                  space.name,
-                                  t('Hierarchy:DeleteSpaceConfirm', { name: space.name }),
-                                  () => getSpaceDeleteImpact(token, space.id),
-                                  () => deleteSpace(token, space.id),
-                                ),
-                            },
-                          ]}
-                        />
-                      )}
+                      <RowActionsMenu
+                        label={space.name}
+                        actions={[
+                          {
+                            label: t('Hierarchy:EditDetails'),
+                            permission: Permissions.Spaces.Edit,
+                            icon: <DetailsIcon />,
+                            onClick: () =>
+                              setEditState({
+                                kind: 'space',
+                                id: space.id,
+                                names: space.names,
+                                spaceTypeId: space.spaceTypeId,
+                                capacity: space.capacity,
+                              }),
+                          },
+                          {
+                            label: canEditRules ? t('Hierarchy:EditConstraints') : t('Hierarchy:ViewConstraints'),
+                            permission: Permissions.Spaces.Default,
+                            icon: <PencilIcon />,
+                            onClick: () => navigate(`/admin/constraints/space/${space.id}`),
+                          },
+                          {
+                            label: t('Common:Delete'),
+                            permission: Permissions.Spaces.Delete,
+                            icon: <TrashIcon />,
+                            destructive: true,
+                            onClick: () =>
+                              confirmDelete(
+                                space.name,
+                                t('Hierarchy:DeleteSpaceConfirm', { name: space.name }),
+                                () => getSpaceDeleteImpact(token, space.id),
+                                () => deleteSpace(token, space.id),
+                              ),
+                          },
+                        ]}
+                      />
                     </span>
                   </div>
                 ))}
