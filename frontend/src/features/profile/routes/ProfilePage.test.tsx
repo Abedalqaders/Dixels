@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, Link, RouterProvider } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { ApiError, changeMyPassword, getMyProfile, updateMyProfile } from '@/features/profile/api/profileApi'
 import type { ProfileDto } from '@/features/profile/api/profileApi'
 import { TestProviders } from '@/test/providers'
+import { stubMatchMedia } from '@/test/matchMedia'
 import { getPasswordRules } from '@/features/profile/passwordRules'
 import type { PasswordRules } from '@/features/profile/passwordRules'
 import { ProfilePage } from './ProfilePage'
@@ -170,6 +171,20 @@ describe('ProfilePage — tabs', () => {
     expect(await screen.findByLabelText('New password', { selector: 'input' })).toBeInTheDocument()
     expect(screen.queryByLabelText('First name')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Security' })).toHaveAttribute('aria-current', 'page')
+  })
+})
+
+describe('ProfilePage — breadcrumb', () => {
+  let restore = () => {}
+  afterEach(() => restore())
+
+  it('reads My profile › Security on the Security tab, My profile leading back to Profile', async () => {
+    restore = stubMatchMedia(1280)
+    renderPage('/profile/security')
+
+    const crumbs = await screen.findByRole('navigation', { name: 'Breadcrumb' })
+    expect(within(crumbs).getByRole('link', { name: 'My profile' })).toHaveAttribute('href', '/profile')
+    expect(within(crumbs).getByText('Security')).toBeInTheDocument()
   })
 })
 

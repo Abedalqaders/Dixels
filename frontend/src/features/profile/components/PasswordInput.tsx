@@ -17,7 +17,7 @@ export function PasswordInput(props: Omit<ComponentProps<typeof Input>, 'type'>)
       <Input {...props} type={visible ? 'text' : 'password'} className="pe-10" />
       <button
         type="button"
-        className="absolute inset-y-0 end-0 flex w-10 items-center justify-center rounded-e-md text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        className="absolute inset-y-px end-px flex w-9 items-center justify-center rounded-e-md border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
         aria-label={visible ? t('Profile:HidePassword') : t('Profile:ShowPassword')}
         aria-pressed={visible}
         onClick={() => setVisible((v) => !v)}

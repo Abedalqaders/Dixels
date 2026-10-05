@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Dixels.Users;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
 using Volo.Abp.Content;
@@ -22,7 +23,18 @@ public class ProfilePictureController : DixelsController, IProfilePictureAppServ
 
     /// <summary>The picture, or 204 No Content when there isn't one.</summary>
     [HttpGet]
-    public virtual Task<IRemoteStreamContent?> GetAsync() => _profilePictureAppService.GetAsync();
+    public virtual async Task<IRemoteStreamContent?> GetAsync()
+    {
+        var picture = await _profilePictureAppService.GetAsync();
+        // Left alone, ABP answers a missing stream with 200 and an empty body, which a browser
+        // takes for a broken image. 204 is what the frontend reads as "no picture".
+        if (picture is null)
+        {
+            Response.StatusCode = StatusCodes.Status204NoContent;
+        }
+
+        return picture;
+    }
 
     [HttpPut]
     public virtual Task UpdateAsync(IRemoteStreamContent file) => _profilePictureAppService.UpdateAsync(file);

@@ -88,7 +88,7 @@ export function ProfilePage({ section }: { section: ProfileSectionName }) {
                 </CardContent>
               </Card>
 
-              <nav aria-label={t('Profile:Sections')} className="flex gap-1 border-b">
+              <nav aria-label={t('Profile:Sections')} className="flex gap-1 border-b border-border">
                 <SectionTab to="/profile">{t('Profile:TabProfile')}</SectionTab>
                 <SectionTab to="/profile/security">{t('Profile:TabSecurity')}</SectionTab>
               </nav>
