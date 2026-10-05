@@ -10,6 +10,7 @@ using Volo.Abp;
 using Volo.Abp.BlobStoring;
 using Volo.Abp.BlobStoring.FileSystem;
 using Volo.Abp.Content;
+using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
 
@@ -120,6 +121,26 @@ public class ProfilePictureTests : DixelsApplicationTestBase<DixelsEntityFramewo
             await _pictures.DeleteAsync();
             System.IO.File.Exists(path).ShouldBeFalse();
         }
+    }
+
+    [Fact]
+    public async Task Goes_when_the_account_is_deleted()
+    {
+        var user = new IdentityUser(Guid.NewGuid(), "pic" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io");
+        await WithUnitOfWorkAsync(async () =>
+            (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue());
+        var pictures = GetRequiredService<ProfilePictureManager>();
+        await pictures.SetAsync(user.Id, Png);
+
+        // Deleted straight through Identity, not a Dixels service: the cleanup listens for
+        // the delete wherever it comes from.
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var userManager = GetRequiredService<IdentityUserManager>();
+            (await userManager.DeleteAsync(await userManager.GetByIdAsync(user.Id))).Succeeded.ShouldBeTrue();
+        });
+
+        (await pictures.GetOrNullAsync(user.Id)).ShouldBeNull();
     }
 
     [Fact]

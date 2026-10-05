@@ -1,4 +1,6 @@
-﻿namespace Dixels.Permissions;
+﻿using Volo.Abp.Identity;
+
+namespace Dixels.Permissions;
 
 public static class DixelsPermissions
 {
@@ -62,7 +64,7 @@ public static class DixelsPermissions
             DixelsPermissions.Buildings.Default,
             DixelsPermissions.Floors.Default,
             DixelsPermissions.Spaces.Default,
-            "AbpIdentity.Users",
+            IdentityPermissions.Users.Default,
         };
 
         /// <summary>Listing/getting floors: their own viewers and space viewers below them.</summary>

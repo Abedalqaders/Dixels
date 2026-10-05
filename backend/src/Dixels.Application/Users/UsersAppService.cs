@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -59,11 +60,9 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         await _bookingImpact.CancelOnMoveAsync(userId, user.GetBuildingId(), input.BuildingId, CurrentUser.GetId());
 
         user.SetBuildingId(input.BuildingId);
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            throw new UserFriendlyException(string.Join(" ", result.Errors.Select(e => e.Description)));
-        }
+        // ABP's own exception for Identity errors: each one is reported and translated, not
+        // glued together in English.
+        (await _userManager.UpdateAsync(user)).CheckErrors();
     }
 
     [Authorize(IdentityPermissions.Users.Default)]
