@@ -39,7 +39,7 @@ describe('AccountMenu', () => {
 
     expect(screen.getByRole('button', { name: 'Account: sara' })).toBeInTheDocument()
 
-    answer({ userName: 'sara', email: 'sara@x.io', name: 'Sara', surname: 'Haddad', phoneNumber: null, hasPassword: true, concurrencyStamp: 's' })
+    answer({ userName: 'sara', email: 'sara@x.io', name: 'Sara', surname: 'Haddad', phoneNumber: null, concurrencyStamp: 's' })
     expect(await screen.findByRole('button', { name: 'Account: Sara Haddad' })).toHaveTextContent('SH')
   })
 

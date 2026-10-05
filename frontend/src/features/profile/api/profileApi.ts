@@ -14,15 +14,12 @@ export interface ProfileDto {
   name: string | null
   surname: string | null
   phoneNumber: string | null
-  /** False for an account that has never had a password: setting one needs no current one. */
-  hasPassword: boolean
   concurrencyStamp: string
 }
 
 /** ABP's ChangePasswordInput. */
 export interface ChangePasswordInput {
-  /** Left out when the account has no password yet (see ProfileDto.hasPassword). */
-  currentPassword?: string
+  currentPassword: string
   newPassword: string
 }
 

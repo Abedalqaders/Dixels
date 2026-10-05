@@ -39,9 +39,8 @@ public class DixelsProfileAppService : ProfileAppService
 
     public override async Task ChangePasswordAsync(ChangePasswordInput input)
     {
-        // An account with no password yet sets its first one: there's nothing to check.
         var user = await UserManager.GetByIdAsync(CurrentUser.GetId());
-        if (user.PasswordHash is not null && !await UserManager.CheckPasswordAsync(user, input.CurrentPassword ?? string.Empty))
+        if (!await UserManager.CheckPasswordAsync(user, input.CurrentPassword ?? string.Empty))
         {
             throw new BusinessException(DixelsDomainErrorCodes.WrongCurrentPassword);
         }
