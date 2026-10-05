@@ -8,6 +8,7 @@ using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
 using Shouldly;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -297,6 +298,39 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await _buildings.DeleteAsync(s.Building.Id);
 
         (await StoredAsync(booking.Id)).CancelReason.ShouldBe("The building was removed");
+    }
+
+    [Fact]
+    public async Task Deleting_a_floor_cancels_the_upcoming_bookings_on_it()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await _floors.DeleteAsync(s.Floor.Id);
+
+        var stored = await StoredAsync(booking.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledByAdmin.ShouldBeTrue();
+        stored.CancelReason.ShouldBe("The floor was removed");
+    }
+
+    [Fact]
+    public async Task Bookings_listen_for_a_removed_room_not_the_space_service()
+    {
+        // Anything that removes a room (a future import, another module) only has to announce
+        // it; Bookings releases what it held there itself.
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await WithUnitOfWorkAsync(() =>
+            GetRequiredService<ILocalEventBus>().PublishAsync(new SpaceDeletedEvent(s.Space.Id, Admin)));
+
+        var stored = await StoredAsync(booking.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledById.ShouldBe(Admin);
+        stored.CancelReason.ShouldBe("The space was removed");
     }
 
     [Fact]

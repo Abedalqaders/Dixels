@@ -11,6 +11,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
@@ -28,6 +29,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ILocalEventBus _localEventBus;
     private readonly LocalizedNameValidator _nameValidator;
     private readonly LocalizedNameReader _nameReader;
 
@@ -39,6 +41,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
+        ILocalEventBus localEventBus,
         LocalizedNameValidator nameValidator,
         LocalizedNameReader nameReader)
     {
@@ -49,6 +52,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _localEventBus = localEventBus;
         _nameValidator = nameValidator;
         _nameReader = nameReader;
     }
@@ -270,7 +274,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await EnsureCanManageBuildingAsync(floor.BuildingId);
 
         var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == id);
-        var upcoming = await _bookingImpact.UpcomingAsync(spaces.Select(s => (s, floor)).ToList());
 
         var batchId = GuidGenerator.Create();
         _spaceHierarchyManager.MarkForSoftDelete(batchId, floor, spaces);
@@ -295,7 +298,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await _floorRepository.DeleteAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
 
-        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
+        // What its rooms held (bookings) is released by its own module.
+        await _localEventBus.PublishAsync(new FloorDeletedEvent(id, spaces.Select(s => s.Id).ToList(), CurrentUser.GetId()));
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]
