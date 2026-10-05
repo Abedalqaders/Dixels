@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Emails;
 using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
@@ -29,7 +28,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IDataFilter _dataFilter;
     private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly LocalizedNameReader _nameReader;
-    private readonly BookingEmails _bookingEmails;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -41,8 +39,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         BookingAccessChecker accessChecker,
         IDataFilter dataFilter,
         IRepository<BookingSeries, Guid> seriesRepository,
-        LocalizedNameReader nameReader,
-        BookingEmails bookingEmails)
+        LocalizedNameReader nameReader)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -54,7 +51,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _dataFilter = dataFilter;
         _seriesRepository = seriesRepository;
         _nameReader = nameReader;
-        _bookingEmails = bookingEmails;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -78,7 +74,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     {
         try
         {
-            var (booking, replayed) = await _bookingManager.CreateAsync(
+            var (booking, _) = await _bookingManager.CreateAsync(
                 CurrentUser.GetId(),
                 input.SpaceId,
                 input.LocalStart,
@@ -86,12 +82,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.Attendees,
                 input.Title,
                 input.IdempotencyKey);
-
-            // A retry of a request that already went through was already emailed about.
-            if (!replayed)
-            {
-                await _bookingEmails.SendConfirmedAsync(booking);
-            }
 
             return (await MapToDtosAsync(new[] { booking })).Single();
         }
@@ -152,7 +142,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<ListResultDto<BookingDto>> CancelAsync(Guid id, CancelBookingDto input)
     {
         var cancelled = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason, input.Scope);
-        await _bookingEmails.SendCancelledAsync(cancelled);
         return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));
     }
 
@@ -184,7 +173,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     {
         try
         {
-            var (series, bookings, replayed) = await _bookingManager.CreateSeriesAsync(
+            var (series, bookings, _) = await _bookingManager.CreateSeriesAsync(
                 CurrentUser.GetId(),
                 input.SpaceId,
                 input.LocalStart,
@@ -194,11 +183,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 ToRule(input.Recurrence),
                 input.SkipDates,
                 input.IdempotencyKey);
-
-            if (!replayed)
-            {
-                await _bookingEmails.SendSeriesConfirmedAsync(series, bookings);
-            }
 
             return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList()) };
         }

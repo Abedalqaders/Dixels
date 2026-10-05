@@ -65,7 +65,7 @@ public partial class BookingManager
     /// Books every date of a series except <paramref name="skipDates"/>, all in one
     /// transaction: if any date that should be booked no longer fits (someone took it since
     /// the preview), nothing is booked at all. A retry with the same key returns the series
-    /// the first attempt created.
+    /// the first attempt created; only a new series raises <see cref="BookingSeriesConfirmedEvent"/>.
     /// </summary>
     public async Task<(BookingSeries Series, IReadOnlyList<Booking> Bookings, bool Replayed)> CreateSeriesAsync(
         Guid userId,
@@ -149,6 +149,7 @@ public partial class BookingManager
                 series.Id)));
         }
 
+        await _localEventBus.PublishAsync(new BookingSeriesConfirmedEvent(series, bookings));
         return (series, bookings, false);
     }
 
@@ -260,13 +261,21 @@ public partial class BookingManager
     /// <summary>
     /// Cancels the owner's booking, or — for a series booking — this one and every later one,
     /// or every upcoming one. Only bookings that haven't started are ever touched; the ones
-    /// under way or over stay as history.
+    /// under way or over stay as history. Whatever was cancelled is announced in one
+    /// <see cref="BookingsCancelledEvent"/>.
     /// </summary>
     public async Task<IReadOnlyList<Booking>> CancelOwnAsync(Guid userId, Guid bookingId, string? reason, CancelScope scope)
     {
+        var cancelled = await CancelOwnInScopeAsync(userId, bookingId, reason, scope);
+        await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: false));
+        return cancelled;
+    }
+
+    private async Task<IReadOnlyList<Booking>> CancelOwnInScopeAsync(Guid userId, Guid bookingId, string? reason, CancelScope scope)
+    {
         if (scope == CancelScope.This)
         {
-            return new[] { await CancelOwnAsync(userId, bookingId, reason) };
+            return new[] { await CancelOneAsync(userId, bookingId, reason) };
         }
 
         var booking = await _bookingRepository.GetAsync(bookingId);
@@ -277,7 +286,7 @@ public partial class BookingManager
 
         if (booking.SeriesId is null)
         {
-            return new[] { await CancelOwnAsync(userId, bookingId, reason) };
+            return new[] { await CancelOneAsync(userId, bookingId, reason) };
         }
 
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);

@@ -27,7 +27,8 @@ namespace Dixels.Emails;
 /// booking, so a booking that fails to save sends nothing, and a mail server that's down only
 /// delays the email (ABP retries) — the booking itself is never held up by it.
 ///
-/// Admin cancellations deliberately send nothing (the employee sees them in their calendar).
+/// Sent by <see cref="BookingEmailHandler"/> when the booking events are raised; admin
+/// cancellations deliberately send nothing (the employee sees them in their calendar).
 /// </summary>
 public class BookingEmails : DomainService
 {
