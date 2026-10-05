@@ -47,9 +47,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-# Serilog writes Logs/logs.txt next to the app, and /keys is the data protection volume;
-# both must be writable by the non-root user the containers run as.
-RUN mkdir -p /app/Logs /keys && chown "$APP_UID" /app/Logs /keys
+# Serilog writes Logs/logs.txt next to the app, /keys is the data protection volume and
+# /blobs the uploaded files volume; all must be writable by the non-root user the containers run as.
+RUN mkdir -p /app/Logs /keys /blobs && chown "$APP_UID" /app/Logs /keys /blobs
 ENV ASPNETCORE_ENVIRONMENT=Production
 
 

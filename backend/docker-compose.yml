@@ -4,6 +4,8 @@
 #   2. Export the HTTPS dev cert:
 #        dotnet dev-certs https -ep "%USERPROFILE%\.aspnet\https\dixels.pfx" -p dixels-dev
 #        dotnet dev-certs https --trust
+# A second checkout (git worktree) runs its own copy next to this one by setting
+# COMPOSE_PROJECT_NAME and the DIXELS_*_PORT values in its .env (see .env.example).
 services:
   web:
     # Development image (runs from source). The production image is ./Dockerfile - see deploy/.
@@ -11,15 +13,18 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "44334:44334"
+      - "${DIXELS_API_PORT:-44334}:44334"
     env_file:
       - .env
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: https://+:44334
       ASPNETCORE_Kestrel__Certificates__Default__Path: /https/dixels.pfx
+      BlobStoring__FileSystem__BasePath: /blobs
     volumes:
       - ${USERPROFILE}/.aspnet/https:/https:ro
+      # Uploaded files (profile pictures), kept on Windows so a rebuild doesn't lose them.
+      - ./App_Data/blobs:/blobs
     depends_on:
       - smtp4dev
 
@@ -28,4 +33,4 @@ services:
   smtp4dev:
     image: rnwood/smtp4dev:v3
     ports:
-      - "5000:80"
+      - "${DIXELS_MAIL_PORT:-5000}:80"
