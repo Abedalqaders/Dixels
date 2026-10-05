@@ -5,7 +5,6 @@ using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BackgroundJobs.EntityFrameworkCore;
-using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EntityFrameworkCore;
@@ -105,7 +104,6 @@ public class DixelsDbContext :
         builder.ConfigurePermissionManagement();
         builder.ConfigureSettingManagement();
         builder.ConfigureBackgroundJobs();
-        builder.ConfigureBlobStoring();
         builder.ConfigureAuditLogging();
         builder.ConfigureIdentity();
         builder.ConfigureOpenIddict();

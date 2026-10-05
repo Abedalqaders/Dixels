@@ -1,7 +1,6 @@
 using Dixels.Localization;
 using Volo.Abp.AuditLogging;
 using Volo.Abp.BackgroundJobs;
-using Volo.Abp.BlobStoring.Database;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
@@ -19,7 +18,6 @@ namespace Dixels;
 [DependsOn(
     typeof(AbpAuditLoggingDomainSharedModule),
     typeof(AbpBackgroundJobsDomainSharedModule),
-    typeof(BlobStoringDatabaseDomainSharedModule),
     typeof(AbpFeatureManagementDomainSharedModule),
     typeof(AbpIdentityDomainSharedModule),
     typeof(AbpOpenIddictDomainSharedModule),
