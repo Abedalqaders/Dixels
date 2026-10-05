@@ -226,6 +226,17 @@ describe('ProfilePage — password', () => {
     }
   })
 
+  it('rates the new password by how many rules it meets', async () => {
+    renderPage('/profile/security')
+
+    const next = await screen.findByLabelText('New password', { selector: 'input' })
+    await userEvent.type(next, 'abcdef1')
+    expect(screen.getByText('Fair')).toBeInTheDocument()
+
+    await userEvent.type(next, 'A!')
+    expect(screen.getByText('Strong')).toBeInTheDocument()
+  })
+
   it('says what a box is missing once you leave it, not while typing, and drops it once fixed', async () => {
     renderPage('/profile/security')
 

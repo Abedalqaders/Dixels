@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { CheckIcon, CircleIcon, XIcon } from 'lucide-react'
+import { CircleCheckIcon, CircleIcon, CircleXIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { activeRules } from '@/features/profile/passwordRules'
 import type { PasswordRule, PasswordRules } from '@/features/profile/passwordRules'
@@ -12,14 +12,33 @@ interface PasswordChecklistProps {
   showMissing: boolean
 }
 
+type Strength = 'Weak' | 'Fair' | 'Good' | 'Strong'
+
+/** How far along the rules the password is: all met is Strong, most Good, about half Fair. */
+function strengthOf(met: number, total: number): Strength | null {
+  if (met === 0) return null
+  const share = met / total
+  if (share === 1) return 'Strong'
+  if (share > 0.6) return 'Good'
+  if (share >= 0.5) return 'Fair'
+  return 'Weak'
+}
+
 /**
- * Under the new password, what it still needs: each rule ticks green as it's met. Before
- * the box is left a missing rule is a plain grey dot; after, a red cross. The new password
- * box points at this list (aria-describedby), so a screen reader reads it on focus rather
- * than on every keystroke.
+ * Under the new password, a soft panel with what it still needs: a bar with one step per
+ * rule, filled as rules are met, with a word for how far along it is, and the rules
+ * themselves in two columns — a purple tick when met, an empty circle while not, a red
+ * cross once the box has been left with it still missing. The new password box points at
+ * this panel (aria-describedby), so a screen reader reads it on focus rather than on every
+ * keystroke.
  */
 export function PasswordChecklist({ id, rules, unmet, showMissing }: PasswordChecklistProps) {
   const { t } = useTranslation()
+  const active = activeRules(rules)
+  if (active.length === 0) return null
+
+  const met = active.filter((rule) => !unmet.includes(rule)).length
+  const strength = strengthOf(met, active.length)
 
   const label: Record<PasswordRule, string> = {
     length: t('Profile:Rule:Length', { count: rules.requiredLength }),
@@ -31,29 +50,37 @@ export function PasswordChecklist({ id, rules, unmet, showMissing }: PasswordChe
   }
 
   return (
-    <div id={id} className="mt-1.5 grid gap-1 text-sm">
-      <p className="text-muted-foreground">{t('Profile:PasswordNeeds')}</p>
-      <ul className="grid gap-1">
-        {activeRules(rules).map((rule) => {
-          const met = !unmet.includes(rule)
-          const missing = !met && showMissing
+    <div id={id} className="mt-1.5 grid gap-2.5 rounded-lg bg-[var(--accent-soft)] p-3 text-[13px]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-muted-foreground">{t('Profile:PasswordNeeds')}</p>
+        {strength && <p className="text-xs font-semibold text-primary">{t(`Profile:Strength:${strength}`)}</p>}
+      </div>
+      <div className="flex gap-1" aria-hidden>
+        {active.map((rule, i) => (
+          <span key={rule} className={cn('h-1 flex-1 rounded-full', i < met ? 'bg-primary' : 'bg-primary/15')} />
+        ))}
+      </div>
+      <ul className="m-0 grid list-none gap-x-4 gap-y-1.5 p-0 sm:grid-cols-2">
+        {active.map((rule) => {
+          const ok = !unmet.includes(rule)
+          const missing = !ok && showMissing
           return (
             <li
               key={rule}
               className={cn(
                 'flex items-center gap-2',
-                met ? 'text-[var(--state-confirmed-ink)]' : missing ? 'text-destructive' : 'text-muted-foreground',
+                ok ? 'font-medium text-foreground' : missing ? 'text-destructive' : 'text-muted-foreground',
               )}
             >
-              {met ? (
-                <CheckIcon className="size-4 flex-none" aria-hidden />
+              {ok ? (
+                <CircleCheckIcon className="size-4 flex-none text-primary" aria-hidden />
               ) : missing ? (
-                <XIcon className="size-4 flex-none" aria-hidden />
+                <CircleXIcon className="size-4 flex-none" aria-hidden />
               ) : (
-                <CircleIcon className="size-2 flex-none mx-1" aria-hidden />
+                <CircleIcon className="size-4 flex-none" aria-hidden />
               )}
               <span>{label[rule]}</span>
-              <span className="sr-only">{met ? t('Profile:RuleMet') : t('Profile:RuleNotMet')}</span>
+              <span className="sr-only">{ok ? t('Profile:RuleMet') : t('Profile:RuleNotMet')}</span>
             </li>
           )
         })}

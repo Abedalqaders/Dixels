@@ -13,7 +13,7 @@ export function ProfileSection({ title, description, footer, children }: { title
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="p-6">{children}</CardContent>
-      <CardFooter className="justify-end gap-2 border-t bg-muted/40 px-6 py-3.5 [.border-t]:pt-3.5">{footer}</CardFooter>
+      <CardFooter className="justify-end gap-2 border-t px-6 py-3.5 [.border-t]:pt-3.5">{footer}</CardFooter>
     </Card>
   )
 }

@@ -565,6 +565,10 @@ export interface TextKeys {
   "Profile:SetPassword": string
   "Profile:ShowPassword": string
   "Profile:SignInDetailsNote": string
+  "Profile:Strength:Fair": string
+  "Profile:Strength:Good": string
+  "Profile:Strength:Strong": string
+  "Profile:Strength:Weak": string
   "Profile:TabProfile": string
   "Profile:TabSecurity": string
   "Profile:UploadPhoto": string
