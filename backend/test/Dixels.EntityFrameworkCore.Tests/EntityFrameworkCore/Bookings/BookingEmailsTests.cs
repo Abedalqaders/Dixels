@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -249,6 +250,34 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await Should.ThrowAsync<Exception>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
         }
 
+        EmailsTo(s).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_admin_cancel_is_announced_but_not_emailed()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto booking;
+        using (ActAs(s.UserId))
+        {
+            booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id));
+        }
+        _emails.Clear();
+
+        // Listening as any other listener would: the event is there for them, the email isn't.
+        BookingsCancelledEvent? heard = null;
+        using (GetRequiredService<ILocalEventBus>().Subscribe<BookingsCancelledEvent>(e => { heard = e; return Task.CompletedTask; }))
+        {
+            await WithUnitOfWorkAsync(async () =>
+            {
+                var stored = await GetRequiredService<IBookingRepository>().GetAsync(booking.Id);
+                await GetRequiredService<BookingImpactChecker>().CancelAsAdminAsync(new[] { stored }, Guid.NewGuid(), _ => "Room closed");
+            });
+        }
+
+        heard.ShouldNotBeNull();
+        heard.ByAdmin.ShouldBeTrue();
+        heard.Bookings.ShouldHaveSingleItem().Id.ShouldBe(booking.Id);
         EmailsTo(s).ShouldBeEmpty();
     }
 

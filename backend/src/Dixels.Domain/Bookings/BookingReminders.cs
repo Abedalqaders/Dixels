@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Dixels.Emails;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Services;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Uow;
 
 namespace Dixels.Bookings;
@@ -15,25 +15,26 @@ namespace Dixels.Bookings;
 /// every minute.
 ///
 /// Each reminder is its own transaction: the booking is stamped
-/// (<see cref="Booking.ReminderSentAt"/>) and the email queued together, so it's sent once —
+/// (<see cref="Booking.ReminderSentAt"/>) and <see cref="BookingReminderDueEvent"/> raised in
+/// it — its listeners (the email) queue their work there too — so it's sent once —
 /// a second app instance doing the same at the same moment fails on the booking's
 /// concurrency stamp and rolls back its copy.
 /// </summary>
 public class BookingReminders : DomainService
 {
     private readonly IBookingRepository _bookingRepository;
-    private readonly BookingEmails _bookingEmails;
+    private readonly ILocalEventBus _localEventBus;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly BookingOptions _options;
 
     public BookingReminders(
         IBookingRepository bookingRepository,
-        BookingEmails bookingEmails,
+        ILocalEventBus localEventBus,
         IUnitOfWorkManager unitOfWorkManager,
         IOptions<BookingOptions> options)
     {
         _bookingRepository = bookingRepository;
-        _bookingEmails = bookingEmails;
+        _localEventBus = localEventBus;
         _unitOfWorkManager = unitOfWorkManager;
         _options = options.Value;
     }
@@ -79,7 +80,7 @@ public class BookingReminders : DomainService
 
                 booking.MarkReminderSent(now);
                 await _bookingRepository.UpdateAsync(booking);
-                await _bookingEmails.SendReminderAsync(booking);
+                await _localEventBus.PublishAsync(new BookingReminderDueEvent(booking));
                 await uow.CompleteAsync();
                 sent++;
             }

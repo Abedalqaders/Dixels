@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Json;
 
 namespace Dixels.Bookings;
@@ -34,6 +35,7 @@ public partial class BookingManager : DomainService
     private readonly BookingOptions _options;
     private readonly LocalizedNameReader _nameReader;
     private readonly IStringLocalizer<DixelsResource> _localizer;
+    private readonly ILocalEventBus _localEventBus;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -48,7 +50,8 @@ public partial class BookingManager : DomainService
         IJsonSerializer jsonSerializer,
         IOptions<BookingOptions> options,
         LocalizedNameReader nameReader,
-        IStringLocalizer<DixelsResource> localizer)
+        IStringLocalizer<DixelsResource> localizer,
+        ILocalEventBus localEventBus)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -63,6 +66,7 @@ public partial class BookingManager : DomainService
         _options = options.Value;
         _nameReader = nameReader;
         _localizer = localizer;
+        _localEventBus = localEventBus;
     }
 
     /// <summary>
@@ -82,7 +86,8 @@ public partial class BookingManager : DomainService
     /// here and then sees this booking in its overlap check.
     ///
     /// A retry with the same idempotency key returns the booking the first attempt created
-    /// (<c>Replayed = true</c>) instead of creating a second one.
+    /// (<c>Replayed = true</c>) instead of creating a second one. Only a new booking raises
+    /// <see cref="BookingConfirmedEvent"/>.
     /// </summary>
     public async Task<(Booking Booking, bool Replayed)> CreateAsync(
         Guid userId,
@@ -135,14 +140,17 @@ public partial class BookingManager : DomainService
             _jsonSerializer.Serialize(BookingRuleSnapshot.From(evaluation.Rules)),
             idempotencyKey);
 
-        return (await _bookingRepository.InsertConfirmedAsync(booking), false);
+        booking = await _bookingRepository.InsertConfirmedAsync(booking);
+        await _localEventBus.PublishAsync(new BookingConfirmedEvent(booking));
+        return (booking, false);
     }
 
     /// <summary>
     /// The owner cancelling their own booking, which frees the slot straight away. Only
     /// before it starts: once a booking is under way (or over) it's part of the record.
+    /// Raises nothing: the scoped <c>CancelOwnAsync</c> that calls it announces the cancel.
     /// </summary>
-    public async Task<Booking> CancelOwnAsync(Guid userId, Guid bookingId, string? reason)
+    private async Task<Booking> CancelOneAsync(Guid userId, Guid bookingId, string? reason)
     {
         var booking = await _bookingRepository.GetAsync(bookingId);
 

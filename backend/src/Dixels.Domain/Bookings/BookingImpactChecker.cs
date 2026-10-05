@@ -6,6 +6,7 @@ using Dixels.SpaceManagement;
 using Microsoft.Extensions.Options;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
+using Volo.Abp.EventBus.Local;
 
 namespace Dixels.Bookings;
 
@@ -38,17 +39,20 @@ public class BookingImpactChecker : DomainService
     private readonly IRepository<AvailabilityOverride, Guid> _overrideRepository;
     private readonly BookingPolicyValidator _validator;
     private readonly BookingOptions _options;
+    private readonly ILocalEventBus _localEventBus;
 
     public BookingImpactChecker(
         IBookingRepository bookingRepository,
         IRepository<AvailabilityOverride, Guid> overrideRepository,
         BookingPolicyValidator validator,
-        IOptions<BookingOptions> options)
+        IOptions<BookingOptions> options,
+        ILocalEventBus localEventBus)
     {
         _bookingRepository = bookingRepository;
         _overrideRepository = overrideRepository;
         _validator = validator;
         _options = options.Value;
+        _localEventBus = localEventBus;
     }
 
     /// <summary>
@@ -142,7 +146,10 @@ public class BookingImpactChecker : DomainService
             .ToList();
     }
 
-    /// <summary>Cancels bookings on an admin's behalf, with the reason employees will see.</summary>
+    /// <summary>
+    /// Cancels bookings on an admin's behalf, with the reason employees will see, and announces
+    /// them in one <see cref="BookingsCancelledEvent"/> (<c>ByAdmin</c>).
+    /// </summary>
     public async Task CancelAsAdminAsync(IReadOnlyCollection<Booking> bookings, Guid adminId, Func<Booking, string> reason)
     {
         if (bookings.Count == 0)
@@ -157,6 +164,7 @@ public class BookingImpactChecker : DomainService
         }
 
         await _bookingRepository.UpdateManyAsync(bookings, autoSave: true);
+        await _localEventBus.PublishAsync(new BookingsCancelledEvent(bookings.ToList(), byAdmin: true));
     }
 
     private DateTimeOffset Now() => new(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
