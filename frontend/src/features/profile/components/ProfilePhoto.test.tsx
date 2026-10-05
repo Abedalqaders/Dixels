@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useAuth } from 'react-oidc-context'
 import { ApiError, getMyPicture, removeMyPicture, setMyPicture } from '@/features/profile/api/profileApi'
@@ -10,7 +10,7 @@ import { ProfilePhoto } from './ProfilePhoto'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 // jsdom has no canvas: the shrinking itself is the browser's job.
-vi.mock('@/features/profile/shrinkPicture', () => ({ shrinkPicture: vi.fn() }))
+vi.mock('@/features/profile/shrinkPicture', () => ({ PICTURE_SIZE: 256, shrinkPicture: vi.fn() }))
 
 const SHRUNK = new Blob(['shrunk'], { type: 'image/jpeg' })
 const photo = (type = 'image/png') => new File(['big-photo'], 'me.png', { type })
@@ -48,6 +48,18 @@ describe('ProfilePhoto', () => {
 
     expect(await screen.findByText('SH')).toBeInTheDocument()
     expect(picture()).toBeNull()
+    // Nothing to enlarge.
+    expect(screen.queryByRole('button', { name: 'View photo' })).toBeNull()
+  })
+
+  it('opens the picture larger when it is clicked', async () => {
+    vi.mocked(getMyPicture).mockResolvedValue(SHRUNK)
+    renderPhoto()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'View photo' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Sara Haddad' })
+    expect(within(dialog).getByRole('img', { name: 'Sara Haddad' })).toHaveAttribute('src', 'blob:picture')
   })
 
   it('opens the file picker straight away when there is no picture', async () => {

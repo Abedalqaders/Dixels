@@ -574,6 +574,7 @@ export interface TextKeys {
   "Profile:TabSecurity": string
   "Profile:UploadPhoto": string
   "Profile:UserName": string
+  "Profile:ViewPhoto": string
   "QuickBook:AllowUpTo": string
   "QuickBook:CheckFailed": string
   "QuickBook:Checking": string
