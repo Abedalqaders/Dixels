@@ -32,7 +32,7 @@ interface DayBarProps {
 // Outside opening hours: a faint hatch in the theme's neutral tones.
 const OUTSIDE_HOURS = {
   backgroundImage:
-    'repeating-linear-gradient(135deg, var(--surface-sunken) 0 4px, var(--border-subtle) 4px 6px)',
+    'repeating-linear-gradient(135deg, var(--accent-soft) 0 4px, var(--border-subtle) 4px 6px)',
 }
 
 // Movement below this many pixels is a click, not a drag.
@@ -200,7 +200,7 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
           />
         ))}
         <span
-          className="absolute inset-y-0 rounded-sm border-2 border-solid border-foreground"
+          className="absolute inset-y-0 rounded-sm border-2 border-solid border-brand bg-brand/12"
           style={place(selection.startMinute, selection.endMinute)}
         />
         {preview && (

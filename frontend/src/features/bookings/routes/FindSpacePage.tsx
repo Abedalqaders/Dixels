@@ -33,7 +33,8 @@ import type { Slot } from '@/features/bookings/suggestSlot'
 import { readLastDuration } from '@/features/bookings/preferences'
 import { onlyTimeIssues } from '@/features/bookings/violationFields'
 import type { DayBarPick } from '@/features/bookings/components/DayBar'
-import { FindSpaceSkeleton, ResultsSkeleton, TextSkeleton } from '@/components/LoadingSkeletons'
+import { FindSpaceSkeleton, ResultsSkeleton } from '@/components/LoadingSkeletons'
+import { BuildingLine } from '@/components/BuildingLine'
 import { TopBar } from '@/components/TopBar'
 
 /**
@@ -54,14 +55,23 @@ export function FindSpacePage() {
 
   return (
     <TooltipProvider>
-      <TopBar crumbs={[{ label: t('Nav:Bookings') }, { label: t('Nav:FindSpace') }]}>
-        <span className="pick">
-          <span className="picklbl">{status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}</span>
-        </span>
-      </TopBar>
+      <TopBar crumbs={[{ label: t('Nav:Bookings') }, { label: t('Nav:FindSpace') }]} />
 
       <div className="content" data-compact-top="">
-        <h1 className="pagetitle">{t('Nav:FindSpace')}</h1>
+        <div>
+          <h1 className="pagetitle">{t('Nav:FindSpace')}</h1>
+          {status === 'loading' && <BuildingLine loading />}
+          {building && (
+            <BuildingLine
+              name={building.name}
+              details={
+                building.isRemoved
+                  ? t('Calendar:Lead', { timezone: building.timezone })
+                  : t('FindSpace:Lead', { timezone: building.timezone, count: building.maxHorizonDays })
+              }
+            />
+          )}
+        </div>
 
         {status === 'loading' && <FindSpaceSkeleton />}
 
@@ -195,10 +205,6 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
 
   return (
     <>
-      <p className="lead">
-        {t('FindSpace:Lead', { building: building.name, timezone: building.timezone, count: building.maxHorizonDays })}
-      </p>
-
       <SearchBar building={building} value={values} onChange={update} />
 
       <section
@@ -308,7 +314,10 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
                           {room.nextFreeStart ? (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
+                              // The page's one way out of "nothing free": soft purple so it stands out,
+                              // without competing with the solid New booking button.
+                              className="bg-[color-mix(in_srgb,var(--focus-ring)_12%,var(--surface-raised))] font-semibold text-accent-foreground hover:bg-[color-mix(in_srgb,var(--focus-ring)_20%,var(--surface-raised))]"
                               aria-label={t('FindSpace:TryTimeFor', { time: room.nextFreeStart, space: room.space.name })}
                               onClick={() => tryTime(room.nextFreeStart!)}
                             >
@@ -366,7 +375,7 @@ function ResultRow({ room, muted, children }: { room: SpaceAvailabilityDto; mute
         'grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-4 pt-5 pb-3',
         'lg:grid-cols-[minmax(200px,1.1fr)_2fr_minmax(150px,0.8fr)_auto]',
         '[&>[data-daybar]]:col-span-2 lg:[&>[data-daybar]]:col-span-1',
-        muted && 'bg-muted shadow-none',
+        muted && 'shadow-none',
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
@@ -399,7 +408,7 @@ function Legend() {
       {item('bg-slot-busy', t('FindSpace:LegendBooked'))}
       {item('bg-slot-mine', t('FindSpace:LegendYours'))}
       {item('bg-slot-closed', t('Calendar:Closed'))}
-      {item('border-2 border-solid border-foreground', t('FindSpace:LegendYourTime'))}
+      {item('border-2 border-solid border-brand bg-brand/12', t('FindSpace:LegendYourTime'))}
     </p>
   )
 }

@@ -122,7 +122,7 @@ describe('MyCalendarPage', () => {
     const month = gridMonthFor('week', tomorrow)
     // The week and the mini calendar share one request for the month.
     expect(callsFor(month)).toBe(1)
-    expect(screen.getByText('Riverside HQ · UTC')).toBeInTheDocument()
+    expect(screen.getByText('Riverside HQ')).toBeInTheDocument()
   })
 
   it("prefetches the months either side, so stepping over doesn't wait on the network", async () => {

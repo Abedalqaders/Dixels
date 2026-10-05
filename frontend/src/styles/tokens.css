@@ -8,11 +8,11 @@
      rather than an approximation. */
   --surface-canvas: #f7f4fa;
   --surface-raised: #FFFFFF;
-  --surface-sunken: #F2F2F2;
+  --surface-sunken: #efebf3;
   --surface-overlay: #FFFFFF;
   --surface-scrim: #00000099;
   --border-subtle: #ebe8ee;
-  --border-strong: #B0B0B0;
+  --border-strong: #b3acb9;
   --focus-ring: #713c91;
   --ink-primary: #27202d;
   --ink-secondary: #746e7a;
