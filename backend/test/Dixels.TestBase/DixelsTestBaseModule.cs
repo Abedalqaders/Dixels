@@ -54,9 +54,12 @@ public class DixelsTestBaseModule : AbpModule
         {
             using (var scope = context.ServiceProvider.CreateScope())
             {
+                // The tests work against the sample buildings, but not the demo bookings. The name is
+                // SpaceManagementHierarchyDataSeedContributor.EnabledPropertyName (this project
+                // doesn't reference Dixels.Domain).
                 await scope.ServiceProvider
                     .GetRequiredService<IDataSeeder>()
-                    .SeedAsync();
+                    .SeedAsync(new DataSeedContext().WithProperty("Dixels:SampleHierarchy", true));
             }
         });
     }

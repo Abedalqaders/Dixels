@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dixels.Data;
 using Dixels.SpaceManagement.ValueObjects;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
@@ -15,9 +16,16 @@ namespace Dixels.SpaceManagement;
  * Cross-cutting (spans all four aggregates), so it lives at the SpaceManagement root rather
  * than under one aggregate's folder. Guarded by name ("Riverside HQ"), not "any Building
  * exists" — it runs alongside whatever else is already in the database instead of being
- * silently skipped by it, and is idempotent (won't recreate itself) either way. */
+ * silently skipped by it, and is idempotent (won't recreate itself) either way.
+ *
+ * Sample data only: it runs when the DbMigrator is asked for demo data (Dixels:DemoData) or
+ * a caller asks for just this hierarchy (EnabledPropertyName — the test suites do, without
+ * the demo bookings). A production migration seeds none of it. */
 public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor, ITransientDependency
 {
+    /// <summary>Seeds the sample buildings without the rest of the demo data (bookings, employees).</summary>
+    public const string EnabledPropertyName = "Dixels:SampleHierarchy";
+
     private static readonly DayOfWeek[] Weekdays =
     {
         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday
@@ -51,6 +59,11 @@ public class SpaceManagementHierarchyDataSeedContributor : IDataSeedContributor,
 
     public async Task SeedAsync(DataSeedContext context)
     {
+        if (context?[EnabledPropertyName] is not true && context?[RiversideDemoDataSeedContributor.EnabledPropertyName] is not true)
+        {
+            return;
+        }
+
         // Checked by name, not "any Building exists" — this seed data should land alongside
         // whatever an admin has already created through the UI, not be skipped because of it.
         if (await _buildingRepository.AnyAsync(b => b.Translations.Any(t => t.Language == English && t.Name == "Riverside HQ")))
