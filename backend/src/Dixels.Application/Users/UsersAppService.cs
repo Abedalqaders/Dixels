@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
@@ -19,16 +20,20 @@ public class UsersAppService : DixelsAppService, IUsersAppService
     private readonly IIdentityRoleRepository _identityRoleRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IdentityUserManager _userManager;
+    // Only for the preview (GetReassignImpactAsync): the move itself is announced.
     private readonly BookingImpactService _bookingImpact;
+    private readonly ILocalEventBus _localEventBus;
 
     public UsersAppService(
         IIdentityRoleRepository identityRoleRepository,
         IRepository<Building, Guid> buildingRepository,
         IdentityUserManager userManager,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        ILocalEventBus localEventBus)
     {
         _userManager = userManager;
         _bookingImpact = bookingImpact;
+        _localEventBus = localEventBus;
         _identityRoleRepository = identityRoleRepository;
         _buildingRepository = buildingRepository;
     }
@@ -57,12 +62,16 @@ public class UsersAppService : DixelsAppService, IUsersAppService
             await _buildingRepository.GetAsync(target); // 404 for a missing or deleted building
         }
 
-        await _bookingImpact.CancelOnMoveAsync(userId, user.GetBuildingId(), input.BuildingId, CurrentUser.GetId());
-
+        var fromBuildingId = user.GetBuildingId();
         user.SetBuildingId(input.BuildingId);
         // ABP's own exception for Identity errors: each one is reported and translated, not
         // glued together in English.
         (await _userManager.UpdateAsync(user)).CheckErrors();
+
+        if (fromBuildingId != input.BuildingId)
+        {
+            await _localEventBus.PublishAsync(new UserMovedBuildingEvent(userId, fromBuildingId, input.BuildingId, CurrentUser.GetId()));
+        }
     }
 
     [Authorize(IdentityPermissions.Users.Default)]

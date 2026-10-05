@@ -8,6 +8,7 @@ using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -167,6 +168,23 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
         stored.Status.ShouldBe(BookingStatus.Cancelled);
         stored.CancelledByAdmin.ShouldBeTrue();
         stored.CancelReason.ShouldBe("The account was deactivated");
+    }
+
+    [Fact]
+    public async Task Bookings_listen_for_the_announcement_not_the_user_service()
+    {
+        // Anything that deactivates an account (a future import, another module) only has to
+        // announce it; Bookings releases the rooms itself.
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await WithUnitOfWorkAsync(() =>
+            GetRequiredService<ILocalEventBus>().PublishAsync(new UserDeactivatedEvent(s.UserId, Admin)));
+
+        var stored = await StoredAsync(booking.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledById.ShouldBe(Admin);
     }
 
     [Fact]
