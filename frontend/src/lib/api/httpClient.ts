@@ -113,7 +113,10 @@ async function readJson<T>(response: Response): Promise<T> {
 }
 
 async function readBlob(response: Response): Promise<Blob | null> {
-  return response.status === 204 ? null : response.blob()
+  if (response.status === 204) return null
+  // An empty body is no file either — shown as a picture it would be a broken image.
+  const blob = await response.blob()
+  return blob.size === 0 ? null : blob
 }
 
 async function send<T>(path: string, token: string, init: RequestInit | undefined, retried: boolean, read: ReadBody<T>): Promise<T> {

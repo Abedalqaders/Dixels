@@ -1,4 +1,6 @@
 using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
@@ -25,5 +27,14 @@ public class ProfilePictureRouteTests : DixelsWebTestBase
             e.RoutePattern.RawText == "api/app/profile-picture"
             && e.Metadata.GetMetadata<HttpMethodMetadata>() != null
             && e.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods.Contains(method));
+    }
+
+    [Fact]
+    public async Task No_picture_is_204_not_an_empty_file()
+    {
+        // The test user has no picture. An empty 200 would show as a broken image.
+        var response = await Client.GetAsync("/api/app/profile-picture");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
 }
