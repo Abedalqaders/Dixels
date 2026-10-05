@@ -36,6 +36,15 @@
   padding: var(--space-2) var(--space-3) var(--space-5);
 }
 .logo-img { height: 44px; width: auto; display: block; }
+/* Logo: one image per theme (see Logo.tsx). !important because each place sizes it with its
+   own display: block rule (.logo-img, .authlogo), which would otherwise win. */
+.logo-fordark { display: none !important; }
+[data-theme="dark"] .logo-forlight { display: none !important; }
+[data-theme="dark"] .logo-fordark { display: block !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .logo-forlight { display: none !important; }
+  :root:not([data-theme="light"]) .logo-fordark { display: block !important; }
+}
 .nav {
   display: flex; align-items: center; gap: var(--space-3);
   padding: 9px var(--space-3); border-radius: var(--radius-md);
@@ -133,12 +142,13 @@
 .corner .topbtn { padding: 0; }
 .themebtn svg, .topbtn > svg:first-child { width: 18px; height: 18px; display: block; flex: none; }
 .themebtn:hover, .topbtn:hover { background: var(--surface-sunken); color: var(--ink-primary); }
-.pick {
-  display: inline-flex; align-items: center; gap: var(--space-2); font-size: 15px; font-weight: 600;
-  border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 7px var(--space-3);
-  background: var(--surface-raised); cursor: pointer;
+/* Under a booking page's title: which building, and its timezone (BuildingLine.tsx). */
+.buildingline {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin-top: 6px;
+  font-size: 15px; line-height: 22px; color: var(--ink-secondary);
 }
-.pick.static { cursor: default; }
+.buildingline svg { width: 16px; height: 16px; flex: none; color: var(--accent-ink); }
+.buildingline b { font-weight: 600; color: var(--ink-primary); }
 .tz { font-size: 13px; color: var(--ink-secondary); }
 .now { margin-inline-start: auto; font-family: var(--font-mono); font-size: 14px; font-weight: 500; color: var(--ink-secondary); }
 .content { padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); }

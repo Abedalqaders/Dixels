@@ -1,17 +1,19 @@
 /* Login / signed-out — page-specific styles. Loads after tokens.css + base.css. */
 
-.page { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+/* 820 : 620 — the brand side takes more, so the sign-in column is full rather than lost. */
+.page { display: grid; grid-template-columns: minmax(0, 41fr) minmax(0, 31fr); min-height: 100vh; }
 
-/* left brand panel — the same soft glow + hairline grid the real dixels.ai site washes
-   its panels with (radial-gradient(at 90% 30%,#e4d0f46b,transparent 75%) over a pastel
-   diagonal), just built from our own tokens instead of their literal hex. */
+/* left brand panel — dixels.ai's hero: a soft lavender-to-blue wash with the faint
+   hairline grid, then the site's own messaging. Built from our tokens (the blue is the
+   chart blue, mixed down) so dark mode follows on its own. */
 .brandpanel {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(at 88% 12%, color-mix(in srgb, var(--brand-1) 20%, transparent), transparent 60%),
-    linear-gradient(135deg, color-mix(in srgb, var(--brand-1) 6%, var(--surface-raised)) 0%, var(--accent-soft) 100%);
-  padding: 64px 56px;
+    radial-gradient(at 88% 12%, color-mix(in srgb, var(--brand-1) 18%, transparent), transparent 60%),
+    radial-gradient(at 10% 95%, color-mix(in srgb, var(--chart-1) 14%, transparent), transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--brand-1) 9%, var(--surface-raised)) 0%, color-mix(in srgb, var(--chart-1) 9%, var(--surface-raised)) 100%);
+  padding: 56px;
   display: flex;
   flex-direction: column;
 }
@@ -28,25 +30,84 @@
 }
 .brandpanel > * { position: relative; }
 .mark { display: flex; }
-.mark .logo-img { height: 52px; }
-.tag { font-size: 17px; line-height: 26px; color: var(--accent-ink); margin-top: 20px; max-width: 34ch; opacity: .9; }
-.pts { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
-.pt { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; line-height: 22px; color: var(--accent-ink); }
-.pt svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+.mark .logo-img { height: 44px; }
+
+/* The site's small spaced-out label, used above the headline, the Dixels panel and the card. */
+.eyebrow {
+  margin: 0; font-size: 11px; line-height: 16px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-secondary);
+}
+.brandpanel > .eyebrow { margin-top: 48px; }
+/* The site's headline style: medium weight, tight tracking. The text holds a line break. */
+.headline {
+  margin: 12px 0 0; font-family: var(--font-display); font-size: 48px; line-height: 1.05;
+  font-weight: 500; letter-spacing: -.03em; color: var(--ink-primary); white-space: pre-line;
+}
+.tag { font-size: 16px; line-height: 24px; color: var(--ink-secondary); margin: 16px 0 0; max-width: 40ch; }
+/* Letter spacing pulls joined Arabic letters apart: Latin-only styling. */
+:lang(ar) .eyebrow, :lang(ar) .headline, :lang(ar) .logincard h1 { letter-spacing: 0; }
+
+/* "Meet the Dixels" */
+.dixels {
+  margin-top: 32px; max-width: 520px; padding: 20px;
+  background: color-mix(in srgb, var(--surface-raised) 82%, transparent);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.dixelshead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.dixelsnote { font-size: 12px; color: var(--ink-secondary); }
+.dixelgroup { margin-top: 12px; }
+.dixelgrouptitle { font-size: 12px; line-height: 16px; color: var(--ink-secondary); margin-bottom: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  font-size: 12px; line-height: 18px; font-weight: 500; color: var(--ink-primary);
+  background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
+}
+/* A Dixel this deployment runs: dark ink chip with a green dot. */
+.chip.live { background: var(--ink-primary); color: var(--ink-inverse); border-color: var(--ink-primary); }
+.livedot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--chart-3);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--chart-3) 30%, transparent);
+}
+.livetag { font-size: 10px; opacity: .7; }
+.cortex {
+  display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border-subtle); font-size: 12px; color: var(--ink-secondary);
+}
+.cortex b { color: var(--ink-primary); font-weight: 600; }
+.cortexmark {
+  width: 24px; height: 24px; flex: none; border-radius: var(--radius-sm); display: flex;
+  align-items: center; justify-content: center; background: var(--gradient-accent); color: var(--on-accent);
+}
+.cortexmark svg { width: 14px; height: 14px; }
+
+/* The site's foundation strip, pinned to the bottom of the panel. */
+.foundation {
+  margin: auto 0 0; padding: 32px 0 0; list-style: none;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
+}
+.foundation li {
+  display: flex; flex-direction: column; gap: 2px; padding-top: 10px;
+  border-top: 1px solid var(--border-strong); font-size: 12px; line-height: 16px; color: var(--ink-secondary);
+}
+.foundation b { font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-primary); }
+.foundationnum { font-family: var(--font-mono); font-size: 11px; }
 
 /* right form panel */
 .formwrap {
-  display: flex; align-items: center; justify-content: center; padding: 64px 56px;
+  display: flex; flex-direction: column; align-items: center; padding: 64px 56px 24px;
   background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--brand-1) 8%, transparent), transparent 60%);
 }
 .logincard {
-  width: 380px; max-width: 100%; box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--border-subtle);
+  box-sizing: border-box; background: var(--surface-raised); border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg); padding: 32px;
   box-shadow: 0 24px 48px -16px color-mix(in srgb, var(--brand-1) 22%, transparent), var(--shadow-card);
   animation: authin .3s ease both;
 }
+.logincard .eyebrow { margin-bottom: 8px; }
 .logincard h1 {
-  font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 600; margin: 0;
+  font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 500; letter-spacing: -.02em; margin: 0;
 }
 .loginsub { font-size: 15px; line-height: 22px; color: var(--ink-secondary); margin: 8px 0 24px; }
 .loginfield { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
@@ -71,9 +132,41 @@
 }
 .err svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
 .err b { display: block; font-size: 15px; line-height: 22px; margin-bottom: 2px; }
-.foot { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-subtle); font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+.foot {
+  display: flex; gap: 8px; align-items: flex-start; margin-top: 16px; padding: 10px 12px;
+  background: var(--accent-soft); border-radius: var(--radius-md);
+  font-size: 13px; line-height: 18px; color: var(--ink-secondary);
+}
+.foot svg { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--accent-ink); }
 .foot code { font-family: var(--font-mono); font-size: 12px; }
-.loginbtn { width: 100%; justify-content: center; }
+.loginbtn { width: 100%; justify-content: flex-start; gap: 10px; }
+.loginbtn svg { width: 18px; height: 18px; flex: none; }
+.loginbtn .arrow { margin-inline-start: auto; transition: transform .15s ease; }
+.loginbtn:hover .arrow { transform: translateX(3px); }
+.loginbtn .arrow:dir(rtl) { scale: -1 1; }
+.loginbtn:hover .arrow:dir(rtl) { transform: translateX(-3px); }
+
+/* The column under the card: centred in the form side, the footer pinned below it. */
+.formcol { width: 400px; max-width: 100%; margin: auto 0; }
+
+/* "What's new": a plain list with dividers, deliberately not another card. */
+.whatsnew { margin-top: 28px; }
+.whatsnewhead {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding-bottom: 8px; font-size: 12px; color: var(--ink-secondary);
+}
+.whatsnew ul { margin: 0; padding: 0; list-style: none; }
+.whatsnew li { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-subtle); }
+.whatsnew li b { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--ink-primary); }
+.whatsnew li span span { display: block; font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+.whatsnewicon {
+  width: 28px; height: 28px; flex: none; border-radius: var(--radius-sm); display: flex;
+  align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent-ink);
+}
+.whatsnewicon svg { width: 16px; height: 16px; }
+.loginhelp { margin: 12px 0 0; text-align: center; font-size: 13px; line-height: 18px; color: var(--ink-secondary); }
+.loginhelp b { font-weight: 600; color: var(--accent-ink); }
+.loginfooter { padding-top: 32px; font-size: 12px; color: var(--ink-secondary); }
 
 /* signed-out screen */
 .divider {
@@ -100,15 +193,21 @@
 @media (max-width: 1023px) {
   /* minmax(0, …): otherwise the 380px sign-in card sets the column's minimum width and the
      page scrolls sideways on a phone. */
-  .page { grid-template-columns: minmax(0, 1fr); }
+  .page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
   .brandpanel { padding: 40px 32px; }
-  .pts { margin-top: 32px; }
-  .formwrap { padding: 32px 24px; }
+  .headline { font-size: 40px; }
+  /* The panel sits above the sign-in card here: keep it short so the button stays near. */
+  .dixels, .foundation { display: none; }
+  .formwrap { padding: 32px 24px 24px; }
+  /* A normal row above the card: positioned in the corner, they'd sit on top of it. */
+  .logintools { position: static; align-self: flex-end; margin-bottom: var(--space-4); }
 }
 
 @media (max-width: 639px) {
-  .brandpanel { padding: 32px 20px; }
-  .formwrap { padding: 24px 16px; }
+  .brandpanel { padding: 32px 16px; }
+  .brandpanel > .eyebrow { margin-top: 32px; }
+  .headline { font-size: 34px; }
+  .formwrap { padding: 24px 16px 16px; }
   .logincard { padding: 24px; }
 }
 
@@ -149,6 +248,7 @@
 @keyframes authpop { from { transform: scale(.6); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .authcard, .authicon.done, .logincard { animation: none; }
+  .loginbtn .arrow { transition: none; }
   .authspinner { animation-duration: 2.4s; }
 }
 
