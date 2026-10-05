@@ -34,7 +34,6 @@ const SARA: ProfileDto = {
   name: 'Sara',
   surname: 'Haddad',
   phoneNumber: null,
-  hasPassword: true,
   concurrencyStamp: 'stamp-1',
 }
 
@@ -193,7 +192,7 @@ describe('ProfilePage — password', () => {
   const rule = (name: string) => screen.getByText(name).closest('li')!
 
   async function fillIn(current: string, next: string, confirm: string) {
-    if (current) await userEvent.type(await screen.findByLabelText('Current password', { selector: 'input' }), current)
+    await userEvent.type(await screen.findByLabelText('Current password', { selector: 'input' }), current)
     await userEvent.type(await screen.findByLabelText('New password', { selector: 'input' }), next)
     await userEvent.type(box('Confirm new password'), confirm)
   }
@@ -303,17 +302,5 @@ describe('ProfilePage — password', () => {
 
     expect(current).toHaveAttribute('type', 'text')
     expect(screen.getAllByRole('button', { name: 'Hide password' })).toHaveLength(1)
-  })
-
-  it('sets a first password without asking for a current one', async () => {
-    vi.mocked(getMyProfile).mockResolvedValue({ ...SARA, hasPassword: false })
-    vi.mocked(changeMyPassword).mockResolvedValue(undefined)
-    renderPage('/profile/security')
-
-    await fillIn('', 'New1!pass', 'New1!pass')
-    expect(screen.queryByLabelText('Current password', { selector: 'input' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
-
-    expect(changeMyPassword).toHaveBeenCalledWith('t', { currentPassword: undefined, newPassword: 'New1!pass' })
   })
 })

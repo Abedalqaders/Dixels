@@ -536,7 +536,6 @@ export interface TextKeys {
   "Profile:Loading": string
   "Profile:NewPassword": string
   "Profile:NewPasswordRequired": string
-  "Profile:NoPasswordLead": string
   "Profile:Password": string
   "Profile:PasswordChanged": string
   "Profile:PasswordLead": string
@@ -563,7 +562,6 @@ export interface TextKeys {
   "Profile:SaveChanges": string
   "Profile:Saved": string
   "Profile:Sections": string
-  "Profile:SetPassword": string
   "Profile:ShowPassword": string
   "Profile:SignInDetailsNote": string
   "Profile:Strength:Fair": string

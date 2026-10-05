@@ -48,8 +48,6 @@ export function ProfilePage({ section }: { section: ProfileSectionName }) {
 
   function handlePasswordChanged() {
     showToast(t('Profile:PasswordChanged'))
-    // An account that had no password now has one.
-    if (profile && !profile.hasPassword) void queryClient.invalidateQueries({ queryKey: queryKeys.profile.me() })
   }
 
   return (
@@ -97,7 +95,7 @@ export function ProfilePage({ section }: { section: ProfileSectionName }) {
                 // Keyed by the stamp: after a save or a reload, the boxes start from what's stored.
                 <PersonalInfoCard key={profile.concurrencyStamp} profile={profile} token={token} onSaved={handleSaved} onError={handleError} />
               ) : (
-                <PasswordCard hasPassword={profile.hasPassword} token={token} onChanged={handlePasswordChanged} />
+                <PasswordCard token={token} onChanged={handlePasswordChanged} />
               )}
             </>
           )}

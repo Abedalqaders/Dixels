@@ -13,8 +13,6 @@ import { PasswordInput } from './PasswordInput'
 import { ProfileSection } from './ProfileSection'
 
 interface PasswordCardProps {
-  /** Whether the account has a password already — if not, there's no current one to ask for. */
-  hasPassword: boolean
   token: string
   onChanged: () => void
 }
@@ -36,7 +34,7 @@ const boxId = (field: Field) => `password-${field}`
  * The server stays the judge. Its answer — a wrong current password, or a rule the checklist
  * didn't know about — goes under the box it's about, and goes once that box is changed.
  */
-export function PasswordCard({ hasPassword, token, onChanged }: PasswordCardProps) {
+export function PasswordCard({ token, onChanged }: PasswordCardProps) {
   const { t } = useTranslation()
   const [values, setValues] = useState<Record<Field, string>>({ current: '', new: '', confirm: '' })
   const [left, setLeft] = useState<Partial<Record<Field, boolean>>>({})
@@ -52,7 +50,7 @@ export function PasswordCard({ hasPassword, token, onChanged }: PasswordCardProp
 
   // What's wrong with each box as it stands, whether or not it's shown yet.
   const problems: Record<Field, string | undefined> = {
-    current: hasPassword && !values.current ? t('Profile:CurrentPasswordRequired') : undefined,
+    current: !values.current ? t('Profile:CurrentPasswordRequired') : undefined,
     new: !values.new ? t('Profile:NewPasswordRequired') : unmet.length > 0 ? t('Profile:PasswordRulesUnmet') : undefined,
     confirm: !values.confirm
       ? t('Profile:ConfirmPasswordRequired')
@@ -90,7 +88,7 @@ export function PasswordCard({ hasPassword, token, onChanged }: PasswordCardProp
 
     setSaving(true)
     try {
-      await changeMyPassword(token, { currentPassword: hasPassword ? values.current : undefined, newPassword: values.new })
+      await changeMyPassword(token, { currentPassword: values.current, newPassword: values.new })
       setValues({ current: '', new: '', confirm: '' })
       setLeft({})
       setSubmitted(false)
@@ -136,16 +134,16 @@ export function PasswordCard({ hasPassword, token, onChanged }: PasswordCardProp
   return (
     <form onSubmit={handleSubmit} noValidate>
       <ProfileSection
-        title={hasPassword ? t('Profile:ChangePassword') : t('Profile:SetPassword')}
-        description={hasPassword ? t('Profile:PasswordLead') : t('Profile:NoPasswordLead')}
+        title={t('Profile:ChangePassword')}
+        description={t('Profile:PasswordLead')}
         footer={
           <Button type="submit" disabled={saving || empty}>
-            {saving ? t('Common:Saving') : hasPassword ? t('Profile:ChangePassword') : t('Profile:SetPassword')}
+            {saving ? t('Common:Saving') : t('Profile:ChangePassword')}
           </Button>
         }
       >
         <div className="grid max-w-md gap-y-[18px]">
-          {hasPassword && passwordBox('current', t('Profile:CurrentPassword'), 'current-password')}
+          {passwordBox('current', t('Profile:CurrentPassword'), 'current-password')}
           {passwordBox('new', t('Profile:NewPassword'), 'new-password')}
           {passwordBox('confirm', t('Profile:ConfirmPassword'), 'new-password')}
         </div>
