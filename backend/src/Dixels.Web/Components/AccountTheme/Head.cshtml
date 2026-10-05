@@ -1,0 +1,26 @@
+@* Which theme, in this order: the one the web app sent (ui_theme inside ReturnUrl, the sign-in
+   request this page continues), then the one picked with the button on this page before, then
+   the computer's setting. Inline and in the head on purpose: it runs before the page paints. *@
+<script>
+    (function () {
+        var theme = null;
+        try {
+            var query = new URLSearchParams(location.search);
+            var back = query.get('ReturnUrl') || query.get('returnUrl');
+            if (back) {
+                var sent = new URL(back, location.origin).searchParams.get('ui_theme');
+                if (sent === 'light' || sent === 'dark') theme = sent;
+            }
+        } catch (e) { }
+        if (!theme) {
+            try {
+                var saved = localStorage.getItem('dixels.theme');
+                if (saved === 'light' || saved === 'dark') theme = saved;
+            } catch (e) { }
+        }
+        // Null: nobody picked one, so the page keeps following the computer (Toggle.cshtml).
+        window.dixelsPinnedTheme = theme;
+        var dark = theme ? theme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+    })();
+</script>

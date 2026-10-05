@@ -1,6 +1,58 @@
 /* Your Global Styles */
 
+/* ABP's sign-in pages (login, register, forgot password) in Dixels' colours.
+   The logo is the real one; LeptonX's placeholder was white, so only the name showed. */
 :root .lpx-brand-logo {
-    --lpx-logo: url('/images/logo/leptonx/logo-light.png');
-    --lpx-logo-icon: url('/images/logo/leptonx/logo-light-thumbnail.png');
+    --lpx-logo: url('/images/logo/dixels.png');
+    --lpx-logo-icon: url('/images/logo/dixels.png');
 }
+/* LeptonX sizes this box for a square mark; ours is a wordmark (about 2.5 : 1). */
+.lpx-login-brand-text .lpx-brand-logo.lpx-login-logo {
+    width: 12em; height: 4.8em; background-size: contain; background-position: center; background-repeat: no-repeat;
+}
+/* The logo already says Dixels. */
+.lpx-brand-name.lpx-login-name { display: none; }
+
+/* Dark: Bootstrap's own dark mode (data-bs-theme, set by Components/AccountTheme), with the
+   web app's dark colours (frontend tokens.css) instead of Bootstrap's grey. */
+[data-bs-theme=dark] {
+    --bs-body-bg: #1e1a24;
+    --bs-body-bg-rgb: 30, 26, 36;
+    --bs-body-color: #f1edf5;
+    --bs-body-color-rgb: 241, 237, 245;
+    --bs-emphasis-color: #f1edf5;
+    --bs-secondary-color: #a9a1b2;
+    --bs-secondary-bg: #26212d;
+    --bs-tertiary-bg: #15121a;
+    --bs-border-color: #2f2937;
+    --bs-link-color: #c9a3e3;
+    --bs-link-color-rgb: 201, 163, 227;
+    --bs-link-hover-color: #dcc2ee;
+    --bs-link-hover-color-rgb: 220, 194, 238;
+}
+[data-bs-theme=dark] body,
+[data-bs-theme=dark] .lpx-content-container { background-color: #15121a; }
+[data-bs-theme=dark] .card { background-color: #1e1a24; border-color: #2f2937; }
+[data-bs-theme=dark] .form-control,
+[data-bs-theme=dark] .form-select { background-color: #15121a; border-color: #6e6677; color: #f1edf5; }
+[data-bs-theme=dark] .btn-light {
+    --bs-btn-bg: #26212d; --bs-btn-color: #f1edf5; --bs-btn-border-color: #2f2937;
+    --bs-btn-hover-bg: #2f2937; --bs-btn-hover-color: #f1edf5; --bs-btn-hover-border-color: #2f2937;
+    --bs-btn-active-bg: #2f2937; --bs-btn-active-color: #f1edf5;
+}
+[data-bs-theme=dark] .dropdown-menu { --bs-dropdown-bg: #26212d; --bs-dropdown-link-color: #f1edf5; --bs-dropdown-link-hover-bg: #2f2937; }
+
+/* The light/dark button, top corner (Components/AccountTheme/Toggle.cshtml). */
+.dixels-theme-toggle {
+    position: fixed; top: 1rem; inset-inline-end: 1rem; z-index: 1030;
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid #ebe8ee; border-radius: 999px;
+    background: #ffffff; color: #746e7a; cursor: pointer;
+}
+.dixels-theme-toggle:hover { color: #27202d; }
+[data-bs-theme=dark] .dixels-theme-toggle { border-color: #2f2937; background: #1e1a24; color: #a9a1b2; }
+[data-bs-theme=dark] .dixels-theme-toggle:hover { color: #f1edf5; }
+.dixels-theme-toggle svg { width: 18px; height: 18px; }
+.dixels-theme-toggle .dixels-sun,
+[data-bs-theme=dark] .dixels-theme-toggle .dixels-moon { display: none; }
+[data-bs-theme=dark] .dixels-theme-toggle .dixels-sun { display: block; }

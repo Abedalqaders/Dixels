@@ -4,6 +4,7 @@ import { useAuth } from 'react-oidc-context'
 import { useTranslation } from 'react-i18next'
 import { setTokenRefresher, setUnauthorizedHandler } from '@/lib/api/httpClient'
 import { AuthStatusScreen } from './AuthStatusScreen'
+import { signInExtras } from '@/features/auth/signIn'
 
 const STORAGE_KEY = 'dixels:forced-sign-outs'
 /** Two forced sign-outs inside this window means signing in again won't help. */
@@ -73,7 +74,7 @@ export function SessionGuard({ children }: { children: ReactNode }) {
           onClick={() => {
             clearForcedSignOuts()
             setBroken(false)
-            void removeUser().then(() => signinRedirect())
+            void removeUser().then(() => signinRedirect(signInExtras()))
           }}
         >
           {t('Auth:RefusedRetry')}

@@ -11,6 +11,7 @@ import logo from '@/assets/logo.png'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/login.css'
+import { signInExtras } from '@/features/auth/signIn'
 
 // Root route. Also where signoutRedirect() sends the user back to, so it
 // doubles as the "signed out" landing page from the mock.
@@ -35,7 +36,7 @@ export function HomePage() {
 
   function signIn() {
     setRedirecting(true)
-    auth.signinRedirect().catch(() => setRedirecting(false))
+    auth.signinRedirect(signInExtras()).catch(() => setRedirecting(false))
   }
 
   return (

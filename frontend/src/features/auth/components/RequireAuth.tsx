@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import { useTranslation } from 'react-i18next'
 import { AuthStatusScreen } from './AuthStatusScreen'
+import { signInExtras } from '@/features/auth/signIn'
 
 /** Where to land after signing in, carried through the login round trip in the OIDC state. */
 export interface SignInState {
@@ -23,7 +24,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!auth.isLoading && !auth.isAuthenticated && !auth.activeNavigator) {
       const state: SignInState = { returnTo: location.pathname + location.search }
-      auth.signinRedirect({ state })
+      auth.signinRedirect({ state, ...signInExtras() })
     }
   }, [auth, location.pathname, location.search])
 
