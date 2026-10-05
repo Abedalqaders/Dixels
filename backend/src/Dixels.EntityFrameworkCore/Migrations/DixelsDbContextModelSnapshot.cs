@@ -81,6 +81,9 @@ namespace Dixels.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("LastModifierId");
 
+                    b.Property<DateTimeOffset?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ResolvedConstraintsJson")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -110,6 +113,10 @@ namespace Dixels.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("SeriesId");
+
+                    b.HasIndex("StartsAt")
+                        .HasDatabaseName("IX_AppBookings_ReminderDue")
+                        .HasFilter("\"ReminderSentAt\" IS NULL AND \"Status\" = 'Confirmed'");
 
                     b.HasIndex("UserId", "IdempotencyKey")
                         .IsUnique();

@@ -132,6 +132,7 @@ public class HierarchyNamesTests : DixelsApplicationTestBase<DixelsEntityFramewo
         (await InAsync("en", () => _spaces.GetAsync(space.Id))).Name.ShouldBe("Room 201");
     }
 
-    // Keeps each test's rows apart from the seeded ones in searches.
-    private static readonly string Tag = Guid.NewGuid().ToString("N")[..6];
+    // Keeps each test's rows apart from the seeded ones in searches. Capitals, so it's a code
+    // an Arabic name may hold too (NameAlphabet).
+    private static readonly string Tag = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
 }

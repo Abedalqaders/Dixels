@@ -3463,6 +3463,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/my-preferences/language": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/*+json": components["schemas"]["Dixels.Users.UpdateMyLanguageDto"];
+                    "application/json": components["schemas"]["Dixels.Users.UpdateMyLanguageDto"];
+                    "text/json": components["schemas"]["Dixels.Users.UpdateMyLanguageDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/app/space-types": {
         parameters: {
             query?: never;
@@ -5970,6 +6082,9 @@ export interface components {
             /** Format: uuid */
             buildingId?: string | null;
         };
+        "Dixels.Users.UpdateMyLanguageDto": {
+            language: string;
+        };
         "Dixels.Users.UserRolesDto": {
             roles: string[];
             /** Format: uuid */
@@ -6083,6 +6198,7 @@ export type SchemaDixelsSpaceManagementUpdateSpaceConstraintsDto = components['s
 export type SchemaDixelsSpaceManagementUpdateSpaceDto = components['schemas']['Dixels.SpaceManagement.UpdateSpaceDto'];
 export type SchemaDixelsSpaceManagementUpdateSpaceTypeDto = components['schemas']['Dixels.SpaceManagement.UpdateSpaceTypeDto'];
 export type SchemaDixelsUsersAssignUserBuildingDto = components['schemas']['Dixels.Users.AssignUserBuildingDto'];
+export type SchemaDixelsUsersUpdateMyLanguageDto = components['schemas']['Dixels.Users.UpdateMyLanguageDto'];
 export type SchemaDixelsUsersUserRolesDto = components['schemas']['Dixels.Users.UserRolesDto'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingSummaryDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingSummaryDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];

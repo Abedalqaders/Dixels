@@ -15,7 +15,8 @@ namespace Dixels.Localization;
 /// - each language is one of the app's (AbpLocalizationOptions.Languages) and appears once;
 /// - the default language (ABP's Abp.Localization.DefaultLanguage setting) has a name — it's
 ///   what every language without its own name falls back to;
-/// - names are trimmed, and an empty one just means "no name in that language".
+/// - names are trimmed, and an empty one just means "no name in that language";
+/// - each name is in its language's own letters (<see cref="NameAlphabet"/>).
 /// Uniqueness is per entity type, so each manager checks it itself.
 /// </summary>
 public class LocalizedNameValidator : DomainService
@@ -59,10 +60,22 @@ public class LocalizedNameValidator : DomainService
             }
 
             var name = entry.Name?.Trim() ?? string.Empty;
-            if (name.Length > 0)
+            if (name.Length == 0)
             {
-                result.Add(new LocalizedName(code, name));
+                continue;
             }
+
+            if (!NameAlphabet.Fits(code, name))
+            {
+                // "language" names it in the message; "languageCode" lets the form switch to it.
+                throw new BusinessException(NameAlphabet.AllowsLatinCodes(code)
+                        ? DixelsDomainErrorCodes.NameHasForeignLettersExceptCodes
+                        : DixelsDomainErrorCodes.NameHasForeignLetters)
+                    .WithData("language", language.DisplayName)
+                    .WithData("languageCode", code);
+            }
+
+            result.Add(new LocalizedName(code, name));
         }
 
         var defaultLanguage = await GetDefaultLanguageAsync();

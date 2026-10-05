@@ -3,6 +3,7 @@ import { AuthProvider as OidcAuthProvider } from 'react-oidc-context'
 import type { AuthProviderProps } from 'react-oidc-context'
 import { SessionGuard } from './SessionGuard'
 import { PermissionsProvider } from '@/features/auth/permissions/PermissionsProvider'
+import { LanguageSync } from '@/features/auth/language/LanguageSync'
 
 // This config describes our OpenIddict client ("Dixels_App") to the OIDC
 // library. It mirrors exactly what we registered on the backend in
@@ -35,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <OidcAuthProvider {...oidcConfig}>
       <SessionGuard>
-        <PermissionsProvider>{children}</PermissionsProvider>
+        <PermissionsProvider>
+          <LanguageSync />
+          {children}
+        </PermissionsProvider>
       </SessionGuard>
     </OidcAuthProvider>
   )

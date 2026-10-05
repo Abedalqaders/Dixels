@@ -250,6 +250,8 @@ export interface TextKeys {
   "Dixels:Bookings:TooSoon:Short": string
   "Dixels:Localization:DefaultLanguageNameRequired": string
   "Dixels:Localization:LanguageListedTwice": string
+  "Dixels:Localization:NameHasForeignLetters": string
+  "Dixels:Localization:NameHasForeignLettersExceptCodes": string
   "Dixels:Localization:UnsupportedLanguage": string
   "Dixels:SpaceManagement:CapacityBelowMinAttendees": string
   "Dixels:SpaceManagement:CapacityMustBePositive": string
@@ -282,6 +284,28 @@ export interface TextKeys {
   "Duration:MinutesShort_other": string
   "Duration:Minutes_one": string
   "Duration:Minutes_other": string
+  "Email:Attendees": string
+  "Email:BookingCancelled:Intro": string
+  "Email:BookingCancelled:Subject": string
+  "Email:BookingConfirmed:Intro": string
+  "Email:BookingConfirmed:Subject": string
+  "Email:BookingReminder:Intro": string
+  "Email:BookingReminder:Subject": string
+  "Email:Bookings": string
+  "Email:Dates": string
+  "Email:Footer": string
+  "Email:Greeting": string
+  "Email:OpenDixels": string
+  "Email:Reason": string
+  "Email:SeriesCancelled:Intro": string
+  "Email:SeriesCancelled:Subject": string
+  "Email:SeriesConfirmed:Intro": string
+  "Email:SeriesConfirmed:Subject": string
+  "Email:Space": string
+  "Email:Time": string
+  "Email:Title": string
+  "Email:When": string
+  "Email:Where": string
   "Enum:ConstraintSource.Building": string
   "Enum:ConstraintSource.Floor": string
   "Enum:ConstraintSource.Space": string
@@ -456,6 +480,7 @@ export interface TextKeys {
   "Names:DefaultRequired": string
   "Names:HasName": string
   "Names:Language": string
+  "Names:NeedsFixing": string
   "Names:Required": string
   "Nav:Administration": string
   "Nav:Bookings": string
