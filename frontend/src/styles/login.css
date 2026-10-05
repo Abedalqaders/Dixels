@@ -152,10 +152,16 @@
   .authspinner { animation-duration: 2.4s; }
 }
 
-/* The language button, top corner of the form side. */
+/* The language and theme buttons, top corner of the form side. */
 .formwrap { position: relative; }
-.loginlang {
+.logintools {
   position: absolute; top: var(--space-4); inset-inline-end: var(--space-4);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+/* Same height side by side; round like the language pill. */
+.logintools > * { height: 36px; }
+.logintools .themebtn { border-radius: var(--radius-pill); }
+.loginlang {
   display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
   border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
   background: var(--surface-raised); color: var(--ink-primary); font: inherit; font-size: 14px; cursor: pointer;

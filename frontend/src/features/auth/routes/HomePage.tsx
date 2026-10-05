@@ -6,6 +6,7 @@ import { HOME_PATH } from '@/features/auth/landing'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
 import { CalendarIcon, ClockIcon } from '@/components/icons'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import logo from '@/assets/logo.png'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -59,7 +60,10 @@ export function HomePage() {
       </div>
 
       <div className="formwrap">
-        <LanguageSwitcher className="loginlang" />
+        <div className="logintools">
+          <LanguageSwitcher className="loginlang" />
+          <ThemeToggle />
+        </div>
         <div className="logincard">
           <h1>{t('SignIn:Title')}</h1>
           <p className="loginsub">{t('SignIn:Subtitle')}</p>

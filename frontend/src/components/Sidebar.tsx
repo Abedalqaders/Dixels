@@ -1,20 +1,62 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { PanelLeftCloseIcon, PanelLeftOpenIcon } from 'lucide-react'
 import { Flows, HierarchyViewers, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { up } from '@/lib/breakpoints'
+import { languageInfo } from '@/i18n'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, TagIcon } from './icons'
 import { AccountMenu } from './AccountMenu'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 import logo from '@/assets/logo.png'
 
+// Collapsed or not, remembered per browser. Read on the first render, so a collapsed
+// sidebar never flashes open on a reload.
+const COLLAPSED_KEY = 'dixels.sidebar'
+
+function readCollapsed(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(COLLAPSED_KEY) === 'collapsed'
+  } catch {
+    return false
+  }
+}
+
+function saveCollapsed(collapsed: boolean) {
+  try {
+    if (collapsed) globalThis.localStorage?.setItem(COLLAPSED_KEY, 'collapsed')
+    else globalThis.localStorage?.removeItem(COLLAPSED_KEY)
+  } catch {
+    // Storage blocked (private mode): it still collapses, just not after a reload.
+  }
+}
+
+/**
+ * In the collapsed rail only icons show, so each one names itself in a tooltip — on hover
+ * and on keyboard focus — on the side facing the page. The label itself stays in the link
+ * (visually hidden), so screen readers and tests still find it by name.
+ */
+function RailTip({ show, label, children }: { show: boolean; label: React.ReactNode; children: React.ReactElement }) {
+  if (!show) return children
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side={languageInfo().dir === 'rtl' ? 'left' : 'right'} sideOffset={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 type NavItemProps = {
   to: string
   active: boolean
   disabled?: boolean
+  collapsed: boolean
   children: React.ReactNode
   icon: React.ReactNode
   onNavigate: () => void
@@ -22,21 +64,25 @@ type NavItemProps = {
 
 // Pages that don't exist yet render as an inert row (same look, no
 // navigation) instead of a dead link into an unbuilt route.
-function NavItem({ to, active, disabled, children, icon, onNavigate }: NavItemProps) {
+function NavItem({ to, active, disabled, collapsed, children, icon, onNavigate }: NavItemProps) {
   const className = `nav${active ? ' on' : ''}`
   if (disabled) {
     return (
-      <span className={className} style={{ cursor: 'default', opacity: 0.6 }}>
-        {icon}
-        {children}
-      </span>
+      <RailTip show={collapsed} label={children}>
+        <span className={className} style={{ cursor: 'default', opacity: 0.6 }}>
+          {icon}
+          <span className="navlabel">{children}</span>
+        </span>
+      </RailTip>
     )
   }
   return (
-    <Link className={className} to={to} onClick={onNavigate}>
-      {icon}
-      {children}
-    </Link>
+    <RailTip show={collapsed} label={children}>
+      <Link className={className} to={to} onClick={onNavigate}>
+        {icon}
+        <span className="navlabel">{children}</span>
+      </Link>
+    </RailTip>
   )
 }
 
@@ -81,6 +127,15 @@ export function Sidebar() {
     if (mobileOpen) setMobileOpen(false)
   }
   if (docked && mobileOpen) setMobileOpen(false)
+
+  // Docked, the sidebar can shrink to an icon rail, giving the page the width back. The
+  // drawer below lg is always full width; it opens and closes instead.
+  const [collapsedChoice, setCollapsedChoice] = useState(readCollapsed)
+  const collapsed = docked && collapsedChoice
+  function toggleCollapsed() {
+    saveCollapsed(!collapsedChoice)
+    setCollapsedChoice(!collapsedChoice)
+  }
 
   // While open it behaves like a dialog: Escape closes it, the page behind doesn't scroll,
   // focus starts on the first item and goes back to the menu button when it closes.
@@ -139,7 +194,13 @@ export function Sidebar() {
         </div>
       )}
       <div className={`scrim${mobileOpen ? ' show' : ''}`} onClick={closeMobile} aria-hidden="true" />
-      <nav id="app-sidebar" ref={drawerRef} aria-label={t('Nav:Main')} className={`side${mobileOpen ? ' open' : ''}`}>
+      <TooltipProvider delayDuration={300}>
+      <nav
+        id="app-sidebar"
+        ref={drawerRef}
+        aria-label={t('Nav:Main')}
+        className={`side${mobileOpen ? ' open' : ''}${collapsed ? ' collapsed' : ''}`}
+      >
       <div className="brand">
         <img className="logo-img" src={logo} alt="Dixels" />
       </div>
@@ -149,6 +210,7 @@ export function Sidebar() {
         <NavItem
           to="/my-calendar"
           active={location.pathname === '/my-calendar'}
+          collapsed={collapsed}
           onNavigate={closeMobile}
           icon={<CalendarLinesIcon />}
         >
@@ -159,6 +221,7 @@ export function Sidebar() {
         <NavItem
           to="/find-space"
           active={location.pathname === '/find-space'}
+          collapsed={collapsed}
           onNavigate={closeMobile}
           icon={<SearchIcon />}
         >
@@ -186,7 +249,8 @@ export function Sidebar() {
                   <NavItem
                     to="/admin/buildings"
                     active={location.pathname === '/admin/buildings' || location.pathname.startsWith('/admin/buildings/')}
-                    onNavigate={closeMobile}
+                    collapsed={collapsed}
+          onNavigate={closeMobile}
                     icon={<BuildingDoorIcon />}
                   >
                     {t('Nav:Hierarchy')}
@@ -196,7 +260,8 @@ export function Sidebar() {
                   <NavItem
                     to="/admin/space-types"
                     active={location.pathname === '/admin/space-types'}
-                    onNavigate={closeMobile}
+                    collapsed={collapsed}
+          onNavigate={closeMobile}
                     icon={<TagIcon />}
                   >
                     {t('Nav:SpaceTypes')}
@@ -211,6 +276,7 @@ export function Sidebar() {
         <NavItem
           to="/admin/users"
           active={location.pathname === '/admin/users'}
+          collapsed={collapsed}
           onNavigate={closeMobile}
           icon={<PeopleIcon />}
         >
@@ -219,8 +285,17 @@ export function Sidebar() {
       )}
 
       <div className="spacer"></div>
+      {docked && (
+        <RailTip show={collapsed} label={t('Nav:ExpandMenu')}>
+          <button type="button" className="nav navcollapse" onClick={toggleCollapsed}>
+            {collapsed ? <PanelLeftOpenIcon aria-hidden /> : <PanelLeftCloseIcon aria-hidden />}
+            <span className="navlabel">{collapsed ? t('Nav:ExpandMenu') : t('Nav:CollapseMenu')}</span>
+          </button>
+        </RailTip>
+      )}
       <AccountMenu />
       </nav>
+      </TooltipProvider>
     </>
   )
 }

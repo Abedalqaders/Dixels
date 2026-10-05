@@ -487,6 +487,8 @@ export interface TextKeys {
   "Nav:Breadcrumb": string
   "Nav:BreadcrumbLoading": string
   "Nav:CloseMenu": string
+  "Nav:CollapseMenu": string
+  "Nav:ExpandMenu": string
   "Nav:FindSpace": string
   "Nav:Hierarchy": string
   "Nav:Main": string
