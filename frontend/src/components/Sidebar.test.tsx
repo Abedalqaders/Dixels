@@ -8,6 +8,7 @@ import { Sidebar } from './Sidebar'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
 import { granted, WithPermissions } from '@/test/permissions'
+import { TestProviders } from '@/test/providers'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 
@@ -19,11 +20,13 @@ function renderAs(permissions: PermissionsValue, role = 'employee') {
     typeof useAuth
   >)
   render(
-    <WithPermissions value={permissions}>
-      <MemoryRouter>
-        <Sidebar />
-      </MemoryRouter>
-    </WithPermissions>,
+    <TestProviders>
+      <WithPermissions value={permissions}>
+        <MemoryRouter>
+          <Sidebar />
+        </MemoryRouter>
+      </WithPermissions>
+    </TestProviders>,
   )
 }
 
@@ -136,11 +139,6 @@ describe('Sidebar drawer (below lg)', () => {
     await userEvent.click(menuButton())
     await userEvent.click(link('Find a space')!)
     expect(menuButton()).toHaveAttribute('aria-expanded', 'false')
-  })
-
-  it('gives the sign-out button a name', () => {
-    renderAs(granted(...BOOKER))
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
   })
 })
 

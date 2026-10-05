@@ -109,7 +109,7 @@ export function SpaceTypesPage() {
     <div className="app">
       <Sidebar />
       <div className="main">
-        <TopBar />
+        <TopBar crumbs={[{ label: t('Nav:SpaceManagement') }, { label: t('Nav:SpaceTypes') }]} />
         <div className="content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

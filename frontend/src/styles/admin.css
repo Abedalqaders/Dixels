@@ -177,15 +177,8 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 
 /* Constraints page (admin-constraints.html) — one level per page, so the
    level block reads as the page's own card rather than a row in a stack. */
-.backlink {
-  display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--accent-ink);
-  padding: 8px 12px; margin: -8px -12px 0; border-radius: var(--radius-md); transition: background .12s ease;
-}
-.backlink:hover { background: var(--accent-soft); text-decoration: none; }
-.backlink svg { width: 14px; height: 14px; flex: none; }
 .constraintspage .level { background: var(--surface-raised); box-shadow: var(--shadow-card); padding: var(--space-5); }
 .constraintspage .effective { background: var(--surface-raised); }
-.constraintspage h1.pagetitle { margin-top: 4px; }
 
 /* constraint levels */
 .level { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-4); }
@@ -247,10 +240,6 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 
 /* a list re-fetching (next page, new search) stays visible but dimmed instead of blanking */
 .tree.refreshing, .pad.refreshing { opacity: .55; transition: opacity .15s ease; }
-
-.breadcrumb { font-size: 13px; line-height: 18px; color: var(--ink-secondary); margin-bottom: var(--space-2); }
-.breadcrumb a { color: var(--accent-ink); text-decoration: none; }
-.breadcrumb a:hover { text-decoration: underline; }
 
 @media (max-width: 1023px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }

@@ -63,7 +63,7 @@ export const HierarchyViewers = {
 export type HierarchyLevel = 'building' | 'floor' | 'space'
 
 /** A hierarchy level's permissions. Its API needs Default to read, Create to add, Edit to
- * change details or constraints and to restore, and Delete to delete. */
+ * change details or constraints, and Delete to delete. */
 export function hierarchyPermissions(level: HierarchyLevel) {
   if (level === 'building') return Permissions.Buildings
   if (level === 'floor') return Permissions.Floors

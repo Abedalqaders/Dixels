@@ -26,6 +26,10 @@ export const queryKeys = {
     all: ['space-types'] as const,
     list: (params: unknown) => ['space-types', 'list', params] as const,
   },
+  profile: {
+    me: () => ['profile', 'me'] as const,
+    picture: () => ['profile', 'picture'] as const,
+  },
   users: {
     all: ['users'] as const,
     list: (params: unknown) => ['users', 'list', params] as const,
