@@ -49,8 +49,9 @@
   /* Day-bar colours for Find a space. Built from the theme's own hue (--focus-ring: brand
      purple in light, a lighter orchid in dark), so the timeline follows the theme instead of
      a fixed green. */
-  --color-slot-open: color-mix(in srgb, var(--focus-ring) 14%, var(--surface-raised));
-  --color-slot-busy: color-mix(in srgb, var(--ink-secondary) 55%, var(--surface-raised));
+  --color-slot-open: color-mix(in srgb, var(--focus-ring) 22%, var(--surface-raised));
+  /* Dark enough to read as taken next to the open purple, not as another shade of free. */
+  --color-slot-busy: color-mix(in srgb, var(--ink-secondary) 85%, var(--surface-raised));
   --color-slot-mine: var(--focus-ring);
   --color-slot-closed: var(--state-blocked-soft);
   --color-slot-closed-ink: var(--state-blocked-ink);
@@ -59,12 +60,14 @@
 
 /* shadcn components mark every element they render with data-slot. Without preflight
    those need the one reset Tailwind's `border` utilities assume: a solid, zero-width
-   border in the theme's border colour. Scoped to them, nothing else on the page. */
+   border in the theme's border colour, and no background (buttons would otherwise keep the
+   browser's grey; background utilities still win). Scoped to them, nothing else on the page. */
 @layer base {
   [data-slot],
   [data-slot]::before,
   [data-slot]::after {
     border: 0 solid var(--color-border);
+    background: transparent;
   }
 
   /* The calendar grids are plain elements built with the same border utilities (day

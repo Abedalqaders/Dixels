@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/Toast'
-import { TextSkeleton } from '@/components/LoadingSkeletons'
+import { BuildingLine } from '@/components/BuildingLine'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
@@ -101,16 +101,14 @@ export function MyCalendarPage() {
 
   return (
     <>
-      <TopBar crumbs={[{ label: t('Nav:Bookings') }, { label: t('Nav:MyCalendar') }]}>
-        <span className="pick">
-          <span className="picklbl">
-            {status === 'loading' ? <TextSkeleton label={t('Common:LoadingBuilding')} /> : building?.name}
-          </span>
-        </span>
-      </TopBar>
+      <TopBar crumbs={[{ label: t('Nav:Bookings') }, { label: t('Nav:MyCalendar') }]} />
 
       <div className="content" data-compact-top="">
-        <h1 className="pagetitle">{t('Calendar:Title')}</h1>
+        <div>
+          <h1 className="pagetitle">{t('Calendar:Title')}</h1>
+          {status === 'loading' && <BuildingLine loading />}
+          {building && <BuildingLine name={building.name} details={t('Calendar:Lead', { timezone: building.timezone })} />}
+        </div>
 
         {status === 'error' && (
           <p className="lead" role="alert">
@@ -306,9 +304,6 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
 
           <span className="flex-1" />
 
-          <span className="hidden text-sm text-muted-foreground xl:inline">
-            {building.name} · {building.timezone}
-          </span>
           <div className="flex items-center overflow-hidden rounded-md border">
             <Button
               variant="ghost"

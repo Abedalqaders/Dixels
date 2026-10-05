@@ -47,7 +47,8 @@ export function DatePicker({ id, value, min, max, isDisabled, onChange, errorId 
         <Button
           id={id}
           variant="outline"
-          className="w-full justify-between text-start font-normal"
+          // Outlined like the From / To / Type selects next to it, not filled.
+          className="w-full justify-between border-input bg-transparent text-start font-normal hover:bg-transparent hover:text-foreground dark:bg-transparent"
           aria-invalid={errorId ? true : undefined}
           aria-describedby={errorId}
         >

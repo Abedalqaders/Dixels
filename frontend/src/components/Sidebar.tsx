@@ -12,7 +12,7 @@ import { BuildingDoorIcon, CalendarLinesIcon, MenuIcon, PeopleIcon, SearchIcon, 
 import { AccountMenu } from './AccountMenu'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
-import logo from '@/assets/logo.png'
+import { Logo } from '@/components/Logo'
 
 // Collapsed or not, remembered per browser. Read on the first render, so a collapsed
 // sidebar never flashes open on a reload.
@@ -202,7 +202,7 @@ export function Sidebar() {
         className={`side${mobileOpen ? ' open' : ''}${collapsed ? ' collapsed' : ''}`}
       >
       <div className="brand">
-        <img className="logo-img" src={logo} alt="Dixels" />
+        <Logo className="logo-img" />
       </div>
 
       {labelSections && <div className="grp">{t('Nav:Bookings')}</div>}

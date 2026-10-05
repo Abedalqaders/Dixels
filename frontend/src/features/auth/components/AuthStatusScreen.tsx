@@ -1,4 +1,4 @@
-import logo from '@/assets/logo.png'
+import { Logo } from '@/components/Logo'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/login.css'
@@ -22,7 +22,7 @@ export function AuthStatusScreen({ state, title, detail, children }: AuthStatusS
   return (
     <div className="authscreen">
       <div className="authcard" role={state === 'error' ? 'alert' : 'status'} aria-live="polite">
-        <img className="authlogo" src={logo} alt="Dixels" />
+        <Logo className="authlogo" />
         <div className={`authicon ${state}`} aria-hidden="true">
           {state === 'busy' && <span className="authspinner" />}
           {state === 'done' && (

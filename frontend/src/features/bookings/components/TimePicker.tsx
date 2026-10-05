@@ -42,12 +42,12 @@ export function TimePicker({ id, value, slotMinutes, min = 0, max = DAY_MINUTES 
     // From moves, To's new value lands before its new list does — that select then reports
     // "" for a moment, which would wipe the end time.
     <Select value={allowed.includes(value) ? value : ''} onValueChange={(v) => v && onChange(v as HhMm)} disabled={allowed.length === 0}>
-      <SelectTrigger id={id} className="w-full font-mono" aria-invalid={errorId ? true : undefined} aria-describedby={errorId}>
+      <SelectTrigger id={id} className="w-full tabular-nums" aria-invalid={errorId ? true : undefined} aria-describedby={errorId}>
         <SelectValue placeholder={allowed.length === 0 ? t('BookingForm:NoTimesLeft') : label(value)} />
       </SelectTrigger>
       <SelectContent className="max-h-72">
         {allowed.map((time, i) => (
-          <SelectItem key={time} value={time} className="font-mono">
+          <SelectItem key={time} value={time} className="tabular-nums">
             {label(time)}
             {showNow && i === 0 && ` · ${t('BookingForm:Now')}`}
           </SelectItem>

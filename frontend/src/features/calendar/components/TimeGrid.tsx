@@ -7,7 +7,7 @@ import { formatDate, fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
 import { dayOfMonth, shortWeekday, weekdayName } from '@/features/calendar/calendarDates'
-import { formatClock } from '@/lib/time/format'
+import { formatClock, formatClockRange } from '@/lib/time/format'
 import { formatDuration } from '@/features/bookings/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { DAY_MINUTES, HOUR_PX, itemMinutes, itemsByDay, layoutDay, openWindow } from '@/features/calendar/dayLayout'
@@ -102,8 +102,9 @@ export function TimeGrid({
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
   const height = 24 * HOUR_PX
   const showsToday = days.includes(today)
-  // The Day view marks "now" in red across its one column; the week keeps a quieter dotted line.
-  const dayView = days.length === 1
+  // "Closed" is written once, in the first column that isn't past (the hatching marks
+  // closed hours in every column) — seven identical labels in a row are just noise.
+  const closedLabelDay = days.find((d) => d >= today) ?? days[0]
 
   const daysKey = days.join()
   // Grouped once per data change, so a column's list keeps its identity between renders
@@ -158,7 +159,7 @@ export function TimeGrid({
               <span
                 className={cn(
                   'grid size-6 place-items-center rounded-full text-xs font-semibold',
-                  isToday && 'bg-foreground text-background',
+                  isToday && 'bg-primary text-primary-foreground',
                 )}
               >
                 {dayOfMonth(d)}
@@ -200,14 +201,11 @@ export function TimeGrid({
             ))}
             {showsToday && (
               <span
-                className={cn(
-                  'absolute inset-e-0 z-30 flex -translate-y-1/2 items-center gap-1 bg-card ps-1 text-[11px] font-semibold',
-                  dayView ? 'pe-2 text-destructive' : 'text-foreground',
-                )}
+                className="absolute inset-e-0 z-30 flex -translate-y-1/2 items-center gap-1 bg-card ps-1 text-[11px] font-bold text-brand"
                 style={{ top: top(nowMinute) }}
               >
                 {formatClock(fromMinutes(nowMinute))}
-                {!dayView && <span className="size-1.5 rounded-full bg-foreground" />}
+                <span className="size-1.5 rounded-full bg-brand" />
               </span>
             )}
           </div>
@@ -215,10 +213,7 @@ export function TimeGrid({
           {/* "Now", once across every day on screen — the day columns only shade what's past. */}
           {showsToday && (
             <div
-              className={cn(
-                'pointer-events-none absolute inset-e-0 inset-s-16 z-30',
-                dayView ? 'border-t border-destructive' : 'border-t-2 border-dotted border-foreground/60',
-              )}
+              className="pointer-events-none absolute inset-e-0 inset-s-16 z-30 border-t-[1.5px] border-brand"
               style={{ top: top(nowMinute) }}
               aria-hidden="true"
             />
@@ -232,6 +227,7 @@ export function TimeGrid({
               open={openByDay.get(d) ?? null}
               past={d < today}
               isToday={d === today}
+              labelClosed={d === closedLabelDay}
               // Only today's column cares what time it is — the others get a constant, so the
               // 30-second clock tick re-renders one column, not the whole week.
               nowMinute={d === today ? nowMinute : 0}
@@ -261,6 +257,8 @@ interface DayColumnProps {
   /** Set on a day past the booking window: the last date that can be booked. */
   bookableUntil: IsoDate | null
   isToday: boolean
+  /** Writes "Closed" on the closed hours; only one column on screen does. */
+  labelClosed: boolean
   nowMinute: number
   firstBookableMinute: number
   leadMinutes: number
@@ -279,6 +277,7 @@ const DayColumn = memo(function DayColumn({
   past,
   bookableUntil,
   isToday,
+  labelClosed,
   nowMinute,
   firstBookableMinute,
   leadMinutes,
@@ -423,7 +422,7 @@ const DayColumn = memo(function DayColumn({
           style={{ height: top(openFrom), backgroundImage: CLOSED_HATCH }}
           aria-hidden="true"
         >
-          {openFrom >= 30 && (
+          {openFrom >= 30 && (labelClosed || !open) && (
             <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{open ? t('Calendar:Closed') : t('Calendar:ClosedAllDay')}</span>
           )}
         </div>
@@ -434,7 +433,7 @@ const DayColumn = memo(function DayColumn({
           style={{ top: top(openTo), height: top(DAY_MINUTES) - top(openTo), backgroundImage: CLOSED_HATCH }}
           aria-hidden="true"
         >
-          {DAY_MINUTES - openTo >= 30 && (
+          {DAY_MINUTES - openTo >= 30 && labelClosed && (
             <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{t('Calendar:Closed')}</span>
           )}
         </div>
@@ -488,8 +487,10 @@ const DayColumn = memo(function DayColumn({
       )}
 
       {placed.map(({ item: b, start, end, lane, lanes }) => {
-        const showTime = end - start >= 30
-        const showPlace = end - start >= 60
+        const height = Math.max(top(end) - top(start) - 2, 18)
+        // How many 16px lines fit inside the padding and border. Too short for two, the time
+        // and the space share one line ("17:30 · Desk 32") instead of the time being cut off.
+        const lines = Math.floor((height - 10) / 16)
         const started = past || (isToday && start <= nowMinute)
         return (
           <button
@@ -504,7 +505,7 @@ const DayColumn = memo(function DayColumn({
             )}
             style={{
               top: top(start) + 1,
-              height: Math.max(top(end) - top(start) - 2, 18),
+              height,
               // From the start side, so side-by-side bookings read in the language's direction.
               insetInlineStart: `calc(${(lane / lanes) * 100}% + 2px)`,
               width: `calc(${100 / lanes}% - 4px)`,
@@ -521,14 +522,16 @@ const DayColumn = memo(function DayColumn({
           >
             <span className={cn('flex min-w-0 items-center gap-1 font-semibold', !b.cancelled && 'text-brand')}>
               {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
-              <span className="truncate">{b.title}</span>
+              <span className="truncate">
+                {lines < 2 ? `${formatClock(timeOf(b.localStart))} · ${b.location}` : b.location}
+              </span>
             </span>
-            {showTime && (
+            {lines >= 2 && (
               <span className={cn('truncate text-[11px]', b.cancelled ? 'text-muted-foreground' : 'text-brand/80')}>
-                {formatClock(timeOf(b.localStart))}
+                {formatClockRange(timeOf(b.localStart), timeOf(b.localEnd))}
               </span>
             )}
-            {showPlace && <span className="truncate text-[11px] text-muted-foreground">{b.location}</span>}
+            {lines >= 3 && b.note && <span className="truncate text-[11px] text-muted-foreground">{b.note}</span>}
           </button>
         )
       })}

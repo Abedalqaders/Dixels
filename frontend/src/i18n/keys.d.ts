@@ -150,6 +150,7 @@ export interface TextKeys {
   "Calendar:DayPassed": string
   "Calendar:DayView": string
   "Calendar:Item": string
+  "Calendar:Lead": string
   "Calendar:MaxLength": string
   "Calendar:MonthHeading": string
   "Calendar:MonthView": string
@@ -746,13 +747,37 @@ export interface TextKeys {
   "Rules:WhatApplies": string
   "Rules:WhatAppliesHint": string
   "SignIn:Button": string
+  "SignIn:CortexNote": string
+  "SignIn:Eyebrow": string
   "SignIn:Foot": string
-  "SignIn:PointNoDoubleBooking": string
-  "SignIn:PointRecurring": string
-  "SignIn:PointTimezone": string
+  "SignIn:FoundationExperiences": string
+  "SignIn:FoundationExperiencesDetail": string
+  "SignIn:FoundationLabel": string
+  "SignIn:FoundationPeople": string
+  "SignIn:FoundationPeopleDetail": string
+  "SignIn:FoundationSpaces": string
+  "SignIn:FoundationSpacesDetail": string
+  "SignIn:FoundationSystems": string
+  "SignIn:FoundationSystemsDetail": string
+  "SignIn:GroupPeople": string
+  "SignIn:GroupServices": string
+  "SignIn:GroupSpaces": string
+  "SignIn:Headline": string
+  "SignIn:HelpAction": string
+  "SignIn:HelpPrompt": string
+  "SignIn:Live": string
+  "SignIn:MeetNote": string
+  "SignIn:MeetTitle": string
+  "SignIn:NewDayBarsDetail": string
+  "SignIn:NewDayBarsTitle": string
+  "SignIn:NewSecurityDetail": string
+  "SignIn:NewSecurityTitle": string
   "SignIn:Subtitle": string
   "SignIn:Tagline": string
   "SignIn:Title": string
+  "SignIn:WelcomeBack": string
+  "SignIn:WhatsNew": string
+  "SignIn:WhatsNewWhen": string
   "SpaceTypes:Add": string
   "SpaceTypes:AddTitle": string
   "SpaceTypes:Added": string

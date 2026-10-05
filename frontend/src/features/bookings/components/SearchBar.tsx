@@ -97,7 +97,7 @@ export function SearchBar({ building, value, onChange }: SearchBarProps) {
             type="number"
             min={1}
             max={maxPeople}
-            className="font-mono"
+            className="tabular-nums"
             value={value.people}
             onChange={(e) => {
               // No room seats more than the biggest one, so a bigger group isn't offered.
