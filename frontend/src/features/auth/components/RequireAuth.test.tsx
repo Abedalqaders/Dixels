@@ -27,6 +27,9 @@ describe('RequireAuth', () => {
     )
 
     expect(screen.queryByText('Calendar')).not.toBeInTheDocument()
-    expect(signinRedirect).toHaveBeenCalledWith({ state: { returnTo: '/my-calendar?view=week&date=2026-10-07' } })
+    expect(signinRedirect).toHaveBeenCalledWith({
+      state: { returnTo: '/my-calendar?view=week&date=2026-10-07' },
+      extraQueryParams: { ui_theme: 'light' },
+    })
   })
 })

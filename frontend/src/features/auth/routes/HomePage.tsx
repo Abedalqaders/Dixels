@@ -6,10 +6,12 @@ import { HOME_PATH } from '@/features/auth/landing'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
 import { CalendarIcon, ClockIcon } from '@/components/icons'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import logo from '@/assets/logo.png'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
 import '@/styles/login.css'
+import { signInExtras } from '@/features/auth/signIn'
 
 // Root route. Also where signoutRedirect() sends the user back to, so it
 // doubles as the "signed out" landing page from the mock.
@@ -34,7 +36,7 @@ export function HomePage() {
 
   function signIn() {
     setRedirecting(true)
-    auth.signinRedirect().catch(() => setRedirecting(false))
+    auth.signinRedirect(signInExtras()).catch(() => setRedirecting(false))
   }
 
   return (
@@ -59,7 +61,10 @@ export function HomePage() {
       </div>
 
       <div className="formwrap">
-        <LanguageSwitcher className="loginlang" />
+        <div className="logintools">
+          <LanguageSwitcher className="loginlang" />
+          <ThemeToggle />
+        </div>
         <div className="logincard">
           <h1>{t('SignIn:Title')}</h1>
           <p className="loginsub">{t('SignIn:Subtitle')}</p>

@@ -16,6 +16,7 @@ using Dixels.Bookings;
 using Dixels.EntityFrameworkCore;
 using Dixels.Localization;
 using Dixels.MultiTenancy;
+using Dixels.Web.Components.AccountTheme;
 using Dixels.Web.Menus;
 using Dixels.Web.RateLimiting;
 using Microsoft.OpenApi;
@@ -31,7 +32,9 @@ using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
 using Volo.Abp.AspNetCore.Mvc.UI.MultiTenancy;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite.Bundling;
+using Volo.Abp.AspNetCore.Mvc.UI.Theming;
 using Volo.Abp.AspNetCore.Mvc.UI.Theme.Shared;
+using Volo.Abp.Ui.LayoutHooks;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundWorkers;
@@ -226,6 +229,13 @@ public class DixelsWebModule : AbpModule
                     bundle.AddFiles("/global-styles.css");
                 }
             );
+        });
+
+        // Light/dark on ABP's sign-in pages, following the web app (Components/AccountTheme).
+        Configure<AbpLayoutHookOptions>(options =>
+        {
+            options.Add(LayoutHooks.Head.Last, typeof(AccountThemeHeadViewComponent), layout: StandardLayouts.Account);
+            options.Add(LayoutHooks.Body.Last, typeof(AccountThemeToggleViewComponent), layout: StandardLayouts.Account);
         });
     }
 

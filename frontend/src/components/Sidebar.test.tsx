@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
@@ -9,6 +9,7 @@ import { Permissions } from '@/features/auth/permissions/permissionNames'
 import type { PermissionsValue } from '@/features/auth/permissions/permissionsContext'
 import { granted, WithPermissions } from '@/test/permissions'
 import { TestProviders } from '@/test/providers'
+import { stubMatchMedia } from '@/test/matchMedia'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 
@@ -166,5 +167,56 @@ describe('Sidebar theme toggle (below lg, beside the menu button)', () => {
     renderAs(granted(...BOOKER))
 
     expect(screen.getByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument()
+  })
+})
+
+describe('Sidebar collapsed to an icon rail (lg and up)', () => {
+  let restore = () => {}
+  afterEach(() => {
+    restore()
+    localStorage.clear()
+  })
+  const sidebar = () => screen.getByRole('navigation', { name: 'Main' })
+
+  it('collapses and expands, saying which it will do next', async () => {
+    restore = stubMatchMedia(1280)
+    renderAs(granted(...BOOKER))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse menu' }))
+    expect(sidebar()).toHaveClass('collapsed')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Expand menu' }))
+    expect(sidebar()).not.toHaveClass('collapsed')
+  })
+
+  it('keeps every link named while only its icon shows', async () => {
+    restore = stubMatchMedia(1280)
+    renderAs(granted(...BOOKER, ...ADMIN), 'admin')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse menu' }))
+
+    expect(link('My calendar')).toBeInTheDocument()
+    expect(link('Hierarchy')).toBeInTheDocument()
+    expect(link('Users')).toBeInTheDocument()
+  })
+
+  it('remembers being collapsed after a reload', async () => {
+    restore = stubMatchMedia(1280)
+    renderAs(granted(...BOOKER))
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse menu' }))
+    cleanup()
+
+    renderAs(granted(...BOOKER))
+
+    expect(sidebar()).toHaveClass('collapsed')
+  })
+
+  it('is always the full drawer below lg, even when collapsed on a wider screen', () => {
+    localStorage.setItem('dixels.sidebar', 'collapsed')
+    restore = stubMatchMedia(800)
+    renderAs(granted(...BOOKER))
+
+    expect(sidebar()).not.toHaveClass('collapsed')
+    expect(screen.queryByRole('button', { name: /Collapse menu|Expand menu/ })).not.toBeInTheDocument()
   })
 })

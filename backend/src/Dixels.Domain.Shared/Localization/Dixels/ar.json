@@ -123,6 +123,8 @@
     "Nav:BreadcrumbLoading": "جارٍ التحميل…",
     "Nav:OpenMenu": "فتح القائمة",
     "Nav:CloseMenu": "إغلاق القائمة",
+    "Nav:CollapseMenu": "طي القائمة",
+    "Nav:ExpandMenu": "توسيع القائمة",
     "Nav:Bookings": "الحجوزات",
     "Nav:MyCalendar": "تقويمي",
     "Nav:FindSpace": "ابحث عن مساحة",

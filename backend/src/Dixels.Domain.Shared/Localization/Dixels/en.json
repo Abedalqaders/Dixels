@@ -123,6 +123,8 @@
     "Nav:BreadcrumbLoading": "Loading…",
     "Nav:OpenMenu": "Open menu",
     "Nav:CloseMenu": "Close menu",
+    "Nav:CollapseMenu": "Collapse menu",
+    "Nav:ExpandMenu": "Expand menu",
     "Nav:Bookings": "Bookings",
     "Nav:MyCalendar": "My calendar",
     "Nav:FindSpace": "Find a space",
