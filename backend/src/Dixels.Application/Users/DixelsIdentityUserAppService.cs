@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
@@ -12,6 +11,7 @@ using Volo.Abp.Authorization.Permissions;
 using Volo.Abp.Data;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
@@ -27,6 +27,8 @@ namespace Dixels.Users;
 /// can book, since that's who needs a building);</item>
 /// <item>create/update check that the building it names exists.</item>
 /// </list>
+/// Deactivating, deleting or moving someone is announced (UserEvents) for whatever they
+/// hold — their bookings — to be released by its own module.
 /// Everything else is ABP's behaviour, unchanged. Reading and writing the value itself needs
 /// no code here: ABP's extension system already carries it in each DTO's
 /// <c>extraProperties</c> (see DixelsModuleExtensionConfigurator).
@@ -37,7 +39,7 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
 {
     private readonly IUserDirectoryRepository _userDirectoryRepository;
     private readonly IRepository<Building, Guid> _buildingRepository;
-    private readonly BookingImpactService _bookingImpact;
+    private readonly ILocalEventBus _localEventBus;
 
     public DixelsIdentityUserAppService(
         IdentityUserManager userManager,
@@ -47,12 +49,12 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         IPermissionChecker permissionChecker,
         IUserDirectoryRepository userDirectoryRepository,
         IRepository<Building, Guid> buildingRepository,
-        BookingImpactService bookingImpact)
+        ILocalEventBus localEventBus)
         : base(userManager, userRepository, roleRepository, identityOptions, permissionChecker)
     {
         _userDirectoryRepository = userDirectoryRepository;
         _buildingRepository = buildingRepository;
-        _bookingImpact = bookingImpact;
+        _localEventBus = localEventBus;
     }
 
     [Authorize(IdentityPermissions.Users.Default)]
@@ -100,7 +102,6 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
     {
         await NormalizeAndCheckBuildingAsync(input.ExtraProperties);
 
-        // Deactivating an account: nobody will turn up for its bookings, so release the rooms.
         var before = await UserManager.GetByIdAsync(id);
         var wasActive = before.IsActive;
         var oldBuildingId = before.GetBuildingId();
@@ -109,12 +110,12 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
         var result = await base.UpdateAsync(id, input);
         if (wasActive && !input.IsActive)
         {
-            await CancelUpcomingBookingsAsync(id, "Dixels:Bookings:CancelReason:AccountDeactivated");
+            await _localEventBus.PublishAsync(new UserDeactivatedEvent(id, CurrentUser.GetId()));
         }
-        else if (buildingSent)
+        else if (buildingSent && oldBuildingId != newBuildingId)
         {
-            // Moved through the account form rather than the Users page: same rule.
-            await _bookingImpact.CancelOnMoveAsync(id, oldBuildingId, newBuildingId, CurrentUser.GetId());
+            // Moved through the account form rather than the Users page: same announcement.
+            await _localEventBus.PublishAsync(new UserMovedBuildingEvent(id, oldBuildingId, newBuildingId, CurrentUser.GetId()));
         }
 
         return result;
@@ -123,15 +124,8 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
     [Authorize(IdentityPermissions.Users.Delete)]
     public override async Task DeleteAsync(Guid id)
     {
-        // A removed account's bookings would hold rooms for no one.
-        await CancelUpcomingBookingsAsync(id, "Dixels:Bookings:CancelReason:AccountRemoved");
         await base.DeleteAsync(id);
-    }
-
-    private async Task CancelUpcomingBookingsAsync(Guid userId, string reasonKey)
-    {
-        var (_, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId);
-        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text(reasonKey));
+        await _localEventBus.PublishAsync(new UserDeletedEvent(id, CurrentUser.GetId()));
     }
 
     /// <summary>
