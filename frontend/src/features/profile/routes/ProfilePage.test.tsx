@@ -7,9 +7,25 @@ import { useAuth } from 'react-oidc-context'
 import { ApiError, changeMyPassword, getMyProfile, updateMyProfile } from '@/features/profile/api/profileApi'
 import type { ProfileDto } from '@/features/profile/api/profileApi'
 import { TestProviders } from '@/test/providers'
+import { getPasswordRules } from '@/features/profile/passwordRules'
+import type { PasswordRules } from '@/features/profile/passwordRules'
 import { ProfilePage } from './ProfilePage'
 
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
+vi.mock('@/features/profile/passwordRules', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/profile/passwordRules')>()),
+  getPasswordRules: vi.fn(),
+}))
+
+// ABP's defaults: 6 characters, an uppercase and a lowercase letter, a digit and a symbol.
+const DEFAULT_RULES: PasswordRules = {
+  requiredLength: 6,
+  requiredUniqueChars: 1,
+  requireDigit: true,
+  requireLowercase: true,
+  requireUppercase: true,
+  requireNonAlphanumeric: true,
+}
 
 const SARA: ProfileDto = {
   userName: 'sara',
@@ -24,7 +40,7 @@ const SARA: ProfileDto = {
 const WRONG_PASSWORD = 'That isn’t your current password.'
 
 // A data router, as in the app: the page asks before leaving with unsaved changes (useBlocker).
-function renderPage() {
+function renderPage(path = '/profile') {
   const router = createMemoryRouter(
     [
       {
@@ -32,13 +48,14 @@ function renderPage() {
         element: (
           <>
             <Link to="/my-calendar">Elsewhere</Link>
-            <ProfilePage />
+            <ProfilePage section="profile" />
           </>
         ),
       },
+      { path: '/profile/security', element: <ProfilePage section="security" /> },
       { path: '/my-calendar', element: <p>My calendar page</p> },
     ],
-    { initialEntries: ['/profile'] },
+    { initialEntries: [path] },
   )
   render(
     <TestProviders>
@@ -57,6 +74,7 @@ beforeEach(() => {
   vi.mocked(getMyProfile).mockResolvedValue(SARA)
   vi.mocked(updateMyProfile).mockReset()
   vi.mocked(changeMyPassword).mockReset()
+  vi.mocked(getPasswordRules).mockResolvedValue(DEFAULT_RULES)
 })
 
 describe('ProfilePage — details', () => {
@@ -139,60 +157,135 @@ describe('ProfilePage — details', () => {
   })
 })
 
-describe('ProfilePage — password', () => {
-  it('changes the password and empties the boxes', async () => {
-    vi.mocked(changeMyPassword).mockResolvedValue(undefined)
+describe('ProfilePage — tabs', () => {
+  it('keeps the details on Profile and the password on Security, each at its own address', async () => {
     renderPage()
 
-    await userEvent.type(await screen.findByLabelText('Current password'), 'Old1!pass')
-    await userEvent.type(screen.getByLabelText('New password'), 'New1!pass')
-    await userEvent.type(screen.getByLabelText('Confirm new password'), 'New1!pass')
+    expect(await screen.findByLabelText('First name')).toBeInTheDocument()
+    expect(screen.queryByLabelText('New password')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Security' }))
+
+    expect(await screen.findByLabelText('New password', { selector: 'input' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Security' })).toHaveAttribute('aria-current', 'page')
+  })
+})
+
+describe('ProfilePage — password', () => {
+  const box = (label: string) => screen.getByLabelText(label, { selector: 'input' })
+  const rule = (name: string) => screen.getByText(name).closest('li')!
+
+  async function fillIn(current: string, next: string, confirm: string) {
+    if (current) await userEvent.type(await screen.findByLabelText('Current password', { selector: 'input' }), current)
+    await userEvent.type(await screen.findByLabelText('New password', { selector: 'input' }), next)
+    await userEvent.type(box('Confirm new password'), confirm)
+  }
+
+  it('changes the password and empties the boxes', async () => {
+    vi.mocked(changeMyPassword).mockResolvedValue(undefined)
+    renderPage('/profile/security')
+
+    await fillIn('Old1!pass', 'New1!pass', 'New1!pass')
     await userEvent.click(changePassword())
 
     expect(changeMyPassword).toHaveBeenCalledWith('t', { currentPassword: 'Old1!pass', newPassword: 'New1!pass' })
     expect(await screen.findByText('Password changed.')).toBeInTheDocument()
-    expect(screen.getByLabelText('New password')).toHaveValue('')
+    expect(box('New password')).toHaveValue('')
   })
 
-  it('stops when the two new passwords differ', async () => {
-    renderPage()
+  it('ticks off each rule as the new password meets it', async () => {
+    renderPage('/profile/security')
 
-    await userEvent.type(await screen.findByLabelText('Current password'), 'Old1!pass')
-    await userEvent.type(screen.getByLabelText('New password'), 'New1!pass')
-    await userEvent.type(screen.getByLabelText('Confirm new password'), 'New1!pasz')
+    await userEvent.type(await screen.findByLabelText('New password', { selector: 'input' }), 'abc')
+
+    expect(rule('A lowercase letter (a–z)')).toHaveTextContent('done')
+    expect(rule('At least 6 characters')).toHaveTextContent('not yet')
+    expect(rule('An uppercase letter (A–Z)')).toHaveTextContent('not yet')
+
+    await userEvent.type(box('New password'), 'D1!xyz')
+
+    for (const name of ['At least 6 characters', 'An uppercase letter (A–Z)', 'A number (0–9)', 'A symbol, such as ! @ # $']) {
+      expect(rule(name)).toHaveTextContent('done')
+    }
+  })
+
+  it('says what a box is missing once you leave it, not while typing, and drops it once fixed', async () => {
+    renderPage('/profile/security')
+
+    const current = await screen.findByLabelText('Current password', { selector: 'input' })
+    await userEvent.click(current)
+    expect(current).not.toHaveAttribute('aria-invalid')
+    await userEvent.tab()
+
+    expect(current).toHaveAccessibleDescription('Enter your current password.')
+    expect(current).toHaveAttribute('aria-invalid', 'true')
+
+    await userEvent.type(current, 'Old1!pass')
+    expect(current).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('flags two different new passwords on leaving the second box, and clears it when they match', async () => {
+    renderPage('/profile/security')
+
+    await fillIn('Old1!pass', 'New1!pass', 'New1!pasz')
+    await userEvent.tab()
+    expect(box('Confirm new password')).toHaveAccessibleDescription('The two new passwords aren’t the same.')
+
+    await userEvent.type(box('Confirm new password'), '{Backspace}s')
+    expect(box('Confirm new password')).not.toHaveAttribute('aria-invalid')
+  })
+
+  it("doesn't send a new password that misses a rule, and shows which in red", async () => {
+    renderPage('/profile/security')
+
+    await fillIn('Old1!pass', 'newpass', 'newpass')
     await userEvent.click(changePassword())
 
-    expect(screen.getByLabelText('Confirm new password')).toHaveAccessibleDescription('The two new passwords aren’t the same.')
     expect(changeMyPassword).not.toHaveBeenCalled()
+    expect(box('New password')).toHaveAccessibleDescription(expect.stringContaining('doesn’t meet every rule below yet'))
+    expect(box('New password')).toHaveFocus()
+    expect(rule('An uppercase letter (A–Z)')).toHaveClass('text-destructive')
   })
 
-  it("puts the server's reason under the box it's about", async () => {
+  it("puts the server's reason under the box it's about, until that box is changed", async () => {
     vi.mocked(changeMyPassword)
       .mockRejectedValueOnce(new ApiError(400, { error: { code: 'Dixels:Users:WrongCurrentPassword', message: WRONG_PASSWORD } }))
-      .mockRejectedValueOnce(new ApiError(400, { error: { message: 'Passwords must be at least 6 characters.' } }))
-    renderPage()
+      .mockRejectedValueOnce(new ApiError(400, { error: { message: 'You used this password recently.' } }))
+    renderPage('/profile/security')
 
-    await userEvent.type(await screen.findByLabelText('Current password'), 'wrong')
-    await userEvent.type(screen.getByLabelText('New password'), 'abc')
-    await userEvent.type(screen.getByLabelText('Confirm new password'), 'abc')
-
+    await fillIn('wrong', 'New1!pass', 'New1!pass')
     await userEvent.click(changePassword())
     expect(await screen.findByText(WRONG_PASSWORD)).toBeInTheDocument()
-    expect(screen.getByLabelText('Current password')).toHaveAccessibleDescription(WRONG_PASSWORD)
+    expect(box('Current password')).toHaveAccessibleDescription(WRONG_PASSWORD)
+
+    await userEvent.type(box('Current password'), 'x')
+    expect(screen.queryByText(WRONG_PASSWORD)).not.toBeInTheDocument()
 
     await userEvent.click(changePassword())
-    expect(await screen.findByText('Passwords must be at least 6 characters.')).toBeInTheDocument()
-    expect(screen.getByLabelText('New password')).toHaveAccessibleDescription('Passwords must be at least 6 characters.')
+    expect(await screen.findByText('You used this password recently.')).toBeInTheDocument()
+    expect(box('New password')).toHaveAccessibleDescription(expect.stringContaining('You used this password recently.'))
+  })
+
+  it('shows what was typed with the eye button', async () => {
+    renderPage('/profile/security')
+
+    const current = await screen.findByLabelText('Current password', { selector: 'input' })
+    expect(current).toHaveAttribute('type', 'password')
+    await userEvent.click(screen.getAllByRole('button', { name: 'Show password' })[0]!)
+
+    expect(current).toHaveAttribute('type', 'text')
+    expect(screen.getAllByRole('button', { name: 'Hide password' })).toHaveLength(1)
   })
 
   it('sets a first password without asking for a current one', async () => {
     vi.mocked(getMyProfile).mockResolvedValue({ ...SARA, hasPassword: false })
     vi.mocked(changeMyPassword).mockResolvedValue(undefined)
-    renderPage()
+    renderPage('/profile/security')
 
-    await userEvent.type(await screen.findByLabelText('New password'), 'New1!pass')
-    expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument()
-    await userEvent.type(screen.getByLabelText('Confirm new password'), 'New1!pass')
+    await fillIn('', 'New1!pass', 'New1!pass')
+    expect(screen.queryByLabelText('Current password', { selector: 'input' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Set password' }))
 
     expect(changeMyPassword).toHaveBeenCalledWith('t', { currentPassword: undefined, newPassword: 'New1!pass' })

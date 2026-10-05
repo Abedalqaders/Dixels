@@ -102,7 +102,8 @@ export const router = createBrowserRouter(
           }
         />
         {/* Everyone signed in has a profile: no permission beyond that. */}
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile" element={<ProfilePage section="profile" />} />
+        <Route path="/profile/security" element={<ProfilePage section="security" />} />
       </Route>
       <Route
         element={
