@@ -4,8 +4,11 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Users;
+using Microsoft.Extensions.Options;
 using Shouldly;
 using Volo.Abp;
+using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.FileSystem;
 using Volo.Abp.Content;
 using Volo.Abp.Security.Claims;
 using Xunit;
@@ -98,6 +101,24 @@ public class ProfilePictureTests : DixelsApplicationTestBase<DixelsEntityFramewo
 
             // Removing again is not an error.
             await _pictures.DeleteAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Is_kept_as_a_file_named_by_the_person()
+    {
+        var userId = Guid.NewGuid();
+        var basePath = GetRequiredService<IOptions<AbpBlobStoringOptions>>().Value.Containers
+            .GetConfiguration<ProfilePictureContainer>().GetFileSystemConfiguration().BasePath;
+        var path = Path.Combine(basePath, "host", "profile-pictures", userId.ToString("N"));
+
+        using (ActAs(userId))
+        {
+            await _pictures.UpdateAsync(File(Png));
+            System.IO.File.ReadAllBytes(path).ShouldBe(Png);
+
+            await _pictures.DeleteAsync();
+            System.IO.File.Exists(path).ShouldBeFalse();
         }
     }
 
