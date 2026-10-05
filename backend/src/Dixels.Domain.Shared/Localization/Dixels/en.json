@@ -153,6 +153,7 @@
     "Profile:PhoneInvalid": "Use digits, spaces and + ( ) - only.",
     "Profile:Saved": "Profile saved.",
     "Profile:ChangePhoto": "Change photo",
+    "Profile:ViewPhoto": "View photo",
     "Profile:UploadPhoto": "Upload a new photo",
     "Profile:RemovePhoto": "Remove photo",
     "Profile:PhotoUpdated": "Photo updated.",

@@ -153,6 +153,7 @@
     "Profile:PhoneInvalid": "استخدم الأرقام والمسافات و + ( ) - فقط.",
     "Profile:Saved": "تم حفظ الملف الشخصي.",
     "Profile:ChangePhoto": "تغيير الصورة",
+    "Profile:ViewPhoto": "عرض الصورة",
     "Profile:UploadPhoto": "رفع صورة جديدة",
     "Profile:RemovePhoto": "إزالة الصورة",
     "Profile:PhotoUpdated": "تم تحديث الصورة.",
