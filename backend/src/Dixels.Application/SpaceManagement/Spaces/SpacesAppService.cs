@@ -11,6 +11,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
@@ -25,6 +26,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ILocalEventBus _localEventBus;
     private readonly LocalizedNameValidator _nameValidator;
     private readonly LocalizedNameReader _nameReader;
 
@@ -36,6 +38,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         ConstraintResolver constraintResolver,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
+        ILocalEventBus localEventBus,
         LocalizedNameValidator nameValidator,
         LocalizedNameReader nameReader)
     {
@@ -46,6 +49,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         _constraintResolver = constraintResolver;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _localEventBus = localEventBus;
         _nameValidator = nameValidator;
         _nameReader = nameReader;
     }
@@ -333,8 +337,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     {
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
-        var floor = await _floorRepository.GetAsync(space.FloorId);
-        var upcoming = await _bookingImpact.UpcomingAsync(new[] { (space, floor) });
 
         // No DeletionBatchId stamping here, unlike Building/Floor: batch scoping exists only
         // to disambiguate cascaded siblings on restore, and a Space is a leaf with nothing
@@ -342,7 +344,8 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         await _spaceRepository.DeleteAsync(space);
         await CurrentUnitOfWork!.SaveChangesAsync();
 
-        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:SpaceRemoved"));
+        // What it held (bookings) is released by its own module.
+        await _localEventBus.PublishAsync(new SpaceDeletedEvent(id, CurrentUser.GetId()));
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]

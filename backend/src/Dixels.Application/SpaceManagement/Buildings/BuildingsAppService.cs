@@ -12,6 +12,7 @@ using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
@@ -29,6 +30,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ILocalEventBus _localEventBus;
     private readonly IUserDirectoryRepository _userDirectory;
     private readonly LocalizedNameValidator _nameValidator;
     private readonly LocalizedNameReader _nameReader;
@@ -41,6 +43,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
+        ILocalEventBus localEventBus,
         IUserDirectoryRepository userDirectory,
         LocalizedNameValidator nameValidator,
         LocalizedNameReader nameReader)
@@ -52,6 +55,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _localEventBus = localEventBus;
         _userDirectory = userDirectory;
         _nameValidator = nameValidator;
         _nameReader = nameReader;
@@ -272,9 +276,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
 
         var building = await _buildingRepository.GetAsync(id);
 
-        // Its upcoming bookings go with it — found before the rooms disappear from queries.
-        var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
-
         var floors = await _floorRepository.GetListAsync(f => f.BuildingId == id);
         var floorIds = floors.Select(f => f.Id).ToList();
         var spaces = floorIds.Count == 0
@@ -318,7 +319,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await _buildingRepository.DeleteAsync(building);
         await CurrentUnitOfWork!.SaveChangesAsync();
 
-        await _bookingImpact.CancelAllAsync(upcoming, CurrentUser.GetId(), _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
+        // What its rooms held (bookings) is released by its own module.
+        await _localEventBus.PublishAsync(new BuildingDeletedEvent(id, spaces.Select(s => s.Id).ToList(), CurrentUser.GetId()));
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
