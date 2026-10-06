@@ -11,10 +11,9 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { components } from './schema'
+import type { AffectedReservationDto, ReservationImpactDto } from '@/lib/api/reservationImpact'
 import type {
-  AffectedBookingDto,
   AvailabilityOverrideDto,
-  BookingImpactDto,
   BuildingDto,
   ConstraintsSaveResultDto,
   CreateAvailabilityOverrideDto,
@@ -103,8 +102,8 @@ void ({} satisfies Same<RecurrenceDto, S['Dixels.Bookings.RecurrenceDto']>)
 void ({} satisfies Same<OccurrencePreviewDto, S['Dixels.Bookings.OccurrencePreviewDto']>)
 void ({} satisfies Same<SeriesPreviewDto, S['Dixels.Bookings.SeriesPreviewDto']>)
 void ({} satisfies Same<SeriesCreatedDto, S['Dixels.Bookings.SeriesCreatedDto']>)
-void ({} satisfies Same<BookingImpactDto, S['Dixels.Bookings.BookingImpactDto']>)
-void ({} satisfies Same<AffectedBookingDto, S['Dixels.Bookings.AffectedBookingDto']>)
+void ({} satisfies Same<ReservationImpactDto, S['Dixels.Reservations.ReservationImpactDto']>)
+void ({} satisfies Same<AffectedReservationDto, S['Dixels.Reservations.AffectedReservationDto']>)
 void ({} satisfies Same<BuildingDto, S['Dixels.SpaceManagement.BuildingDto']>)
 void ({} satisfies Same<FloorDto, S['Dixels.SpaceManagement.FloorDto']>)
 void ({} satisfies Same<SpaceDto, S['Dixels.SpaceManagement.SpaceDto']>)

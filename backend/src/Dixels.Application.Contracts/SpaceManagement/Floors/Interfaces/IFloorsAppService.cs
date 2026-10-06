@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Application.Services;
 
@@ -21,10 +22,10 @@ public interface IFloorsAppService : IApplicationService
     Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateFloorConstraintsDto input);
 
     /// <summary>The upcoming bookings these proposed rules would no longer allow — nothing is saved.</summary>
-    Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input);
+    Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input);
 
     /// <summary>The upcoming bookings a delete would cancel.</summary>
-    Task<BookingImpactDto> GetDeleteImpactAsync(Guid id);
+    Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id);
 
     /// <summary>Resolved values (space→floor→building) plus the Building ancestor trail, in
     /// one round trip — backs the constraints page's "People will see" summary card.</summary>

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
@@ -117,11 +118,12 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         using var _ = ActAs(Admin);
         var impact = await _buildings.GetConstraintsImpactAsync(s.Building.Id, await BuildingHoursAsync(s, "09:00", "17:00"));
 
-        var affected = impact.Bookings.ShouldHaveSingleItem();
+        var affected = impact.Items.ShouldHaveSingleItem();
         impact.Count.ShouldBe(1);
-        affected.BookingId.ShouldBe(late.Id);
-        affected.BookedBy.ShouldBe("Jordan Reed");
-        affected.SpaceName.ShouldBe("Room 1");
+        affected.Id.ShouldBe(late.Id);
+        affected.HeldBy.ShouldBe("Jordan Reed");
+        affected.PlaceName.ShouldBe("Room 1");
+        affected.Kind.ShouldBe(ReservationKinds.Booking);
         affected.LocalStart.ShouldBe(Tomorrow.AddHours(17));
         affected.Reasons.ShouldBe(new[] { "Open 09:00–17:00 only" });
 
@@ -191,8 +193,8 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
             ConcurrencyStamp = floor.ConcurrencyStamp,
         });
 
-        impact.Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(long1.Id);
-        impact.Bookings[0].Reasons.ShouldBe(new[] { "Max 1h per booking" });
+        impact.Items.ShouldHaveSingleItem().Id.ShouldBe(long1.Id);
+        impact.Items[0].Reasons.ShouldBe(new[] { "Max 1h per booking" });
     }
 
     [Fact]
@@ -234,7 +236,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         };
 
         using var _ = ActAs(Admin);
-        (await _closures.GetCreateImpactAsync(closure)).Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(hit.Id);
+        (await _closures.GetCreateImpactAsync(closure)).Items.ShouldHaveSingleItem().Id.ShouldBe(hit.Id);
 
         closure.CancelAffectedBookings = true;
         await _closures.CreateAsync(closure);
@@ -277,7 +279,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         using var _ = ActAs(Admin);
         var impact = await _spaces.GetDeleteImpactAsync(s.Space.Id);
-        impact.Bookings.ShouldHaveSingleItem().Reasons.ShouldBe(new[] { "The space was removed" });
+        impact.Items.ShouldHaveSingleItem().Reasons.ShouldBe(new[] { "The space was removed" });
 
         await _spaces.DeleteAsync(s.Space.Id);
 
@@ -387,8 +389,8 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         using var _ = ActAs(Admin);
         var impact = await _spaces.GetUpdateImpactAsync(s.Space.Id, input);
-        impact.Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(big.Id);
-        impact.Bookings[0].Reasons.ShouldBe(new[] { "Seats 4 — you need 6" });
+        impact.Items.ShouldHaveSingleItem().Id.ShouldBe(big.Id);
+        impact.Items[0].Reasons.ShouldBe(new[] { "Seats 4 — you need 6" });
 
         input.CancelAffectedBookings = true;
         await _spaces.UpdateAsync(s.Space.Id, input);

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -21,36 +21,37 @@ public class UsersAppService : DixelsAppService, IUsersAppService
     private readonly IRepository<Building, Guid> _buildingRepository;
     private readonly IdentityUserManager _userManager;
     // Only for the preview (GetReassignImpactAsync): the move itself is announced.
-    private readonly BookingImpactService _bookingImpact;
+    private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
 
     public UsersAppService(
         IIdentityRoleRepository identityRoleRepository,
         IRepository<Building, Guid> buildingRepository,
         IdentityUserManager userManager,
-        BookingImpactService bookingImpact,
+        ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus)
     {
         _userManager = userManager;
-        _bookingImpact = bookingImpact;
+        _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _identityRoleRepository = identityRoleRepository;
         _buildingRepository = buildingRepository;
     }
 
     [Authorize(IdentityPermissions.Users.Update)]
-    public async Task<BookingImpactDto> GetReassignImpactAsync(Guid userId)
+    public async Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId)
     {
         var user = await _userManager.GetByIdAsync(userId);
         if (user.GetBuildingId() is not { } current)
         {
-            return new BookingImpactDto();
+            return new ReservationImpactDto();
         }
 
-        var (building, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId, current);
+        // A deleted building reads as not found: nothing is held there that a move could release.
+        var building = await _buildingRepository.FindAsync(current);
         return building is null
-            ? new BookingImpactDto()
-            : await _bookingImpact.DescribeAsync(building, upcoming, _bookingImpact.Text("Dixels:Bookings:CancelReason:MovedBuilding"));
+            ? new ReservationImpactDto()
+            : await _impactPreview.PersonLeavingAsync(userId, building, L["Dixels:Bookings:CancelReason:MovedBuilding"]);
     }
 
     [Authorize(IdentityPermissions.Users.Update)]

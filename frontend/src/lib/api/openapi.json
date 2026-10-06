@@ -513,17 +513,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -3412,17 +3412,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -3572,17 +3572,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -4930,17 +4930,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -5090,17 +5090,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -7876,17 +7876,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -8036,17 +8036,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -8215,17 +8215,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -8846,17 +8846,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Dixels.Bookings.BookingImpactDto"
+                  "$ref": "#/components/schemas/Dixels.Reservations.ReservationImpactDto"
                 }
               }
             }
@@ -9316,52 +9316,6 @@
   },
   "components": {
     "schemas": {
-      "Dixels.Bookings.AffectedBookingDto": {
-        "required": [
-          "bookedBy",
-          "bookingId",
-          "floorName",
-          "localEnd",
-          "localStart",
-          "reasons",
-          "spaceName",
-          "title"
-        ],
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "title": {
-            "type": "string"
-          },
-          "bookedBy": {
-            "type": "string"
-          },
-          "spaceName": {
-            "type": "string"
-          },
-          "floorName": {
-            "type": "string"
-          },
-          "localStart": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "localEnd": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "reasons": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
       "Dixels.Bookings.AvailabilitySearchResultDto": {
         "required": [
           "buildingId",
@@ -9635,31 +9589,6 @@
           },
           "recurrence": {
             "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
-          }
-        },
-        "additionalProperties": false
-      },
-      "Dixels.Bookings.BookingImpactDto": {
-        "required": [
-          "assignedEmployees",
-          "bookings",
-          "count"
-        ],
-        "type": "object",
-        "properties": {
-          "count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "bookings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Dixels.Bookings.AffectedBookingDto"
-            }
-          },
-          "assignedEmployees": {
-            "type": "integer",
-            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -10260,6 +10189,81 @@
             "maxLength": 128,
             "minLength": 0,
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.Reservations.AffectedReservationDto": {
+        "required": [
+          "heldBy",
+          "id",
+          "kind",
+          "localEnd",
+          "localStart",
+          "placeDetail",
+          "placeName",
+          "reasons",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "heldBy": {
+            "type": "string"
+          },
+          "placeName": {
+            "type": "string"
+          },
+          "placeDetail": {
+            "type": "string"
+          },
+          "localStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "localEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.Reservations.ReservationImpactDto": {
+        "required": [
+          "assignedEmployees",
+          "count",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Reservations.AffectedReservationDto"
+            }
+          },
+          "assignedEmployees": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

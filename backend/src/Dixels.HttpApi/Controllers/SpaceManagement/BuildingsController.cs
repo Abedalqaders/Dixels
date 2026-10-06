@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.SpaceManagement;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -36,11 +37,11 @@ public class BuildingsController : DixelsController, IBuildingsAppService
         _buildingsAppService.UpdateAsync(id, input);
 
     [HttpPost("{id}/constraints/impact")]
-    public virtual Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input) =>
+    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input) =>
         _buildingsAppService.GetConstraintsImpactAsync(id, input);
 
     [HttpGet("{id}/delete-impact")]
-    public virtual Task<BookingImpactDto> GetDeleteImpactAsync(Guid id) => _buildingsAppService.GetDeleteImpactAsync(id);
+    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id) => _buildingsAppService.GetDeleteImpactAsync(id);
 
     [HttpPut("{id}/constraints")]
     public virtual Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input) =>

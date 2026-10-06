@@ -2,29 +2,31 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 import { setLanguage } from '@/i18n'
 import { BookingImpactDialog } from './BookingImpactDialog'
 
-const impact: BookingImpactDto = {
+const impact: ReservationImpactDto = {
   count: 2,
-  bookings: [
+  items: [
     {
-      bookingId: 'b1',
+      kind: 'booking',
+      id: 'b1',
       title: 'Planning',
-      bookedBy: 'Jordan Reed',
-      spaceName: 'Room 1',
-      floorName: 'Level 2',
+      heldBy: 'Jordan Reed',
+      placeName: 'Room 1',
+      placeDetail: 'Level 2',
       localStart: '2026-09-30T17:00:00',
       localEnd: '2026-09-30T18:00:00',
       reasons: ['Open 09:00–17:00 only'],
     },
     {
-      bookingId: 'b2',
+      kind: 'booking',
+      id: 'b2',
       title: 'Retro',
-      bookedBy: 'Amira Hassan',
-      spaceName: 'Room 2',
-      floorName: 'Level 2',
+      heldBy: 'Amira Hassan',
+      placeName: 'Room 2',
+      placeDetail: 'Level 2',
       localStart: '2026-10-01T08:00:00',
       localEnd: '2026-10-01T09:00:00',
       reasons: ['Open 09:00–17:00 only'],
@@ -75,7 +77,7 @@ describe('BookingImpactDialog', () => {
   it('warns that assigned employees will be left without a building, even with no bookings', async () => {
     const user = userEvent.setup()
     const onChoose = vi.fn()
-    render(<BookingImpactDialog mode="delete" subject="Riverside HQ" impact={{ count: 0, bookings: [], assignedEmployees: 8 }} onChoose={onChoose} />)
+    render(<BookingImpactDialog mode="delete" subject="Riverside HQ" impact={{ count: 0, items: [], assignedEmployees: 8 }} onChoose={onChoose} />)
 
     expect(screen.getByRole('alertdialog', { name: 'Delete “Riverside HQ”?' })).toBeInTheDocument()
     expect(screen.getByRole('note')).toHaveTextContent("8 employees are assigned to Riverside HQ. They won't be able to book")

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Volo.Abp.Application.Services;
 
 namespace Dixels.Users;
@@ -18,7 +19,7 @@ namespace Dixels.Users;
 public interface IUsersAppService : IApplicationService
 {
     /// <summary>An employee's upcoming bookings in the building they're assigned to now — what moving them would leave behind.</summary>
-    Task<BookingImpactDto> GetReassignImpactAsync(Guid userId);
+    Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId);
 
     /// <summary>
     /// Sets (or clears) the employee's building, optionally cancelling their upcoming bookings
