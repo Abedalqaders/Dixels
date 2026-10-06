@@ -30,9 +30,9 @@ public class UsersController : DixelsController, IUsersAppService
     public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>
         _usersAppService.AssignBuildingAsync(userId, input);
 
-    [HttpGet("roles")]
-    public virtual Task<List<UserRolesDto>> GetRolesForUsersAsync([FromQuery] List<Guid> userIds) =>
-        _usersAppService.GetRolesForUsersAsync(userIds);
+    [HttpGet("page-details")]
+    public virtual Task<List<UserPageDetailsDto>> GetPageDetailsAsync([FromQuery] GetUserPageDetailsInput input) =>
+        _usersAppService.GetPageDetailsAsync(input);
 
     [HttpGet("role-names")]
     public virtual Task<List<string>> GetRoleNamesAsync() => _usersAppService.GetRoleNamesAsync();

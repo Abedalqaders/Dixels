@@ -17,6 +17,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.PermissionManagement;
 using Volo.Abp.Security.Claims;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Dixels.EntityFrameworkCore.Users;
@@ -288,26 +289,79 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
         await Should.ThrowAsync<EntityNotFoundException>(() => SetBuildingAsync(user.Id, Guid.NewGuid().ToString()));
     }
 
-    // ---- Roles for the Users page (batch, not one call per row) ----
+    // ---- Building names and roles for the Users page (batch, not one call per row) ----
+
+    private Task<List<UserPageDetailsDto>> PageDetailsAsync(params Guid[] userIds) =>
+        _usersAppService.GetPageDetailsAsync(new GetUserPageDetailsInput { UserIds = userIds.ToList() });
 
     [Fact]
-    public async Task Roles_for_users_returns_each_ones_role_names_in_one_call()
+    public async Task Page_details_return_each_ones_role_names_in_one_call()
     {
         var employee = await CreateUserAsync(role: RoleDataSeedContributor.EmployeeRoleName);
         var noRole = await CreateUserAsync();
 
-        var result = await _usersAppService.GetRolesForUsersAsync(new List<Guid> { employee.Id, noRole.Id });
+        var result = await PageDetailsAsync(employee.Id, noRole.Id);
 
         result.Single(r => r.UserId == employee.Id).Roles.ShouldContain(RoleDataSeedContributor.EmployeeRoleName);
         result.Single(r => r.UserId == noRole.Id).Roles.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task Roles_for_users_skips_an_id_that_no_longer_exists()
+    public async Task Page_details_name_each_users_building_and_leave_the_unassigned_empty()
     {
-        var result = await _usersAppService.GetRolesForUsersAsync(new List<Guid> { Guid.NewGuid() });
+        var building = await CreateBuildingAsync();
+        var assigned = await CreateUserAsync(building.Id);
+        var sameBuilding = await CreateUserAsync(building.Id);
+        var unassigned = await CreateUserAsync();
 
-        result.ShouldBeEmpty();
+        var result = await PageDetailsAsync(assigned.Id, sameBuilding.Id, unassigned.Id);
+
+        var name = building.Translations.Single().Name;
+        result.Single(r => r.UserId == assigned.Id).ShouldSatisfyAllConditions(
+            r => r.BuildingName.ShouldBe(name),
+            r => r.BuildingRemoved.ShouldBeFalse());
+        result.Single(r => r.UserId == sameBuilding.Id).BuildingName.ShouldBe(name);
+        result.Single(r => r.UserId == unassigned.Id).ShouldSatisfyAllConditions(
+            r => r.BuildingName.ShouldBeNull(),
+            r => r.BuildingRemoved.ShouldBeFalse());
+    }
+
+    [Fact]
+    public async Task Page_details_flag_a_deleted_building_and_keep_its_last_name()
+    {
+        var building = await CreateBuildingAsync();
+        var user = await CreateUserAsync(building.Id);
+        await WithUnitOfWorkAsync(() => _buildingRepository.DeleteAsync(building.Id));
+
+        var row = (await PageDetailsAsync(user.Id)).Single();
+
+        row.BuildingRemoved.ShouldBeTrue();
+        row.BuildingName.ShouldBe(building.Translations.Single().Name);
+    }
+
+    [Fact]
+    public async Task Page_details_flag_a_building_that_cannot_be_found()
+    {
+        var user = await CreateUserAsync(Guid.NewGuid());
+
+        var row = (await PageDetailsAsync(user.Id)).Single();
+
+        row.BuildingRemoved.ShouldBeTrue();
+        row.BuildingName.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Page_details_skip_an_id_that_no_longer_exists()
+    {
+        (await PageDetailsAsync(Guid.NewGuid())).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Page_details_refuse_more_than_a_page_of_users()
+    {
+        var ids = Enumerable.Range(0, GetUserPageDetailsInput.MaxUserIds + 1).Select(_ => Guid.NewGuid()).ToArray();
+
+        await Should.ThrowAsync<AbpValidationException>(() => PageDetailsAsync(ids));
     }
 
     [Fact]

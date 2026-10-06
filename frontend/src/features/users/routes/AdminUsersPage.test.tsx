@@ -3,10 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
-import { getRoleNames, getUserRoles, getUsers } from '@/features/users/api/usersApi'
+import { getRoleNames, getUserPageDetails, getUsers } from '@/features/users/api/usersApi'
 import type { IdentityUserDto } from '@/features/users/api/usersApi'
-import { getBuilding, getBuildings } from '@/features/space-management/api/spaceManagementApi'
-import type { BuildingDto } from '@/features/space-management/api/spaceManagementApi'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { setLanguage } from '@/i18n'
 import { TestProviders } from '@/test/providers'
@@ -16,11 +14,7 @@ import { AdminUsersPage } from './AdminUsersPage'
 vi.mock('react-oidc-context', () => ({ useAuth: vi.fn() }))
 vi.mock('@/features/users/api/usersApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/users/api/usersApi')>()
-  return { ...actual, getUsers: vi.fn(), getUserRoles: vi.fn(), getRoleNames: vi.fn() }
-})
-vi.mock('@/features/space-management/api/spaceManagementApi', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/features/space-management/api/spaceManagementApi')>()
-  return { ...actual, getBuilding: vi.fn(), getBuildings: vi.fn() }
+  return { ...actual, getUsers: vi.fn(), getUserPageDetails: vi.fn(), getRoleNames: vi.fn() }
 })
 
 function user(id: string, name: string, buildingId: string | null): IdentityUserDto {
@@ -54,14 +48,12 @@ describe('AdminUsersPage', () => {
   beforeEach(() => {
     vi.mocked(useAuth).mockReturnValue({ user: { access_token: 't', profile: {} } } as unknown as ReturnType<typeof useAuth>)
     vi.mocked(getUsers).mockResolvedValue({ items: [user('u1', 'Sara', null), user('u2', 'Omar', 'gone')], totalCount: 2 })
-    vi.mocked(getUserRoles).mockResolvedValue([
-      { userId: 'u1', roles: ['admin'] },
-      { userId: 'u2', roles: ['employee', 'Reception'] },
+    // Omar's building has since been deleted: flagged, with its last name.
+    vi.mocked(getUserPageDetails).mockResolvedValue([
+      { userId: 'u1', buildingName: null, buildingRemoved: false, roles: ['admin'] },
+      { userId: 'u2', buildingName: 'Old Annex', buildingRemoved: true, roles: ['employee', 'Reception'] },
     ])
     vi.mocked(getRoleNames).mockResolvedValue(['admin', 'employee', 'Reception'])
-    // Omar's building has since been deleted: not found, but still in the list of deleted ones.
-    vi.mocked(getBuilding).mockRejectedValue(new Error('not found'))
-    vi.mocked(getBuildings).mockResolvedValue({ items: [{ id: 'gone', name: 'Old Annex' } as BuildingDto], totalCount: 1 })
   })
 
   it('lists who can book, with their roles and a note on a deleted building', async () => {

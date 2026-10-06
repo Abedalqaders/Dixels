@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TablePagination } from '@/components/TablePagination'
+import { PAGE_SIZE_OPTIONS } from '@/hooks/useListParams'
 import { OverrideEffect, ReasonCategory } from '@/features/space-management/api/spaceManagementApi'
 import type { AvailabilityOverrideDto, CreateAvailabilityOverrideDto, OverrideScope } from '@/features/space-management/api/spaceManagementApi'
 import { ChevronIcon, TrashIcon } from './actionIcons'
@@ -134,16 +136,32 @@ export function formatWhen(startsAt: string, endsAt: string): string {
   return i18n.t('Rules:ClosureSpan', { start: dateTimeFmt(start), end: dateTimeFmt(end) })
 }
 
-interface AncestorClosure {
+export type AncestorLevel = 'Building' | 'Floor'
+
+export interface AncestorClosure {
   override: AvailabilityOverrideDto
-  level: 'Building' | 'Floor'
+  level: AncestorLevel
 }
 
 interface ClosuresListProps {
   scope: OverrideScope
   scopeId: string
+  /** One page of this level's own closures. */
   ownOverrides: AvailabilityOverrideDto[]
+  ownTotalCount: number
+  /** Zero-indexed. */
+  page: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (pageSize: number) => void
+  /** Past closures too (most recent first); otherwise upcoming and current only. */
+  showPast: boolean
+  onShowPastChange: (showPast: boolean) => void
+  /** The first page of each level above's closures… */
   ancestorOverrides: AncestorClosure[]
+  /** …and how many more each has, shown on its own page. */
+  ancestorMore: { level: AncestorLevel; count: number }[]
+  /** From what's in effect right now — not from the page shown here. */
   isCurrentlyClosed: boolean
   onCreate: (input: CreateAvailabilityOverrideDto) => void | Promise<void>
   onDelete: (id: string) => void | Promise<void>
@@ -157,7 +175,15 @@ export function ClosuresList({
   scope,
   scopeId,
   ownOverrides,
+  ownTotalCount,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  showPast,
+  onShowPastChange,
   ancestorOverrides,
+  ancestorMore,
   isCurrentlyClosed,
   onCreate,
   onDelete,
@@ -165,7 +191,7 @@ export function ClosuresList({
   canDelete,
 }: ClosuresListProps) {
   const { t } = useTranslation()
-  const hasAnyClosures = ownOverrides.length > 0 || ancestorOverrides.length > 0
+  const hasAnyClosures = ownTotalCount > 0 || ancestorOverrides.length > 0
   const [sectionOpen, setSectionOpen] = useState(hasAnyClosures)
   const [formOpen, setFormOpen] = useState(false)
 
@@ -217,7 +243,7 @@ export function ClosuresList({
       >
         <h3>{t('Rules:Closures')}</h3>
         {isCurrentlyClosed && <span className="badge blocked">{t('Rules:CurrentlyClosed')}</span>}
-        {!hasAnyClosures && <span className="ovr">{t('Rules:NoneSet')}</span>}
+        {!hasAnyClosures && <span className="ovr">{t(showPast ? 'Rules:NoneSet' : 'Rules:NoneUpcoming')}</span>}
         <span className="chevicon" aria-hidden="true">
           <ChevronIcon />
         </span>
@@ -225,7 +251,12 @@ export function ClosuresList({
 
       {sectionOpen && (
         <>
-          {!hasAnyClosures && <p className="inhnote">{t('Rules:NoClosures')}</p>}
+          <label className="my-2 flex w-fit items-center gap-2 text-sm text-muted-foreground">
+            <input type="checkbox" checked={showPast} onChange={(e) => onShowPastChange(e.target.checked)} />
+            {t('Rules:ShowPastClosures')}
+          </label>
+
+          {!hasAnyClosures && <p className="inhnote">{t(showPast ? 'Rules:NoClosures' : 'Rules:NoUpcomingClosures')}</p>}
 
           {ownOverrides.map((o) => {
             const detail = o.reasonDetail && o.reasonDetail.length <= SHORT_DETAIL_MAX ? o.reasonDetail : null
@@ -251,6 +282,16 @@ export function ClosuresList({
             )
           })}
 
+          {ownTotalCount > PAGE_SIZE_OPTIONS[0] && (
+            <TablePagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={ownTotalCount}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
+          )}
+
           {ancestorOverrides.map(({ override: o, level }) => (
             <div className="closurerow" key={o.id} title={o.reasonDetail ?? undefined}>
               <span className={`closuredot ${o.effect === OverrideEffect.Closed ? 'closed' : 'open'}`} />
@@ -259,6 +300,12 @@ export function ClosuresList({
               </span>
               <span className="ovr">{t('Rules:FromLevel', { level: t(`Enum:ConstraintSource.${level}`) })}</span>
             </div>
+          ))}
+
+          {ancestorMore.map(({ level, count }) => (
+            <p className="inhnote" key={level}>
+              {t('Rules:MoreFromLevel', { count, level: t(`Enum:ConstraintSource.${level}`) })}
+            </p>
           ))}
 
           {canCreate && !formOpen && (

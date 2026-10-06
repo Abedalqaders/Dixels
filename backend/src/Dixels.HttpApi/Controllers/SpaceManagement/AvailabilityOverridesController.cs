@@ -22,8 +22,12 @@ public class AvailabilityOverridesController : DixelsController, IAvailabilityOv
     }
 
     [HttpGet]
-    public virtual Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync([FromQuery] OverrideScope scope, [FromQuery] Guid scopeId) =>
-        _overridesAppService.GetListAsync(scope, scopeId);
+    public virtual Task<PagedResultDto<AvailabilityOverrideDto>> GetListAsync([FromQuery] GetAvailabilityOverridesInput input) =>
+        _overridesAppService.GetListAsync(input);
+
+    [HttpGet("active")]
+    public virtual Task<ListResultDto<AvailabilityOverrideDto>> GetActiveAsync([FromQuery] OverrideScope scope, [FromQuery] Guid scopeId) =>
+        _overridesAppService.GetActiveAsync(scope, scopeId);
 
     [HttpPost]
     public virtual Task<AvailabilityOverrideDto> CreateAsync([FromBody] CreateAvailabilityOverrideDto input) =>

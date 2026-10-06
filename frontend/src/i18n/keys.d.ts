@@ -692,13 +692,16 @@ export interface TextKeys {
   "Rules:MinAttendeesNote_one": string
   "Rules:MinAttendeesNote_other": string
   "Rules:MinLeadTime": string
+  "Rules:MoreFromLevel": string
   "Rules:NoClosures": string
   "Rules:NoDays": string
   "Rules:NoLongerFitsDays": string
   "Rules:NoLongerFitsHours": string
   "Rules:NoMinimum": string
   "Rules:NoMinimumNote": string
+  "Rules:NoUpcomingClosures": string
   "Rules:NoneSet": string
+  "Rules:NoneUpcoming": string
   "Rules:NotSet": string
   "Rules:OfSeats_one": string
   "Rules:OfSeats_other": string
@@ -735,6 +738,7 @@ export interface TextKeys {
   "Rules:SeriesHorizonHint": string
   "Rules:SeriesHorizonTooShort": string
   "Rules:Set": string
+  "Rules:ShowPastClosures": string
   "Rules:SpaceLevel": string
   "Rules:Starts": string
   "Rules:StartsTime": string

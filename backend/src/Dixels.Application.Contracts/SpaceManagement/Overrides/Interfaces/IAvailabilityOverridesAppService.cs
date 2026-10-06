@@ -11,7 +11,15 @@ namespace Dixels.SpaceManagement;
 /// design, there is deliberately no UpdateAsync here.</summary>
 public interface IAvailabilityOverridesAppService : IApplicationService
 {
-    Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync(OverrideScope scope, Guid scopeId);
+    /// <summary>One page of a building's, floor's or space's own closures — for showing them.</summary>
+    Task<PagedResultDto<AvailabilityOverrideDto>> GetListAsync(GetAvailabilityOverridesInput input);
+
+    /// <summary>
+    /// Every closure and special opening in effect right now, unpaged — what "closed now" is
+    /// worked out from, which a page of the list could miss. Only what's on at this moment,
+    /// so it stays a row or two.
+    /// </summary>
+    Task<ListResultDto<AvailabilityOverrideDto>> GetActiveAsync(OverrideScope scope, Guid scopeId);
 
     Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input);
 

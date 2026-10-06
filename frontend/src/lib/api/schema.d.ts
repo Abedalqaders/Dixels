@@ -14,8 +14,11 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    scope?: components["schemas"]["Dixels.SpaceManagement.OverrideScope"];
-                    scopeId?: string;
+                    IncludePast?: boolean;
+                    MaxResultCount?: number;
+                    Scope?: components["schemas"]["Dixels.SpaceManagement.OverrideScope"];
+                    ScopeId?: string;
+                    SkipCount?: number;
                 };
                 header?: never;
                 path?: never;
@@ -29,9 +32,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
-                        "text/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
-                        "text/plain": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "application/json": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/json": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/plain": components["schemas"]["Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
                     };
                 };
                 /** @description Bad Request */
@@ -306,6 +309,112 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/availability-overrides/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    scope?: components["schemas"]["Dixels.SpaceManagement.OverrideScope"];
+                    scopeId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/json": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                        "text/plain": components["schemas"]["Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5635,7 +5744,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/app/users/role-names": {
+    "/api/app/users/page-details": {
         parameters: {
             query?: never;
             header?: never;
@@ -5644,7 +5753,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    UserIds?: string[];
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -5657,9 +5768,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": string[];
-                        "text/json": string[];
-                        "text/plain": string[];
+                        "application/json": components["schemas"]["Dixels.Users.UserPageDetailsDto"][];
+                        "text/json": components["schemas"]["Dixels.Users.UserPageDetailsDto"][];
+                        "text/plain": components["schemas"]["Dixels.Users.UserPageDetailsDto"][];
                     };
                 };
                 /** @description Bad Request */
@@ -5738,7 +5849,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/app/users/roles": {
+    "/api/app/users/role-names": {
         parameters: {
             query?: never;
             header?: never;
@@ -5747,9 +5858,7 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: {
-                    userIds?: string[];
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -5762,9 +5871,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Users.UserRolesDto"][];
-                        "text/json": components["schemas"]["Dixels.Users.UserRolesDto"][];
-                        "text/plain": components["schemas"]["Dixels.Users.UserRolesDto"][];
+                        "application/json": string[];
+                        "text/json": string[];
+                        "text/plain": string[];
                     };
                 };
                 /** @description Bad Request */
@@ -6376,7 +6485,9 @@ export interface components {
         "Dixels.Users.UpdateMyLanguageDto": {
             language: string;
         };
-        "Dixels.Users.UserRolesDto": {
+        "Dixels.Users.UserPageDetailsDto": {
+            buildingName?: string | null;
+            buildingRemoved: boolean;
             roles: string[];
             /** Format: uuid */
             userId: string;
@@ -6389,6 +6500,11 @@ export interface components {
         };
         "Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             items: components["schemas"]["Dixels.SpaceManagement.AvailabilityOverrideDto"][];
+        };
+        "Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
+            items: components["schemas"]["Dixels.SpaceManagement.AvailabilityOverrideDto"][];
+            /** Format: int64 */
+            totalCount: number;
         };
         "Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.BuildingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             items: components["schemas"]["Dixels.SpaceManagement.BuildingDto"][];
@@ -6490,10 +6606,11 @@ export type SchemaDixelsSpaceManagementUpdateSpaceDto = components['schemas']['D
 export type SchemaDixelsSpaceManagementUpdateSpaceTypeDto = components['schemas']['Dixels.SpaceManagement.UpdateSpaceTypeDto'];
 export type SchemaDixelsUsersAssignUserBuildingDto = components['schemas']['Dixels.Users.AssignUserBuildingDto'];
 export type SchemaDixelsUsersUpdateMyLanguageDto = components['schemas']['Dixels.Users.UpdateMyLanguageDto'];
-export type SchemaDixelsUsersUserRolesDto = components['schemas']['Dixels.Users.UserRolesDto'];
+export type SchemaDixelsUsersUserPageDetailsDto = components['schemas']['Dixels.Users.UserPageDetailsDto'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsBookingsBookingSummaryDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Bookings.BookingSummaryDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosListResultDto_1DixelsSpaceManagementAvailabilityOverrideDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
+export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementAvailabilityOverrideDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.AvailabilityOverrideDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementBuildingDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.BuildingDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementFloorDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.FloorDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];
 export type SchemaVoloAbpApplicationDtosPagedResultDto_1DixelsSpaceManagementSpaceDtoDixelsApplicationContractsVersion_1_0_0_0CultureNeutralPublicKeyTokenNull = components['schemas']['Volo.Abp.Application.Dtos.PagedResultDto`1[[Dixels.SpaceManagement.SpaceDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'];

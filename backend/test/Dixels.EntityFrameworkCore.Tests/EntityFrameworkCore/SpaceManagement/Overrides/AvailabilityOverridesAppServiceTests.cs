@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement;
 using Shouldly;
@@ -40,7 +41,8 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
 
         created.ReasonDetail.ShouldBe("Public holiday");
 
-        var list = await _overridesAppService.GetListAsync(OverrideScope.Building, buildingId);
+        var list = await _overridesAppService.GetListAsync(
+            new GetAvailabilityOverridesInput { Scope = OverrideScope.Building, ScopeId = buildingId, IncludePast = true });
 
         list.Items.ShouldContain(o => o.Id == created.Id && o.Effect == OverrideEffect.Closed && o.ReasonCategory == ReasonCategory.Holiday);
     }
@@ -82,11 +84,77 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
             ReasonCategory = ReasonCategory.Maintenance,
         });
 
-        var list = await _overridesAppService.GetListAsync(OverrideScope.Floor, floorId);
+        var list = await _overridesAppService.GetListAsync(new GetAvailabilityOverridesInput { Scope = OverrideScope.Floor, ScopeId = floorId });
 
         list.Items.Count.ShouldBe(1);
         list.Items[0].Scope.ShouldBe(OverrideScope.Floor);
         list.Items[0].ScopeId.ShouldBe(floorId);
+    }
+
+    // ---- Paging, and what "closed now" reads ----
+
+    private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow;
+
+    // Straight into the repository: the app service would announce each one.
+    private Task<AvailabilityOverride> InsertAsync(Guid spaceId, DateTimeOffset starts, DateTimeOffset ends, OverrideEffect effect = OverrideEffect.Closed) =>
+        WithUnitOfWorkAsync(() => _overrideRepository.InsertAsync(new AvailabilityOverride(
+            Guid.NewGuid(), OverrideScope.Space, spaceId, starts, ends, effect, ReasonCategory.Maintenance, null)));
+
+    [Fact]
+    public async Task GetList_Shows_Upcoming_And_Current_Soonest_First_And_Hides_The_Past()
+    {
+        var spaceId = Guid.NewGuid();
+        var past = await InsertAsync(spaceId, Now.AddDays(-3), Now.AddDays(-2));
+        var current = await InsertAsync(spaceId, Now.AddHours(-1), Now.AddHours(1));
+        var upcoming = await InsertAsync(spaceId, Now.AddDays(2), Now.AddDays(3));
+
+        var list = await _overridesAppService.GetListAsync(new GetAvailabilityOverridesInput { Scope = OverrideScope.Space, ScopeId = spaceId });
+
+        list.TotalCount.ShouldBe(2);
+        list.Items.Select(o => o.Id).ShouldBe(new[] { current.Id, upcoming.Id });
+
+        var withPast = await _overridesAppService.GetListAsync(
+            new GetAvailabilityOverridesInput { Scope = OverrideScope.Space, ScopeId = spaceId, IncludePast = true });
+
+        withPast.TotalCount.ShouldBe(3);
+        withPast.Items.Select(o => o.Id).ShouldBe(new[] { upcoming.Id, current.Id, past.Id }); // most recent first
+    }
+
+    [Fact]
+    public async Task GetList_Pages_With_The_Full_Count()
+    {
+        var spaceId = Guid.NewGuid();
+        for (var day = 1; day <= 12; day++)
+        {
+            await InsertAsync(spaceId, Now.AddDays(day), Now.AddDays(day).AddHours(2));
+        }
+
+        var input = new GetAvailabilityOverridesInput { Scope = OverrideScope.Space, ScopeId = spaceId, MaxResultCount = 5, SkipCount = 10 };
+        var lastPage = await _overridesAppService.GetListAsync(input);
+
+        lastPage.TotalCount.ShouldBe(12);
+        lastPage.Items.Count.ShouldBe(2);
+        lastPage.Items[0].StartsAt.ShouldBe(Now.AddDays(11), TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task GetActive_Finds_What_Is_On_Now_However_Many_Come_After_It()
+    {
+        var spaceId = Guid.NewGuid();
+        // The bug it guards: a page of upcoming closures pushing the current one out of sight,
+        // and "closed now" reading as open.
+        for (var day = 1; day <= 60; day++)
+        {
+            await InsertAsync(spaceId, Now.AddDays(-day - 1), Now.AddDays(-day)); // past
+            await InsertAsync(spaceId, Now.AddDays(day), Now.AddDays(day).AddHours(2)); // upcoming
+        }
+
+        var closedNow = await InsertAsync(spaceId, Now.AddDays(-90), Now.AddHours(1)); // started long ago, still on
+        var openNow = await InsertAsync(spaceId, Now.AddMinutes(-5), Now.AddMinutes(30), OverrideEffect.Open);
+
+        var active = await _overridesAppService.GetActiveAsync(OverrideScope.Space, spaceId);
+
+        active.Items.Select(o => o.Id).ShouldBe(new[] { closedNow.Id, openNow.Id });
     }
 
     [Fact]

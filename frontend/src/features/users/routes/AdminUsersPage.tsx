@@ -21,14 +21,13 @@ import {
   buildingIdOf,
   getReassignImpact,
   getRoleNames,
-  getUserRoles,
+  getUserPageDetails,
   getUsers,
 } from '@/features/users/api/usersApi'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ADMIN_ROLE, roleLabel } from '@/features/auth/roles'
 import type { IdentityUserDto } from '@/features/users/api/usersApi'
-import { getBuilding, getBuildings } from '@/features/space-management/api/spaceManagementApi'
 import { BuildingPicker } from '@/features/space-management/components/BuildingPicker'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 import '@/styles/tokens.css'
@@ -70,7 +69,7 @@ interface UserRow {
 // — unlike space types, a company can have thousands of users. Only people who can book are
 // listed (Bookings.Create, through any role — admins too while theirs grants it): a building is
 // where someone books, so they're the ones who need one. ABP's list doesn't carry building
-// names, so each building is fetched once however many users share it.
+// names or roles: one more call brings both for the whole page.
 export function AdminUsersPage() {
   const { t } = useTranslation()
   const auth = useAuth()
@@ -99,41 +98,27 @@ export function AdminUsersPage() {
         maxResultCount: list.pageSize,
       })
 
-      const buildingIds = [...new Set(usersResult.items.map(buildingIdOf).filter((id): id is string => id !== null))]
-      const buildingNames = await Promise.all(
-        // A building deleted since it was assigned reads back as "not found": the picker
-        // shows them as not assigned, with the deleted building's name next to it.
-        buildingIds.map((id) => getBuilding(token, id).then((b) => [id, b.name] as const, () => [id, null] as const)),
-      )
-      const nameById = new Map(buildingNames)
-
-      // Names of those deleted buildings — one list call, only when there are any.
-      const missing = buildingIds.filter((id) => !nameById.get(id))
-      const removedNames = new Map<string, string>()
-      if (missing.length > 0) {
-        const all = await getBuildings(token, { includeDeleted: true, maxResultCount: 1000 }).catch(() => null)
-        for (const b of all?.items ?? []) if (missing.includes(b.id)) removedNames.set(b.id, b.name)
-      }
-
-      // One batch call for the whole page's roles, not one per row — a decoration failing
-      // shouldn't break the list, so an empty map on error just shows no roles.
-      const roles = await getUserRoles(
+      // Building names and roles for the whole page in one call — a decoration failing
+      // shouldn't break the list, so on error the rows just show no names or roles.
+      const details = await getUserPageDetails(
         token,
         usersResult.items.map((u) => u.id),
       ).catch(() => [])
-      const rolesByUserId = new Map(roles.map((r) => [r.userId, r.roles]))
+      const detailsByUserId = new Map(details.map((d) => [d.userId, d]))
 
       const rows: UserRow[] = usersResult.items.map((user) => {
         const buildingId = buildingIdOf(user)
-        const buildingName = buildingId ? (nameById.get(buildingId) ?? null) : null
-        const buildingRemoved = buildingId !== null && !buildingName
+        const detail = detailsByUserId.get(user.id)
+        // A building deleted since it was assigned: the picker shows them as not assigned,
+        // with the deleted building's name next to it.
+        const buildingRemoved = buildingId !== null && detail?.buildingRemoved === true
         return {
           user,
-          buildingId: buildingName ? buildingId : null,
-          buildingName,
+          buildingId: buildingRemoved ? null : buildingId,
+          buildingName: buildingRemoved ? null : (detail?.buildingName ?? null),
           buildingRemoved,
-          removedBuildingName: buildingRemoved ? (removedNames.get(buildingId) ?? null) : null,
-          roles: rolesByUserId.get(user.id) ?? [],
+          removedBuildingName: buildingRemoved ? (detail?.buildingName ?? null) : null,
+          roles: detail?.roles ?? [],
         }
       })
       return { rows, totalCount: usersResult.totalCount }

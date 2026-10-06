@@ -13,8 +13,9 @@ namespace Dixels.Users;
 /// building in <c>extraProperties.BuildingId</c>; the Users page sets it with
 /// <see cref="AssignBuildingAsync"/>, which also cancels what moving leaves behind.
 /// A single user's roles are ABP's own <c>/api/identity/users/{id}/roles</c>. The Users page's
-/// Roles column and role filter use the two below instead, so it needs neither one call per
-/// row nor the separate Role-management permission <c>/api/identity/roles</c> would require.
+/// Building and Roles columns and its role filter use the two below instead, so it needs
+/// neither one call per row (or per building) nor the separate Role-management permission
+/// <c>/api/identity/roles</c> would require.
 /// </summary>
 public interface IUsersAppService : IApplicationService
 {
@@ -27,8 +28,8 @@ public interface IUsersAppService : IApplicationService
     /// </summary>
     Task AssignBuildingAsync(Guid userId, AssignUserBuildingDto input);
 
-    /// <summary>Each of these users' role names, one batch call for a page of the Users list.</summary>
-    Task<List<UserRolesDto>> GetRolesForUsersAsync(List<Guid> userIds);
+    /// <summary>Each of these users' building name and role names, one batch call for a page of the Users list.</summary>
+    Task<List<UserPageDetailsDto>> GetPageDetailsAsync(GetUserPageDetailsInput input);
 
     /// <summary>Every role name in the system, for the Users page's role filter.</summary>
     Task<List<string>> GetRoleNamesAsync();

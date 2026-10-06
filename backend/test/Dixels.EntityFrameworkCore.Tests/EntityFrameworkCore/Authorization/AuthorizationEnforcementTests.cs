@@ -112,7 +112,8 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
         await ShouldRefuse(() => _spaces.RestoreAsync(Missing)); // Spaces.Edit
         await ShouldRefuse(() => _spaces.DeleteAsync(Missing)); // Spaces.Delete
         await ShouldRefuse(() => _spaceTypes.DeleteAsync(Missing)); // SpaceTypes.Delete
-        await ShouldRefuse(() => _overrides.GetListAsync(OverrideScope.Space, Missing)); // Overrides.Default
+        await ShouldRefuse(() => _overrides.GetListAsync(new GetAvailabilityOverridesInput { Scope = OverrideScope.Space, ScopeId = Missing })); // Overrides.Default
+        await ShouldRefuse(() => _overrides.GetActiveAsync(OverrideScope.Space, Missing)); // Overrides.Default
     }
 
     [Fact]
@@ -130,7 +131,8 @@ public class AuthorizationEnforcementTests : DixelsApplicationTestBase<DixelsAut
     {
         ActAs(DixelsPermissions.Spaces.Default, DixelsPermissions.Overrides.Default, DixelsPermissions.Overrides.Create, DixelsPermissions.Overrides.Delete);
 
-        await ShouldAllow(() => _overrides.GetListAsync(OverrideScope.Space, Missing));
+        await ShouldAllow(() => _overrides.GetListAsync(new GetAvailabilityOverridesInput { Scope = OverrideScope.Space, ScopeId = Missing }));
+        await ShouldAllow(() => _overrides.GetActiveAsync(OverrideScope.Space, Missing));
         await ShouldAllow(() => _overrides.DeleteAsync(Missing));
         await ShouldRefuse(() => _spaces.RestoreAsync(Missing)); // the rules themselves: Spaces.Edit
     }
