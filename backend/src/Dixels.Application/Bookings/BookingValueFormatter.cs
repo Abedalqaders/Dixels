@@ -95,34 +95,16 @@ public class BookingValueFormatter : ITransientDependency
     }
 
     // The translations use i18next's plural suffixes (Duration:Hours_one, _two, _few…), which
-    // the frontend picks with the language's CLDR rules. Here only Arabic and English have
-    // their rules written out; any other language gets English's one/other until it's added.
+    // the frontend picks with the language's CLDR rules — PluralRules is the same for the server.
+    // A form a language file lacks falls back to _other.
     private string Plural(string key, int count)
     {
-        var text = _localizer[$"{key}_{PluralForm(count)}"];
+        var text = _localizer[$"{key}_{PluralRules.FormOf(count)}"];
         if (text.ResourceNotFound)
         {
             text = _localizer[$"{key}_other"];
         }
 
         return text.Value.Replace("{count}", count.ToString(CultureInfo.InvariantCulture));
-    }
-
-    private static string PluralForm(int n)
-    {
-        if (CultureInfo.CurrentUICulture.TwoLetterISOLanguageName != "ar")
-        {
-            return n == 1 ? "one" : "other";
-        }
-
-        return (n, n % 100) switch
-        {
-            (0, _) => "zero",
-            (1, _) => "one",
-            (2, _) => "two",
-            (_, >= 3 and <= 10) => "few",
-            (_, >= 11 and <= 99) => "many",
-            _ => "other",
-        };
     }
 }
