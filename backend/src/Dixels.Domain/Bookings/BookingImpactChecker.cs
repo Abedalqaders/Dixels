@@ -200,7 +200,7 @@ public class BookingImpactChecker : DomainService
     /// Cancels bookings on an admin's behalf, with the reason employees will see, and announces
     /// them in one <see cref="BookingsCancelledEvent"/> (<c>ByAdmin</c>).
     /// </summary>
-    public async Task CancelAsAdminAsync(IReadOnlyCollection<Booking> bookings, Guid adminId, Func<Booking, string> reason)
+    public virtual async Task CancelAsAdminAsync(IReadOnlyCollection<Booking> bookings, Guid adminId, Func<Booking, string> reason)
     {
         if (bookings.Count == 0)
         {
