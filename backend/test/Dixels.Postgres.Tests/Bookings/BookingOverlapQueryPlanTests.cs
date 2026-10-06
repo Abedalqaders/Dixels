@@ -177,6 +177,9 @@ public class BookingOverlapQueryPlanTests : DixelsApplicationTestBase<DixelsPost
                 (other, Tomorrow.AddHours(10)),
             });
 
+            // A room named twice still lists each booking once.
+            (await _bookingRepository.GetConfirmedOverlappingAsync(new[] { room, room }, Tomorrow, Tomorrow.AddDays(1))).Count.ShouldBe(1);
+
             // An empty range overlaps nothing, as in TimeRange.Overlaps — and doesn't trip
             // Postgres's "range lower bound must be less than or equal to upper bound".
             (await _bookingRepository.GetConfirmedOverlappingAsync(s.SpaceIds, Tomorrow.AddHours(12), Tomorrow.AddHours(9))).ShouldBeEmpty();

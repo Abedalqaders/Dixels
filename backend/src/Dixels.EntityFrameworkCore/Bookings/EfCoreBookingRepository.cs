@@ -97,7 +97,8 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
                             && b.EndsAt > start);
         }
 
-        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.ToArray(), start, end);
+        // Distinct: unnest returns a room once per time it's named, which would repeat its bookings.
+        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start, end);
     }
 
     public async Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
