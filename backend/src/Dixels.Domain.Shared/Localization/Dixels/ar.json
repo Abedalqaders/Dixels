@@ -425,6 +425,7 @@
     "Booking:OtherRooms": "غرف أخرى في هذا الوقت",
     "Booking:CancelFailed": "تعذّر إلغاء الحجز — حاول مرة أخرى.",
     "Booking:CancelTitle": "إلغاء «{title}»؟",
+    "Booking:Untitled": "حجز",
     "Booking:CancelSeriesTitle": "إلغاء الحجز المتكرر؟",
     "Booking:CancelSummary": "{space}، {date} {start}–{end}. تُحرَّر الغرفة فورًا، فيمكن لشخص آخر حجزها.",
     "Booking:CancelScope": "إلغاء",

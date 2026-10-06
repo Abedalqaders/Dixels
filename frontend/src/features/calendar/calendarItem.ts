@@ -1,4 +1,5 @@
 import type { BookingSummaryDto } from '@/features/bookings/api/bookingsApi'
+import { bookingTitle } from '@/features/bookings/format'
 
 /**
  * One thing on My calendar. The grids draw these and nothing else, so what a booking is
@@ -22,19 +23,16 @@ export interface CalendarItem {
   repeats: boolean
 }
 
-/** What the backend names a booking left untitled (BookingConsts.DefaultTitle). */
-const DEFAULT_BOOKING_TITLE = 'Booking'
-
 /** A booking, as the calendar's light list describes it. */
 export function bookingItem(b: BookingSummaryDto): CalendarItem {
   return {
     id: b.id,
     kind: 'booking',
-    title: b.title,
+    title: bookingTitle(b.title),
     localStart: b.localStart,
     localEnd: b.localEnd,
     location: b.spaceName,
-    note: b.title === DEFAULT_BOOKING_TITLE ? undefined : b.title,
+    note: b.title || undefined,
     cancelled: b.status === 'Cancelled',
     repeats: Boolean(b.seriesId),
   }

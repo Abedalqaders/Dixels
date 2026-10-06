@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { setLanguage } from '@/i18n'
-import { formatDays, formatDuration, formatHours } from './format'
+import { bookingTitle, formatDays, formatDuration, formatHours } from './format'
 
 describe('booking rule formatting', () => {
+  it("names an untitled booking in the reader's language, and keeps a real title", async () => {
+    await setLanguage('en')
+    expect(bookingTitle('')).toBe('Booking')
+    expect(bookingTitle('Standup')).toBe('Standup')
+    await setLanguage('ar')
+    expect(bookingTitle('')).toBe('حجز')
+    await setLanguage('en')
+  })
+
   it('describes operating days the same way the backend messages do', () => {
     expect(formatDays([0, 1, 2, 3, 4, 5, 6])).toBe('every day')
     expect(formatDays([4, 0, 2, 1, 3])).toBe('Sun–Thu')

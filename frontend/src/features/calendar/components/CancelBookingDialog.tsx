@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
 import { ApiError, CancelScope, cancelBooking } from '@/features/bookings/api/bookingsApi'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
+import { bookingTitle } from '@/features/bookings/format'
 
 // Mirrors BookingConsts.MaxCancelReasonLength on the server.
 const MAX_REASON_LENGTH = 512
@@ -61,7 +62,7 @@ export function CancelBookingDialog({ token, booking, onClose, onCancelled }: Ca
     <AlertDialog open onOpenChange={(open) => !open && !busy && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{isSeries ? t('Booking:CancelSeriesTitle') : t('Booking:CancelTitle', { title: booking.title })}</AlertDialogTitle>
+          <AlertDialogTitle>{isSeries ? t('Booking:CancelSeriesTitle') : t('Booking:CancelTitle', { title: bookingTitle(booking.title) })}</AlertDialogTitle>
           <AlertDialogDescription>
             {t('Booking:CancelSummary', {
               space: booking.spaceName,

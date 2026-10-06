@@ -157,7 +157,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     }
 
     [Fact]
-    public async Task A_blank_title_falls_back_to_the_default()
+    public async Task A_blank_title_is_stored_empty()
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.UserId);
@@ -165,7 +165,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         var request = Request(s.Space.Id, 10, 11);
         request.Title = "   ";
 
-        (await _bookingsAppService.CreateAsync(request)).Title.ShouldBe(BookingConsts.DefaultTitle);
+        (await _bookingsAppService.CreateAsync(request)).Title.ShouldBe(string.Empty);
     }
 
     [Fact]

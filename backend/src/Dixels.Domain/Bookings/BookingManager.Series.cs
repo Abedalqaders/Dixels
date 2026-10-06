@@ -117,7 +117,7 @@ public partial class BookingManager
                 .WithData("date", BookingFormat.Date(taken.Date));
         }
 
-        var normalizedTitle = string.IsNullOrWhiteSpace(title) ? BookingConsts.DefaultTitle : title.Trim();
+        var normalizedTitle = string.IsNullOrWhiteSpace(title) ? string.Empty : title.Trim();
         var series = await _seriesRepository.InsertAsync(new BookingSeries(
             GuidGenerator.Create(),
             userId,
