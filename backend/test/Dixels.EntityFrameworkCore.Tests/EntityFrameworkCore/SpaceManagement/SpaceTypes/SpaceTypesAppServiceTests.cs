@@ -391,7 +391,7 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
         var desk = await WithUnitOfWorkAsync(() => _spaceTypeRepository.FindByNameAsync("en", BuiltInSpaceTypes.Desk.EnglishName));
 
         desk.ShouldNotBeNull();
-        desk.FindName("ar").ShouldBe(BuiltInSpaceTypes.Desk.ArabicName);
+        desk.FindName("ar").ShouldBe(BuiltInSpaceTypes.Desk.Names["ar"]);
     }
 
     [Fact]
@@ -425,7 +425,7 @@ public class SpaceTypesAppServiceTests : DixelsApplicationTestBase<DixelsEntityF
 
         await GetRequiredService<IDataSeeder>().SeedAsync();
 
-        (await GetListItemAsync(focusPod.Id, "ar")).Name.ShouldBe(BuiltInSpaceTypes.FocusPod.ArabicName);
+        (await GetListItemAsync(focusPod.Id, "ar")).Name.ShouldBe(BuiltInSpaceTypes.FocusPod.Names["ar"]);
     }
 
     private async Task CreateSpaceUsingSpaceTypeAsync(Guid spaceTypeId)

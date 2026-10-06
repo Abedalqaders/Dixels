@@ -18,7 +18,6 @@ namespace Dixels.SpaceManagement;
 public class SpaceTypeManager : DomainService
 {
     private const string English = "en";
-    private const string Arabic = "ar";
 
     private readonly ISpaceTypeRepository _spaceTypeRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
@@ -92,11 +91,12 @@ public class SpaceTypeManager : DomainService
     }
 
     /// <summary>
-    /// The built-in type, created if it's missing (found by its English name). Its Arabic
-    /// name is added when it has none yet — never overwriting one an admin changed, and never
-    /// taking a name another type already uses. Saved at once: the hierarchy seeder asks for
-    /// the same types, and contributors run in no guaranteed order — an unsaved insert would
-    /// be invisible to the other's query, and both would insert the same name.
+    /// The built-in type, created if it's missing (found by its English name). Its names in
+    /// the other app languages are added when it has none yet — never overwriting one an admin
+    /// changed, and never taking a name another type already uses. Saved at once: the
+    /// hierarchy seeder asks for the same types, and contributors run in no guaranteed order —
+    /// an unsaved insert would be invisible to the other's query, and both would insert the
+    /// same name.
     /// </summary>
     public async Task<SpaceType> EnsureBuiltInAsync(BuiltInSpaceType builtIn)
     {
@@ -104,12 +104,18 @@ public class SpaceTypeManager : DomainService
         var isNew = spaceType is null;
         spaceType ??= new SpaceType(GuidGenerator.Create(), English, builtIn.EnglishName, builtIn.IconKey);
 
-        var addArabic = _nameValidator.IsAppLanguage(Arabic)
-            && spaceType.FindName(Arabic) is null
-            && !await _spaceTypeRepository.NameExistsAsync(Arabic, builtIn.ArabicName, spaceType.Id);
-        if (addArabic)
+        var addedName = false;
+        foreach (var (language, name) in builtIn.Names)
         {
-            spaceType.SetName(Arabic, builtIn.ArabicName);
+            var add = language != English
+                && _nameValidator.IsAppLanguage(language)
+                && spaceType.FindName(language) is null
+                && !await _spaceTypeRepository.NameExistsAsync(language, name, spaceType.Id);
+            if (add)
+            {
+                spaceType.SetName(language, name);
+                addedName = true;
+            }
         }
 
         if (isNew)
@@ -117,7 +123,7 @@ public class SpaceTypeManager : DomainService
             return await _spaceTypeRepository.InsertAsync(spaceType, autoSave: true);
         }
 
-        return addArabic ? await _spaceTypeRepository.UpdateAsync(spaceType, autoSave: true) : spaceType;
+        return addedName ? await _spaceTypeRepository.UpdateAsync(spaceType, autoSave: true) : spaceType;
     }
 
     private async Task EnsureNameIsUniqueAsync(LocalizedName name, Guid excludingId)

@@ -5,9 +5,10 @@ using Volo.Abp.DependencyInjection;
 namespace Dixels.SpaceManagement;
 
 /* Seeds the 3 default space types from the original mock design (BuiltInSpaceTypes), with
- * their English and Arabic names. Runs automatically alongside every other
+ * their names in each app language. Runs automatically alongside every other
  * IDataSeedContributor whenever Dixels.DbMigrator seeds the database — on an existing
- * database too, where it only adds an Arabic name a built-in type doesn't have yet. */
+ * database too, where it only adds a name a built-in type doesn't have yet (say, after a
+ * new language). */
 public class SpaceTypeDataSeedContributor : IDataSeedContributor, ITransientDependency
 {
     private readonly SpaceTypeManager _spaceTypeManager;
