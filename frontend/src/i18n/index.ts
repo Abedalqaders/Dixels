@@ -148,7 +148,7 @@ async function fetchConfig(): Promise<LocalizationConfig> {
   }
 }
 
-async function fetchTexts(code: string): Promise<Texts> {
+async function getTexts(code: string): Promise<Texts> {
   const localization = await getJson<{ resources: Record<string, { texts: Texts }> }>(
     `/api/abp/application-localization?cultureName=${encodeURIComponent(code)}&onlyDynamics=false`,
   )
@@ -169,6 +169,21 @@ export function registerTexts(code: string, texts: Texts) {
   i18n.addResourceBundle(code, 'translation', texts, false, true)
 }
 
+/**
+ * Languages whose texts came from the backend during this visit. Any other bundle is a copy
+ * from localStorage, possibly from before texts were added — showing it is fine for a moment,
+ * but it must be replaced, or the new keys show raw ("Profile:TabSecurity").
+ */
+const fetchedThisVisit = new Set<string>()
+
+/** Fetches one language's texts, applies them and caches them. */
+async function fetchTexts(code: string): Promise<void> {
+  const texts = await getTexts(code)
+  registerTexts(code, texts)
+  write(textsKey(code), texts)
+  fetchedThisVisit.add(code)
+}
+
 function pickLanguage(): string {
   const known = (code: string | undefined) => (code && languages.some((l) => l.code === code) ? code : undefined)
   return (
@@ -185,15 +200,10 @@ async function refresh(code: string) {
   configureLanguages(config)
   write(CONFIG_KEY, config)
   const language = languages.some((l) => l.code === code) ? code : pickLanguage()
-  const texts = await fetchTexts(language)
-  registerTexts(language, texts)
-  write(textsKey(language), texts)
-  // The fallback language must be loaded too, for any key a language hasn't translated yet.
-  if (language !== defaultLanguage && !i18n.hasResourceBundle(defaultLanguage, 'translation')) {
-    const fallback = await fetchTexts(defaultLanguage)
-    registerTexts(defaultLanguage, fallback)
-    write(textsKey(defaultLanguage), fallback)
-  }
+  await fetchTexts(language)
+  // The fallback language too, for any key a language hasn't translated yet — fresh, not only
+  // the cached copy: it's also what shows on switching to it.
+  if (language !== defaultLanguage) await fetchTexts(defaultLanguage)
   return language
 }
 
@@ -226,16 +236,21 @@ export async function loadLocalization(): Promise<void> {
   await i18n.changeLanguage(language)
 }
 
-/** Switches language, fetching its texts first if this browser hasn't got them yet. */
+/**
+ * Switches language. Texts this browser already has (cached, or loaded as the fallback) show
+ * at once and are refreshed in the background; without any, it waits for the backend.
+ */
 export async function setLanguage(code: string): Promise<void> {
-  if (!i18n.hasResourceBundle(code, 'translation')) {
-    const cached = read<Texts>(textsKey(code))
-    if (cached) {
-      registerTexts(code, cached)
-    } else {
-      const texts = await fetchTexts(code)
-      registerTexts(code, texts)
-      write(textsKey(code), texts)
+  if (!fetchedThisVisit.has(code)) {
+    if (!i18n.hasResourceBundle(code, 'translation')) {
+      const cached = read<Texts>(textsKey(code))
+      if (cached) registerTexts(code, cached)
+      else await fetchTexts(code)
+    }
+    if (!fetchedThisVisit.has(code)) {
+      void fetchTexts(code).catch(() => {
+        // Offline or the backend is restarting: the cached texts stay.
+      })
     }
   }
   await i18n.changeLanguage(code)
