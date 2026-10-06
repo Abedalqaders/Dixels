@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement.ValueObjects;
@@ -29,6 +30,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
     private readonly LocalizedNameValidator _nameValidator;
     private readonly LocalizedNameReader _nameReader;
@@ -41,6 +43,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
+        ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
         LocalizedNameValidator nameValidator,
         LocalizedNameReader nameReader)
@@ -52,6 +55,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _nameValidator = nameValidator;
         _nameReader = nameReader;
@@ -195,28 +199,33 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]
-    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input)
+    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input)
     {
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, floor, input));
+        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, floor, input));
     }
 
     [Authorize(DixelsPermissions.Floors.Delete)]
-    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id)
     {
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _bookingImpact.DescribeAsync(
-            building,
-            await _bookingImpact.UpcomingAsync(await RoomsAsync(floor)),
-            _bookingImpact.Text("Dixels:Bookings:CancelReason:FloorRemoved"));
+        return await _impactPreview.UpcomingAsync(building, await RoomsAsync(floor), L["Dixels:Bookings:CancelReason:FloorRemoved"]);
     }
 
     // The proposed floor is a fresh, untracked copy — checking it can never save anything.
+    // Cancelling on save still asks Bookings directly; it moves to an event next.
     private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
+    {
+        var change = await ProposedChangeAsync(building, floor, input);
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
+    }
+
+    /// <summary>The floor's rules as the admin proposes them, on an unsaved copy, for every room on it.</summary>
+    private async Task<RoomRulesChange> ProposedChangeAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
     {
         // Its name plays no part in the check — any one of them will do.
         var name = floor.Translations.First();
@@ -225,7 +234,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         proposed.SetOwnOperatingHours(ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours), building.Hours);
         proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
 
-        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+        return new RoomRulesChange(
             building, await RoomsAsync(floor), (space, _) => _constraintResolver.Resolve(building, proposed, space));
     }
 

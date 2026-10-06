@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.Users;
@@ -30,6 +31,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
     private readonly IUserDirectoryRepository _userDirectory;
     private readonly LocalizedNameValidator _nameValidator;
@@ -43,6 +45,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
         BookingImpactService bookingImpact,
+        ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
         IUserDirectoryRepository userDirectory,
         LocalizedNameValidator nameValidator,
@@ -55,6 +58,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
         _bookingImpact = bookingImpact;
+        _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _userDirectory = userDirectory;
         _nameValidator = nameValidator;
@@ -149,7 +153,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // different local time (10:00 becomes 07:00) — and possibly outside opening hours.
         if (!string.Equals(input.Timezone, building.Timezone, StringComparison.Ordinal))
         {
-            var upcoming = await _bookingImpact.UpcomingAsync(await RoomsAsync(id));
+            var upcoming = await _impactPreview.UpcomingAsync(building, await RoomsAsync(id), reason: string.Empty);
             if (upcoming.Count > 0)
             {
                 throw new BusinessException(DixelsDomainErrorCodes.TimezoneChangeWithBookings).WithData("count", upcoming.Count);
@@ -216,22 +220,19 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
-    public async Task<BookingImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input)
+    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input)
     {
         await EnsureCanManageBuildingAsync(id);
         var building = await _buildingRepository.GetAsync(id);
-        return await _bookingImpact.DescribeAsync(building, await FindBrokenBookingsAsync(building, input));
+        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, input));
     }
 
     [Authorize(DixelsPermissions.Buildings.Delete)]
-    public async Task<BookingImpactDto> GetDeleteImpactAsync(Guid id)
+    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id)
     {
         await EnsureCanManageBuildingAsync(id);
         var building = await _buildingRepository.GetAsync(id);
-        var impact = await _bookingImpact.DescribeAsync(
-            building,
-            await _bookingImpact.UpcomingAsync(await RoomsAsync(id)),
-            _bookingImpact.Text("Dixels:Bookings:CancelReason:BuildingRemoved"));
+        var impact = await _impactPreview.UpcomingAsync(building, await RoomsAsync(id), L["Dixels:Bookings:CancelReason:BuildingRemoved"]);
 
         // They keep the assignment (a restore brings everything back), but can't book meanwhile.
         impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null, grantedPermission: null);
@@ -239,7 +240,15 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     }
 
     // The proposed building is a fresh, untracked copy — checking it can never save anything.
+    // Cancelling on save still asks Bookings directly; it moves to an event next.
     private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, UpdateBuildingConstraintsDto input)
+    {
+        var change = await ProposedChangeAsync(building, input);
+        return await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
+    }
+
+    /// <summary>The building's rules as the admin proposes them, on an unsaved copy, for every room in it.</summary>
+    private async Task<RoomRulesChange> ProposedChangeAsync(Building building, UpdateBuildingConstraintsDto input)
     {
         // Its name plays no part in the check — any one of them will do.
         var name = building.Translations.First();
@@ -257,7 +266,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             input.OwnOverlapPolicy,
             Math.Max(input.MaxSeriesHorizonDays ?? building.MaxSeriesHorizonDays, input.MaxHorizonDays));
 
-        return await _bookingImpact.Checker.FindNoLongerFittingAsync(
+        return new RoomRulesChange(
             building, await RoomsAsync(building.Id), (space, floor) => _constraintResolver.Resolve(proposed, floor, space));
     }
 

@@ -341,9 +341,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -2135,9 +2135,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -2238,9 +2238,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -3066,9 +3066,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -3169,9 +3169,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -4908,9 +4908,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -5011,9 +5011,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -5124,9 +5124,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -5554,9 +5554,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/json": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
-                        "text/plain": components["schemas"]["Dixels.Bookings.BookingImpactDto"];
+                        "application/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/json": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
+                        "text/plain": components["schemas"]["Dixels.Reservations.ReservationImpactDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -5847,19 +5847,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        "Dixels.Bookings.AffectedBookingDto": {
-            bookedBy: string;
-            /** Format: uuid */
-            bookingId: string;
-            floorName: string;
-            /** Format: date-time */
-            localEnd: string;
-            /** Format: date-time */
-            localStart: string;
-            reasons: string[];
-            spaceName: string;
-            title: string;
-        };
         "Dixels.Bookings.AvailabilitySearchResultDto": {
             /** Format: uuid */
             buildingId: string;
@@ -5941,13 +5928,6 @@ export interface components {
             status: string;
             timezone: string;
             title: string;
-        };
-        "Dixels.Bookings.BookingImpactDto": {
-            /** Format: int32 */
-            assignedEmployees: number;
-            bookings: components["schemas"]["Dixels.Bookings.AffectedBookingDto"][];
-            /** Format: int32 */
-            count: number;
         };
         "Dixels.Bookings.BookingPreviewDto": {
             /** Format: date-time */
@@ -6111,6 +6091,27 @@ export interface components {
         "Dixels.Localization.LocalizedNameDto": {
             language: string;
             name: string;
+        };
+        "Dixels.Reservations.AffectedReservationDto": {
+            heldBy: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: date-time */
+            localEnd: string;
+            /** Format: date-time */
+            localStart: string;
+            placeDetail: string;
+            placeName: string;
+            reasons: string[];
+            title: string;
+        };
+        "Dixels.Reservations.ReservationImpactDto": {
+            /** Format: int32 */
+            assignedEmployees: number;
+            /** Format: int32 */
+            count: number;
+            items: components["schemas"]["Dixels.Reservations.AffectedReservationDto"][];
         };
         "Dixels.SpaceManagement.AvailabilityOverrideDto": {
             effect: components["schemas"]["Dixels.SpaceManagement.OverrideEffect"];
@@ -6432,13 +6433,11 @@ export interface components {
     headers: never;
     pathItems: never;
 }
-export type SchemaDixelsBookingsAffectedBookingDto = components['schemas']['Dixels.Bookings.AffectedBookingDto'];
 export type SchemaDixelsBookingsAvailabilitySearchResultDto = components['schemas']['Dixels.Bookings.AvailabilitySearchResultDto'];
 export type SchemaDixelsBookingsBookableBuildingDto = components['schemas']['Dixels.Bookings.BookableBuildingDto'];
 export type SchemaDixelsBookingsBookableFloorDto = components['schemas']['Dixels.Bookings.BookableFloorDto'];
 export type SchemaDixelsBookingsBookableSpaceDto = components['schemas']['Dixels.Bookings.BookableSpaceDto'];
 export type SchemaDixelsBookingsBookingDto = components['schemas']['Dixels.Bookings.BookingDto'];
-export type SchemaDixelsBookingsBookingImpactDto = components['schemas']['Dixels.Bookings.BookingImpactDto'];
 export type SchemaDixelsBookingsBookingPreviewDto = components['schemas']['Dixels.Bookings.BookingPreviewDto'];
 export type SchemaDixelsBookingsBookingRequestDto = components['schemas']['Dixels.Bookings.BookingRequestDto'];
 export type SchemaDixelsBookingsBookingSummaryDto = components['schemas']['Dixels.Bookings.BookingSummaryDto'];
@@ -6459,6 +6458,8 @@ export type SchemaDixelsBookingsSpaceAvailabilityDto = components['schemas']['Di
 export type SchemaDixelsBookingsSpaceDayDto = components['schemas']['Dixels.Bookings.SpaceDayDto'];
 export type SchemaDixelsBookingsSpaceDaysDto = components['schemas']['Dixels.Bookings.SpaceDaysDto'];
 export type SchemaDixelsLocalizationLocalizedNameDto = components['schemas']['Dixels.Localization.LocalizedNameDto'];
+export type SchemaDixelsReservationsAffectedReservationDto = components['schemas']['Dixels.Reservations.AffectedReservationDto'];
+export type SchemaDixelsReservationsReservationImpactDto = components['schemas']['Dixels.Reservations.ReservationImpactDto'];
 export type SchemaDixelsSpaceManagementAvailabilityOverrideDto = components['schemas']['Dixels.SpaceManagement.AvailabilityOverrideDto'];
 export type SchemaDixelsSpaceManagementBuildingDto = components['schemas']['Dixels.SpaceManagement.BuildingDto'];
 export type SchemaDixelsSpaceManagementConstraintsSaveResultDto = components['schemas']['Dixels.SpaceManagement.ConstraintsSaveResultDto'];

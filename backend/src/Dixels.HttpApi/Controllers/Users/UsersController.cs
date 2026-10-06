@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.Users;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp;
@@ -23,7 +24,7 @@ public class UsersController : DixelsController, IUsersAppService
     }
 
     [HttpGet("{userId}/reassign-impact")]
-    public virtual Task<BookingImpactDto> GetReassignImpactAsync(Guid userId) => _usersAppService.GetReassignImpactAsync(userId);
+    public virtual Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId) => _usersAppService.GetReassignImpactAsync(userId);
 
     [HttpPut("{userId}/building")]
     public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>

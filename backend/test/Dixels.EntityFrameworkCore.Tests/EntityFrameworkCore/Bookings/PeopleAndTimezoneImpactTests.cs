@@ -223,8 +223,8 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
 
         using var _ = ActAs(Admin);
         var impact = await _users.GetReassignImpactAsync(s.UserId);
-        impact.Bookings.ShouldHaveSingleItem().BookingId.ShouldBe(booking.Id);
-        impact.Bookings[0].BookedBy.ShouldBe("Jordan Reed");
+        impact.Items.ShouldHaveSingleItem().Id.ShouldBe(booking.Id);
+        impact.Items[0].HeldBy.ShouldBe("Jordan Reed");
     }
 
     [Fact]

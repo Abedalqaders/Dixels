@@ -26,7 +26,7 @@ import { useConfirm } from '@/components/ConfirmDialog'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useListParams } from '@/hooks/useListParams'
-import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 import { ApiError, getBuilding, getFloor, getSpaces, getSpaceTypes, deleteSpace, getSpaceDeleteImpact } from '@/features/space-management/api/spaceManagementApi'
 import '@/styles/tokens.css'
 import '@/styles/base.css'
@@ -90,8 +90,8 @@ export function SpacesListPage() {
 
   // A delete also cancels the upcoming bookings in what's deleted: when there are any, say
   // which (and whose) before going ahead; otherwise the plain confirm is enough.
-  async function confirmDelete(name: string, confirmMessage: string, impact: () => Promise<BookingImpactDto>, remove: () => Promise<unknown>) {
-    let affected: BookingImpactDto
+  async function confirmDelete(name: string, confirmMessage: string, impact: () => Promise<ReservationImpactDto>, remove: () => Promise<unknown>) {
+    let affected: ReservationImpactDto
     try {
       affected = await impact()
     } catch (err) {

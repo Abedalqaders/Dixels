@@ -10,14 +10,14 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
-import type { BookingImpactDto } from '@/features/space-management/api/spaceManagementApi'
+import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 
 export type ImpactMode = 'change' | 'closure' | 'delete' | 'reassign'
 export type ImpactChoice = 'keep' | 'cancel' | null
 
 export interface ImpactRequest {
   mode: ImpactMode
-  impact: BookingImpactDto
+  impact: ReservationImpactDto
   /** What's being deleted, for the delete wording. */
   subject?: string
 }
@@ -83,8 +83,8 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
 
         {n > 0 && (
         <ul className="grid max-h-64 gap-1.5 overflow-y-auto rounded-md border p-1.5" aria-label={t('Hierarchy:AffectedBookings')}>
-          {impact.bookings.map((b) => (
-            <li key={b.bookingId} className="grid gap-0.5 rounded px-2 py-1.5 text-sm odd:bg-muted/50">
+          {impact.items.map((b) => (
+            <li key={b.id} className="grid gap-0.5 rounded px-2 py-1.5 text-sm odd:bg-muted/50">
               <span className="flex flex-wrap justify-between gap-x-3">
                 <span className="font-medium">
                   {formatDate(dateOf(b.localStart))} ·{' '}
@@ -93,11 +93,11 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
                   </span>
                 </span>
                 <span className="text-muted-foreground">
-                  {b.spaceName} · {b.floorName}
+                  {b.placeName} · {b.placeDetail}
                 </span>
               </span>
               <span className="text-xs text-muted-foreground">
-                {b.bookedBy} · {b.title}
+                {b.heldBy} · {b.title}
               </span>
               <span className="text-xs text-slot-closed-ink">{b.reasons.join(' · ')}</span>
             </li>

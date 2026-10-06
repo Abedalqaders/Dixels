@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Localization;
+using Dixels.Reservations;
 using Dixels.SpaceManagement;
 using Microsoft.Extensions.Localization;
 using Volo.Abp;
@@ -105,7 +106,7 @@ public class BookingImpactService : ITransientDependency
     public BookingImpactChecker Checker => _checker;
 
     /// <summary>The bookings as the admin reads them; <paramref name="fixedReason"/> replaces the per-rule reasons (a delete).</summary>
-    public async Task<BookingImpactDto> DescribeAsync(Building building, IReadOnlyList<BookingImpact> impacts, string? fixedReason = null)
+    public async Task<List<AffectedReservationDto>> DescribeAsync(Building building, IReadOnlyList<BookingImpact> impacts, string? fixedReason = null)
     {
         var clock = new BuildingClock(building.Timezone);
         var names = await RoomNamesAsync(impacts);
@@ -116,23 +117,20 @@ public class BookingImpactService : ITransientDependency
                 u => u.Id,
                 u => string.IsNullOrWhiteSpace(u.Name) ? u.UserName : $"{u.Name} {u.Surname}".Trim());
 
-        return new BookingImpactDto
-        {
-            Count = impacts.Count,
-            Bookings = impacts.Select(i => new AffectedBookingDto
+        return impacts.Select(i => new AffectedReservationDto
             {
-                BookingId = i.Booking.Id,
+                Kind = ReservationKinds.Booking,
+                Id = i.Booking.Id,
                 Title = i.Booking.Title,
-                BookedBy = users.GetValueOrDefault(i.Booking.UserId, "Someone"),
-                SpaceName = names[i.Space.Id],
-                FloorName = names[i.Floor.Id],
+                HeldBy = users.GetValueOrDefault(i.Booking.UserId, "Someone"),
+                PlaceName = names[i.Space.Id],
+                PlaceDetail = names[i.Floor.Id],
                 LocalStart = clock.ToLocal(i.Booking.StartsAt),
                 LocalEnd = clock.ToLocal(i.Booking.EndsAt),
                 Reasons = fixedReason is not null
                     ? new List<string> { fixedReason }
                     : i.Violations.Select(v => _violationLocalizer.ToDto(v).ShortMessage).Distinct().ToList(),
-            }).ToList(),
-        };
+            }).ToList();
     }
 
     /// <summary>

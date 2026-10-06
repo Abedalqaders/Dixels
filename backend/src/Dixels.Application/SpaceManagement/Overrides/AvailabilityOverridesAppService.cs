@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.Bookings;
+using Dixels.Reservations;
 using Dixels.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
@@ -20,6 +21,7 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly BookingImpactService _bookingImpact;
+    private readonly ReservationImpactPreview _impactPreview;
 
     public AvailabilityOverridesAppService(
         IRepository<AvailabilityOverride, Guid> overrideRepository,
@@ -27,7 +29,8 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         IRepository<Floor, Guid> floorRepository,
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
-        BookingImpactService bookingImpact)
+        BookingImpactService bookingImpact,
+        ReservationImpactPreview impactPreview)
     {
         _overrideRepository = overrideRepository;
         _buildingRepository = buildingRepository;
@@ -35,6 +38,7 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         _spaceRepository = spaceRepository;
         _constraintResolver = constraintResolver;
         _bookingImpact = bookingImpact;
+        _impactPreview = impactPreview;
     }
 
     public async Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync(OverrideScope scope, Guid scopeId)
@@ -73,10 +77,10 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     }
 
     [Authorize(DixelsPermissions.Overrides.Create)]
-    public async Task<BookingImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input)
+    public async Task<ReservationImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input)
     {
-        var (building, broken) = await FindBrokenBookingsAsync(input);
-        return building is null ? new BookingImpactDto() : await _bookingImpact.DescribeAsync(building, broken);
+        var change = await ProposedClosureAsync(input);
+        return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change);
     }
 
     // "Closed: Replacing the chair" — the admin's own words when there are any, else the category.
@@ -89,11 +93,28 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     /// The upcoming bookings in the closure's scope (a room, a floor's rooms, or the whole
     /// building's) that the closure would fall on. A special opening can't break anything.
     /// </summary>
+    // Cancelling on save still asks Bookings directly; it moves to an event next.
     private async Task<(Building? Building, IReadOnlyList<BookingImpact> Broken)> FindBrokenBookingsAsync(CreateAvailabilityOverrideDto input)
+    {
+        var change = await ProposedClosureAsync(input);
+        if (change is null)
+        {
+            return (null, Array.Empty<BookingImpact>());
+        }
+
+        var closure = OverrideWindow.From(change.AddedClosure!);
+        return (change.Building, await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules, closure));
+    }
+
+    /// <summary>
+    /// The rooms a new closure reaches, with their rules as they are and the closure unsaved;
+    /// null when it closes nothing (a special opening, or an empty range).
+    /// </summary>
+    private async Task<RoomRulesChange?> ProposedClosureAsync(CreateAvailabilityOverrideDto input)
     {
         if (input.Effect != OverrideEffect.Closed || input.EndsAt <= input.StartsAt)
         {
-            return (null, Array.Empty<BookingImpact>());
+            return null;
         }
 
         Building building;
@@ -127,12 +148,10 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
             }
         }
 
-        var closure = new OverrideWindow(
-            new TimeRange(input.StartsAt, input.EndsAt), OverrideEffect.Closed, input.Scope, input.ReasonCategory, input.ReasonDetail);
+        var closure = new AvailabilityOverride(
+            Guid.Empty, input.Scope, input.ScopeId, input.StartsAt, input.EndsAt, OverrideEffect.Closed, input.ReasonCategory, input.ReasonDetail);
 
-        var broken = await _bookingImpact.Checker.FindNoLongerFittingAsync(
-            building, rooms, (space, floor) => _constraintResolver.Resolve(building, floor, space), closure);
-        return (building, broken);
+        return new RoomRulesChange(building, rooms, (space, floor) => _constraintResolver.Resolve(building, floor, space), closure);
     }
 
     [Authorize(DixelsPermissions.Overrides.Delete)]
