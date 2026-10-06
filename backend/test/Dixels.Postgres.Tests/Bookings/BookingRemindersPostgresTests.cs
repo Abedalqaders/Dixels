@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,8 +13,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Volo.Abp.DistributedLocking;
+using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EntityFrameworkCore;
+using Volo.Abp.EventBus;
 using Volo.Abp.Identity;
 using Xunit;
 
@@ -35,7 +38,7 @@ public class BookingRemindersPostgresTests : DixelsApplicationTestBase<DixelsPos
         _emails = GetRequiredService<FakeEmailSender>();
     }
 
-    private sealed record Scenario(Guid UserId, string Email, Guid SpaceId);
+    private sealed record Scenario(Guid UserId, string Email, Guid FloorId, Guid SpaceId);
 
     // Its own building, room and employee: the container's database is shared by every test.
     private Task<Scenario> CreateScenarioAsync() => WithUnitOfWorkAsync(async () =>
@@ -53,7 +56,26 @@ public class BookingRemindersPostgresTests : DixelsApplicationTestBase<DixelsPos
         user.SetBuildingId(building.Id);
         (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
 
-        return new Scenario(user.Id, email, space.Id);
+        return new Scenario(user.Id, email, floor.Id, space.Id);
+    });
+
+    private Task<List<Guid>> AddRoomsAsync(Scenario s, int count) => WithUnitOfWorkAsync(async () =>
+    {
+        var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
+        var rooms = new List<Guid>();
+        for (var i = 0; i < count; i++)
+        {
+            rooms.Add((await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(
+                new Space(Guid.NewGuid(), s.FloorId, "en", $"Room {i + 2}", spaceType.Id, 8))).Id);
+        }
+        return rooms;
+    });
+
+    private Task MadeYesterdayAsync(IReadOnlyCollection<Guid> ids) => WithUnitOfWorkAsync(async () =>
+    {
+        var db = await GetRequiredService<IDbContextProvider<DixelsDbContext>>().GetDbContextAsync();
+        await db.Bookings.Where(b => ids.Contains(b.Id))
+            .ExecuteUpdateAsync(u => u.SetProperty(b => b.CreationTime, DateTime.UtcNow.AddDays(-1)));
     });
 
     /// <summary>
@@ -77,13 +99,7 @@ public class BookingRemindersPostgresTests : DixelsApplicationTestBase<DixelsPos
             return created;
         });
 
-        await WithUnitOfWorkAsync(async () =>
-        {
-            var db = await GetRequiredService<IDbContextProvider<DixelsDbContext>>().GetDbContextAsync();
-            await db.Bookings.Where(b => ids.Contains(b.Id))
-                .ExecuteUpdateAsync(u => u.SetProperty(b => b.CreationTime, DateTime.UtcNow.AddDays(-1)));
-        });
-
+        await MadeYesterdayAsync(ids);
         return ids;
     }
 
@@ -129,4 +145,56 @@ public class BookingRemindersPostgresTests : DixelsApplicationTestBase<DixelsPos
         (await CountRemindedAsync(ids)).ShouldBe(5);
         EmailsTo(s).ShouldBe(5);
     }
+
+    [PostgresFact]
+    public async Task A_booking_that_always_fails_is_skipped_and_the_rest_still_go_out()
+    {
+        var s = await CreateScenarioAsync();
+
+        // 450 due bookings: one-minute slots 5–24 minutes from now, 20 per room (the overlap
+        // constraint is real here).
+        var rooms = await AddRoomsAsync(s, 22);
+        rooms.Insert(0, s.SpaceId);
+        var first = DateTimeOffset.UtcNow.AddMinutes(5);
+        var ids = await WithUnitOfWorkAsync(async () =>
+        {
+            var created = new List<Guid>();
+            for (var i = 0; i < 450; i++)
+            {
+                var start = first.AddMinutes(i % 20);
+                created.Add((await _bookingRepository.InsertAsync(new Booking(
+                    Guid.NewGuid(), rooms[i / 20], s.UserId, start, start.AddMinutes(1),
+                    attendees: 1, "Direct", "{}", Guid.NewGuid().ToString()))).Id);
+            }
+            return created;
+        });
+        await MadeYesterdayAsync(ids);
+
+        var poison = ids[3];
+        FailingReminderListener.FailFor[poison] = true;
+        try
+        {
+            // Twice: the bad one fails again next minute, still without holding up anyone.
+            await GetRequiredService<BookingReminders>().SendDueAsync();
+            await GetRequiredService<BookingReminders>().SendDueAsync();
+        }
+        finally
+        {
+            FailingReminderListener.FailFor.TryRemove(poison, out _);
+        }
+
+        (await CountRemindedAsync(ids.Where(id => id != poison).ToList())).ShouldBe(449);
+        (await CountRemindedAsync(new[] { poison })).ShouldBe(0);
+    }
+}
+
+/// <summary>A reminder listener that throws for the bookings a test names: a reminder that always fails.</summary>
+public class FailingReminderListener : ILocalEventHandler<BookingReminderDueEvent>, ITransientDependency
+{
+    public static readonly ConcurrentDictionary<Guid, bool> FailFor = new();
+
+    public Task HandleEventAsync(BookingReminderDueEvent eventData) =>
+        FailFor.ContainsKey(eventData.Booking.Id)
+            ? throw new InvalidOperationException("This booking's reminder always fails.")
+            : Task.CompletedTask;
 }
