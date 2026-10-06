@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Volo.Abp.DistributedLocking;
 using Volo.Abp.Domain.Services;
 using Volo.Abp.EventBus.Local;
 using Volo.Abp.Uow;
@@ -16,33 +17,49 @@ namespace Dixels.Bookings;
 ///
 /// Each reminder is its own transaction: the booking is stamped
 /// (<see cref="Booking.ReminderSentAt"/>) and <see cref="BookingReminderDueEvent"/> raised in
-/// it — its listeners (the email) queue their work there too — so it's sent once —
-/// a second app instance doing the same at the same moment fails on the booking's
-/// concurrency stamp and rolls back its copy.
+/// it — its listeners (the email) queue their work there too — so it's sent once.
+///
+/// With several app servers only the one holding the distributed lock runs; the others skip
+/// that minute. Should two ever overlap anyway (the lock lost with its connection), the second
+/// fails on the booking's concurrency stamp and rolls back its copy.
 /// </summary>
 public class BookingReminders : DomainService
 {
+    public const string LockName = "Dixels:BookingReminders";
+
     private readonly IBookingRepository _bookingRepository;
     private readonly ILocalEventBus _localEventBus;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
+    private readonly IAbpDistributedLock _distributedLock;
     private readonly BookingOptions _options;
 
     public BookingReminders(
         IBookingRepository bookingRepository,
         ILocalEventBus localEventBus,
         IUnitOfWorkManager unitOfWorkManager,
+        IAbpDistributedLock distributedLock,
         IOptions<BookingOptions> options)
     {
         _bookingRepository = bookingRepository;
         _localEventBus = localEventBus;
         _unitOfWorkManager = unitOfWorkManager;
+        _distributedLock = distributedLock;
         _options = options.Value;
     }
 
-    /// <summary>Sends every reminder that's due now; returns how many.</summary>
+    /// <summary>
+    /// Sends every reminder that's due now; returns how many (0 when another server is
+    /// already doing it).
+    /// </summary>
     public async Task<int> SendDueAsync()
     {
         if (_options.ReminderLeadMinutes <= 0)
+        {
+            return 0;
+        }
+
+        await using var handle = await _distributedLock.TryAcquireAsync(LockName);
+        if (handle is null)
         {
             return 0;
         }
