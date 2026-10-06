@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement;
+using Microsoft.Extensions.Logging;
 using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
@@ -54,11 +55,22 @@ public class CancelBookingsInRemovedRoomsJob : AsyncBackgroundJob<CancelBookings
     public override async Task ExecuteAsync(CancelBookingsInRemovedRoomsArgs args)
     {
         var spaceIds = await StillRemovedAsync(args.SpaceIds);
+        var previous = new HashSet<Guid>();
 
         while (true)
         {
             using var uow = _unitOfWorkManager.Begin(requiresNew: true);
             var batch = await _checker.FindUpcomingAsync(spaceIds, BatchSize);
+
+            // Each batch cancelled drops out of the next. One that comes back again means
+            // nothing was cancelled: stop rather than ask for the same bookings forever.
+            if (batch.Any(b => previous.Contains(b.Id)))
+            {
+                Logger.LogWarning(
+                    "Stopped cancelling bookings in removed rooms: the last batch of {Count} wasn't cancelled.", batch.Count);
+                return;
+            }
+
             await _checker.CancelAsAdminAsync(batch, args.AdminId, _ => args.Reason);
             await uow.CompleteAsync();
 
@@ -66,6 +78,8 @@ public class CancelBookingsInRemovedRoomsJob : AsyncBackgroundJob<CancelBookings
             {
                 return;
             }
+
+            previous = batch.Select(b => b.Id).ToHashSet();
         }
     }
 
