@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -7,11 +8,14 @@ using Dixels.Reservations;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
+using Microsoft.Extensions.Options;
 using Shouldly;
+using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
+using Volo.Abp.Uow;
 using Xunit;
 using static Dixels.TestNames;
 
@@ -566,5 +570,60 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var stillConfirmed = await WithUnitOfWorkAsync(async () =>
             (await _bookingRepository.GetListAsync(b => b.SpaceId == s.Space.Id && b.Status == BookingStatus.Confirmed)).Count);
         stillConfirmed.ShouldBe(0);
+    }
+
+    /// <summary>Finds bookings like the real checker but cancels none of them.</summary>
+    private sealed class CancelsNothing(
+        IBookingRepository bookingRepository,
+        IRepository<AvailabilityOverride, Guid> overrideRepository,
+        BookingPolicyValidator validator,
+        IOptions<BookingOptions> options,
+        ILocalEventBus localEventBus)
+        : BookingImpactChecker(bookingRepository, overrideRepository, validator, options, localEventBus)
+    {
+        public int Calls { get; private set; }
+
+        public override Task CancelAsAdminAsync(IReadOnlyCollection<Booking> bookings, Guid adminId, Func<Booking, string> reason)
+        {
+            Calls++;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task The_job_stops_when_a_full_batch_is_not_cancelled()
+    {
+        // A batch that comes back again made no progress: the job gives up instead of asking
+        // for the same bookings forever.
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            for (var i = 0; i < CancelBookingsInRemovedRoomsJob.BatchSize; i++)
+            {
+                var start = new DateTimeOffset(Tomorrow, TimeSpan.Zero).AddMinutes(i);
+                await _bookingRepository.InsertAsync(new Booking(
+                    Guid.NewGuid(), s.Space.Id, s.UserId, start, start.AddMinutes(1),
+                    attendees: 1, title: "Slot", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString()));
+            }
+
+            await GetRequiredService<IRepository<Space, Guid>>().DeleteAsync(s.Space.Id);
+        });
+
+        var checker = new CancelsNothing(
+            _bookingRepository,
+            GetRequiredService<IRepository<AvailabilityOverride, Guid>>(),
+            GetRequiredService<BookingPolicyValidator>(),
+            GetRequiredService<IOptions<BookingOptions>>(),
+            GetRequiredService<ILocalEventBus>())
+        {
+            LazyServiceProvider = GetRequiredService<IAbpLazyServiceProvider>(),
+        };
+        var job = new CancelBookingsInRemovedRoomsJob(
+            checker, GetRequiredService<IRepository<Space, Guid>>(), GetRequiredService<IUnitOfWorkManager>());
+
+        Should.CompleteIn(
+            () => job.ExecuteAsync(new CancelBookingsInRemovedRoomsArgs { SpaceIds = new() { s.Space.Id }, AdminId = Admin, Reason = "Removed" }),
+            TimeSpan.FromSeconds(30));
+        checker.Calls.ShouldBe(1);
     }
 }
