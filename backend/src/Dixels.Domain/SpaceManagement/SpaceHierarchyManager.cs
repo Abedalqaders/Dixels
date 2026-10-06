@@ -19,6 +19,10 @@ namespace Dixels.SpaceManagement;
 /// shared by every entity cascaded from it, so a later restore can be scoped to exactly what
 /// was deleted together — restoring a Building must not resurrect a Floor that was deleted
 /// independently and earlier.
+///
+/// The app services delete through <see cref="ISpaceHierarchyBulkRepository"/> (one UPDATE
+/// per table) rather than <c>MarkForSoftDelete</c> on loaded entities; the two stamp the same
+/// rows the same way, and a test holds them to it.
 /// </summary>
 public class SpaceHierarchyManager : IDomainService
 {

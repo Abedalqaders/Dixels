@@ -361,6 +361,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         impact.Items.ShouldHaveSingleItem().Reasons.ShouldBe(new[] { "The space was removed" });
 
         await _spaces.DeleteAsync(s.Space.Id);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
 
         var stored = await StoredAsync(upcoming.Id);
         stored.Status.ShouldBe(BookingStatus.Cancelled);
@@ -377,6 +378,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         using var _ = ActAs(Admin);
         (await _buildings.GetDeleteImpactAsync(s.Building.Id)).Count.ShouldBe(1);
         await _buildings.DeleteAsync(s.Building.Id);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
 
         (await StoredAsync(booking.Id)).CancelReason.ShouldBe("The building was removed");
     }
@@ -389,6 +391,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         using var _ = ActAs(Admin);
         await _floors.DeleteAsync(s.Floor.Id);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
 
         var stored = await StoredAsync(booking.Id);
         stored.Status.ShouldBe(BookingStatus.Cancelled);
@@ -405,8 +408,12 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var booking = await BookAsync(s, 10, 11);
 
         using var _ = ActAs(Admin);
-        await WithUnitOfWorkAsync(() =>
-            GetRequiredService<ILocalEventBus>().PublishAsync(new SpaceDeletedEvent(s.Space.Id, Admin)));
+        await WithUnitOfWorkAsync(async () =>
+        {
+            await GetRequiredService<IRepository<Space, Guid>>().DeleteAsync(s.Space.Id);
+            await GetRequiredService<ILocalEventBus>().PublishAsync(new SpaceDeletedEvent(s.Space.Id, Admin));
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
 
         var stored = await StoredAsync(booking.Id);
         stored.Status.ShouldBe(BookingStatus.Cancelled);
@@ -424,6 +431,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
             var impact = await _buildings.GetDeleteImpactAsync(s.Building.Id);
             impact.AssignedEmployees.ShouldBe(1);
             await _buildings.DeleteAsync(s.Building.Id);
+            await QueuedJobs.RunAllAsync(ServiceProvider);
         }
 
         using var _ = ActAs(s.UserId);
@@ -476,5 +484,87 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         (await StoredAsync(big.Id)).CancelReason.ShouldBe("Rules changed: Seats 4 — you need 6");
         (await StoredAsync(small.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    // ---- Removed rooms: cancelled by a background job ----
+
+    [Fact]
+    public async Task A_delete_queues_the_cancels_instead_of_waiting_for_them()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await _buildings.DeleteAsync(s.Building.Id);
+
+        // Saved and answered: the booking is still there until the job runs.
+        (await StoredAsync(booking.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+        (await QueuedJobs.WaitingAsync(ServiceProvider))
+            .ShouldContain(j => j.JobName == "Dixels.CancelBookingsInRemovedRooms" && j.JobArgs.Contains(s.Space.Id.ToString()));
+
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var stored = await StoredAsync(booking.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledById.ShouldBe(Admin);
+        stored.CancelReason.ShouldBe("The building was removed");
+    }
+
+    [Fact]
+    public async Task A_delete_that_rolls_back_leaves_no_job_behind()
+    {
+        // The job is queued as the delete saves, in its unit of work: a delete that fails
+        // before then queues nothing.
+        var s = await CreateScenarioAsync();
+        await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await Should.ThrowAsync<InvalidOperationException>(() => WithUnitOfWorkAsync(async () =>
+        {
+            await _floors.DeleteAsync(s.Floor.Id);
+            throw new InvalidOperationException("Something after the delete failed");
+        }));
+
+        (await QueuedJobs.WaitingAsync(ServiceProvider)).ShouldNotContain(j => j.JobArgs.Contains(s.Space.Id.ToString()));
+    }
+
+    [Fact]
+    public async Task A_room_restored_before_the_job_runs_keeps_its_bookings()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, 10, 11);
+
+        using var _ = ActAs(Admin);
+        await _buildings.DeleteAsync(s.Building.Id);
+        await _buildings.RestoreAsync(s.Building.Id);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        (await StoredAsync(booking.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    [Fact]
+    public async Task The_job_works_through_more_bookings_than_one_batch()
+    {
+        var s = await CreateScenarioAsync();
+        // Written straight to the table: the booking rules don't matter here, only how many.
+        var count = CancelBookingsInRemovedRoomsJob.BatchSize + 3;
+        await WithUnitOfWorkAsync(async () =>
+        {
+            for (var i = 0; i < count; i++)
+            {
+                var start = new DateTimeOffset(Tomorrow, TimeSpan.Zero).AddMinutes(i);
+                await _bookingRepository.InsertAsync(new Booking(
+                    Guid.NewGuid(), s.Space.Id, s.UserId, start, start.AddMinutes(1),
+                    attendees: 1, title: "Slot", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString()));
+            }
+        });
+
+        using var _ = ActAs(Admin);
+        await _spaces.DeleteAsync(s.Space.Id);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var stillConfirmed = await WithUnitOfWorkAsync(async () =>
+            (await _bookingRepository.GetListAsync(b => b.SpaceId == s.Space.Id && b.Status == BookingStatus.Confirmed)).Count);
+        stillConfirmed.ShouldBe(0);
     }
 }

@@ -12,7 +12,8 @@ namespace Dixels.SpaceManagement;
 // there without querying space management for it (for a delete: rooms already deleted).
 //
 // Listeners run inside the change's own transaction, when it saves. So a listener must be
-// quick, and an exception rolls the change back with it.
+// quick, and an exception rolls the change back with it: work that can be large (releasing
+// everything a deleted building held) belongs in a background job the listener queues.
 
 /// <summary>A room was deleted.</summary>
 public class SpaceDeletedEvent

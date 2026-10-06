@@ -28,6 +28,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
+    private readonly ISpaceHierarchyBulkRepository _hierarchyBulk;
     private readonly IDataFilter _dataFilter;
     private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
@@ -41,6 +42,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
+        ISpaceHierarchyBulkRepository hierarchyBulk,
         IDataFilter dataFilter,
         ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
@@ -53,6 +55,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _spaceRepository = spaceRepository;
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
+        _hierarchyBulk = hierarchyBulk;
         _dataFilter = dataFilter;
         _impactPreview = impactPreview;
         _localEventBus = localEventBus;
@@ -276,54 +279,14 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     public async Task DeleteAsync(Guid id)
     {
         await EnsureCanManageBuildingAsync(id);
+        await _buildingRepository.GetAsync(id); // 404 for a missing or already deleted building
 
-        var building = await _buildingRepository.GetAsync(id);
+        // One UPDATE per table, however many rooms: the whole building under one batch id.
+        var spaceIds = await _hierarchyBulk.SoftDeleteBuildingAsync(id, GuidGenerator.Create(), Clock.Now, CurrentUser.Id);
 
-        var floors = await _floorRepository.GetListAsync(f => f.BuildingId == id);
-        var floorIds = floors.Select(f => f.Id).ToList();
-        var spaces = floorIds.Count == 0
-            ? new List<Space>()
-            : await _spaceRepository.GetListAsync(s => floorIds.Contains(s.FloorId));
-
-        var batchId = GuidGenerator.Create();
-        _spaceHierarchyManager.MarkForSoftDelete(batchId, building, floors, spaces);
-
-        // Flushed separately from the soft-deletes below: converting a repository DeleteAsync
-        // call into a soft-delete (Remove -> Modified) appears to reset which properties EF
-        // considers actually changed, silently dropping a DeletionBatchId mutation made just
-        // beforehand if both land in the same SaveChanges call. Saving the stamp on its own
-        // first sidesteps that entirely.
-        await _buildingRepository.UpdateAsync(building);
-        foreach (var floor in floors)
-        {
-            await _floorRepository.UpdateAsync(floor);
-        }
-
-        foreach (var space in spaces)
-        {
-            await _spaceRepository.UpdateAsync(space);
-        }
-
-        await CurrentUnitOfWork!.SaveChangesAsync();
-
-        // Children first: once the building itself is (soft-)deleted, a plain repository
-        // query for its floors would already be filtered out by the parent's own state in
-        // some setups, and this ordering matches how a real DB cascade would run anyway.
-        foreach (var space in spaces)
-        {
-            await _spaceRepository.DeleteAsync(space);
-        }
-
-        foreach (var floor in floors)
-        {
-            await _floorRepository.DeleteAsync(floor);
-        }
-
-        await _buildingRepository.DeleteAsync(building);
-        await CurrentUnitOfWork!.SaveChangesAsync();
-
-        // What its rooms held (bookings) is released by its own module.
-        await _localEventBus.PublishAsync(new BuildingDeletedEvent(id, spaces.Select(s => s.Id).ToList(), CurrentUser.GetId()));
+        // What its rooms held is released by its own module (in the background: the delete
+        // doesn't wait for it).
+        await _localEventBus.PublishAsync(new BuildingDeletedEvent(id, spaceIds, CurrentUser.GetId()));
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
