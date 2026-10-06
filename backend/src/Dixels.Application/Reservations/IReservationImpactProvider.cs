@@ -20,6 +20,9 @@ public interface IReservationImpactProvider
     /// <summary>Everything upcoming it holds in these rooms: a delete takes all of it, for <paramref name="reason"/>.</summary>
     Task<List<AffectedReservationDto>> FindUpcomingAsync(Building building, IReadOnlyList<(Space Space, Floor Floor)> rooms, string reason);
 
+    /// <summary>How many upcoming reservations it holds in these rooms — counted, nothing described.</summary>
+    Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds);
+
     /// <summary>What a person holds in a building they're leaving (moved or unassigned), for <paramref name="reason"/>.</summary>
     Task<List<AffectedReservationDto>> FindForPersonLeavingAsync(Guid userId, Building building, string reason);
 }

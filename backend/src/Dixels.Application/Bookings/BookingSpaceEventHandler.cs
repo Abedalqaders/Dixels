@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement;
+using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EventBus;
 
@@ -11,7 +13,8 @@ namespace Dixels.Bookings;
 /// Keeps bookings in step with what happens to rooms (see SpaceManagementEvents):
 /// <list type="bullet">
 /// <item>a room, floor or building deleted: its upcoming bookings are cancelled ("The room was
-/// removed", or its floor or building);</item>
+/// removed", or its floor or building) by a background job, queued with the delete (and
+/// dropped with it if the delete rolls back);</item>
 /// <item>rules changed or a closure added, and the admin chose to cancel what no longer fits:
 /// the upcoming bookings in those rooms are checked against the saved rules and closures, and
 /// the ones that break them are cancelled, each with the rule it breaks or the closure's
@@ -29,11 +32,16 @@ public class BookingSpaceEventHandler :
 {
     private readonly BookingImpactService _bookingImpact;
     private readonly ConstraintResolver _constraintResolver;
+    private readonly IBackgroundJobManager _backgroundJobManager;
 
-    public BookingSpaceEventHandler(BookingImpactService bookingImpact, ConstraintResolver constraintResolver)
+    public BookingSpaceEventHandler(
+        BookingImpactService bookingImpact,
+        ConstraintResolver constraintResolver,
+        IBackgroundJobManager backgroundJobManager)
     {
         _bookingImpact = bookingImpact;
         _constraintResolver = constraintResolver;
+        _backgroundJobManager = backgroundJobManager;
     }
 
     public Task HandleEventAsync(SpaceDeletedEvent eventData) =>
@@ -52,6 +60,14 @@ public class BookingSpaceEventHandler :
             return;
         }
 
+        // The save already checked the rooms (to tell the admin how many): cancel what it found
+        // rather than checking every upcoming booking a second time.
+        if (eventData.Affected is { } affected)
+        {
+            await _bookingImpact.CancelForRuleChangeAsync(affected, eventData.ByUserId);
+            return;
+        }
+
         var broken = await FindNoLongerFittingAsync(eventData.BuildingId, eventData.SpaceIds);
         await _bookingImpact.CancelForRuleChangeAsync(broken, eventData.ByUserId);
     }
@@ -60,6 +76,12 @@ public class BookingSpaceEventHandler :
     {
         if (!eventData.CancelAffected)
         {
+            return;
+        }
+
+        if (eventData.Affected is { } affected)
+        {
+            await _bookingImpact.CancelAllAsync(affected, eventData.ByUserId, eventData.Reason);
             return;
         }
 
@@ -91,9 +113,14 @@ public class BookingSpaceEventHandler :
             return;
         }
 
-        // Found by room id, so rooms that are already deleted are no obstacle.
-        var upcoming = await _bookingImpact.Checker.FindUpcomingAsync(spaceIds);
-        var reason = _bookingImpact.Text(reasonKey);
-        await _bookingImpact.Checker.CancelAsAdminAsync(upcoming, adminId, _ => reason);
+        // Queued in the delete's own unit of work (the job store saves with it), so it runs
+        // only once the delete is saved. The reason is put in words now, while the admin's
+        // language is known.
+        await _backgroundJobManager.EnqueueAsync(new CancelBookingsInRemovedRoomsArgs
+        {
+            SpaceIds = spaceIds.ToList(),
+            AdminId = adminId,
+            Reason = _bookingImpact.Text(reasonKey),
+        });
     }
 }

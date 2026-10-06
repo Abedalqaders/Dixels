@@ -244,11 +244,11 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var proposedDays = ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days);
         var proposedHours = ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours);
 
-        // Worked out on an unsaved copy before the real room changes: how much the admin's
-        // choice to cancel what no longer fits will cancel.
-        var cancelled = input.CancelAffectedBookings
-            ? (await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input))).Count
-            : 0;
+        // Worked out on an unsaved copy before the real room changes: what the admin's choice
+        // to cancel what no longer fits will cancel. The event carries it, so it's checked once.
+        var affected = input.CancelAffectedBookings
+            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input)))
+            : null;
 
         space.SetOwnOperatingDays(proposedDays, resolvedParent.Days.Value);
         space.SetOwnOperatingHours(proposedHours, resolvedParent.Hours.Value);
@@ -260,14 +260,14 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
 
         // What the room holds is released (or kept, as the admin chose) by its own module.
         await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-            building.Id, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId()));
+            building.Id, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId(), affected));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = space.ConcurrencyStamp,
             // A Space is a leaf — nothing sits below it to ever produce a narrowing warning.
             Warnings = new List<string>(),
-            CancelledBookings = cancelled,
+            CancelledBookings = affected?.Count ?? 0,
         };
     }
 

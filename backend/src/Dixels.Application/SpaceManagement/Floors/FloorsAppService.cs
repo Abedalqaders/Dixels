@@ -27,6 +27,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
+    private readonly ISpaceHierarchyBulkRepository _hierarchyBulk;
     private readonly IDataFilter _dataFilter;
     private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
@@ -39,6 +40,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
+        ISpaceHierarchyBulkRepository hierarchyBulk,
         IDataFilter dataFilter,
         ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
@@ -50,6 +52,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _spaceRepository = spaceRepository;
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
+        _hierarchyBulk = hierarchyBulk;
         _dataFilter = dataFilter;
         _impactPreview = impactPreview;
         _localEventBus = localEventBus;
@@ -175,7 +178,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // The change on an unsaved copy, before the real floor changes: the rooms it reaches
         // and, when the admin chose to cancel what no longer fits, how much that is.
         var change = await ProposedChangeAsync(building, floor, input);
-        var cancelled = input.CancelAffectedBookings ? (await _impactPreview.NoLongerFittingAsync(change)).Count : 0;
+        // Checked once: the event carries what it found, so no listener checks it all again.
+        var affected = input.CancelAffectedBookings
+            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(change))
+            : null;
 
         // Validated against the Building's raw values directly — Building has no parent of
         // its own, so its own fields already are the "resolved" value.
@@ -187,13 +193,13 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
         // What the rooms hold is released (or kept, as the admin chose) by its own module.
         await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId()));
+            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId(), affected));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = floor.ConcurrencyStamp,
             Warnings = warnings,
-            CancelledBookings = cancelled,
+            CancelledBookings = affected?.Count ?? 0,
         };
     }
 
@@ -274,33 +280,12 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
 
-        var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == id);
+        // One UPDATE per table, however many rooms: the floor and its rooms under one batch id.
+        var spaceIds = await _hierarchyBulk.SoftDeleteFloorAsync(id, GuidGenerator.Create(), Clock.Now, CurrentUser.Id);
 
-        var batchId = GuidGenerator.Create();
-        _spaceHierarchyManager.MarkForSoftDelete(batchId, floor, spaces);
-
-        // Flushed separately from the soft-deletes below — see BuildingsAppService.DeleteAsync
-        // for why: converting Remove -> Modified for the soft-delete appears to reset which
-        // properties EF considers changed, silently dropping a same-transaction DeletionBatchId
-        // mutation otherwise.
-        await _floorRepository.UpdateAsync(floor);
-        foreach (var space in spaces)
-        {
-            await _spaceRepository.UpdateAsync(space);
-        }
-
-        await CurrentUnitOfWork!.SaveChangesAsync();
-
-        foreach (var space in spaces)
-        {
-            await _spaceRepository.DeleteAsync(space);
-        }
-
-        await _floorRepository.DeleteAsync(floor);
-        await CurrentUnitOfWork!.SaveChangesAsync();
-
-        // What its rooms held (bookings) is released by its own module.
-        await _localEventBus.PublishAsync(new FloorDeletedEvent(id, spaces.Select(s => s.Id).ToList(), CurrentUser.GetId()));
+        // What its rooms held is released by its own module (in the background: the delete
+        // doesn't wait for it).
+        await _localEventBus.PublishAsync(new FloorDeletedEvent(id, spaceIds, CurrentUser.GetId()));
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]

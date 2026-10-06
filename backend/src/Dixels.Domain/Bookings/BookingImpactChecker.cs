@@ -136,6 +136,56 @@ public class BookingImpactChecker : DomainService
             .ToList();
     }
 
+    /// <summary>
+    /// The next <paramref name="maxCount"/> confirmed bookings on these rooms that haven't
+    /// started yet, earliest first — for working through many a batch at a time (each batch
+    /// cancelled drops out of the next).
+    /// </summary>
+    public async Task<List<Booking>> FindUpcomingAsync(IReadOnlyCollection<Guid> spaceIds, int maxCount)
+    {
+        if (spaceIds.Count == 0)
+        {
+            return new List<Booking>();
+        }
+
+        var now = Now();
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        return await AsyncExecuter.ToListAsync(bookings
+            .Where(b => spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now)
+            .OrderBy(b => b.StartsAt)
+            .Take(maxCount));
+    }
+
+    /// <summary>How many confirmed bookings on these rooms haven't started yet — one COUNT, nothing loaded.</summary>
+    public async Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds)
+    {
+        if (spaceIds.Count == 0)
+        {
+            return 0;
+        }
+
+        var now = Now();
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        return await AsyncExecuter.CountAsync(bookings.Where(b =>
+            spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now));
+    }
+
+    /// <summary>
+    /// These bookings, by id, that are still confirmed and haven't started — what a check made
+    /// moments ago found, less any that were cancelled or began since.
+    /// </summary>
+    public async Task<List<Booking>> FindUpcomingByIdsAsync(IReadOnlyCollection<Guid> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return new List<Booking>();
+        }
+
+        var now = Now();
+        return await _bookingRepository.GetListAsync(b =>
+            ids.Contains(b.Id) && b.Status == BookingStatus.Confirmed && b.StartsAt > now);
+    }
+
     /// <summary>Every confirmed booking this person has that hasn't started yet, earliest first.</summary>
     public async Task<List<Booking>> FindUpcomingForUserAsync(Guid userId)
     {
