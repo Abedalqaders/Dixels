@@ -32,6 +32,9 @@ public class BookingImpactProvider : IReservationImpactProvider, ITransientDepen
     public async Task<List<AffectedReservationDto>> FindUpcomingAsync(Building building, IReadOnlyList<(Space Space, Floor Floor)> rooms, string reason) =>
         await _bookingImpact.DescribeAsync(building, await _bookingImpact.UpcomingAsync(rooms), reason);
 
+    public Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds) =>
+        _bookingImpact.Checker.CountUpcomingAsync(spaceIds);
+
     public async Task<List<AffectedReservationDto>> FindForPersonLeavingAsync(Guid userId, Building building, string reason)
     {
         var (_, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId, building.Id);

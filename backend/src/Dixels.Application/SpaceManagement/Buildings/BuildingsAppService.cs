@@ -149,10 +149,11 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // different local time (10:00 becomes 07:00) — and possibly outside opening hours.
         if (!string.Equals(input.Timezone, building.Timezone, StringComparison.Ordinal))
         {
-            var upcoming = await _impactPreview.UpcomingAsync(building, await RoomsAsync(id), reason: string.Empty);
-            if (upcoming.Count > 0)
+            // Only the number is shown, so it's counted — nothing loaded or described.
+            var upcoming = await _impactPreview.CountUpcomingAsync((await RoomsAsync(id)).Select(r => r.Space.Id).ToList());
+            if (upcoming > 0)
             {
-                throw new BusinessException(DixelsDomainErrorCodes.TimezoneChangeWithBookings).WithData("count", upcoming.Count);
+                throw new BusinessException(DixelsDomainErrorCodes.TimezoneChangeWithBookings).WithData("count", upcoming);
             }
         }
 
@@ -184,7 +185,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // The change on an unsaved copy, before the real building changes: the rooms it
         // reaches and, when the admin chose to cancel what no longer fits, how much that is.
         var change = await ProposedChangeAsync(building, input);
-        var cancelled = input.CancelAffectedBookings ? (await _impactPreview.NoLongerFittingAsync(change)).Count : 0;
+        // Checked once: the event carries what it found, so no listener checks it all again.
+        var affected = input.CancelAffectedBookings
+            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(change))
+            : null;
 
         building.SetOperatingDays(proposedDays);
         building.SetOperatingHours(proposedHours);
@@ -206,13 +210,13 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
         // What the rooms hold is released (or kept, as the admin chose) by its own module.
         await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId()));
+            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId(), affected));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = building.ConcurrencyStamp,
             Warnings = warnings,
-            CancelledBookings = cancelled,
+            CancelledBookings = affected?.Count ?? 0,
         };
     }
 

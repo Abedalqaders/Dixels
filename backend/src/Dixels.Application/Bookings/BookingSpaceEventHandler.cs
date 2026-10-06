@@ -52,6 +52,14 @@ public class BookingSpaceEventHandler :
             return;
         }
 
+        // The save already checked the rooms (to tell the admin how many): cancel what it found
+        // rather than checking every upcoming booking a second time.
+        if (eventData.Affected is { } affected)
+        {
+            await _bookingImpact.CancelForRuleChangeAsync(affected, eventData.ByUserId);
+            return;
+        }
+
         var broken = await FindNoLongerFittingAsync(eventData.BuildingId, eventData.SpaceIds);
         await _bookingImpact.CancelForRuleChangeAsync(broken, eventData.ByUserId);
     }
@@ -60,6 +68,12 @@ public class BookingSpaceEventHandler :
     {
         if (!eventData.CancelAffected)
         {
+            return;
+        }
+
+        if (eventData.Affected is { } affected)
+        {
+            await _bookingImpact.CancelAllAsync(affected, eventData.ByUserId, eventData.Reason);
             return;
         }
 

@@ -275,6 +275,58 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
     }
 
     [Fact]
+    public async Task What_the_save_already_found_is_cancelled_without_checking_again()
+    {
+        // The save's own preview passes on what breaks: Bookings cancels exactly those (its own
+        // kind only, still upcoming), each with the reason found, and checks nothing itself —
+        // the rules here are unchanged, so a fresh check would find nothing at all.
+        var s = await CreateScenarioAsync();
+        var listed = await BookAsync(s, 10, 11);
+        var notListed = await BookAsync(s, 12, 13);
+        var alreadyCancelled = await BookAsync(s, 14, 15);
+        using (ActAs(s.UserId))
+        {
+            await _bookings.CancelAsync(alreadyCancelled.Id, new CancelBookingDto());
+        }
+
+        var bus = GetRequiredService<ILocalEventBus>();
+        var affected = new[]
+        {
+            new AffectedReservation(ReservationKinds.Booking, listed.Id, "Open 09:00–10:00 only"),
+            new AffectedReservation(ReservationKinds.Booking, alreadyCancelled.Id, "Open 09:00–10:00 only"),
+            new AffectedReservation("parking", notListed.Id, "Spot gone"),
+        };
+
+        using var _ = ActAs(Admin);
+        await WithUnitOfWorkAsync(() => bus.PublishAsync(
+            new SpaceRulesChangedEvent(s.Building.Id, new[] { s.Space.Id }, cancelAffected: true, Admin, affected)));
+
+        var stored = await StoredAsync(listed.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledById.ShouldBe(Admin);
+        stored.CancelReason.ShouldBe("Rules changed: Open 09:00–10:00 only");
+        (await StoredAsync(notListed.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+        (await StoredAsync(alreadyCancelled.Id)).CancelledByAdmin.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task What_a_closure_was_found_to_break_is_cancelled_with_its_reason()
+    {
+        var s = await CreateScenarioAsync();
+        var listed = await BookAsync(s, 10, 11);
+        var notListed = await BookAsync(s, 12, 13);
+        var bus = GetRequiredService<ILocalEventBus>();
+
+        using var _ = ActAs(Admin);
+        await WithUnitOfWorkAsync(() => bus.PublishAsync(new ClosureCreatedEvent(
+            Guid.NewGuid(), s.Building.Id, new[] { s.Space.Id }, "Closed: test", cancelAffected: true, Admin,
+            new[] { new AffectedReservation(ReservationKinds.Booking, listed.Id, "Closed") })));
+
+        (await StoredAsync(listed.Id)).CancelReason.ShouldBe("Closed: test");
+        (await StoredAsync(notListed.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    [Fact]
     public async Task A_special_opening_affects_nothing()
     {
         var s = await CreateScenarioAsync();

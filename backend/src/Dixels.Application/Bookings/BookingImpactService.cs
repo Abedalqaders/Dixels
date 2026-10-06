@@ -166,9 +166,30 @@ public class BookingImpactService : ITransientDependency
         return _checker.CancelAsAdminAsync(impacts.Select(i => i.Booking).ToList(), adminId, b => reasons[b.Id]);
     }
 
+    /// <summary>
+    /// The same, for what the save's own preview already found (bookings only, the rest are
+    /// other modules'): each with the first rule it breaks, as the preview put it.
+    /// </summary>
+    public async Task CancelForRuleChangeAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId)
+    {
+        var reasons = OwnOf(affected).ToDictionary(a => a.Id, a => a.Reason);
+        var bookings = await _checker.FindUpcomingByIdsAsync(reasons.Keys);
+        await _checker.CancelAsAdminAsync(bookings, adminId, b => _localizer["Dixels:Bookings:CancelReason:RulesChanged", reasons[b.Id]].Value);
+    }
+
     /// <summary>Cancels bookings with one reason for all (a closure, a removed room).</summary>
     public Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
         _checker.CancelAsAdminAsync(impacts.Select(i => i.Booking).ToList(), adminId, _ => reason);
+
+    /// <summary>The same, for what the save's own preview already found (bookings only).</summary>
+    public async Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason)
+    {
+        var bookings = await _checker.FindUpcomingByIdsAsync(OwnOf(affected).Select(a => a.Id).ToList());
+        await _checker.CancelAsAdminAsync(bookings, adminId, _ => reason);
+    }
+
+    private static IEnumerable<AffectedReservation> OwnOf(IReadOnlyList<AffectedReservation> affected) =>
+        affected.Where(a => a.Kind == ReservationKinds.Booking).DistinctBy(a => a.Id);
 
     public string Text(string key, params object[] args) => _localizer[key, args].Value;
 

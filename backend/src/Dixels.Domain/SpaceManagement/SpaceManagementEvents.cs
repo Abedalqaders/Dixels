@@ -77,15 +77,27 @@ public class SpaceRulesChangedEvent
     public IReadOnlyList<Guid> SpaceIds { get; }
     public bool CancelAffected { get; }
 
+    /// <summary>
+    /// What the change was already found to break, worked out once before saving (see
+    /// <see cref="AffectedReservation"/>); null when it wasn't, and each listener checks itself.
+    /// </summary>
+    public IReadOnlyList<AffectedReservation>? Affected { get; }
+
     /// <summary>The admin who did it.</summary>
     public Guid ByUserId { get; }
 
-    public SpaceRulesChangedEvent(Guid buildingId, IReadOnlyList<Guid> spaceIds, bool cancelAffected, Guid byUserId)
+    public SpaceRulesChangedEvent(
+        Guid buildingId,
+        IReadOnlyList<Guid> spaceIds,
+        bool cancelAffected,
+        Guid byUserId,
+        IReadOnlyList<AffectedReservation>? affected = null)
     {
         BuildingId = buildingId;
         SpaceIds = spaceIds;
         CancelAffected = cancelAffected;
         ByUserId = byUserId;
+        Affected = affected;
     }
 }
 
@@ -102,10 +114,20 @@ public class ClosureCreatedEvent
     public string Reason { get; }
     public bool CancelAffected { get; }
 
+    /// <summary>What the closure was already found to break, before saving; null: each listener checks itself.</summary>
+    public IReadOnlyList<AffectedReservation>? Affected { get; }
+
     /// <summary>The admin who did it.</summary>
     public Guid ByUserId { get; }
 
-    public ClosureCreatedEvent(Guid closureId, Guid buildingId, IReadOnlyList<Guid> spaceIds, string reason, bool cancelAffected, Guid byUserId)
+    public ClosureCreatedEvent(
+        Guid closureId,
+        Guid buildingId,
+        IReadOnlyList<Guid> spaceIds,
+        string reason,
+        bool cancelAffected,
+        Guid byUserId,
+        IReadOnlyList<AffectedReservation>? affected = null)
     {
         ClosureId = closureId;
         BuildingId = buildingId;
@@ -113,5 +135,15 @@ public class ClosureCreatedEvent
         Reason = reason;
         CancelAffected = cancelAffected;
         ByUserId = byUserId;
+        Affected = affected;
     }
 }
+
+/// <summary>
+/// One reservation a change breaks, as the preview found it on the unsaved change in the same
+/// request. A save that has just worked this out (to tell the admin how many it cancels)
+/// passes it along, so the module holding it releases exactly these instead of checking every
+/// upcoming reservation again. <see cref="Kind"/> says which module holds it; each module
+/// skips the others'. <see cref="Reason"/> is the first rule it breaks, in a few words.
+/// </summary>
+public sealed record AffectedReservation(string Kind, Guid Id, string Reason);

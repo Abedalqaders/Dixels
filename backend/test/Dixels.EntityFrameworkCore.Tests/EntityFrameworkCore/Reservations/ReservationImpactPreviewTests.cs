@@ -32,6 +32,8 @@ public class ReservationImpactPreviewTests
         public Task<List<AffectedReservationDto>> FindUpcomingAsync(Building building, IReadOnlyList<(Space Space, Floor Floor)> rooms, string reason) =>
             Task.FromResult(items.ToList());
 
+        public Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds) => Task.FromResult(items.Length);
+
         public Task<List<AffectedReservationDto>> FindForPersonLeavingAsync(Guid userId, Building building, string reason) =>
             Task.FromResult(items.ToList());
     }
@@ -51,6 +53,32 @@ public class ReservationImpactPreviewTests
             (ReservationKinds.Booking, "Desk 2"),
             ("parking", "Spot P4"),
             (ReservationKinds.Booking, "Room 1"),
+        });
+    }
+
+    [Fact]
+    public async Task Counting_adds_up_every_module()
+    {
+        var bookings = new FixedProvider(Item(ReservationKinds.Booking, 14, "Room 1"), Item(ReservationKinds.Booking, 9, "Desk 2"));
+        var parking = new FixedProvider(Item("parking", 11, "Spot P4"));
+        var preview = new ReservationImpactPreview(new IReservationImpactProvider[] { bookings, parking });
+
+        (await preview.CountUpcomingAsync(new[] { Guid.NewGuid() })).ShouldBe(3);
+    }
+
+    [Fact]
+    public void A_preview_is_carried_on_as_which_reservations_and_the_first_reason_each()
+    {
+        var late = Item(ReservationKinds.Booking, 17, "Room 1");
+        late.Reasons = new List<string> { "Open 09:00–17:00 only", "Up to 2h" };
+        var spot = Item("parking", 11, "Spot P4");
+
+        var affected = ReservationImpactPreview.ToAffected(new ReservationImpactDto { Count = 2, Items = new List<AffectedReservationDto> { late, spot } });
+
+        affected.ShouldBe(new[]
+        {
+            new AffectedReservation(ReservationKinds.Booking, late.Id, "Open 09:00–17:00 only"),
+            new AffectedReservation("parking", spot.Id, string.Empty),
         });
     }
 

@@ -175,7 +175,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // The change on an unsaved copy, before the real floor changes: the rooms it reaches
         // and, when the admin chose to cancel what no longer fits, how much that is.
         var change = await ProposedChangeAsync(building, floor, input);
-        var cancelled = input.CancelAffectedBookings ? (await _impactPreview.NoLongerFittingAsync(change)).Count : 0;
+        // Checked once: the event carries what it found, so no listener checks it all again.
+        var affected = input.CancelAffectedBookings
+            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(change))
+            : null;
 
         // Validated against the Building's raw values directly — Building has no parent of
         // its own, so its own fields already are the "resolved" value.
@@ -187,13 +190,13 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
         // What the rooms hold is released (or kept, as the admin chose) by its own module.
         await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId()));
+            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId(), affected));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = floor.ConcurrencyStamp,
             Warnings = warnings,
-            CancelledBookings = cancelled,
+            CancelledBookings = affected?.Count ?? 0,
         };
     }
 
