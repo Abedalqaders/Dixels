@@ -8,6 +8,11 @@ import { formatWeekday } from '@/lib/time/format'
 // rule reads the same in the space list as it does in a rejection message. Weekday names
 // come from lib/time/format, so they're in the reader's language ("Tue", "الثلاثاء").
 
+/** A booking's title, or "Booking" in the reader's language when it was left blank (stored empty). */
+export function bookingTitle(title: string): string {
+  return title || i18n.t('Booking:Untitled')
+}
+
 /** 4 Jan 2026 was a Sunday, so day `d` of the week (0 = Sunday) is this date plus d. */
 const A_SUNDAY: IsoDate = '2026-01-04'
 

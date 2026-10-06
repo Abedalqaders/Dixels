@@ -26,6 +26,7 @@ import { BookingForm } from '@/features/bookings/components/BookingForm'
 import { BuildingRemovedNotice } from '@/features/bookings/components/BuildingRemovedNotice'
 import { readLastDuration } from '@/features/bookings/preferences'
 import { suggestWindow, suggestWindowForDay } from '@/features/bookings/suggestSlot'
+import { bookingTitle } from '@/features/bookings/format'
 import {
   dayOfMonth,
   daysBetween,
@@ -278,7 +279,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     emitBookingsChanged()
     showToast(
       all.length > 1
-        ? t('Calendar:CancelledSeries', { count: all.length, title: cancelled.title, space: cancelled.spaceName })
+        ? t('Calendar:CancelledSeries', { count: all.length, title: bookingTitle(cancelled.title), space: cancelled.spaceName })
         : t('Calendar:Cancelled', { space: cancelled.spaceName, start: timeOf(cancelled.localStart), end: timeOf(cancelled.localEnd) }),
     )
   }

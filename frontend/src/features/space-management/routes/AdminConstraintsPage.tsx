@@ -238,7 +238,7 @@ export function AdminConstraintsPage() {
         ownOverrides,
         ancestorOverrides: [],
         scope: OverrideScope.Building,
-        isCurrentlyClosedNow: isCurrentlyClosed(days, hours, toOverrideWindows(ownOverrides), new Date()),
+        isCurrentlyClosedNow: isCurrentlyClosed(days, hours, toOverrideWindows(ownOverrides), new Date(), building.timezone),
         parents: {},
         building: {
           name: building.name,
@@ -296,6 +296,7 @@ export function AdminConstraintsPage() {
           resolvedHours,
           toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
           new Date(),
+          building.timezone,
         ),
         parents: { building: { id: building.id, name: building.name } },
         floor: {
@@ -366,6 +367,7 @@ export function AdminConstraintsPage() {
         resolvedHours,
         toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
         new Date(),
+        building.timezone,
       ),
       parents: { building: { id: building.id, name: building.name }, floor: { id: floor.id, name: floor.name } },
       space: {

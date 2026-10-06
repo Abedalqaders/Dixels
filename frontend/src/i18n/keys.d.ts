@@ -93,6 +93,7 @@ export interface TextKeys {
   "Booking:Time": string
   "Booking:TimezoneTime": string
   "Booking:To": string
+  "Booking:Untitled": string
   "Booking:Upcoming": string
   "Booking:Where": string
   "BookingForm:AllDatesFree": string

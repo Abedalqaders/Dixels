@@ -385,6 +385,7 @@
     "Booking:OtherRooms": "Other rooms at this time",
     "Booking:CancelFailed": "Couldn't cancel the booking — please try again.",
     "Booking:CancelTitle": "Cancel “{title}”?",
+    "Booking:Untitled": "Booking",
     "Booking:CancelSeriesTitle": "Cancel recurring booking?",
     "Booking:CancelSummary": "{space}, {date} {start}–{end}. The room is released straight away, so someone else can book it.",
     "Booking:CancelScope": "Cancel",

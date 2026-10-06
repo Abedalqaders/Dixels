@@ -97,7 +97,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
                 </span>
               </span>
               <span className="text-xs text-muted-foreground">
-                {b.heldBy} · {b.title}
+                {b.heldBy} · {b.title || t('Booking:Untitled')}
               </span>
               <span className="text-xs text-slot-closed-ink">{b.reasons.join(' · ')}</span>
             </li>

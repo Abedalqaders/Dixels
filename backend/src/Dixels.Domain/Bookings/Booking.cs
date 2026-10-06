@@ -132,11 +132,15 @@ public class Booking : AuditedAggregateRoot<Guid>
         ReminderSentAt = at.ToUniversalTime();
     }
 
+    /// <summary>
+    /// The title is optional: left blank, it's stored empty, and each screen or email shows
+    /// a default in the reader's own language.
+    /// </summary>
     private static string NormalizeTitle(string? title)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
-            return BookingConsts.DefaultTitle;
+            return string.Empty;
         }
 
         return Check.Length(title.Trim(), nameof(title), BookingConsts.MaxTitleLength)!;

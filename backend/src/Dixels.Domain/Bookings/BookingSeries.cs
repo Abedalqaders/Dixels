@@ -54,7 +54,8 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
     {
         UserId = userId;
         SpaceId = spaceId;
-        Title = Check.NotNullOrWhiteSpace(title, nameof(title), BookingConsts.MaxTitleLength);
+        // Empty when the employee gave no title, like Booking.Title.
+        Title = Check.Length(Check.NotNull(title, nameof(title)), nameof(title), BookingConsts.MaxTitleLength)!;
         Attendees = attendees;
         FirstDate = firstDate;
         StartTime = startTime;

@@ -18,7 +18,4 @@ public static class BookingConsts
 
     /// <summary>Shorter than a booking's key: each occurrence's key is the series key plus ":yyyyMMdd".</summary>
     public const int MaxSeriesIdempotencyKeyLength = 50;
-
-    /// <summary>Used when the employee leaves the title blank — the title is optional.</summary>
-    public const string DefaultTitle = "Booking";
 }

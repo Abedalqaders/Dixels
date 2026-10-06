@@ -107,52 +107,62 @@ describe('isCurrentlyClosed', () => {
   const nineToFive = new OperatingWindow('09:00', '17:00')
   const overnight = new OperatingWindow('22:00', '02:00')
 
-  function at(isoLocal: string): Date {
-    return new Date(isoLocal)
+  // Instants in UTC, checked against a UTC building, so the machine's own timezone can't leak in.
+  function at(isoUtc: string): Date {
+    return new Date(`${isoUtc}Z`)
   }
 
   it('is open during resolved hours on an allowed day, with no overrides', () => {
-    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T10:00:00'))).toBe(false) // Wednesday
+    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T10:00:00'), 'UTC')).toBe(false) // Wednesday
   })
 
   it('is closed outside resolved hours on an allowed day', () => {
-    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T20:00:00'))).toBe(true)
+    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T20:00:00'), 'UTC')).toBe(true)
   })
 
   it('is closed on a day not in the resolved days, even during resolved hours', () => {
-    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-26T10:00:00'))).toBe(true) // Saturday
+    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-26T10:00:00'), 'UTC')).toBe(true) // Saturday
   })
 
   it('a wrapping window just after midnight belongs to the day it started, not today', () => {
     // Sat 2026-09-26 01:00 belongs to Friday's overnight session — Friday is allowed, so
     // this is open even though Saturday itself isn't (a naive "check today's day" reading
     // would wrongly call this closed).
-    expect(isCurrentlyClosed(weekdays, overnight, [], at('2026-09-26T01:00:00'))).toBe(false)
+    expect(isCurrentlyClosed(weekdays, overnight, [], at('2026-09-26T01:00:00'), 'UTC')).toBe(false)
 
     // Mon 2026-09-21 01:00 belongs to Sunday's overnight session — Sunday isn't allowed, so
     // this is closed even though Monday itself is (the naive reading would wrongly call
     // this open).
-    expect(isCurrentlyClosed(weekdays, overnight, [], at('2026-09-21T01:00:00'))).toBe(true)
+    expect(isCurrentlyClosed(weekdays, overnight, [], at('2026-09-21T01:00:00'), 'UTC')).toBe(true)
   })
 
   it('a Closed override wins even during otherwise-open resolved hours', () => {
-    const closure: OverrideWindow = { startsAt: '2026-09-23T00:00:00', endsAt: '2026-09-24T00:00:00', effect: 'Closed' }
-    expect(isCurrentlyClosed(weekdays, nineToFive, [closure], at('2026-09-23T10:00:00'))).toBe(true)
+    const closure: OverrideWindow = { startsAt: '2026-09-23T00:00:00Z', endsAt: '2026-09-24T00:00:00Z', effect: 'Closed' }
+    expect(isCurrentlyClosed(weekdays, nineToFive, [closure], at('2026-09-23T10:00:00'), 'UTC')).toBe(true)
   })
 
   it('an Open override extends bookability outside the resolved hours', () => {
-    const specialOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00', endsAt: '2026-09-26T20:00:00', effect: 'Open' }
-    expect(isCurrentlyClosed(weekdays, nineToFive, [specialOpening], at('2026-09-26T10:00:00'))).toBe(false) // Saturday, normally closed
+    const specialOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00Z', endsAt: '2026-09-26T20:00:00Z', effect: 'Open' }
+    expect(isCurrentlyClosed(weekdays, nineToFive, [specialOpening], at('2026-09-26T10:00:00'), 'UTC')).toBe(false) // Saturday, normally closed
   })
 
   it('a Closed override beats an overlapping Open override at any level', () => {
-    const specialOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00', endsAt: '2026-09-26T20:00:00', effect: 'Open' }
-    const floorMaintenance: OverrideWindow = { startsAt: '2026-09-26T09:00:00', endsAt: '2026-09-26T11:00:00', effect: 'Closed' }
-    expect(isCurrentlyClosed(weekdays, nineToFive, [specialOpening, floorMaintenance], at('2026-09-26T10:00:00'))).toBe(true)
+    const specialOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00Z', endsAt: '2026-09-26T20:00:00Z', effect: 'Open' }
+    const floorMaintenance: OverrideWindow = { startsAt: '2026-09-26T09:00:00Z', endsAt: '2026-09-26T11:00:00Z', effect: 'Closed' }
+    expect(isCurrentlyClosed(weekdays, nineToFive, [specialOpening, floorMaintenance], at('2026-09-26T10:00:00'), 'UTC')).toBe(true)
+  })
+
+  it("reads days and hours on the building's clock, not the browser's", () => {
+    // Wed 07:00 UTC is 10:00 in Amman (UTC+3): open there, though a UTC clock says closed.
+    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T07:00:00'), 'Asia/Amman')).toBe(false)
+    expect(isCurrentlyClosed(weekdays, nineToFive, [], at('2026-09-23T07:00:00'), 'UTC')).toBe(true)
+
+    // Fri 22:00 UTC is already Saturday 01:00 in Amman: a weekday-only building is closed.
+    expect(isCurrentlyClosed(weekdays, OperatingWindow.FullDay, [], at('2026-09-25T22:00:00'), 'Asia/Amman')).toBe(true)
   })
 
   it('an Open override that has already ended no longer applies', () => {
-    const pastOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00', endsAt: '2026-09-26T09:00:00', effect: 'Open' }
-    expect(isCurrentlyClosed(weekdays, nineToFive, [pastOpening], at('2026-09-26T10:00:00'))).toBe(true)
+    const pastOpening: OverrideWindow = { startsAt: '2026-09-26T08:00:00Z', endsAt: '2026-09-26T09:00:00Z', effect: 'Open' }
+    expect(isCurrentlyClosed(weekdays, nineToFive, [pastOpening], at('2026-09-26T10:00:00'), 'UTC')).toBe(true)
   })
 })
