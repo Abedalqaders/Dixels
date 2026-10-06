@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Bookings;
 using Dixels.Reservations;
 using Dixels.Localization;
 using Dixels.Permissions;
@@ -30,7 +29,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
-    private readonly BookingImpactService _bookingImpact;
     private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
     private readonly IUserDirectoryRepository _userDirectory;
@@ -44,7 +42,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact,
         ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
         IUserDirectoryRepository userDirectory,
@@ -57,7 +54,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
-        _bookingImpact = bookingImpact;
         _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _userDirectory = userDirectory;
@@ -185,11 +181,10 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // admin to go fix the named descendants afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
-        // Which upcoming bookings the new rules break — worked out on an unsaved copy before
-        // the real building changes, and cancelled after the save only if the admin chose to.
-        var broken = input.CancelAffectedBookings
-            ? await FindBrokenBookingsAsync(building, input)
-            : Array.Empty<BookingImpact>();
+        // The change on an unsaved copy, before the real building changes: the rooms it
+        // reaches and, when the admin chose to cancel what no longer fits, how much that is.
+        var change = await ProposedChangeAsync(building, input);
+        var cancelled = input.CancelAffectedBookings ? (await _impactPreview.NoLongerFittingAsync(change)).Count : 0;
 
         building.SetOperatingDays(proposedDays);
         building.SetOperatingHours(proposedHours);
@@ -209,13 +204,15 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         // but we need the freshly-generated ConcurrencyStamp back *now*, in this same
         // response, so flush explicitly instead of returning whatever's still in memory.
         await CurrentUnitOfWork!.SaveChangesAsync();
-        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
+        // What the rooms hold is released (or kept, as the admin chose) by its own module.
+        await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
+            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId()));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = building.ConcurrencyStamp,
             Warnings = warnings,
-            CancelledBookings = broken.Count,
+            CancelledBookings = cancelled,
         };
     }
 
@@ -240,13 +237,6 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     }
 
     // The proposed building is a fresh, untracked copy — checking it can never save anything.
-    // Cancelling on save still asks Bookings directly; it moves to an event next.
-    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, UpdateBuildingConstraintsDto input)
-    {
-        var change = await ProposedChangeAsync(building, input);
-        return await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
-    }
-
     /// <summary>The building's rules as the admin proposes them, on an unsaved copy, for every room in it.</summary>
     private async Task<RoomRulesChange> ProposedChangeAsync(Building building, UpdateBuildingConstraintsDto input)
     {

@@ -172,6 +172,25 @@ public class BookingImpactService : ITransientDependency
 
     public string Text(string key, params object[] args) => _localizer[key, args].Value;
 
+    /// <summary>
+    /// The building and the rooms an event names, each with its floor — what a rules check
+    /// needs. Rooms deleted since are left out (nothing can be booked there any more); null
+    /// building when it's gone.
+    /// </summary>
+    public async Task<(Building? Building, List<(Space Space, Floor Floor)> Rooms)> RoomsAsync(Guid buildingId, IReadOnlyCollection<Guid> spaceIds)
+    {
+        var building = await _buildingRepository.FindAsync(buildingId);
+        if (building is null || spaceIds.Count == 0)
+        {
+            return (building, new List<(Space, Floor)>());
+        }
+
+        var spaces = await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id));
+        var floorIds = spaces.Select(s => s.FloorId).Distinct().ToList();
+        var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
+        return (building, spaces.Where(s => floors.ContainsKey(s.FloorId)).Select(s => (s, floors[s.FloorId])).ToList());
+    }
+
     /// <summary>Every upcoming booking on these rooms, as impacts with no rule broken — for a delete.</summary>
     public async Task<IReadOnlyList<BookingImpact>> UpcomingAsync(IReadOnlyList<(Space Space, Floor Floor)> rooms)
     {

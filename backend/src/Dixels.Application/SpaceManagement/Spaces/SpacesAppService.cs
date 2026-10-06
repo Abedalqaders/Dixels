@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Bookings;
 using Dixels.Reservations;
 using Dixels.Localization;
 using Dixels.Permissions;
@@ -26,7 +25,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     private readonly IRepository<SpaceType, Guid> _spaceTypeRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly IDataFilter _dataFilter;
-    private readonly BookingImpactService _bookingImpact;
     private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
     private readonly LocalizedNameValidator _nameValidator;
@@ -39,7 +37,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         IRepository<SpaceType, Guid> spaceTypeRepository,
         ConstraintResolver constraintResolver,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact,
         ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
         LocalizedNameValidator nameValidator,
@@ -51,7 +48,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         _spaceTypeRepository = spaceTypeRepository;
         _constraintResolver = constraintResolver;
         _dataFilter = dataFilter;
-        _bookingImpact = bookingImpact;
         _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _nameValidator = nameValidator;
@@ -170,9 +166,8 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
 
-        var broken = input.CancelAffectedBookings
-            ? await FindBookingsOverCapacityAsync(space, input.Capacity)
-            : Array.Empty<BookingImpact>();
+        // A smaller room can leave bookings with more people than it now seats.
+        var capacityChanged = input.Capacity != space.Capacity;
 
         space.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
         if (space.SpaceTypeId != input.SpaceTypeId)
@@ -183,7 +178,14 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         space.SetCapacity(input.Capacity);
 
         await _spaceRepository.UpdateAsync(space, autoSave: true);
-        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
+
+        if (capacityChanged)
+        {
+            // What the room holds is released (or kept, as the admin chose) by its own module.
+            var floor = await _floorRepository.GetAsync(space.FloorId);
+            await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
+                floor.BuildingId, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId()));
+        }
 
         return await MapToDtoAsync(space);
     }
@@ -201,15 +203,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
 
     // Only the capacity can break a booking among the details; checked on an untracked copy
     // carrying the room's own rules, so nothing here saves.
-    // Cancelling on save still asks Bookings directly; it moves to an event next.
-    private async Task<IReadOnlyList<BookingImpact>> FindBookingsOverCapacityAsync(Space space, int capacity)
-    {
-        var change = await ProposedCapacityChangeAsync(space, capacity);
-        return change is null
-            ? Array.Empty<BookingImpact>()
-            : await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
-    }
-
     /// <summary>The room with a smaller capacity, on an unsaved copy; null when it isn't shrinking (nothing can break).</summary>
     private async Task<RoomRulesChange?> ProposedCapacityChangeAsync(Space space, int capacity)
     {
@@ -251,9 +244,11 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var proposedDays = ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days);
         var proposedHours = ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours);
 
-        var broken = input.CancelAffectedBookings
-            ? await FindBrokenBookingsAsync(building, floor, space, input)
-            : Array.Empty<BookingImpact>();
+        // Worked out on an unsaved copy before the real room changes: how much the admin's
+        // choice to cancel what no longer fits will cancel.
+        var cancelled = input.CancelAffectedBookings
+            ? (await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input))).Count
+            : 0;
 
         space.SetOwnOperatingDays(proposedDays, resolvedParent.Days.Value);
         space.SetOwnOperatingHours(proposedHours, resolvedParent.Hours.Value);
@@ -262,14 +257,17 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
 
         await _spaceRepository.UpdateAsync(space);
         await CurrentUnitOfWork!.SaveChangesAsync();
-        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
+
+        // What the room holds is released (or kept, as the admin chose) by its own module.
+        await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
+            building.Id, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId()));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = space.ConcurrencyStamp,
             // A Space is a leaf — nothing sits below it to ever produce a narrowing warning.
             Warnings = new List<string>(),
-            CancelledBookings = broken.Count,
+            CancelledBookings = cancelled,
         };
     }
 
@@ -294,13 +292,6 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     }
 
     // The proposed space is a fresh, untracked copy — checking it can never save anything.
-    // Cancelling on save still asks Bookings directly; it moves to an event next.
-    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, Space space, UpdateSpaceConstraintsDto input)
-    {
-        var change = ProposedChange(building, floor, space, input);
-        return await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
-    }
-
     /// <summary>The room's own rules as the admin proposes them, on an unsaved copy.</summary>
     private RoomRulesChange ProposedChange(Building building, Floor floor, Space space, UpdateSpaceConstraintsDto input)
     {

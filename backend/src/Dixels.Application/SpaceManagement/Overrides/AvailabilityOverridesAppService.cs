@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Bookings;
 using Dixels.Reservations;
 using Dixels.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Users;
 
 namespace Dixels.SpaceManagement;
@@ -20,8 +20,8 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     private readonly IRepository<Floor, Guid> _floorRepository;
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly ConstraintResolver _constraintResolver;
-    private readonly BookingImpactService _bookingImpact;
     private readonly ReservationImpactPreview _impactPreview;
+    private readonly ILocalEventBus _localEventBus;
 
     public AvailabilityOverridesAppService(
         IRepository<AvailabilityOverride, Guid> overrideRepository,
@@ -29,16 +29,16 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         IRepository<Floor, Guid> floorRepository,
         IRepository<Space, Guid> spaceRepository,
         ConstraintResolver constraintResolver,
-        BookingImpactService bookingImpact,
-        ReservationImpactPreview impactPreview)
+        ReservationImpactPreview impactPreview,
+        ILocalEventBus localEventBus)
     {
         _overrideRepository = overrideRepository;
         _buildingRepository = buildingRepository;
         _floorRepository = floorRepository;
         _spaceRepository = spaceRepository;
         _constraintResolver = constraintResolver;
-        _bookingImpact = bookingImpact;
         _impactPreview = impactPreview;
+        _localEventBus = localEventBus;
     }
 
     public async Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync(OverrideScope scope, Guid scopeId)
@@ -52,9 +52,9 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     [Authorize(DixelsPermissions.Overrides.Create)]
     public async Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input)
     {
-        var (building, broken) = input.CancelAffectedBookings
-            ? await FindBrokenBookingsAsync(input)
-            : (null, Array.Empty<BookingImpact>());
+        // The rooms it closes, worked out before it's saved; null for a special opening, which
+        // can't break anything, or a scope that doesn't exist (nothing to announce there).
+        var closing = await ScopeExistsAsync(input) ? await ProposedClosureAsync(input) : null;
 
         var availabilityOverride = new AvailabilityOverride(
             GuidGenerator.Create(),
@@ -66,11 +66,19 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
             input.ReasonCategory,
             input.ReasonDetail);
 
-        await _overrideRepository.InsertAsync(availabilityOverride);
+        // Saved now, so whoever listens reads it along with the room's other closures.
+        await _overrideRepository.InsertAsync(availabilityOverride, autoSave: true);
 
-        if (broken.Count > 0)
+        if (closing is not null)
         {
-            await _bookingImpact.CancelAllAsync(broken, CurrentUser.GetId(), ClosureReason(input));
+            // What the rooms hold is released (or kept, as the admin chose) by its own module.
+            await _localEventBus.PublishAsync(new ClosureCreatedEvent(
+                availabilityOverride.Id,
+                closing.Building.Id,
+                closing.Rooms.Select(r => r.Space.Id).ToList(),
+                ClosureReason(input),
+                input.CancelAffectedBookings,
+                CurrentUser.GetId()));
         }
 
         return ObjectMapper.Map<AvailabilityOverride, AvailabilityOverrideDto>(availabilityOverride);
@@ -85,31 +93,21 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
 
     // "Closed: Replacing the chair" — the admin's own words when there are any, else the category.
     private string ClosureReason(CreateAvailabilityOverrideDto input) =>
-        _bookingImpact.Text(
+        L[
             "Dixels:Bookings:CancelReason:Closure",
-            string.IsNullOrWhiteSpace(input.ReasonDetail) ? _bookingImpact.Text("Enum:ReasonCategory." + input.ReasonCategory) : input.ReasonDetail.Trim());
-
-    /// <summary>
-    /// The upcoming bookings in the closure's scope (a room, a floor's rooms, or the whole
-    /// building's) that the closure would fall on. A special opening can't break anything.
-    /// </summary>
-    // Cancelling on save still asks Bookings directly; it moves to an event next.
-    private async Task<(Building? Building, IReadOnlyList<BookingImpact> Broken)> FindBrokenBookingsAsync(CreateAvailabilityOverrideDto input)
-    {
-        var change = await ProposedClosureAsync(input);
-        if (change is null)
-        {
-            return (null, Array.Empty<BookingImpact>());
-        }
-
-        var closure = OverrideWindow.From(change.AddedClosure!);
-        return (change.Building, await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules, closure));
-    }
+            string.IsNullOrWhiteSpace(input.ReasonDetail) ? L["Enum:ReasonCategory." + input.ReasonCategory].Value : input.ReasonDetail.Trim()].Value;
 
     /// <summary>
     /// The rooms a new closure reaches, with their rules as they are and the closure unsaved;
     /// null when it closes nothing (a special opening, or an empty range).
     /// </summary>
+    private Task<bool> ScopeExistsAsync(CreateAvailabilityOverrideDto input) => input.Scope switch
+    {
+        OverrideScope.Space => _spaceRepository.AnyAsync(s => s.Id == input.ScopeId),
+        OverrideScope.Floor => _floorRepository.AnyAsync(f => f.Id == input.ScopeId),
+        _ => _buildingRepository.AnyAsync(b => b.Id == input.ScopeId),
+    };
+
     private async Task<RoomRulesChange?> ProposedClosureAsync(CreateAvailabilityOverrideDto input)
     {
         if (input.Effect != OverrideEffect.Closed || input.EndsAt <= input.StartsAt)

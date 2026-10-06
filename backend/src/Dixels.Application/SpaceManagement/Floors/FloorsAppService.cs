@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dixels.Bookings;
 using Dixels.Reservations;
 using Dixels.Localization;
 using Dixels.Permissions;
@@ -29,7 +28,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly SpaceHierarchyManager _spaceHierarchyManager;
     private readonly IDataFilter _dataFilter;
-    private readonly BookingImpactService _bookingImpact;
     private readonly ReservationImpactPreview _impactPreview;
     private readonly ILocalEventBus _localEventBus;
     private readonly LocalizedNameValidator _nameValidator;
@@ -42,7 +40,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         ConstraintResolver constraintResolver,
         SpaceHierarchyManager spaceHierarchyManager,
         IDataFilter dataFilter,
-        BookingImpactService bookingImpact,
         ReservationImpactPreview impactPreview,
         ILocalEventBus localEventBus,
         LocalizedNameValidator nameValidator,
@@ -54,7 +51,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _constraintResolver = constraintResolver;
         _spaceHierarchyManager = spaceHierarchyManager;
         _dataFilter = dataFilter;
-        _bookingImpact = bookingImpact;
         _impactPreview = impactPreview;
         _localEventBus = localEventBus;
         _nameValidator = nameValidator;
@@ -176,9 +172,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         // informational for the admin to go fix the named Spaces afterward.
         var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
 
-        var broken = input.CancelAffectedBookings
-            ? await FindBrokenBookingsAsync(building, floor, input)
-            : Array.Empty<BookingImpact>();
+        // The change on an unsaved copy, before the real floor changes: the rooms it reaches
+        // and, when the admin chose to cancel what no longer fits, how much that is.
+        var change = await ProposedChangeAsync(building, floor, input);
+        var cancelled = input.CancelAffectedBookings ? (await _impactPreview.NoLongerFittingAsync(change)).Count : 0;
 
         // Validated against the Building's raw values directly — Building has no parent of
         // its own, so its own fields already are the "resolved" value.
@@ -188,13 +185,15 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
         await _floorRepository.UpdateAsync(floor);
         await CurrentUnitOfWork!.SaveChangesAsync();
-        await _bookingImpact.CancelForRuleChangeAsync(broken, CurrentUser.GetId());
+        // What the rooms hold is released (or kept, as the admin chose) by its own module.
+        await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
+            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId()));
 
         return new ConstraintsSaveResultDto
         {
             ConcurrencyStamp = floor.ConcurrencyStamp,
             Warnings = warnings,
-            CancelledBookings = broken.Count,
+            CancelledBookings = cancelled,
         };
     }
 
@@ -217,13 +216,6 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     }
 
     // The proposed floor is a fresh, untracked copy — checking it can never save anything.
-    // Cancelling on save still asks Bookings directly; it moves to an event next.
-    private async Task<IReadOnlyList<BookingImpact>> FindBrokenBookingsAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
-    {
-        var change = await ProposedChangeAsync(building, floor, input);
-        return await _bookingImpact.Checker.FindNoLongerFittingAsync(change.Building, change.Rooms, change.ProposedRules);
-    }
-
     /// <summary>The floor's rules as the admin proposes them, on an unsaved copy, for every room on it.</summary>
     private async Task<RoomRulesChange> ProposedChangeAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
     {

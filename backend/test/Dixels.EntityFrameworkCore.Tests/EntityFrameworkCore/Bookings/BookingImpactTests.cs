@@ -248,6 +248,33 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
     }
 
     [Fact]
+    public async Task Bookings_follow_the_admins_choice_announced_with_a_closure()
+    {
+        // Whatever adds a closure only announces it, with the admin's choice; Bookings checks
+        // the rooms against the saved closure itself and cancels only when asked to.
+        var s = await CreateScenarioAsync();
+        var hit = await BookAsync(s, 10, 11);
+        var closure = await WithUnitOfWorkAsync(() => GetRequiredService<IRepository<AvailabilityOverride, Guid>>().InsertAsync(
+            new AvailabilityOverride(
+                Guid.NewGuid(), OverrideScope.Space, s.Space.Id,
+                new DateTimeOffset(Tomorrow.AddHours(9), TimeSpan.Zero), new DateTimeOffset(Tomorrow.AddHours(13), TimeSpan.Zero),
+                OverrideEffect.Closed, ReasonCategory.Maintenance)));
+        var bus = GetRequiredService<ILocalEventBus>();
+
+        using var _ = ActAs(Admin);
+        await WithUnitOfWorkAsync(() => bus.PublishAsync(
+            new ClosureCreatedEvent(closure.Id, s.Building.Id, new[] { s.Space.Id }, "Closed: test", cancelAffected: false, Admin)));
+        (await StoredAsync(hit.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+
+        await WithUnitOfWorkAsync(() => bus.PublishAsync(
+            new ClosureCreatedEvent(closure.Id, s.Building.Id, new[] { s.Space.Id }, "Closed: test", cancelAffected: true, Admin)));
+        var stored = await StoredAsync(hit.Id);
+        stored.Status.ShouldBe(BookingStatus.Cancelled);
+        stored.CancelledById.ShouldBe(Admin);
+        stored.CancelReason.ShouldBe("Closed: test");
+    }
+
+    [Fact]
     public async Task A_special_opening_affects_nothing()
     {
         var s = await CreateScenarioAsync();
