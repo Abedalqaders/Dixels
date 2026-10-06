@@ -158,12 +158,16 @@ const DAY_NAMES_BY_JS_INDEX: readonly DayName[] = [
  * `overrides` should already be the ones applicable to this node (its own plus every
  * ancestor's, per the closures-union rule) — this function doesn't know about the
  * hierarchy, only about resolving a flat list of windows against a point in time.
+ *
+ * `timeZone` is the building's IANA zone: days and hours are the building's wall clock,
+ * not the browser's, so an admin in another timezone sees the same answer.
  */
 export function isCurrentlyClosed(
   resolvedDays: OperatingDays,
   resolvedHours: OperatingWindow,
   overrides: readonly OverrideWindow[],
   at: Date,
+  timeZone: string,
 ): boolean {
   const covering = overrides.filter((override) => coversInstant(override, at))
 
@@ -175,8 +179,33 @@ export function isCurrentlyClosed(
     return false
   }
 
-  return !isWithinOperatingWindow(resolvedDays, resolvedHours, at)
+  return !isWithinOperatingWindow(resolvedDays, resolvedHours, wallClockIn(timeZone, at))
 }
+
+interface WallClock {
+  /** 0 = Sunday, like Date.getDay(). */
+  dayIndex: number
+  minutesOfDay: number
+}
+
+/** The weekday and time of day `at` shows on a clock in `timeZone`. */
+function wallClockIn(timeZone: string, at: Date): WallClock {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(at)
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)!.value
+
+  return {
+    dayIndex: SHORT_DAY_NAMES.indexOf(part('weekday')),
+    minutesOfDay: Number(part('hour')) * 60 + Number(part('minute')),
+  }
+}
+
+const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function coversInstant(override: OverrideWindow, at: Date): boolean {
   const startsAt = override.startsAt instanceof Date ? override.startsAt : new Date(override.startsAt)
@@ -184,11 +213,9 @@ function coversInstant(override: OverrideWindow, at: Date): boolean {
   return at >= startsAt && at < endsAt
 }
 
-function isWithinOperatingWindow(days: OperatingDays, hours: OperatingWindow, at: Date): boolean {
-  const minutesOfDay = at.getHours() * 60 + at.getMinutes()
-
+function isWithinOperatingWindow(days: OperatingDays, hours: OperatingWindow, { dayIndex, minutesOfDay }: WallClock): boolean {
   if (hours.isOpen24Hours) {
-    return days.contains(DAY_NAMES_BY_JS_INDEX[at.getDay()])
+    return days.contains(DAY_NAMES_BY_JS_INDEX[dayIndex])
   }
 
   const open = toMinutesFromHHmm(hours.open)
@@ -203,7 +230,7 @@ function isWithinOperatingWindow(days: OperatingDays, hours: OperatingWindow, at
   // belongs to *yesterday's* allowed day, not today's — the session started the evening
   // before and hasn't ended yet.
   const belongsToPreviousDay = wraps && minutesOfDay < close
-  const relevantDayIndex = belongsToPreviousDay ? (at.getDay() + 6) % 7 : at.getDay()
+  const relevantDayIndex = belongsToPreviousDay ? (dayIndex + 6) % 7 : dayIndex
 
   return days.contains(DAY_NAMES_BY_JS_INDEX[relevantDayIndex])
 }
