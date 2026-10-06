@@ -56,7 +56,7 @@ import type {
   SeriesRequestDto,
   SpaceAvailabilityDto,
 } from '@/features/bookings/api/bookingsApi'
-import type { UserRolesDto } from '@/features/users/api/usersApi'
+import type { UserPageDetailsDto } from '@/features/users/api/usersApi'
 import type { UpdateMyLanguageDto } from '@/features/auth/language/myLanguageApi'
 
 type S = components['schemas']
@@ -113,7 +113,7 @@ void ({} satisfies Same<AvailabilityOverrideDto, S['Dixels.SpaceManagement.Avail
 void ({} satisfies Same<OperatingWindowDto, S['Dixels.SpaceManagement.OperatingWindowDto']>)
 void ({} satisfies Same<ResolvedConstraintsDto, S['Dixels.SpaceManagement.ResolvedConstraintsDto']>)
 void ({} satisfies Same<ConstraintsSaveResultDto, S['Dixels.SpaceManagement.ConstraintsSaveResultDto']>)
-void ({} satisfies Same<UserRolesDto, S['Dixels.Users.UserRolesDto']>)
+void ({} satisfies Same<UserPageDetailsDto, S['Dixels.Users.UserPageDetailsDto']>)
 
 // ---- Requests: what the frontend sends must be what the API accepts ----
 void ({} satisfies Same<BookingRequestDto, S['Dixels.Bookings.BookingRequestDto']>)

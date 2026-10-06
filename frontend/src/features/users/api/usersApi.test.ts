@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getRoleNames, getUserRoles, getUsers } from './usersApi'
+import { getRoleNames, getUserPageDetails, getUsers } from './usersApi'
 import { Permissions } from '@/features/auth/permissions/permissionNames'
 
 afterEach(() => {
@@ -42,11 +42,11 @@ describe('getUsers', () => {
   })
 })
 
-describe('getUserRoles', () => {
+describe('getUserPageDetails', () => {
   it('repeats userIds so the server sees every id, not just the last', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify([])))
 
-    await getUserRoles('token', ['u1', 'u2'])
+    await getUserPageDetails('token', ['u1', 'u2'])
 
     expect(requestedParams().getAll('userIds')).toEqual(['u1', 'u2'])
   })
@@ -54,7 +54,7 @@ describe('getUserRoles', () => {
   it('skips the request entirely for an empty page', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
-    const result = await getUserRoles('token', [])
+    const result = await getUserPageDetails('token', [])
 
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(result).toEqual([])

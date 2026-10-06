@@ -1,7 +1,7 @@
 // The user list is ABP's own Identity endpoint (/api/identity/users); the building a user
 // can see is an ABP extra property on the user — extraProperties.BuildingId — which the
 // backend's DixelsIdentityUserAppService also lets the list filter by. Moving someone and
-// the Roles column are Dixels endpoints (/api/app/users). Same request/ApiError plumbing as
+// the Building and Roles columns are Dixels endpoints (/api/app/users). Same request/ApiError plumbing as
 // spaceManagementApi.ts.
 
 import { request, query } from '@/lib/api/httpClient'
@@ -80,17 +80,24 @@ export function getReassignImpact(token: string, userId: string) {
   return request<ReservationImpactDto>(`/api/app/users/${userId}/reassign-impact`, token)
 }
 
-export interface UserRolesDto {
+export interface UserPageDetailsDto {
   userId: string
+  /** The assigned building's name, in the reader's language; null when unassigned. */
+  buildingName: string | null
+  /** That building was deleted since: buildingName is its last name. */
+  buildingRemoved: boolean
   roles: string[]
 }
 
-/** Each of these users' role names, one call for a page of the Users list — not one per row. */
-export function getUserRoles(token: string, userIds: string[]) {
-  if (userIds.length === 0) return Promise.resolve<UserRolesDto[]>([])
+/**
+ * Each of these users' building name and role names — one call for a page of the Users
+ * list, not one per row or per building. At most a page (100) of ids.
+ */
+export function getUserPageDetails(token: string, userIds: string[]) {
+  if (userIds.length === 0) return Promise.resolve<UserPageDetailsDto[]>([])
   const params = new URLSearchParams()
   for (const id of userIds) params.append('userIds', id)
-  return request<UserRolesDto[]>(`/api/app/users/roles?${params}`, token)
+  return request<UserPageDetailsDto[]>(`/api/app/users/page-details?${params}`, token)
 }
 
 /** Every role name in the system, for the Users page's role filter. */

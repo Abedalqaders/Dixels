@@ -1,4 +1,5 @@
 using Volo.Abp.Data;
+using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
@@ -38,6 +39,16 @@ public class DixelsPostgresTestModule : AbpModule
         Configure<AbpDbConnectionOptions>(options =>
         {
             options.ConnectionStrings.Default = PostgresFixture.ConnectionString;
+        });
+
+        // As DixelsEntityFrameworkCoreModule, plus SqlCapture for the query-plan tests.
+        Configure<AbpDbContextOptions>(options =>
+        {
+            options.Configure(context =>
+            {
+                context.UseNpgsql();
+                context.DbContextOptions.AddInterceptors(SqlCapture.Instance);
+            });
         });
     }
 }

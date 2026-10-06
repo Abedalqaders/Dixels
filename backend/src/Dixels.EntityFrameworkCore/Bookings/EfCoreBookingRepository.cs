@@ -51,16 +51,8 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
 
     public async Task<bool> AnyConfirmedOverlapAsync(Guid spaceId, DateTimeOffset start, DateTimeOffset end, CancellationToken cancellationToken = default)
     {
-        var bookings = await GetQueryableAsync();
-
-        // The same overlap predicate as TimeRange.Overlaps and the exclusion constraint:
-        // end-exclusive, confirmed bookings only (cancelled ones release their slot).
-        return await bookings.AnyAsync(
-            b => b.SpaceId == spaceId
-                 && b.Status == BookingStatus.Confirmed
-                 && b.StartsAt < end
-                 && b.EndsAt > start,
-            GetCancellationToken(cancellationToken));
+        return await (await ConfirmedOverlappingAsync(new[] { spaceId }, start, end))
+            .AnyAsync(GetCancellationToken(cancellationToken));
     }
 
     public async Task<List<Booking>> GetConfirmedOverlappingAsync(
@@ -69,13 +61,44 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         DateTimeOffset end,
         CancellationToken cancellationToken = default)
     {
-        var bookings = await GetQueryableAsync();
-        return await bookings
-            .Where(b => spaceIds.Contains(b.SpaceId)
-                        && b.Status == BookingStatus.Confirmed
-                        && b.StartsAt < end
-                        && b.EndsAt > start)
+        return await (await ConfirmedOverlappingAsync(spaceIds, start, end))
             .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
+    /// <summary>
+    /// The rooms' confirmed bookings that overlap [start, end) — on Postgres as a range
+    /// overlap, so it's answered by the exclusion constraint's GiST index (one probe per room)
+    /// instead of walking each room's whole booking history. Two things make the index
+    /// usable: the same tstzrange expression it was built on, and the status written into
+    /// the SQL — a partial index is only picked when the planner can see the query's WHERE
+    /// matches the index's, which a parameter wouldn't show. unnest + LATERAL rather than
+    /// "SpaceId" = ANY(...), which GiST can't take as an index condition: this way the
+    /// planner can probe room by room (SpaceId and range together) when that's cheaper.
+    /// </summary>
+    public static readonly string ConfirmedOverlapSql =
+        $"SELECT b.* FROM unnest({{0}}::uuid[]) AS s(\"Id\") " +
+        $"CROSS JOIN LATERAL (SELECT * FROM \"{DixelsConsts.DbTablePrefix}Bookings\" " +
+        $"WHERE \"SpaceId\" = s.\"Id\" AND \"Status\" = '{nameof(BookingStatus.Confirmed)}' " +
+        $"AND tstzrange(\"StartsAt\", \"EndsAt\", '[)') && tstzrange({{1}}, {{2}}, '[)')) AS b";
+
+    private async Task<IQueryable<Booking>> ConfirmedOverlappingAsync(IReadOnlyCollection<Guid> spaceIds, DateTimeOffset start, DateTimeOffset end)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // SQLite (the unit tests) has no ranges, and Postgres refuses a range that ends before
+        // it starts: both get the same predicate as TimeRange.Overlaps — end-exclusive,
+        // confirmed bookings only (cancelled ones release their slot).
+        if (!dbContext.Database.IsNpgsql() || end <= start)
+        {
+            return (await GetQueryableAsync())
+                .Where(b => spaceIds.Contains(b.SpaceId)
+                            && b.Status == BookingStatus.Confirmed
+                            && b.StartsAt < end
+                            && b.EndsAt > start);
+        }
+
+        // Distinct: unnest returns a room once per time it's named, which would repeat its bookings.
+        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start, end);
     }
 
     public async Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)

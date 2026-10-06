@@ -41,13 +41,37 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         _localEventBus = localEventBus;
     }
 
-    public async Task<ListResultDto<AvailabilityOverrideDto>> GetListAsync(OverrideScope scope, Guid scopeId)
+    public async Task<PagedResultDto<AvailabilityOverrideDto>> GetListAsync(GetAvailabilityOverridesInput input)
     {
-        var overrides = await _overrideRepository.GetListAsync(o => o.Scope == scope && o.ScopeId == scopeId);
+        var now = Now();
+        var queryable = (await _overrideRepository.GetQueryableAsync())
+            .Where(o => o.Scope == input.Scope && o.ScopeId == input.ScopeId);
+        if (!input.IncludePast)
+        {
+            queryable = queryable.Where(o => o.EndsAt > now);
+        }
+
+        var totalCount = await AsyncExecuter.CountAsync(queryable);
+        var page = await AsyncExecuter.ToListAsync(
+            (input.IncludePast ? queryable.OrderByDescending(o => o.StartsAt) : queryable.OrderBy(o => o.StartsAt))
+                .ThenBy(o => o.Id)
+                .PageBy(input));
+
+        return new PagedResultDto<AvailabilityOverrideDto>(
+            totalCount, page.Select(o => ObjectMapper.Map<AvailabilityOverride, AvailabilityOverrideDto>(o)).ToList());
+    }
+
+    public async Task<ListResultDto<AvailabilityOverrideDto>> GetActiveAsync(OverrideScope scope, Guid scopeId)
+    {
+        var now = Now();
+        var active = await _overrideRepository.GetListAsync(
+            o => o.Scope == scope && o.ScopeId == scopeId && o.StartsAt <= now && o.EndsAt > now);
 
         return new ListResultDto<AvailabilityOverrideDto>(
-            overrides.OrderBy(o => o.StartsAt).Select(o => ObjectMapper.Map<AvailabilityOverride, AvailabilityOverrideDto>(o)).ToList());
+            active.OrderBy(o => o.StartsAt).Select(o => ObjectMapper.Map<AvailabilityOverride, AvailabilityOverrideDto>(o)).ToList());
     }
+
+    private DateTimeOffset Now() => new(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
 
     [Authorize(DixelsPermissions.Overrides.Create)]
     public async Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input)

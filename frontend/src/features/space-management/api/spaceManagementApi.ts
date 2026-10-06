@@ -395,11 +395,30 @@ export interface UpdateSpaceTypeDto {
   iconKey: IconKey
 }
 
-/** Every space type — for pickers and icons. A company has tens, well under ABP's 1000 cap. */
-export const ALL_SPACE_TYPES = { maxResultCount: 1000 }
+/** ABP's largest page (LimitedResultRequestDto.MaxMaxResultCount). */
+const MAX_PAGE_SIZE = 1000
 
-export function getSpaceTypes(token: string, input: Omit<PagedListInput, 'includeDeleted'> = ALL_SPACE_TYPES) {
-  return request<PagedResultDto<SpaceTypeDto>>(`/api/app/space-types${query({ ...input })}`, token)
+/**
+ * One page of space types when `input` is given; without it, every one — for pickers and
+ * icons. That reads pages of ABP's largest size until the total is in: a single request for
+ * any real company (tens of types), and nothing silently cut off past the 1000th.
+ */
+export async function getSpaceTypes(token: string, input?: Omit<PagedListInput, 'includeDeleted'>) {
+  if (input) return request<PagedResultDto<SpaceTypeDto>>(`/api/app/space-types${query({ ...input })}`, token)
+
+  const items: SpaceTypeDto[] = []
+  let totalCount = 0
+  do {
+    const page = await request<PagedResultDto<SpaceTypeDto>>(
+      `/api/app/space-types${query({ skipCount: items.length, maxResultCount: MAX_PAGE_SIZE })}`,
+      token,
+    )
+    totalCount = page.totalCount
+    items.push(...page.items)
+    // An empty page means the list shrank while reading: stop rather than loop.
+    if (page.items.length === 0) break
+  } while (items.length < totalCount)
+  return { items, totalCount: items.length }
 }
 
 export function createSpaceType(token: string, input: CreateSpaceTypeDto) {
@@ -450,9 +469,28 @@ export interface CreateAvailabilityOverrideDto {
   cancelAffectedBookings?: boolean
 }
 
-export function getOverrides(token: string, scope: OverrideScope, scopeId: string) {
+export interface GetOverridesInput {
+  /** Also the ones already over, most recent first. Default: upcoming and current only, soonest first. */
+  includePast?: boolean
+  skipCount?: number
+  maxResultCount?: number
+}
+
+/** One page of a level's own closures — for showing them. Never for "closed now": see getActiveOverrides. */
+export function getOverrides(token: string, scope: OverrideScope, scopeId: string, input: GetOverridesInput = {}) {
+  return request<PagedResultDto<AvailabilityOverrideDto>>(
+    `/api/app/availability-overrides${query({ scope, scopeId, ...input })}`,
+    token,
+  )
+}
+
+/**
+ * Every closure and special opening in effect right now, unpaged — what "closed now" is
+ * worked out from. A page of getOverrides could leave the current one out.
+ */
+export function getActiveOverrides(token: string, scope: OverrideScope, scopeId: string) {
   return request<ListResultDto<AvailabilityOverrideDto>>(
-    `/api/app/availability-overrides${query({ scope, scopeId })}`,
+    `/api/app/availability-overrides/active${query({ scope, scopeId })}`,
     token,
   )
 }

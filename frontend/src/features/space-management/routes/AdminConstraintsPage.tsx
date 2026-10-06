@@ -20,6 +20,7 @@ import type { FloorDraft } from '@/features/space-management/components/FloorLev
 import { SpaceLevelFields } from '@/features/space-management/components/SpaceLevelFields'
 import type { SpaceDraft } from '@/features/space-management/components/SpaceLevelFields'
 import { ClosuresList } from '@/features/space-management/components/ClosuresList'
+import type { AncestorClosure, AncestorLevel } from '@/features/space-management/components/ClosuresList'
 import { HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
 import { usePermission } from '@/features/auth/permissions/usePermission'
 import { ResetToParentButton } from '@/features/space-management/components/ResetToParentButton'
@@ -37,6 +38,7 @@ import {
   getSpace,
   getSpaceResolvedConstraints,
   getOverrides,
+  getActiveOverrides,
   createOverride,
   deleteOverride,
   updateBuildingConstraints,
@@ -64,9 +66,14 @@ import type { Crumb } from '@/components/Breadcrumbs'
 
 type Level = 'building' | 'floor' | 'space'
 
-interface AncestorClosure {
-  override: AvailabilityOverrideDto
-  level: 'Building' | 'Floor'
+/** Closures shown per page: they're one line each. */
+const CLOSURES_PAGE_SIZE = 10
+
+/** A level above this one whose closures also apply here, nearest first. */
+interface AncestorScope {
+  scope: OverrideScope
+  scopeId: string
+  level: AncestorLevel
 }
 
 /**
@@ -94,8 +101,8 @@ interface PageData {
   level: Level
   concurrencyStamp: string
   effective: EffectiveValues
-  ownOverrides: AvailabilityOverrideDto[]
-  ancestorOverrides: AncestorClosure[]
+  /** The levels above whose closures apply here too — listed read-only. */
+  ancestors: AncestorScope[]
   scope: OverrideScope
   isCurrentlyClosedNow: boolean
   /** The levels above this one, for the lead line under the title and the breadcrumbs. */
@@ -207,17 +214,18 @@ export function AdminConstraintsPage() {
   const canDeleteClosure = usePermission(Permissions.Overrides.Delete)
   const canOpenFloors = usePermission(HierarchyViewers.Floors)
   const canOpenSpaces = usePermission(HierarchyViewers.Spaces)
-  // Without Overrides.Default the closures API refuses: load none rather than fail the whole page.
-  const listOverrides = (scope: OverrideScope, scopeId: string) =>
-    canViewClosures ? getOverrides(token, scope, scopeId) : Promise.resolve({ items: [] as AvailabilityOverrideDto[] })
+  // "Closed now" reads only what's in effect at this moment, unpaged — never a page of the
+  // list, which could leave the current closure out. Without Overrides.Default the closures
+  // API refuses: load none rather than fail the whole page.
+  const activeOverrides = (scope: OverrideScope, scopeId: string) =>
+    canViewClosures ? getActiveOverrides(token, scope, scopeId) : Promise.resolve({ items: [] as AvailabilityOverrideDto[] })
 
   const { status, data, error, refetch } = useApiQuery(queryKeys.hierarchy.constraints(level, id, canViewClosures), async (): Promise<PageData> => {
     if (level === 'building') {
       const building = await getBuilding(token, id)
       const days = operatingDaysFromApi(building.days)
       const hours = operatingWindowFromApi(building.hours)
-      const [ownOverridesResult] = await Promise.all([listOverrides(OverrideScope.Building, id)])
-      const ownOverrides = ownOverridesResult.items
+      const active = (await activeOverrides(OverrideScope.Building, id)).items
 
       return {
         level: 'building',
@@ -235,10 +243,9 @@ export function AdminConstraintsPage() {
           minLeadMinutes: building.minLeadMinutes,
           ownOverlapPolicy: building.ownOverlapPolicy,
         },
-        ownOverrides,
-        ancestorOverrides: [],
+        ancestors: [],
         scope: OverrideScope.Building,
-        isCurrentlyClosedNow: isCurrentlyClosed(days, hours, toOverrideWindows(ownOverrides), new Date(), building.timezone),
+        isCurrentlyClosedNow: isCurrentlyClosed(days, hours, toOverrideWindows(active), new Date(), building.timezone),
         parents: {},
         building: {
           name: building.name,
@@ -257,22 +264,17 @@ export function AdminConstraintsPage() {
 
     if (level === 'floor') {
       const floor = await getFloor(token, id)
-      const [building, resolved, ownOverridesResult, buildingOverridesResult] = await Promise.all([
+      const [building, resolved, ownActive, buildingActive] = await Promise.all([
         getBuilding(token, floor.buildingId),
         getFloorResolvedConstraints(token, id),
-        listOverrides(OverrideScope.Floor, id),
-        listOverrides(OverrideScope.Building, floor.buildingId),
+        activeOverrides(OverrideScope.Floor, id),
+        activeOverrides(OverrideScope.Building, floor.buildingId),
       ])
 
       const parentDays = operatingDaysFromApi(building.days)
       const parentHours = operatingWindowFromApi(building.hours)
       const resolvedDays = operatingDaysFromApi(resolved.days.value)
       const resolvedHours = operatingWindowFromApi(resolved.hours.value)
-      const ownOverrides = ownOverridesResult.items
-      const ancestorOverrides: AncestorClosure[] = buildingOverridesResult.items.map((o) => ({
-        override: o,
-        level: 'Building',
-      }))
 
       return {
         level: 'floor',
@@ -288,13 +290,12 @@ export function AdminConstraintsPage() {
           maxHorizonDays: resolved.maxHorizonDays,
           minLeadMinutes: resolved.minLeadMinutes,
         },
-        ownOverrides,
-        ancestorOverrides,
+        ancestors: [{ scope: OverrideScope.Building, scopeId: floor.buildingId, level: 'Building' }],
         scope: OverrideScope.Floor,
         isCurrentlyClosedNow: isCurrentlyClosed(
           resolvedDays,
           resolvedHours,
-          toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
+          toOverrideWindows([...ownActive.items, ...buildingActive.items]),
           new Date(),
           building.timezone,
         ),
@@ -319,11 +320,11 @@ export function AdminConstraintsPage() {
     // The floor's own raw fields (not a separate resolved-constraints call) are enough to
     // know both whether it overrides and what its resolved value is: when it does override,
     // its own field IS the resolved value; when it doesn't, the Building's is.
-    const [resolved, ownOverridesResult, floorOverridesResult, buildingOverridesResult, building] = await Promise.all([
+    const [resolved, ownActive, floorActive, buildingActive, building] = await Promise.all([
       getSpaceResolvedConstraints(token, id),
-      listOverrides(OverrideScope.Space, id),
-      listOverrides(OverrideScope.Floor, space.floorId),
-      listOverrides(OverrideScope.Building, floor.buildingId),
+      activeOverrides(OverrideScope.Space, id),
+      activeOverrides(OverrideScope.Floor, space.floorId),
+      activeOverrides(OverrideScope.Building, floor.buildingId),
       getBuilding(token, floor.buildingId),
     ])
 
@@ -337,12 +338,6 @@ export function AdminConstraintsPage() {
 
     const resolvedDays = operatingDaysFromApi(resolved.days.value)
     const resolvedHours = operatingWindowFromApi(resolved.hours.value)
-
-    const ownOverrides = ownOverridesResult.items
-    const ancestorOverrides: AncestorClosure[] = [
-      ...floorOverridesResult.items.map((o): AncestorClosure => ({ override: o, level: 'Floor' })),
-      ...buildingOverridesResult.items.map((o): AncestorClosure => ({ override: o, level: 'Building' })),
-    ]
 
     return {
       level: 'space',
@@ -359,13 +354,15 @@ export function AdminConstraintsPage() {
         minLeadMinutes: resolved.minLeadMinutes,
         space: { minAttendees: resolved.minAttendees, capacity: resolved.capacity },
       },
-      ownOverrides,
-      ancestorOverrides,
+      ancestors: [
+        { scope: OverrideScope.Floor, scopeId: space.floorId, level: 'Floor' },
+        { scope: OverrideScope.Building, scopeId: floor.buildingId, level: 'Building' },
+      ],
       scope: OverrideScope.Space,
       isCurrentlyClosedNow: isCurrentlyClosed(
         resolvedDays,
         resolvedHours,
-        toOverrideWindows([...ownOverrides, ...ancestorOverrides.map((a) => a.override)]),
+        toOverrideWindows([...ownActive.items, ...floorActive.items, ...buildingActive.items]),
         new Date(),
         building.timezone,
       ),
@@ -388,6 +385,49 @@ export function AdminConstraintsPage() {
       },
     }
   })
+
+  // The closures list on its own query: paging it or showing past ones reloads just the
+  // list, not the rules (and never touches unsaved edits). This level's own closures are
+  // paged; the levels above show their first page, with a count of the rest.
+  const [closuresPage, setClosuresPage] = useState(0)
+  const [closuresPageSize, setClosuresPageSize] = useState(CLOSURES_PAGE_SIZE)
+  const [showPastClosures, setShowPastClosures] = useState(false)
+  const closures = useApiQuery(
+    queryKeys.hierarchy.closures(level, id, { page: closuresPage, pageSize: closuresPageSize, includePast: showPastClosures }),
+    async () => {
+      const [own, ...ancestors] = await Promise.all([
+        getOverrides(token, data!.scope, id, {
+          includePast: showPastClosures,
+          skipCount: closuresPage * closuresPageSize,
+          maxResultCount: closuresPageSize,
+        }),
+        ...data!.ancestors.map((a) =>
+          getOverrides(token, a.scope, a.scopeId, { includePast: showPastClosures, maxResultCount: CLOSURES_PAGE_SIZE }),
+        ),
+      ])
+      return {
+        own,
+        ancestorOverrides: data!.ancestors.flatMap((a, i): AncestorClosure[] =>
+          ancestors[i].items.map((o) => ({ override: o, level: a.level })),
+        ),
+        ancestorMore: data!.ancestors
+          .map((a, i) => ({ level: a.level, count: ancestors[i].totalCount - ancestors[i].items.length }))
+          .filter((m) => m.count > 0),
+      }
+    },
+    { enabled: canViewClosures && !!data, keepPreviousData: true },
+  )
+
+  function handleShowPastClosures(show: boolean) {
+    setShowPastClosures(show)
+    setClosuresPage(0)
+  }
+
+  // After adding or removing one: the list, and "closed now" with the rest of the page.
+  function refetchWithClosures() {
+    refetch()
+    closures.refetch()
+  }
 
   const [buildingDraft, setBuildingDraft] = useState<BuildingDraft | null>(null)
   const [floorDraft, setFloorDraft] = useState<FloorDraft | null>(null)
@@ -521,7 +561,7 @@ export function AdminConstraintsPage() {
 
       await createOverride(token, { ...input, cancelAffectedBookings: cancel })
       showToast(cancel ? t('Rules:ClosureAddedCancelled', { count: impact.count }) : t('Rules:ClosureAdded'))
-      refetch()
+      refetchWithClosures()
     } catch (err) {
       handleSaveError(err)
     }
@@ -538,7 +578,7 @@ export function AdminConstraintsPage() {
     try {
       await deleteOverride(token, overrideId)
       showToast(t('Rules:ClosureRemoved'))
-      refetch()
+      refetchWithClosures()
     } catch (err) {
       handleSaveError(err)
     }
@@ -634,12 +674,26 @@ export function AdminConstraintsPage() {
               )}
               </fieldset>
 
-              {canViewClosures && (
+              {canViewClosures && closures.status === 'error' && (
+                <p className="treeempty">{t('Rules:LoadFailed', { error: closures.error.message })}</p>
+              )}
+              {canViewClosures && closures.status === 'success' && (
                 <ClosuresList
                   scope={data.scope}
                   scopeId={id}
-                  ownOverrides={data.ownOverrides}
-                  ancestorOverrides={data.ancestorOverrides}
+                  ownOverrides={closures.data.own.items}
+                  ownTotalCount={closures.data.own.totalCount}
+                  page={closuresPage}
+                  pageSize={closuresPageSize}
+                  onPageChange={setClosuresPage}
+                  onPageSizeChange={(size) => {
+                    setClosuresPageSize(size)
+                    setClosuresPage(0)
+                  }}
+                  showPast={showPastClosures}
+                  onShowPastChange={handleShowPastClosures}
+                  ancestorOverrides={closures.data.ancestorOverrides}
+                  ancestorMore={closures.data.ancestorMore}
                   isCurrentlyClosed={data.isCurrentlyClosedNow}
                   onCreate={handleCreateOverride}
                   onDelete={handleDeleteOverride}
