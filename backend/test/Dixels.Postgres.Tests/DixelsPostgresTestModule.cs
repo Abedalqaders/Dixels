@@ -1,4 +1,8 @@
+using Medallion.Threading;
+using Medallion.Threading.Postgres;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Data;
+using Volo.Abp.DistributedLocking;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Modularity;
@@ -11,11 +15,13 @@ namespace Dixels;
 /// <summary>
 /// Like DixelsEntityFrameworkCoreTestModule, but against the real Postgres from
 /// <see cref="PostgresFixture"/> and with unit-of-work transactions left ON — the space
-/// lock only means anything inside a transaction.
+/// lock only means anything inside a transaction. Distributed locks are Postgres advisory
+/// locks, as in DixelsWebModule.
 /// </summary>
 [DependsOn(
     typeof(DixelsApplicationTestModule),
-    typeof(DixelsEntityFrameworkCoreModule))]
+    typeof(DixelsEntityFrameworkCoreModule),
+    typeof(AbpDistributedLockingModule))]
 public class DixelsPostgresTestModule : AbpModule
 {
     public override void ConfigureServices(ServiceConfigurationContext context)
@@ -50,5 +56,8 @@ public class DixelsPostgresTestModule : AbpModule
                 context.DbContextOptions.AddInterceptors(SqlCapture.Instance);
             });
         });
+
+        context.Services.AddSingleton<IDistributedLockProvider>(_ =>
+            new PostgresDistributedSynchronizationProvider(PostgresFixture.ConnectionString));
     }
 }

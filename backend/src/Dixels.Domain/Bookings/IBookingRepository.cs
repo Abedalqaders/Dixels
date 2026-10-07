@@ -59,9 +59,10 @@ public interface IBookingRepository : IRepository<Booking, Guid>
 
     /// <summary>
     /// Confirmed bookings starting in <c>(after, until]</c> whose reminder hasn't been sent,
-    /// earliest first — what the reminder job sends next.
+    /// earliest first, at most <paramref name="maxCount"/> and none of <paramref name="skipIds"/> —
+    /// what the reminder job sends next. Bookings in a removed room, floor or building are left out.
     /// </summary>
-    Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default);
+    Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, int maxCount, IReadOnlyCollection<Guid> skipIds, CancellationToken cancellationToken = default);
 
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 

@@ -16,11 +16,25 @@
 #
 # Upgrading: git pull && docker compose up -d --build — the migrator runs again first and the
 # api only starts once it has finished successfully.
+#
+# Running more than one api: background work (email jobs, token cleanup, booking reminders) is
+# kept to one server at a time by Postgres advisory locks. They need a session-level connection,
+# so put PgBouncer (if any) in session-pooling mode, not transaction pooling.
 
 name: dixels
 
+# Each container's log is rotated at 10 MB, keeping 5 files (about 50 MB at most). Docker's
+# default never rotates, and a busy api fills the disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 x-backend-env: &backend-env
-  ConnectionStrings__Default: "Host=db;Port=5432;Database=Dixels;User ID=postgres;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+  # Maximum Pool Size caps the connections one api opens (Npgsql's default is 100, the same as
+  # Postgres's max_connections, so two apis could exhaust the server). Raise both together.
+  ConnectionStrings__Default: "Host=db;Port=5432;Database=Dixels;User ID=postgres;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env};Maximum Pool Size=${DB_POOL_SIZE:-50}"
   StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE:?set STRING_ENCRYPTION_PASSPHRASE in .env}
   Settings__Abp.Mailing.Smtp.Host: ${SMTP_HOST:?set SMTP_HOST in .env}
   Settings__Abp.Mailing.Smtp.Port: ${SMTP_PORT:?set SMTP_PORT in .env}
@@ -35,6 +49,10 @@ services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
+    # Time for a clean shutdown (a checkpoint) before Docker kills it; the default 10s can
+    # force crash recovery on the next start.
+    stop_grace_period: 60s
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: Dixels
@@ -50,6 +68,7 @@ services:
     build:
       context: ../backend
       target: migrator
+    logging: *logging
     environment:
       <<: *backend-env
       Dixels__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
@@ -68,6 +87,19 @@ services:
       context: ../backend
       target: web
     restart: unless-stopped
+    logging: *logging
+    # .NET waits up to 30s for requests and the running background job to finish after
+    # SIGTERM; Docker's default 10s would kill it halfway.
+    stop_grace_period: 40s
+    # The image checks /health/live (the process answers). Here it's /health/ready, which also
+    # needs the database, so `docker compose ps` shows the api unhealthy while it can't serve.
+    # Nothing depends_on the api, so this never blocks another service from starting.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 15s
+      timeout: 3s
+      start_period: 60s
+      retries: 3
     environment:
       <<: *backend-env
       App__SelfUrl: ${API_URL}
@@ -98,6 +130,7 @@ services:
         VITE_OIDC_REDIRECT_URI: ${APP_URL}/callback
         VITE_OIDC_POST_LOGOUT_REDIRECT_URI: ${APP_URL}/
     restart: unless-stopped
+    logging: *logging
     ports:
       - "127.0.0.1:8081:8080"
 

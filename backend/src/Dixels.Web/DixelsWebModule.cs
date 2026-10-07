@@ -19,6 +19,8 @@ using Dixels.MultiTenancy;
 using Dixels.Web.Components.AccountTheme;
 using Dixels.Web.Menus;
 using Dixels.Web.RateLimiting;
+using Medallion.Threading;
+using Medallion.Threading.Postgres;
 using Microsoft.OpenApi;
 using OpenIddict.Server.AspNetCore;
 using OpenIddict.Validation.AspNetCore;
@@ -38,6 +40,7 @@ using Volo.Abp.Ui.LayoutHooks;
 using Volo.Abp.AspNetCore.Serilog;
 using Volo.Abp.Autofac;
 using Volo.Abp.BackgroundWorkers;
+using Volo.Abp.DistributedLocking;
 using Volo.Abp.Mapperly;
 using Volo.Abp.FeatureManagement;
 using Volo.Abp.Identity.Web;
@@ -65,6 +68,7 @@ namespace Dixels.Web;
     typeof(AbpAccountWebOpenIddictModule),
     typeof(AbpAspNetCoreMvcUiLeptonXLiteThemeModule),
     typeof(AbpAspNetCoreSerilogModule),
+    typeof(AbpDistributedLockingModule),
     typeof(AbpSwashbuckleModule)
     )]
 public class DixelsWebModule : AbpModule
@@ -134,6 +138,7 @@ public class DixelsWebModule : AbpModule
         ConfigureForwardedHeaders(context.Services, configuration);
         ConfigureDataProtection(context.Services, configuration);
         ConfigureHealthChecks(context.Services);
+        ConfigureDistributedLocking(context.Services, configuration);
         ConfigureRateLimiting(context.Services, configuration);
 
         context.Services.AddMapperlyObjectMapper<DixelsWebModule>();
@@ -183,6 +188,17 @@ public class DixelsWebModule : AbpModule
     {
         services.AddHealthChecks()
             .AddDbContextCheck<DixelsDbContext>(tags: new[] { HealthCheckTags.Ready });
+    }
+
+    // With two or more API servers, background work must run on one of them at a time: ABP's job
+    // worker, OpenIddict's token cleanup and the booking reminders all take an IAbpDistributedLock
+    // first. Without a provider ABP falls back to an in-process lock, which every server gets.
+    // Postgres advisory locks need no extra infrastructure, but hold a session-level connection
+    // while held — so not through PgBouncer in transaction-pooling mode.
+    private void ConfigureDistributedLocking(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton<IDistributedLockProvider>(_ =>
+            new PostgresDistributedSynchronizationProvider(configuration.GetConnectionString("Default")!));
     }
 
     private void ConfigureRateLimiting(IServiceCollection services, IConfiguration configuration)

@@ -101,15 +101,33 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start, end);
     }
 
-    public async Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, CancellationToken cancellationToken = default)
+    public async Task<List<Booking>> GetDueForReminderAsync(
+        DateTimeOffset after,
+        DateTimeOffset until,
+        int maxCount,
+        IReadOnlyCollection<Guid> skipIds,
+        CancellationToken cancellationToken = default)
     {
         var bookings = await GetQueryableAsync();
+
+        // Rooms whose room, floor and building all still exist. The soft-delete filter hides
+        // removed ones: their bookings are being cancelled (a background job), not reminded.
+        var dbContext = await GetDbContextAsync();
+        var liveRoomIds =
+            from s in dbContext.Spaces
+            join f in dbContext.Floors on s.FloorId equals f.Id
+            join bl in dbContext.Buildings on f.BuildingId equals bl.Id
+            select s.Id;
+
         return await bookings
             .Where(b => b.Status == BookingStatus.Confirmed
                         && b.ReminderSentAt == null
                         && b.StartsAt > after
-                        && b.StartsAt <= until)
+                        && b.StartsAt <= until
+                        && !skipIds.Contains(b.Id)
+                        && liveRoomIds.Contains(b.SpaceId))
             .OrderBy(b => b.StartsAt)
+            .Take(maxCount)
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
