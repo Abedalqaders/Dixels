@@ -46,6 +46,8 @@ const building: BookableBuildingDto = {
   name: 'Riverside HQ',
   timezone: 'UTC',
   maxHorizonDays: 60,
+  maxSeriesHorizonDays: 90,
+  isRemoved: false,
   minLeadMinutes: 0,
   slotMinutes: 15,
   ownOverlapPolicy: 1,
@@ -72,6 +74,10 @@ function booking(id: string, title: string, from: string, to: string, day = tomo
     attendees: 4,
     title,
     status: 'Confirmed',
+    seriesId: null,
+    recurrence: null,
+    cancelledByAdmin: false,
+    cancelReason: null,
   }
 }
 
@@ -222,6 +228,7 @@ describe('MyCalendarPage', () => {
       timezone: 'UTC',
       localStart: '',
       localEnd: '',
+      warnings: [],
       spaces: [
         {
           space: room,
@@ -269,6 +276,7 @@ describe('MyCalendarPage', () => {
       timezone: 'UTC',
       localStart: '',
       localEnd: '',
+      warnings: [],
       spaces: [
         result(false, pod, ['Dixels:Bookings:TooLong']),
         result(false, room, ['Dixels:Bookings:Overlap']),

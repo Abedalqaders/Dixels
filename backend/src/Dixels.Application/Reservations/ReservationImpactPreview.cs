@@ -33,23 +33,32 @@ public class ReservationImpactPreview : ITransientDependency
         GatherAsync(skip, (provider, first) => provider.FindNoLongerFittingAsync(change, first));
 
     /// <summary>
-    /// A preview as a save's event carries it on (<see cref="SpaceRulesChangedEvent.Affected"/>):
-    /// which reservations, and the first reason each one breaks.
+    /// What a save's event carries on (<see cref="SpaceRulesChangedEvent.Affected"/>): every
+    /// reservation the change would no longer allow, and the first rule each breaks — the
+    /// same ones and reasons the preview shows, without describing them.
     /// </summary>
-    public static IReadOnlyList<AffectedReservation> ToAffected(ReservationImpactDto impact) =>
-        impact.Items.Select(i => new AffectedReservation(i.Kind, i.Id, i.Reasons.FirstOrDefault() ?? string.Empty)).ToList();
+    public async Task<IReadOnlyList<AffectedReservation>> AffectedAsync(RoomRulesChange change)
+    {
+        var affected = new List<AffectedReservation>();
+        foreach (var provider in _providers)
+        {
+            affected.AddRange(await provider.FindAffectedAsync(change));
+        }
+
+        return affected;
+    }
 
     /// <summary>Every upcoming reservation in <paramref name="scope"/>: what a delete would take.</summary>
     public Task<ReservationImpactDto> UpcomingAsync(Building building, RoomScope scope, string reason, int? skip = null) =>
         GatherAsync(skip, (provider, first) => provider.FindUpcomingAsync(building, scope, reason, first));
 
-    /// <summary>How many upcoming reservations these rooms hold, across every module — when only the number matters.</summary>
-    public async Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds)
+    /// <summary>How many upcoming reservations the rooms in <paramref name="scope"/> hold, across every module — when only the number matters.</summary>
+    public async Task<int> CountUpcomingAsync(RoomScope scope)
     {
         var count = 0;
         foreach (var provider in _providers)
         {
-            count += await provider.CountUpcomingAsync(spaceIds);
+            count += await provider.CountUpcomingAsync(scope);
         }
 
         return count;

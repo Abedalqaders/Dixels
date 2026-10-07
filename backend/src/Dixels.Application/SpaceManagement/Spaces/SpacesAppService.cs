@@ -247,7 +247,7 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         // Worked out on an unsaved copy before the real room changes: what the admin's choice
         // to cancel what no longer fits will cancel. The event carries it, so it's checked once.
         var affected = input.CancelAffectedBookings
-            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input)))
+            ? await _impactPreview.AffectedAsync(ProposedChange(building, floor, space, input))
             : null;
 
         space.SetOwnOperatingDays(proposedDays, resolvedParent.Days.Value);

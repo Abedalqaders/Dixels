@@ -141,6 +141,18 @@ public class BookingImpactService : ITransientDependency
     }
 
     /// <summary>
+    /// As a save carries them on: each booking with the first rule it breaks, in the words
+    /// <see cref="DescribeAsync"/> shows it (its first reason) — nothing else is looked up.
+    /// </summary>
+    public List<AffectedReservation> ToAffected(IReadOnlyList<BookingMisfit> misfits) =>
+        misfits
+            .Select(m => new AffectedReservation(
+                ReservationKinds.Booking,
+                m.Booking.Id,
+                m.Violations.Count == 0 ? string.Empty : _violationLocalizer.ToDto(m.Violations[0]).ShortMessage))
+            .ToList();
+
+    /// <summary>
     /// Each room's name and its floor's, in the reader's language. Deleted ones included —
     /// they're still where the booking is.
     /// </summary>
@@ -163,7 +175,7 @@ public class BookingImpactService : ITransientDependency
         var reasons = impacts.ToDictionary(
             i => i.Booking.Id,
             i => _localizer["Dixels:Bookings:CancelReason:RulesChanged", _violationLocalizer.ToDto(i.Violations[0]).ShortMessage].Value);
-        return _checker.CancelAsAdminAsync(impacts.Select(i => i.Booking).ToList(), adminId, b => reasons[b.Id]);
+        return CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
     }
 
     /// <summary>
@@ -172,20 +184,36 @@ public class BookingImpactService : ITransientDependency
     /// </summary>
     public async Task CancelForRuleChangeAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId)
     {
-        var reasons = OwnOf(affected).ToDictionary(a => a.Id, a => a.Reason);
-        var bookings = await _checker.FindUpcomingByIdsAsync(reasons.Keys);
-        await _checker.CancelAsAdminAsync(bookings, adminId, b => _localizer["Dixels:Bookings:CancelReason:RulesChanged", reasons[b.Id]].Value);
+        var reasons = OwnOf(affected).ToDictionary(a => a.Id, a => _localizer["Dixels:Bookings:CancelReason:RulesChanged", a.Reason].Value);
+        await CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
     }
 
     /// <summary>Cancels bookings with one reason for all (a closure, a removed room).</summary>
     public Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
-        _checker.CancelAsAdminAsync(impacts.Select(i => i.Booking).ToList(), adminId, _ => reason);
+        CancelInBatchesAsync(impacts.Select(i => i.Booking.Id), adminId, _ => reason);
 
     /// <summary>The same, for what the save's own preview already found (bookings only).</summary>
-    public async Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason)
+    public Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason) =>
+        CancelInBatchesAsync(OwnOf(affected).Select(a => a.Id), adminId, _ => reason);
+
+    /// <summary>How many bookings one round cancels (one UPDATE and one event per reason), like CancelBookingsInRemovedRoomsJob.</summary>
+    public const int CancelBatchSize = 500;
+
+    // A building-wide change can cancel thousands: they go a round at a time, each round one
+    // UPDATE per reason (one for a closure; one per broken rule for a rule change), so no
+    // statement carries thousands of ids and no booking is loaded and saved one by one. A
+    // booking that was cancelled or began since the check is left alone (the UPDATE's own
+    // condition). All in the admin's own unit of work, so the save and its cancels still
+    // commit (or roll back) together.
+    private async Task CancelInBatchesAsync(IEnumerable<Guid> ids, Guid adminId, Func<Guid, string> reason)
     {
-        var bookings = await _checker.FindUpcomingByIdsAsync(OwnOf(affected).Select(a => a.Id).ToList());
-        await _checker.CancelAsAdminAsync(bookings, adminId, _ => reason);
+        foreach (var batch in ids.Chunk(CancelBatchSize))
+        {
+            foreach (var sameReason in batch.GroupBy(reason))
+            {
+                await _checker.CancelUpcomingAsAdminAsync(sameReason.ToList(), adminId, sameReason.Key);
+            }
+        }
     }
 
     private static IEnumerable<AffectedReservation> OwnOf(IReadOnlyList<AffectedReservation> affected) =>

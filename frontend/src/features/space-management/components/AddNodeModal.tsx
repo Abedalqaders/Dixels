@@ -18,6 +18,7 @@ import {
   createBuilding,
   createFloor,
   createSpace,
+  OwnOverlapPolicy,
 } from '@/features/space-management/api/spaceManagementApi'
 import type { OperatingWindowDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 
@@ -119,6 +120,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
           maxDurationMinutes: DEFAULT_BUILDING_MAX_DURATION_MINUTES,
           maxHorizonDays: DEFAULT_BUILDING_MAX_HORIZON_DAYS,
           minLeadMinutes: DEFAULT_BUILDING_MIN_LEAD_MINUTES,
+          ownOverlapPolicy: OwnOverlapPolicy.Warn,
         })
       } else if (state.kind === 'floor') {
         await createFloor(token, {

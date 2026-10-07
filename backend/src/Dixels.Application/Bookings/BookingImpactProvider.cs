@@ -41,8 +41,15 @@ public class BookingImpactProvider : IReservationImpactProvider, ITransientDepen
         return new ReservationImpactPart(count, await _bookingImpact.DescribeAsync(building, Unbroken(shown), reason));
     }
 
-    public Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds) =>
-        _bookingImpact.Checker.CountUpcomingAsync(spaceIds);
+    public async Task<List<AffectedReservation>> FindAffectedAsync(RoomRulesChange change)
+    {
+        var closure = change.AddedClosure is null ? null : OverrideWindow.From(change.AddedClosure);
+        var misfits = await _bookingImpact.Checker.FindMisfitsAsync(change.Building, change.Rooms, change.ProposedRules, closure);
+        return _bookingImpact.ToAffected(misfits);
+    }
+
+    public Task<int> CountUpcomingAsync(RoomScope scope) =>
+        _bookingImpact.Checker.CountUpcomingAsync(scope);
 
     public async Task<ReservationImpactPart> FindForPersonLeavingAsync(Guid userId, Building building, string reason, int first)
     {

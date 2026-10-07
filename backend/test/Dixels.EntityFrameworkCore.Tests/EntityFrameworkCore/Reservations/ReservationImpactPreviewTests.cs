@@ -40,7 +40,10 @@ public class ReservationImpactPreviewTests
 
         public Task<ReservationImpactPart> FindUpcomingAsync(Building building, RoomScope scope, string reason, int first) => First(first);
 
-        public Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds) => Task.FromResult(items.Length);
+        public Task<List<AffectedReservation>> FindAffectedAsync(RoomRulesChange change) =>
+            Task.FromResult(items.Select(i => new AffectedReservation(i.Kind, i.Id, i.Reasons.FirstOrDefault() ?? string.Empty)).ToList());
+
+        public Task<int> CountUpcomingAsync(RoomScope scope) => Task.FromResult(items.Length);
 
         public Task<ReservationImpactPart> FindForPersonLeavingAsync(Guid userId, Building building, string reason, int first) => First(first);
     }
@@ -93,17 +96,18 @@ public class ReservationImpactPreviewTests
         var parking = new FixedProvider(Item("parking", 11, "Spot P4"));
         var preview = new ReservationImpactPreview(new IReservationImpactProvider[] { bookings, parking });
 
-        (await preview.CountUpcomingAsync(new[] { Guid.NewGuid() })).ShouldBe(3);
+        (await preview.CountUpcomingAsync(new RoomScope(Guid.NewGuid()))).ShouldBe(3);
     }
 
     [Fact]
-    public void A_preview_is_carried_on_as_which_reservations_and_the_first_reason_each()
+    public async Task A_save_carries_on_every_module_s_reservations_and_the_first_reason_each()
     {
         var late = Item(ReservationKinds.Booking, 17, "Room 1");
         late.Reasons = new List<string> { "Open 09:00–17:00 only", "Up to 2h" };
         var spot = Item("parking", 11, "Spot P4");
+        var preview = new ReservationImpactPreview(new IReservationImpactProvider[] { new FixedProvider(late), new FixedProvider(spot) });
 
-        var affected = ReservationImpactPreview.ToAffected(new ReservationImpactDto { Count = 2, Items = new List<AffectedReservationDto> { late, spot } });
+        var affected = await preview.AffectedAsync(null!);
 
         affected.ShouldBe(new[]
         {
