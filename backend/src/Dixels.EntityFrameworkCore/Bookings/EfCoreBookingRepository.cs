@@ -201,6 +201,39 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         }
     }
 
+    public async Task<List<Booking>> CancelUpcomingAsAdminAsync(
+        IReadOnlyCollection<Guid> ids,
+        Guid adminId,
+        DateTimeOffset cancelledAt,
+        string reason,
+        DateTime modificationTime,
+        Guid? modifierId,
+        CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        // One stamp for the round: it marks exactly the rows this UPDATE changed, to read back.
+        var stamp = Guid.NewGuid().ToString("N");
+
+        // In the unit of work's own transaction, like the rest of the save. The tracker is
+        // bypassed (that's the point): a copy of one of these already loaded in this unit of work
+        // keeps what it read, and being unchanged it's never saved over what this wrote.
+        await dbContext.Bookings
+            .Where(b => ids.Contains(b.Id) && b.Status == BookingStatus.Confirmed && b.StartsAt > cancelledAt)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(b => b.Status, BookingStatus.Cancelled)
+                .SetProperty(b => b.CancelledById, adminId)
+                .SetProperty(b => b.CancelledAt, cancelledAt)
+                .SetProperty(b => b.CancelReason, reason)
+                .SetProperty(b => b.CancelledByAdmin, true)
+                .SetProperty(b => b.LastModificationTime, modificationTime)
+                .SetProperty(b => b.LastModifierId, modifierId)
+                .SetProperty(b => b.ConcurrencyStamp, stamp), GetCancellationToken(cancellationToken));
+
+        return await dbContext.Bookings.AsNoTracking()
+            .Where(b => ids.Contains(b.Id) && b.ConcurrencyStamp == stamp)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
     public async Task InsertManyConfirmedAsync(IReadOnlyCollection<Booking> bookings, CancellationToken cancellationToken = default)
     {
         try

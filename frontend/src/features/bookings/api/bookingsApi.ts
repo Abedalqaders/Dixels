@@ -1,167 +1,67 @@
 import { ApiError, query, request } from '@/lib/api/httpClient'
-import type { FieldValueDto, IconKey, OperatingWindowDto, OwnOverlapPolicy } from '@/features/space-management/api/spaceManagementApi'
+import type { ApiDto, ApiResponse } from '@/lib/api/schemaTypes'
 import type { IsoDate } from '@/lib/time/buildingTime'
 
 export { ApiError }
 
-// ---- DTOs (mirror Dixels.Application.Contracts/Bookings/Dtos) ----
+// ---- DTOs: the API's own types (src/lib/api/schema.d.ts, see lib/api/schemaTypes.ts) ----
 
-export interface BookableSpaceDto {
-  id: string
-  name: string
-  spaceTypeId: string
-  spaceTypeName: string
-  iconKey: IconKey
-  capacity: number
-  minAttendees: number | null
-  days: FieldValueDto<number[]>
-  hours: FieldValueDto<OperatingWindowDto>
-  maxDurationMinutes: FieldValueDto<number>
-}
+/** A room the employee can book, with its rules resolved through floor and building. */
+export type BookableSpaceDto = ApiResponse<'Dixels.Bookings.BookableSpaceDto'>
 
-export interface BookableFloorDto {
-  id: string
-  name: string
-  floorNumber: number | null
-  spaces: BookableSpaceDto[]
-}
+export type BookableFloorDto = ApiResponse<'Dixels.Bookings.BookableFloorDto'>
 
-export interface BookableBuildingDto {
-  id: string
-  name: string
-  timezone: string
-  maxHorizonDays: number
-  /** The employee's building was deleted: shown with its name, nothing to book. */
-  isRemoved?: boolean
-  /** How far ahead a recurring booking's end date may be. */
-  maxSeriesHorizonDays?: number
-  minLeadMinutes: number
-  /** Whether one person may hold two bookings at once here (0 Allow, 1 Warn, 2 Block). */
-  ownOverlapPolicy: OwnOverlapPolicy
-  slotMinutes: number
-  /** The building's own opening days (0 = Sunday … 6) and hours — what My calendar shades as closed. */
-  days: number[]
-  hours: OperatingWindowDto
-  floors: BookableFloorDto[]
-}
+/**
+ * The employee's building: `isRemoved` when it was deleted (shown with its name, nothing to
+ * book); `ownOverlapPolicy` says whether one person may hold two bookings at once; `days`
+ * (0 = Sunday … 6) and `hours` are what My calendar shades as closed.
+ */
+export type BookableBuildingDto = ApiResponse<'Dixels.Bookings.BookableBuildingDto'>
 
 /**
  * `localStart`/`localEnd` are wall-clock times in the building's timezone, with no offset
  * ("2026-09-29T10:00:00") — the server converts them using the building's zone.
  */
-export interface BookingRequestDto {
-  spaceId: string
-  localStart: string
-  localEnd: string
-  attendees: number
-  title?: string | null
-}
+export type BookingRequestDto = ApiDto<'Dixels.Bookings.BookingRequestDto'>
 
-export interface CreateBookingDto extends BookingRequestDto {
-  idempotencyKey: string
-}
+export type CreateBookingDto = ApiDto<'Dixels.Bookings.CreateBookingDto'>
 
-export interface BookingViolationDto {
-  code: string
-  level: string | null
-  /** Localized and ready to show. */
-  message: string
-  /** A few words for tight spaces, e.g. "Seats 1 — you need 4". */
-  shortMessage: string
-}
+/** `message` is localized and ready to show; `shortMessage` is a few words for tight spaces ("Seats 1 — you need 4"). */
+export type BookingViolationDto = ApiResponse<'Dixels.Bookings.BookingViolationDto'>
 
-export interface BookingPreviewDto {
-  isValid: boolean
-  violations: BookingViolationDto[]
-  /** Worth knowing but doesn't stop the booking — e.g. you already have another room then. */
-  warnings?: BookingViolationDto[]
-  startsAt: string
-  endsAt: string
-  timezone: string
-}
+/** A dry run's answer; `warnings` don't stop the booking (you already have another room then). */
+export type BookingPreviewDto = ApiResponse<'Dixels.Bookings.BookingPreviewDto'>
 
-export interface BookingDto {
-  id: string
-  spaceId: string
-  spaceName: string
-  floorName: string
-  buildingName: string
-  timezone: string
-  startsAt: string
-  endsAt: string
-  localStart: string
-  localEnd: string
-  attendees: number
-  title: string
-  status: string
-  /** Set when this booking is one date of a recurring series, with how the series repeats. */
-  seriesId?: string | null
-  recurrence?: RecurrenceDto | null
-  /** An admin cancelled it (a rule change, a closure, a removed room) — shown struck through until it would have ended. */
-  cancelledByAdmin?: boolean
-  cancelReason?: string | null
-}
+/**
+ * A booking in full. `seriesId`/`recurrence` are set when it's one date of a recurring series;
+ * `cancelledByAdmin` (a rule change, a closure, a removed room) shows it struck through until
+ * it would have ended.
+ */
+export type BookingDto = ApiResponse<'Dixels.Bookings.BookingDto'>
 
 /**
  * What the calendar's list carries per booking — enough to draw it, nothing more. The
  * full BookingDto is fetched when one is opened (getBooking).
  */
-export interface BookingSummaryDto {
-  id: string
-  title: string
-  localStart: string
-  localEnd: string
-  spaceName: string
-  status: string
-  seriesId?: string | null
-}
+export type BookingSummaryDto = ApiResponse<'Dixels.Bookings.BookingSummaryDto'>
 
-/** A stretch of the searched day, in minutes from the building's local midnight (0–1440). */
-export interface DayRangeDto {
-  startMinute: number
-  endMinute: number
-  /** Busy ranges only: it's your own booking. Everyone else's is anonymous. */
-  isMine: boolean
-}
+/** A stretch of the searched day, in minutes from the building's local midnight (0–1440); `isMine` on busy ranges only. */
+export type DayRangeDto = ApiResponse<'Dixels.Bookings.DayRangeDto'>
 
-export interface SpaceAvailabilityDto {
-  space: BookableSpaceDto
-  floorId: string
-  floorName: string
-  isAvailable: boolean
-  violations: BookingViolationDto[]
-  /** "HH:mm" the free stretch lasts until ("24:00" = midnight) — when available. */
-  freeUntil: string | null
-  /** The next "HH:mm" start that day where the same length fits — when busy only because of the time. */
-  nextFreeStart: string | null
-  open: DayRangeDto[]
-  closed: DayRangeDto[]
-  busy: DayRangeDto[]
-}
+/**
+ * One room in a search: `freeUntil` is the "HH:mm" the free stretch lasts until ("24:00" =
+ * midnight) when available; `nextFreeStart` the next start that day where the same length
+ * fits, when it's busy only because of the time.
+ */
+export type SpaceAvailabilityDto = ApiResponse<'Dixels.Bookings.SpaceAvailabilityDto'>
 
-export interface AvailabilitySearchResultDto {
-  buildingId: string
-  buildingName: string
-  timezone: string
-  localStart: string
-  localEnd: string
-  /** About the search as a whole — e.g. you already have another booking then. */
-  warnings?: BookingViolationDto[]
-  /** Available spaces first. */
-  spaces: SpaceAvailabilityDto[]
-}
+/** A search's answer, available spaces first; `warnings` are about the search as a whole. */
+export type AvailabilitySearchResultDto = ApiResponse<'Dixels.Bookings.AvailabilitySearchResultDto'>
 
 /** One day of a room: when it's open, closed by an admin, and booked. */
-export interface SpaceDayDto {
-  date: IsoDate
-  open: DayRangeDto[]
-  closed: DayRangeDto[]
-  busy: DayRangeDto[]
-}
+export type SpaceDayDto = ApiResponse<'Dixels.Bookings.SpaceDayDto'>
 
-export interface SpaceDaysDto {
-  days: SpaceDayDto[]
-}
+export type SpaceDaysDto = ApiResponse<'Dixels.Bookings.SpaceDaysDto'>
 
 export interface SearchAvailabilityInput {
   localStart: string
@@ -231,10 +131,9 @@ export function getBooking(token: string, id: string): Promise<BookingDto> {
   return request<BookingDto>(`/api/app/bookings/${id}`, token)
 }
 
-/** Cancels one of my own bookings before it starts; the slot is free the moment this returns. */
 /** Which bookings of a series a cancel covers (CancelScope on the server). */
-export const CancelScope = { This: 0, ThisAndFollowing: 1, Series: 2 } as const
-export type CancelScope = (typeof CancelScope)[keyof typeof CancelScope]
+export const CancelScope = { This: 0, ThisAndFollowing: 1, Series: 2 } as const satisfies Record<string, CancelScope>
+export type CancelScope = ApiDto<'Dixels.Bookings.CancelScope'>
 
 /**
  * Cancels one of my own bookings before it starts — or, for a series, this and the following
@@ -257,54 +156,26 @@ export async function cancelBooking(
 // ---- Recurring bookings ----
 
 /** How often a series repeats (RecurrenceFrequency on the server). */
-export const RecurrenceFrequency = { Daily: 0, Weekly: 1, Monthly: 2 } as const
-export type RecurrenceFrequency = (typeof RecurrenceFrequency)[keyof typeof RecurrenceFrequency]
+export const RecurrenceFrequency = { Daily: 0, Weekly: 1, Monthly: 2 } as const satisfies Record<string, RecurrenceFrequency>
+export type RecurrenceFrequency = ApiDto<'Dixels.Bookings.RecurrenceFrequency'>
 
 /** Monthly only: the same date each month, or the same weekday position ("2nd Tuesday"). */
-export const MonthlyRepeat = { OnDay: 0, OnWeekday: 1 } as const
-export type MonthlyRepeat = (typeof MonthlyRepeat)[keyof typeof MonthlyRepeat]
+export const MonthlyRepeat = { OnDay: 0, OnWeekday: 1 } as const satisfies Record<string, MonthlyRepeat>
+export type MonthlyRepeat = ApiDto<'Dixels.Bookings.MonthlyRepeat'>
 
-/** How a booking repeats (RecurrenceDto on the server). */
-export interface RecurrenceDto {
-  frequency: RecurrenceFrequency
-  interval: number
-  /** Weekly only: 0 = Sunday … 6 = Saturday. */
-  weekdays: number[]
-  monthlyRepeat: MonthlyRepeat
-  /** Last date an occurrence may fall on, "YYYY-MM-DD". */
-  endDate: IsoDate
-}
+/** How a booking repeats: `weekdays` (weekly only) are 0 = Sunday … 6; `endDate` is the last date an occurrence may fall on. */
+export type RecurrenceDto = ApiDto<'Dixels.Bookings.RecurrenceDto'>
 
-export interface SeriesRequestDto extends BookingRequestDto {
-  recurrence: RecurrenceDto
-}
+export type SeriesRequestDto = ApiDto<'Dixels.Bookings.SeriesRequestDto'>
 
-export interface CreateSeriesDto extends SeriesRequestDto {
-  skipDates: IsoDate[]
-  idempotencyKey: string
-}
+export type CreateSeriesDto = ApiDto<'Dixels.Bookings.CreateSeriesDto'>
 
-export interface OccurrencePreviewDto {
-  date: IsoDate
-  localStart: string
-  localEnd: string
-  isValid: boolean
-  violations: BookingViolationDto[]
-  warnings: BookingViolationDto[]
-}
+export type OccurrencePreviewDto = ApiResponse<'Dixels.Bookings.OccurrencePreviewDto'>
 
-export interface SeriesPreviewDto {
-  /** Problems every date shares (too many people, too long) — nothing can be booked until they're fixed. */
-  seriesViolations: BookingViolationDto[]
-  occurrences: OccurrencePreviewDto[]
-  bookableCount: number
-  timezone: string
-}
+/** Every date checked; `seriesViolations` are problems every date shares (too many people, too long) — nothing books until they're fixed. */
+export type SeriesPreviewDto = ApiResponse<'Dixels.Bookings.SeriesPreviewDto'>
 
-export interface SeriesCreatedDto {
-  seriesId: string
-  bookings: BookingDto[]
-}
+export type SeriesCreatedDto = ApiResponse<'Dixels.Bookings.SeriesCreatedDto'>
 
 /** Every date of a recurring booking checked against every rule, nothing reserved. */
 export function previewSeries(token: string, input: SeriesRequestDto): Promise<SeriesPreviewDto> {

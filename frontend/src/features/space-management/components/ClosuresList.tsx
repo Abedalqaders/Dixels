@@ -221,6 +221,8 @@ export function ClosuresList({
         effect,
         reasonCategory,
         reasonDetail: reasonDetail.trim() || null,
+        // The page asks what this closure would break, then sends the admin's choice.
+        cancelAffectedBookings: false,
       })
       setStartDate(undefined)
       setStartTime('')
