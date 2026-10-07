@@ -33,13 +33,11 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
         CancellationToken cancellationToken = default)
     {
         var query = await BuildQueryAsync(filter, buildingId, roleId, grantedPermission, cancellationToken);
-
-        return await query
-            .OrderBy(u => u.UserName)
-            .Skip(skipCount)
-            .Take(maxResultCount)
-            .ToListAsync(cancellationToken);
+        return await Page(query, skipCount, maxResultCount).ToListAsync(cancellationToken);
     }
+
+    private static IQueryable<IdentityUser> Page(IQueryable<IdentityUser> query, int skipCount, int maxResultCount) =>
+        query.OrderBy(u => u.UserName).Skip(skipCount).Take(maxResultCount);
 
     public async Task<long> GetCountAsync(
         string? filter,
@@ -88,6 +86,21 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
             .ThenBy(u => u.UserName)
             .Take(maxResultCount)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<(long TotalCount, List<IdentityUser> Users)> GetPageAsync(
+        string? filter,
+        Guid? buildingId,
+        Guid? roleId,
+        string? grantedPermission,
+        int skipCount,
+        int maxResultCount,
+        CancellationToken cancellationToken = default)
+    {
+        var query = await BuildQueryAsync(filter, buildingId, roleId, grantedPermission, cancellationToken);
+        var totalCount = await query.LongCountAsync(cancellationToken);
+        var users = await Page(query, skipCount, maxResultCount).ToListAsync(cancellationToken);
+        return (totalCount, users);
     }
 
     private async Task<IQueryable<IdentityUser>> BuildQueryAsync(

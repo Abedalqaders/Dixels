@@ -243,6 +243,18 @@ public class BookingImpactChecker : DomainService
         }
     }
 
+    /// <summary>
+    /// The same bookings as entities, soonest first — for cancelling them when the person leaves
+    /// <paramref name="buildingId"/>. The building is picked out in the query, no room is loaded.
+    /// </summary>
+    public async Task<List<Booking>> FindUpcomingForUserInBuildingAsync(Guid userId, Guid buildingId)
+    {
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            return await AsyncExecuter.ToListAsync((await UpcomingForUserQueryAsync(userId, buildingId)).OrderBy(b => b.StartsAt));
+        }
+    }
+
     /// <summary>The first <paramref name="maxCount"/> of them, soonest first.</summary>
     public async Task<List<UpcomingBooking>> FindUpcomingForUserAsync(Guid userId, Guid buildingId, int maxCount)
     {

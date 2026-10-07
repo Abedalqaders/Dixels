@@ -135,7 +135,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await EnsureCanManageBuildingAsync(input.BuildingId);
 
         // 404 for an unknown or deleted building, instead of a foreign-key failure (500).
-        await _buildingRepository.GetAsync(input.BuildingId);
+        await _buildingRepository.EnsureExistsAsync(input.BuildingId);
 
         var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
         var floor = new Floor(GuidGenerator.Create(), input.BuildingId, names[0].Language, names[0].Name, input.FloorNumber);

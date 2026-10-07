@@ -35,7 +35,6 @@ public class BookingUserEventHandler :
 
     private async Task CancelUpcomingAsync(Guid userId, Guid adminId, string reasonKey)
     {
-        var (_, upcoming) = await _bookingImpact.UpcomingForUserAsync(userId);
-        await _bookingImpact.CancelAllAsync(upcoming, adminId, _bookingImpact.Text(reasonKey));
+        await _bookingImpact.CancelAllAsync(await _bookingImpact.UpcomingForUserAsync(userId), adminId, _bookingImpact.Text(reasonKey));
     }
 }
