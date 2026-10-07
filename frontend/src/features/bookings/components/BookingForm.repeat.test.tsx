@@ -46,6 +46,7 @@ const building: BookableBuildingDto = {
   timezone: 'UTC',
   maxHorizonDays: 30,
   maxSeriesHorizonDays: 90,
+  isRemoved: false,
   minLeadMinutes: 0,
   slotMinutes: 15,
   ownOverlapPolicy: 1,

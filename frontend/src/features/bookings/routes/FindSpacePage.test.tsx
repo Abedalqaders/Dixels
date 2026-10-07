@@ -42,6 +42,8 @@ const building: BookableBuildingDto = {
   name: 'Riverside HQ',
   timezone: 'UTC',
   maxHorizonDays: 30,
+  maxSeriesHorizonDays: 90,
+  isRemoved: false,
   minLeadMinutes: 0,
   slotMinutes: 15,
   ownOverlapPolicy: 1,
@@ -93,6 +95,7 @@ describe('FindSpacePage', () => {
       timezone: 'UTC',
       localStart: '2026-10-01T10:00:00',
       localEnd: '2026-10-01T11:00:00',
+      warnings: [],
       spaces: [
         result(room201, { freeUntil: '14:00' }),
         result(desk12, {
@@ -208,6 +211,7 @@ describe('FindSpacePage', () => {
         timezone: 'UTC',
         localStart: '2026-10-01T10:00:00',
         localEnd: '2026-10-01T11:00:00',
+        warnings: [],
         spaces: [
           result(room201, { freeUntil: '14:00' }),
           result(room301, { floorId: 'f3', floorName: 'Level 3', freeUntil: '12:00' }),

@@ -7,6 +7,7 @@ import { setLanguage } from '@/i18n'
 import { BookingImpactDialog } from './BookingImpactDialog'
 
 const impact: ReservationImpactDto = {
+  assignedEmployees: 0,
   count: 2,
   items: [
     {
@@ -119,6 +120,7 @@ describe('BookingImpactDialog', () => {
     expect(screen.getByRole('button', { name: 'Loading…' })).toBeDisabled()
 
     resolve({
+      assignedEmployees: 0,
       count: 3,
       items: [{ ...impact.items[1], id: 'b3', placeName: 'Room 3', localStart: '2026-10-02T08:00:00', localEnd: '2026-10-02T09:00:00' }],
     })
