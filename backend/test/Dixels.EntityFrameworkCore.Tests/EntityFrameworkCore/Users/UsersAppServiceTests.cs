@@ -248,6 +248,37 @@ public class UsersAppServiceTests : DixelsApplicationTestBase<DixelsEntityFramew
     }
 
     [Fact]
+    public async Task List_by_permission_pages_with_the_full_count()
+    {
+        // Three people in a new building who hold the permission directly, two a page.
+        var building = await CreateBuildingAsync();
+        var users = new List<IdentityUser>();
+        for (var i = 0; i < 3; i++)
+        {
+            var user = await CreateUserAsync(building.Id);
+            await WithUnitOfWorkAsync(() =>
+                _permissionManager.SetAsync(DixelsPermissions.Bookings.Create, UserPermissionValueProvider.ProviderName, user.Id.ToString(), true));
+            users.Add(user);
+        }
+
+        async Task<PagedResultDto<IdentityUserDto>> PageAsync(int skip)
+        {
+            var input = new GetIdentityUsersInput { SkipCount = skip, MaxResultCount = 2 };
+            input.ExtraProperties[DixelsUserConsts.PermissionFilterKey] = DixelsPermissions.Bookings.Create;
+            input.ExtraProperties[BuildingIdKey] = building.Id.ToString();
+            return await _identityUserAppService.GetListAsync(input);
+        }
+
+        var first = await PageAsync(0);
+        var second = await PageAsync(2);
+
+        first.TotalCount.ShouldBe(3);
+        second.TotalCount.ShouldBe(3);
+        first.Items.Concat(second.Items).Select(u => u.UserName)
+            .ShouldBe(users.Select(u => u.UserName).OrderBy(n => n));
+    }
+
+    [Fact]
     public async Task List_without_a_building_filter_is_abps_own()
     {
         var result = await _identityUserAppService.GetListAsync(new GetIdentityUsersInput { Filter = "admin" });

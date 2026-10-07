@@ -55,38 +55,13 @@ public class BookingImpactService : ITransientDependency
     }
 
     /// <summary>
-    /// A person's upcoming bookings as impacts — all of them, or only those in
-    /// <paramref name="buildingId"/> (moving them elsewhere). Also returns that building, for
-    /// describing them on its clock.
+    /// A person's upcoming bookings, for cancelling them — all of them, or only those in
+    /// <paramref name="buildingId"/> (moving them elsewhere; picked out in the same query).
     /// </summary>
-    public async Task<(Building? Building, IReadOnlyList<BookingImpact> Impacts)> UpcomingForUserAsync(Guid userId, Guid? buildingId = null)
-    {
-        var bookings = await _checker.FindUpcomingForUserAsync(userId);
-        if (bookings.Count == 0)
-        {
-            return (buildingId is null ? null : await _buildingRepository.FindAsync(buildingId.Value), Array.Empty<BookingImpact>());
-        }
-
-        // Deleted rooms included: they're still where the booking is.
-        using (_dataFilter.Disable<ISoftDelete>())
-        {
-            var spaceIds = bookings.Select(b => b.SpaceId).Distinct().ToList();
-            var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id))).ToDictionary(s => s.Id);
-            var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
-            var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
-
-            var impacts = bookings
-                .Select(b => (Booking: b, Space: spaces[b.SpaceId], Floor: floors[spaces[b.SpaceId].FloorId]))
-                .Where(x => buildingId is null || x.Floor.BuildingId == buildingId)
-                .Select(x => new BookingImpact(x.Booking, x.Space, x.Floor, Array.Empty<BookingViolation>()))
-                .ToList();
-
-            var building = buildingId is not null
-                ? await _buildingRepository.FindAsync(buildingId.Value)
-                : impacts.Count > 0 ? await _buildingRepository.FindAsync(impacts[0].Floor.BuildingId) : null;
-            return (building, impacts);
-        }
-    }
+    public async Task<List<Booking>> UpcomingForUserAsync(Guid userId, Guid? buildingId = null) =>
+        buildingId is { } building
+            ? await _checker.FindUpcomingForUserInBuildingAsync(userId, building)
+            : await _checker.FindUpcomingForUserAsync(userId);
 
     /// <summary>
     /// Someone leaves <paramref name="fromBuildingId"/> (moved or unassigned): they can only
@@ -99,8 +74,7 @@ public class BookingImpactService : ITransientDependency
             return;
         }
 
-        var (_, upcoming) = await UpcomingForUserAsync(userId, fromBuildingId);
-        await CancelAllAsync(upcoming, adminId, Text("Dixels:Bookings:CancelReason:MovedBuilding"));
+        await CancelAllAsync(await UpcomingForUserAsync(userId, fromBuildingId), adminId, Text("Dixels:Bookings:CancelReason:MovedBuilding"));
     }
 
     public BookingImpactChecker Checker => _checker;
@@ -191,6 +165,10 @@ public class BookingImpactService : ITransientDependency
     /// <summary>Cancels bookings with one reason for all (a closure, a removed room).</summary>
     public Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
         CancelInBatchesAsync(impacts.Select(i => i.Booking.Id), adminId, _ => reason);
+
+    /// <summary>The same, for bookings already read (a person's, when they leave or are removed).</summary>
+    public Task CancelAllAsync(IReadOnlyList<Booking> bookings, Guid adminId, string reason) =>
+        CancelInBatchesAsync(bookings.Select(b => b.Id), adminId, _ => reason);
 
     /// <summary>The same, for what the save's own preview already found (bookings only).</summary>
     public Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason) =>

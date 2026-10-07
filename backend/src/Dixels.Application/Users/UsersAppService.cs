@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Volo.Abp;
 using Volo.Abp.Data;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
@@ -52,7 +53,11 @@ public class UsersAppService : DixelsAppService, IUsersAppService
     [Authorize(IdentityPermissions.Users.Update)]
     public async Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, int skip = 0)
     {
-        var user = await _userManager.GetByIdAsync(userId);
+        // Only the building is read: the user without roles, claims, logins and the rest
+        // (still tracked, so the BuildingId column fills the extra property). The same
+        // not-found as before for an unknown user.
+        var user = await _identityUserRepository.FindAsync(userId, includeDetails: false)
+                   ?? throw new EntityNotFoundException(typeof(Volo.Abp.Identity.IdentityUser), userId);
         if (user.GetBuildingId() is not { } current)
         {
             return new ReservationImpactDto();

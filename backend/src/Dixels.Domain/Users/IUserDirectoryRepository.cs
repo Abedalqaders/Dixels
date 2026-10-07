@@ -36,4 +36,17 @@ public interface IUserDirectoryRepository
         Guid? roleId,
         string? grantedPermission,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// <see cref="GetCountAsync"/> and <see cref="GetListAsync"/> together, for a page with its
+    /// total: the filters (and a permission's direct grants) are worked out once for both.
+    /// </summary>
+    Task<(long TotalCount, List<IdentityUser> Users)> GetPageAsync(
+        string? filter,
+        Guid? buildingId,
+        Guid? roleId,
+        string? grantedPermission,
+        int skipCount,
+        int maxResultCount,
+        CancellationToken cancellationToken = default);
 }
