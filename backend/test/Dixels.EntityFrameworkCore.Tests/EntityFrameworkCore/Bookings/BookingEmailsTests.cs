@@ -1,14 +1,17 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Dixels.Bookings;
 using Dixels.Emailing;
+using Dixels.Emails;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EventBus.Local;
@@ -253,31 +256,186 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         EmailsTo(s).ShouldBeEmpty();
     }
 
+    // ---- Cancelled by an admin: one email per person per admin action ----
+
+    /// <summary>A booking tomorrow, straight into the database.</summary>
+    private Task<Booking> BookDirectAsync(Scenario s, int startHour, int minutes = 60) =>
+        BookDirectAsync(s, TimeSpan.FromHours(startHour), minutes);
+
+    private Task<Booking> BookDirectAsync(Scenario s, TimeSpan from, int minutes) => WithUnitOfWorkAsync(() =>
+        GetRequiredService<IBookingRepository>().InsertAsync(new Booking(
+            Guid.NewGuid(), s.Space.Id, s.UserId,
+            new DateTimeOffset(Tomorrow.Add(from), TimeSpan.Zero),
+            new DateTimeOffset(Tomorrow.Add(from).AddMinutes(minutes), TimeSpan.Zero),
+            2, title: "Planning", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString())));
+
+    private Task CancelAsAdminAsync(Guid bookingId, string reason) =>
+        GetRequiredService<BookingImpactChecker>().CancelUpcomingAsAdminAsync(new[] { bookingId }, Admin, reason);
+
+    private static readonly Guid Admin = Guid.NewGuid();
+
+    private async Task<BackgroundJobRecord[]> AdminCancelJobsFor(Scenario s) =>
+        (await QueuedJobs.WaitingAsync(ServiceProvider))
+        .Where(j => j.JobName == "Dixels.Emails.AdminCancelled" && j.JobArgs.Contains(s.UserId.ToString()))
+        .ToArray();
+
     [Fact]
-    public async Task An_admin_cancel_is_announced_but_not_emailed()
+    public async Task An_admin_cancel_emails_the_owner_what_was_cancelled_and_why()
     {
         var s = await CreateScenarioAsync();
-        BookingDto booking;
-        using (ActAs(s.UserId))
+        var booking = await BookDirectAsync(s, 10);
+        _emails.Clear();
+
+        await WithUnitOfWorkAsync(() => CancelAsAdminAsync(booking.Id, "Closed: Floor works <now>"));
+
+        // Queued with the cancel, sent by the job.
+        EmailsTo(s).ShouldBeEmpty();
+        (await AdminCancelJobsFor(s)).ShouldHaveSingleItem();
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var email = EmailsTo(s).ShouldHaveSingleItem();
+        email.Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+        email.Body.ShouldContain("Hi Dana Haddad,");
+        email.Body.ShouldContain("An admin cancelled your booking.");
+        email.Body.ShouldContain("Level 1");
+        email.Body.ShouldContain("10:00–11:00");
+        email.Body.ShouldContain("Closed: Floor works &lt;now&gt;");
+        email.Body.ShouldContain("http://localhost:5173/my-calendar");
+    }
+
+    [Fact]
+    public async Task One_admin_action_in_several_rounds_and_reasons_is_one_email_per_person()
+    {
+        var s = await CreateScenarioAsync();
+        var other = await CreateScenarioAsync();
+        var early = await BookDirectAsync(s, 9);
+        var late = await BookDirectAsync(s, 15);
+        var theirs = await BookDirectAsync(other, 11);
+        _emails.Clear();
+
+        // Three rounds, two reasons, two people — as a rule change that breaks two rules does.
+        await WithUnitOfWorkAsync(async () =>
         {
-            booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id));
+            await CancelAsAdminAsync(late.Id, "Rules changed: Open 10:00–14:00 only");
+            await CancelAsAdminAsync(early.Id, "Rules changed: Up to 30 minutes");
+            await CancelAsAdminAsync(theirs.Id, "Rules changed: Up to 30 minutes");
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var email = EmailsTo(s).ShouldHaveSingleItem();
+        email.Subject.ShouldBe("2 of your bookings were cancelled by an admin");
+        email.Body.ShouldContain("An admin cancelled 2 of your bookings.");
+        // Soonest first, each with its own reason.
+        email.Body.IndexOf("09:00–10:00", StringComparison.Ordinal).ShouldBeLessThan(email.Body.IndexOf("15:00–16:00", StringComparison.Ordinal));
+        email.Body.ShouldContain("Rules changed: Open 10:00–14:00 only");
+        email.Body.ShouldContain("Rules changed: Up to 30 minutes");
+        EmailsTo(other).ShouldHaveSingleItem().Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+    }
+
+    [Fact]
+    public async Task An_admin_cancel_that_rolls_back_emails_nobody()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookDirectAsync(s, 10);
+        _emails.Clear();
+
+        // The emails are queued as the cancel saves, in its unit of work: one that fails
+        // before then queues nothing.
+        await Should.ThrowAsync<InvalidOperationException>(() => WithUnitOfWorkAsync(async () =>
+        {
+            await CancelAsAdminAsync(booking.Id, "Closed");
+            throw new InvalidOperationException("Something after the cancel failed");
+        }));
+
+        (await AdminCancelJobsFor(s)).ShouldBeEmpty();
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        EmailsTo(s).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task The_admin_cancel_email_is_in_the_owners_language()
+    {
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(() => _userLanguage.SetAsync(s.UserId, "ar"));
+        var first = await BookDirectAsync(s, 10);
+        var second = await BookDirectAsync(s, 12);
+        _emails.Clear();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            await CancelAsAdminAsync(first.Id, "Closed");
+            await CancelAsAdminAsync(second.Id, "Closed");
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var email = EmailsTo(s).ShouldHaveSingleItem();
+        email.Subject.ShouldBe("ألغى أحد المسؤولين 2 من حجوزاتك");
+        email.Body.ShouldContain("dir=\"rtl\"");
+        email.Body.ShouldContain("مرحبًا Dana Haddad،");
+        email.Body.ShouldContain("ألغى أحد المسؤولين 2 من حجوزاتك.");
+        // The times stay left-to-right inside the Arabic text.
+        email.Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span>");
+    }
+
+    [Fact]
+    public async Task A_long_list_shows_the_soonest_and_counts_the_rest()
+    {
+        var s = await CreateScenarioAsync();
+        var ids = new List<Guid>();
+        for (var i = 0; i < AdminCancelEmailQueue.ShownBookings + 3; i++)
+        {
+            // Half-hour slots from midnight on.
+            ids.Add((await BookDirectAsync(s, TimeSpan.FromMinutes(30 * i), 30)).Id);
         }
         _emails.Clear();
 
-        // Listening as any other listener would: the event is there for them, the email isn't.
-        BookingsCancelledEvent? heard = null;
-        using (GetRequiredService<ILocalEventBus>().Subscribe<BookingsCancelledEvent>(e => { heard = e; return Task.CompletedTask; }))
-        {
-            await WithUnitOfWorkAsync(async () =>
-            {
-                var stored = await GetRequiredService<IBookingRepository>().GetAsync(booking.Id);
-                await GetRequiredService<BookingImpactChecker>().CancelAsAdminAsync(new[] { stored }, Guid.NewGuid(), _ => "Room closed");
-            });
-        }
+        await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactChecker>().CancelUpcomingAsAdminAsync(ids, Admin, "Closed"));
+        await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        heard.ShouldNotBeNull();
-        heard.ByAdmin.ShouldBeTrue();
-        heard.Bookings.ShouldHaveSingleItem().Id.ShouldBe(booking.Id);
+        var email = EmailsTo(s).ShouldHaveSingleItem();
+        email.Subject.ShouldBe("23 of your bookings were cancelled by an admin");
+        email.Body.Split("text-decoration:line-through").Length.ShouldBe(AdminCancelEmailQueue.ShownBookings + 1);
+        email.Body.ShouldContain("…and 3 more. Open Dixels to see them all.");
+        email.Body.ShouldContain("00:00–00:30");
+        email.Body.ShouldNotContain("11:00–11:30"); // the 23rd
+    }
+
+    [Fact]
+    public async Task A_removed_room_is_still_named_in_the_email()
+    {
+        var s = await CreateScenarioAsync();
+        await BookDirectAsync(s, 10);
+        _emails.Clear();
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            await _spaceRepository.DeleteAsync(s.Space.Id);
+            await GetRequiredService<ILocalEventBus>().PublishAsync(new SpaceDeletedEvent(s.Space.Id, Admin));
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider); // cancels
+        await QueuedJobs.RunAllAsync(ServiceProvider); // emails
+
+        var email = EmailsTo(s).ShouldHaveSingleItem();
+        email.Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+        email.Body.ShouldContain("The space was removed");
+    }
+
+    [Fact]
+    public async Task A_switched_off_account_gets_no_admin_cancel_email()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookDirectAsync(s, 10);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var user = await _userManager.GetByIdAsync(s.UserId);
+            user.SetIsActive(false);
+            (await _userManager.UpdateAsync(user)).Succeeded.ShouldBeTrue();
+        });
+        _emails.Clear();
+
+        await WithUnitOfWorkAsync(() => CancelAsAdminAsync(booking.Id, "Account deactivated"));
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
         EmailsTo(s).ShouldBeEmpty();
     }
 

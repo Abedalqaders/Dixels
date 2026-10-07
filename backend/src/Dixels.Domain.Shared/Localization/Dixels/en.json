@@ -895,6 +895,11 @@
     "Email:BookingReminder:Subject": "Reminder: {0} at {1}",
     "Email:BookingReminder:Intro": "Your booking starts soon.",
     "Email:SeriesConfirmed:Subject": "Recurring booking confirmed: {0}",
-    "Email:SeriesConfirmed:Intro": "Your recurring booking is confirmed."
+    "Email:SeriesConfirmed:Intro": "Your recurring booking is confirmed.",
+    "Email:AdminCancelled:Subject": "Booking cancelled by an admin: {0}, {1}",
+    "Email:AdminCancelled:SubjectMany": "{0} of your bookings were cancelled by an admin",
+    "Email:AdminCancelled:Intro": "An admin cancelled your booking.",
+    "Email:AdminCancelled:IntroMany": "An admin cancelled {0} of your bookings.",
+    "Email:AdminCancelled:More": "…and {0} more. Open Dixels to see them all."
   }
 }
