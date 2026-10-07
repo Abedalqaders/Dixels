@@ -10,6 +10,7 @@ using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
@@ -400,6 +401,96 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
 
         cancelled.ShouldNotBeNull().ByAdmin.ShouldBeTrue();
         cancelled.InviteesByBooking[created.Id].ShouldHaveSingleItem().UserId.ShouldBe(s.Rana.Id);
+    }
+
+    // ---- My calendar and reading an invite (T3) ----
+
+    private async Task<List<BookingSummaryDto>> CalendarOfAsync(Person p)
+    {
+        using var _ = ActAs(p.Id);
+        return (await _bookings.GetMineAsync(new GetMyBookingsInput { From = Tomorrow, To = Tomorrow.AddDays(1) })).Items.ToList();
+    }
+
+    [Fact]
+    public async Task An_invited_colleague_sees_the_booking_in_their_calendar_marked_as_an_invite()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+        }
+
+        (await CalendarOfAsync(s.Rana)).ShouldHaveSingleItem().ShouldSatisfyAllConditions(
+            b => b.Id.ShouldBe(created.Id),
+            b => b.IsInvited.ShouldBeTrue(),
+            b => b.Title.ShouldBe("Planning"));
+        (await CalendarOfAsync(s.Owner)).ShouldHaveSingleItem().IsInvited.ShouldBeFalse();
+        (await CalendarOfAsync(s.Omar)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_invite_the_owner_cancelled_leaves_the_calendar_but_one_an_admin_cancelled_stays_struck_through()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto byOwner, byAdmin;
+        using (ActAs(s.Owner.Id))
+        {
+            byOwner = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+            var later = Request(s.SpaceId, 2, Colleague(s.Rana));
+            later.LocalStart = Tomorrow.AddHours(12);
+            later.LocalEnd = Tomorrow.AddHours(13);
+            byAdmin = await _bookings.CreateAsync(later);
+            await _bookings.CancelAsync(byOwner.Id, new CancelBookingDto());
+        }
+        await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactChecker>()
+            .CancelUpcomingAsAdminAsync(new[] { byAdmin.Id }, Guid.NewGuid(), "The room was removed"));
+
+        var shown = (await CalendarOfAsync(s.Rana)).ShouldHaveSingleItem();
+        shown.Id.ShouldBe(byAdmin.Id);
+        shown.Status.ShouldBe(nameof(BookingStatus.Cancelled));
+        shown.IsInvited.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_colleague_guest_can_open_the_booking_read_only_and_sees_other_guests_by_name_only()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 3, Colleague(s.Rana), Colleague(s.Omar)));
+        }
+
+        using var _ = ActAs(s.Rana.Id);
+        var read = await _bookings.GetAsync(created.Id);
+
+        read.IsOwner.ShouldBeFalse();
+        read.OwnerName.ShouldBe("Owner Test");
+        read.Invitees.Select(i => i.Name).ShouldBe(new[] { "Rana Test", "Omar Test" }, ignoreOrder: true);
+        read.Invitees.ShouldAllBe(i => i.Email == string.Empty);
+    }
+
+    [Fact]
+    public async Task A_guest_cannot_cancel_and_a_stranger_cannot_even_open_it()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+        }
+
+        using (ActAs(s.Rana.Id))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.CancelAsync(created.Id, new CancelBookingDto()));
+        }
+        using (ActAs(s.Omar.Id))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.GetAsync(created.Id));
+        }
+
+        (await _bookingRepository.GetAsync(created.Id)).Status.ShouldBe(BookingStatus.Confirmed);
     }
 
     // ---- Colleague search ----
