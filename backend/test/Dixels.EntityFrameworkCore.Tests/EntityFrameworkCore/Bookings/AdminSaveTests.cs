@@ -187,6 +187,54 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
     }
 
     [Fact]
+    public async Task A_big_cancel_goes_in_rounds_and_still_cancels_every_one_without_emails()
+    {
+        var s = await CreateScenarioAsync();
+        // 1,200 one-minute bookings from 16:00 (the new closing time) on, 300 a room; 10 that still fit.
+        var outside = new List<Guid>();
+        var inside = new List<Guid>();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            foreach (var room in s.AllRooms)
+            {
+                for (var i = 0; i < 300; i++)
+                {
+                    var start = new DateTimeOffset(Tomorrow.AddHours(16).AddMinutes(i), TimeSpan.Zero);
+                    outside.Add((await _bookingRepository.InsertAsync(new Booking(Guid.NewGuid(), room, s.UserId, start, start.AddMinutes(1),
+                        2, title: "Slot", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString()))).Id);
+                }
+            }
+
+            for (var i = 0; i < 10; i++)
+            {
+                var start = new DateTimeOffset(Tomorrow.AddHours(10).AddMinutes(i), TimeSpan.Zero);
+                inside.Add((await _bookingRepository.InsertAsync(new Booking(Guid.NewGuid(), s.Rooms[0][0], s.UserId, start, start.AddMinutes(1),
+                    2, title: "Slot", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString()))).Id);
+            }
+        });
+        var emails = GetRequiredService<Dixels.Emailing.FakeEmailSender>();
+        emails.Clear();
+
+        var (rounds, subscription) = Listen<BookingsCancelledEvent>();
+        using (subscription)
+        using (ActAs(Admin))
+        {
+            (await _buildings.UpdateConstraintsAsync(s.BuildingId, await BuildingRulesAsync(s, "09:00", "16:00", 180, cancel: true)))
+                .CancelledBookings.ShouldBe(1200);
+        }
+
+        var stored = await WithUnitOfWorkAsync(() => _bookingRepository.GetListAsync(b => b.UserId == s.UserId));
+        stored.Where(b => outside.Contains(b.Id)).ShouldAllBe(b =>
+            b.Status == BookingStatus.Cancelled && b.CancelledByAdmin && b.CancelReason == "Rules changed: Open 09:00–16:00 only");
+        stored.Where(b => inside.Contains(b.Id)).ShouldAllBe(b => b.Status == BookingStatus.Confirmed);
+
+        // Three rounds of at most 500, each an admin cancel: nobody is emailed for those.
+        rounds.Select(r => r.Bookings.Count).ShouldBe(new[] { 500, 500, 200 });
+        rounds.ShouldAllBe(r => r.ByAdmin);
+        emails.Sent.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_floor_rules_save_keeps_or_cancels_only_on_that_floor()
     {
         var s = await CreateScenarioAsync();
