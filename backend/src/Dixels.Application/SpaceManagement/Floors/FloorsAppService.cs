@@ -171,16 +171,18 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         var proposedDays = ConstraintDtoConversions.ToOperatingDaysOrNull(input.Days);
         var proposedHours = ConstraintDtoConversions.ToOperatingWindowOrNull(input.Hours);
 
+        // The floor's rooms are read once: for the warnings, the event and (when cancelling) the check.
+        var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == id, includeDetails: true);
+
         // Computed before saving — the tightening itself is never blocked, this is purely
         // informational for the admin to go fix the named Spaces afterward.
-        var warnings = await FindNarrowingConflictsAsync(id, proposedDays, proposedHours);
+        var warnings = await FindNarrowingConflictsAsync(spaces, proposedDays, proposedHours);
 
-        // The change on an unsaved copy, before the real floor changes: the rooms it reaches
-        // and, when the admin chose to cancel what no longer fits, how much that is.
-        var change = await ProposedChangeAsync(building, floor, input);
-        // Checked once: the event carries what it found, so no listener checks it all again.
+        // When the admin chose to cancel what no longer fits: worked out on an unsaved copy,
+        // before the real floor changes, and carried by the event so no listener checks it all
+        // again. Kept bookings need no check.
         var affected = input.CancelAffectedBookings
-            ? ReservationImpactPreview.ToAffected(await _impactPreview.NoLongerFittingAsync(change))
+            ? await _impactPreview.AffectedAsync(ProposedChange(building, floor, input, spaces))
             : null;
 
         // Validated against the Building's raw values directly — Building has no parent of
@@ -193,7 +195,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         await CurrentUnitOfWork!.SaveChangesAsync();
         // What the rooms hold is released (or kept, as the admin chose) by its own module.
         await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-            building.Id, change.Rooms.Select(r => r.Space.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId(), affected));
+            building.Id, spaces.Select(s => s.Id).ToList(), input.CancelAffectedBookings, CurrentUser.GetId(), affected));
 
         return new ConstraintsSaveResultDto
         {
@@ -209,7 +211,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, floor, input), skip);
+        var spaces = await _spaceRepository.GetListAsync(s => s.FloorId == floor.Id);
+        return await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, input, spaces), skip);
     }
 
     [Authorize(DixelsPermissions.Floors.Delete)]
@@ -223,7 +226,7 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
 
     // The proposed floor is a fresh, untracked copy — checking it can never save anything.
     /// <summary>The floor's rules as the admin proposes them, on an unsaved copy, for every room on it.</summary>
-    private async Task<RoomRulesChange> ProposedChangeAsync(Building building, Floor floor, UpdateFloorConstraintsDto input)
+    private RoomRulesChange ProposedChange(Building building, Floor floor, UpdateFloorConstraintsDto input, IReadOnlyList<Space> spaces)
     {
         // Its name plays no part in the check — any one of them will do.
         var name = floor.Translations.First();
@@ -233,11 +236,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         proposed.SetOwnMaxDuration(input.MaxDurationMinutes);
 
         return new RoomRulesChange(
-            building, await RoomsAsync(floor), (space, _) => _constraintResolver.Resolve(building, proposed, space));
+            building, spaces.Select(s => (s, floor)).ToList(), (space, _) => _constraintResolver.Resolve(building, proposed, space));
     }
-
-    private async Task<List<(Space Space, Floor Floor)>> RoomsAsync(Floor floor) =>
-        (await _spaceRepository.GetListAsync(s => s.FloorId == floor.Id)).Select(s => (s, floor)).ToList();
 
     [Authorize(DixelsPermissions.Floors.Default)]
     public async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id)
@@ -331,11 +331,10 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         }
     }
 
-    private async Task<List<string>> FindNarrowingConflictsAsync(Guid floorId, OperatingDays? proposedDays, OperatingWindow? proposedHours)
+    /// <summary>The rooms (read with their names) whose own days or hours the proposed floor rules would cut into.</summary>
+    private async Task<List<string>> FindNarrowingConflictsAsync(IReadOnlyList<Space> floorSpaces, OperatingDays? proposedDays, OperatingWindow? proposedHours)
     {
-        var spaces = (await _spaceRepository.GetListAsync(s => s.FloorId == floorId, includeDetails: true))
-            .Where(s => s.Days is not null || s.Hours is not null)
-            .ToList();
+        var spaces = floorSpaces.Where(s => s.Days is not null || s.Hours is not null).ToList();
         var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
         var candidates = spaces.Select(s => new NarrowingCandidate(names[s.Id], s.Days, s.Hours)).ToList();
 

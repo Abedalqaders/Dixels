@@ -23,8 +23,14 @@ public interface IReservationImpactProvider
     /// <summary>Everything upcoming it holds in <paramref name="scope"/>: a delete takes all of it, for <paramref name="reason"/>.</summary>
     Task<ReservationImpactPart> FindUpcomingAsync(Building building, RoomScope scope, string reason, int first);
 
-    /// <summary>How many upcoming reservations it holds in these rooms — counted, nothing described.</summary>
-    Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds);
+    /// <summary>
+    /// The same as <see cref="FindNoLongerFittingAsync"/>, as a save carries it on: which, and
+    /// the first rule each breaks — all of them, and no names (nobody reads them).
+    /// </summary>
+    Task<List<AffectedReservation>> FindAffectedAsync(RoomRulesChange change);
+
+    /// <summary>How many upcoming reservations it holds in <paramref name="scope"/> — counted, nothing described.</summary>
+    Task<int> CountUpcomingAsync(RoomScope scope);
 
     /// <summary>What a person holds in a building they're leaving (moved or unassigned), for <paramref name="reason"/>.</summary>
     Task<ReservationImpactPart> FindForPersonLeavingAsync(Guid userId, Building building, string reason, int first);

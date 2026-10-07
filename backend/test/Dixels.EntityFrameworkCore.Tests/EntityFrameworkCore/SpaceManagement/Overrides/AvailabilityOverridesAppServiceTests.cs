@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement;
+using Dixels.SpaceManagement.ValueObjects;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Repositories;
@@ -21,10 +22,27 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
         _overrideRepository = GetRequiredService<IRepository<AvailabilityOverride, Guid>>();
     }
 
+    private sealed record Place(Guid BuildingId, Guid FloorId, Guid OtherFloorId, Guid SpaceId);
+
+    /// <summary>A building with two floors and a room — an override needs a real place to go on.</summary>
+    private Task<Place> CreatePlaceAsync() => WithUnitOfWorkAsync(async () =>
+    {
+        var building = await GetRequiredService<IRepository<Building, Guid>>().InsertAsync(new Building(
+            Guid.NewGuid(), "en", "Overrides HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
+            new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
+            maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
+        var floors = GetRequiredService<IRepository<Floor, Guid>>();
+        var floor = await floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
+        var other = await floors.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 2", 2));
+        var spaceType = await GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync();
+        var space = await GetRequiredService<IRepository<Space, Guid>>().InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, 8));
+        return new Place(building.Id, floor.Id, other.Id, space.Id);
+    });
+
     [Fact]
     public async Task Create_Then_GetList_Roundtrips_Reason_And_Effect()
     {
-        var buildingId = Guid.NewGuid();
+        var buildingId = (await CreatePlaceAsync()).BuildingId;
         var starts = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero);
         var ends = starts.AddDays(1);
 
@@ -50,9 +68,8 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
     [Fact]
     public async Task GetList_Is_Scoped_And_Does_Not_Leak_Other_Scopes_Or_ScopeIds()
     {
-        var floorId = Guid.NewGuid();
-        var otherFloorId = Guid.NewGuid();
-        var spaceId = Guid.NewGuid();
+        var place = await CreatePlaceAsync();
+        var (floorId, otherFloorId) = (place.FloorId, place.OtherFloorId);
         var starts = DateTimeOffset.UtcNow;
         var ends = starts.AddHours(2);
 
@@ -74,15 +91,10 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
             Effect = OverrideEffect.Closed,
             ReasonCategory = ReasonCategory.Maintenance,
         });
-        await _overridesAppService.CreateAsync(new CreateAvailabilityOverrideDto
-        {
-            Scope = OverrideScope.Space,
-            ScopeId = floorId,
-            StartsAt = starts,
-            EndsAt = ends,
-            Effect = OverrideEffect.Closed,
-            ReasonCategory = ReasonCategory.Maintenance,
-        });
+        // The same id under another scope: no room has it (the API would refuse it), so it goes
+        // straight in — the list must still not show it.
+        await WithUnitOfWorkAsync(() => _overrideRepository.InsertAsync(new AvailabilityOverride(
+            Guid.NewGuid(), OverrideScope.Space, floorId, starts, ends, OverrideEffect.Closed, ReasonCategory.Maintenance, null)));
 
         var list = await _overridesAppService.GetListAsync(new GetAvailabilityOverridesInput { Scope = OverrideScope.Floor, ScopeId = floorId });
 
@@ -180,10 +192,11 @@ public class AvailabilityOverridesAppServiceTests : DixelsApplicationTestBase<Di
     public async Task Delete_Is_A_Real_Hard_Delete()
     {
         var starts = DateTimeOffset.UtcNow;
+        var spaceId = (await CreatePlaceAsync()).SpaceId;
         var created = await _overridesAppService.CreateAsync(new CreateAvailabilityOverrideDto
         {
             Scope = OverrideScope.Space,
-            ScopeId = Guid.NewGuid(),
+            ScopeId = spaceId,
             StartsAt = starts,
             EndsAt = starts.AddHours(1),
             Effect = OverrideEffect.Open,
