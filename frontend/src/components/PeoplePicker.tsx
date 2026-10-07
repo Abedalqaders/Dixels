@@ -91,9 +91,10 @@ export function PeoplePicker({ id, value, onChange, searchKey, search, allowGues
               aria-controls={`${tabsId}-panel`}
               onClick={() => setTab(key)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-colors',
+                // No preflight here: a <button> keeps the browser's border and grey fill unless told.
+                'inline-flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
                 'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
-                tab === key && 'bg-background text-foreground shadow-xs',
+                tab === key && 'bg-background text-foreground shadow-sm',
               )}
             >
               {key === 'colleague' ? <SearchIcon className="size-3.5" aria-hidden="true" /> : <Mail className="size-3.5" aria-hidden="true" />}
@@ -114,9 +115,9 @@ export function PeoplePicker({ id, value, onChange, searchKey, search, allowGues
       </div>
 
       {value.length > 0 && (
-        <ul className="grid rounded-md border" aria-label={t('People:Picked')}>
+        <ul className="m-0 grid list-none rounded-md border border-border p-0" aria-label={t('People:Picked')}>
           {value.map((p, i) => (
-            <li key={p.userId ?? `guest:${p.email.toLowerCase()}`} className="flex min-w-0 items-center gap-3 px-3 py-2 not-first:border-t">
+            <li key={p.userId ?? `guest:${p.email.toLowerCase()}`} className="flex min-w-0 items-center gap-3 px-3 py-2 not-first:border-t not-first:border-border">
               <Initials name={p.name || p.email} guest={p.isExternal} />
               <span className="grid min-w-0 flex-1">
                 <span className="truncate text-sm font-medium">{p.name || p.email}</span>
@@ -214,7 +215,7 @@ function ColleagueSearch({ people, searchKey, search, onAdd, onRemoveLast }: Col
               onFocus={() => text && setOpen(true)}
               placeholder={t('People:Search')}
               autoComplete="off"
-              className="h-full w-full min-w-0 bg-transparent text-base outline-hidden placeholder:text-muted-foreground md:text-sm"
+              className="h-full w-full min-w-0 border-0 bg-transparent p-0 text-base outline-hidden placeholder:text-muted-foreground md:text-sm"
             />
           </div>
         </PopoverAnchor>
@@ -274,7 +275,7 @@ function GuestFields({ id, people, onAdd }: { id: string; people: PickedPerson[]
   const enterAdds = (e: KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && submit(e)
 
   return (
-    <div className="grid gap-2 rounded-md border border-dashed bg-[color-mix(in_srgb,var(--state-expired-soft)_30%,transparent)] p-3">
+    <div className="grid gap-2 rounded-md border border-dashed border-input bg-[color-mix(in_srgb,var(--state-expired-soft)_30%,transparent)] p-3">
       <div className="grid gap-2 sm:grid-cols-[1.3fr_1fr]">
         <div className="grid gap-1.5">
           <Label htmlFor={`${id}-guest-email`}>{t('People:GuestEmail')}</Label>
