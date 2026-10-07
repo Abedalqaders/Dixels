@@ -6463,7 +6463,7 @@ export interface components {
             ownOverlapPolicy: components["schemas"]["Dixels.SpaceManagement.OwnOverlapPolicy"];
         };
         "Dixels.SpaceManagement.UpdateBuildingDto": {
-            addresses: components["schemas"]["Dixels.SpaceManagement.BuildingAddressDto"][];
+            addresses?: components["schemas"]["Dixels.SpaceManagement.BuildingAddressDto"][] | null;
             buildingNumber?: string | null;
             names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             timezone: string;

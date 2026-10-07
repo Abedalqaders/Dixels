@@ -11318,7 +11318,6 @@
       },
       "Dixels.SpaceManagement.UpdateBuildingDto": {
         "required": [
-          "addresses",
           "names",
           "timezone"
         ],
@@ -11341,7 +11340,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Dixels.SpaceManagement.BuildingAddressDto"
-            }
+            },
+            "nullable": true
           },
           "timezone": {
             "maxLength": 64,
