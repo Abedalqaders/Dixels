@@ -111,8 +111,6 @@
 .rowbtn:hover { background: var(--accent-soft); color: var(--accent-ink); }
 .rowbtn svg { width: 14px; height: 14px; }
 
-.treeempty { padding: var(--space-4) var(--space-5) var(--space-3); font-size: 13px; color: var(--ink-secondary); }
-
 /* search-match highlight */
 mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radius: 3px; padding: 0 1px; }
 
