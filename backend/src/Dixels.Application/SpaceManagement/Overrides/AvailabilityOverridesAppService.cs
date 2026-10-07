@@ -77,8 +77,20 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     [Authorize(DixelsPermissions.Overrides.Create)]
     public async Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input)
     {
-        // Where it is, read once; null when the scope doesn't exist (nothing to announce there).
-        var place = await FindPlaceAsync(input);
+        // Built first, so its own rules (a range that ends after it starts) are checked first.
+        var availabilityOverride = new AvailabilityOverride(
+            GuidGenerator.Create(),
+            input.Scope,
+            input.ScopeId,
+            input.StartsAt,
+            input.EndsAt,
+            input.Effect,
+            input.ReasonCategory,
+            input.ReasonDetail);
+
+        // Where it is, read once: a room, floor or building that doesn't exist (or was removed)
+        // is a not-found, and nothing is saved.
+        var place = await FindPlaceAsync(input) ?? throw NotFound(input);
 
         // The rooms it closes, worked out before it's saved; none for a special opening, which
         // can't break anything. When the admin chose to cancel what it closes, the bookings it
@@ -86,7 +98,7 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         // checks them all again; kept bookings need no check, so then only the rooms' ids are read.
         List<Guid>? closedRooms = null;
         IReadOnlyList<AffectedReservation>? affected = null;
-        if (place is not null && Closes(input))
+        if (Closes(input))
         {
             if (input.CancelAffectedBookings)
             {
@@ -100,16 +112,6 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
             }
         }
 
-        var availabilityOverride = new AvailabilityOverride(
-            GuidGenerator.Create(),
-            input.Scope,
-            input.ScopeId,
-            input.StartsAt,
-            input.EndsAt,
-            input.Effect,
-            input.ReasonCategory,
-            input.ReasonDetail);
-
         // Saved now, so whoever listens reads it along with the room's other closures.
         await _overrideRepository.InsertAsync(availabilityOverride, autoSave: true);
 
@@ -118,7 +120,7 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
             // What the rooms hold is released (or kept, as the admin chose) by its own module.
             await _localEventBus.PublishAsync(new ClosureCreatedEvent(
                 availabilityOverride.Id,
-                place!.Building.Id,
+                place.Building.Id,
                 closedRooms,
                 ClosureReason(input),
                 input.CancelAffectedBookings,
@@ -186,7 +188,7 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
         }
     }
 
-    /// <summary>The not-found GetAsync gives for the scope's own type, so a missing scope reads the same as before.</summary>
+    /// <summary>The not-found GetAsync gives for the scope's own type.</summary>
     private static EntityNotFoundException NotFound(CreateAvailabilityOverrideDto input) => input.Scope switch
     {
         OverrideScope.Space => new EntityNotFoundException(typeof(Space), input.ScopeId),

@@ -10,6 +10,7 @@ using Dixels.SpaceManagement.ValueObjects;
 using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
+using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
@@ -280,6 +281,47 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
         events[0].SpaceIds.ShouldBe(new[] { s.Rooms[1][1] });
         events[1].SpaceIds.OrderBy(id => id).ShouldBe(s.AllRooms.OrderBy(id => id));
         events.ShouldAllBe(e => e.BuildingId == s.BuildingId);
+    }
+
+    [Theory]
+    [InlineData(OverrideScope.Space, OverrideEffect.Closed)]
+    [InlineData(OverrideScope.Floor, OverrideEffect.Closed)]
+    [InlineData(OverrideScope.Building, OverrideEffect.Closed)]
+    [InlineData(OverrideScope.Space, OverrideEffect.Open)]
+    public async Task A_closure_or_opening_on_a_removed_room_floor_or_building_is_not_found_and_saves_nothing(OverrideScope scope, OverrideEffect effect)
+    {
+        var s = await CreateScenarioAsync();
+        var scopeId = scope switch
+        {
+            OverrideScope.Space => s.Rooms[0][0],
+            OverrideScope.Floor => s.FloorIds[0],
+            _ => s.BuildingId,
+        };
+        await WithUnitOfWorkAsync(async () =>
+        {
+            switch (scope)
+            {
+                case OverrideScope.Space: await GetRequiredService<IRepository<Space, Guid>>().DeleteAsync(scopeId); break;
+                case OverrideScope.Floor: await GetRequiredService<IRepository<Floor, Guid>>().DeleteAsync(scopeId); break;
+                default: await GetRequiredService<IRepository<Building, Guid>>().DeleteAsync(scopeId); break;
+            }
+        });
+
+        var input = Closure(scope, scopeId, 9, 12, cancel: true);
+        input.Effect = effect;
+        using (ActAs(Admin))
+        {
+            var notFound = await Should.ThrowAsync<EntityNotFoundException>(() => _closures.CreateAsync(input));
+            notFound.EntityType.ShouldBe(scope switch
+            {
+                OverrideScope.Space => typeof(Space),
+                OverrideScope.Floor => typeof(Floor),
+                _ => typeof(Building),
+            });
+            notFound.Id.ShouldBe(scopeId);
+        }
+
+        (await WithUnitOfWorkAsync(() => GetRequiredService<IRepository<AvailabilityOverride, Guid>>().CountAsync(o => o.ScopeId == scopeId))).ShouldBe(0);
     }
 
     [Fact]
