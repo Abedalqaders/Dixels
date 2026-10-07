@@ -24,7 +24,7 @@ public interface IAvailabilityOverridesAppService : IApplicationService
     Task<AvailabilityOverrideDto> CreateAsync(CreateAvailabilityOverrideDto input);
 
     /// <summary>The upcoming bookings this closure would fall on — nothing is saved.</summary>
-    Task<ReservationImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input);
+    Task<ReservationImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input, int skip = 0);
 
     Task DeleteAsync(Guid id);
 }

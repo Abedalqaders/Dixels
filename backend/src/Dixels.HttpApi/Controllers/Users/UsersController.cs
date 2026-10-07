@@ -24,7 +24,7 @@ public class UsersController : DixelsController, IUsersAppService
     }
 
     [HttpGet("{userId}/reassign-impact")]
-    public virtual Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId) => _usersAppService.GetReassignImpactAsync(userId);
+    public virtual Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, [FromQuery] int skip = 0) => _usersAppService.GetReassignImpactAsync(userId, skip);
 
     [HttpPut("{userId}/building")]
     public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>

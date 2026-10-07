@@ -483,7 +483,7 @@ export function AdminConstraintsPage() {
         concurrencyStamp: data.concurrencyStamp,
       }
       return {
-        impact: () => getBuildingConstraintsImpact(token, id, input),
+        impact: (skip?: number) => getBuildingConstraintsImpact(token, id, input, skip),
         save: (cancelAffectedBookings: boolean) => updateBuildingConstraints(token, id, { ...input, cancelAffectedBookings }),
       }
     }
@@ -495,7 +495,7 @@ export function AdminConstraintsPage() {
         concurrencyStamp: data.concurrencyStamp,
       }
       return {
-        impact: () => getFloorConstraintsImpact(token, id, input),
+        impact: (skip?: number) => getFloorConstraintsImpact(token, id, input, skip),
         save: (cancelAffectedBookings: boolean) => updateFloorConstraints(token, id, { ...input, cancelAffectedBookings }),
       }
     }
@@ -508,7 +508,7 @@ export function AdminConstraintsPage() {
         concurrencyStamp: data.concurrencyStamp,
       }
       return {
-        impact: () => getSpaceConstraintsImpact(token, id, input),
+        impact: (skip?: number) => getSpaceConstraintsImpact(token, id, input, skip),
         save: (cancelAffectedBookings: boolean) => updateSpaceConstraints(token, id, { ...input, cancelAffectedBookings }),
       }
     }
@@ -524,7 +524,7 @@ export function AdminConstraintsPage() {
       const impact = await calls.impact()
       let cancel = false
       if (impact.count > 0) {
-        const choice = await askImpact({ mode: 'change', impact })
+        const choice = await askImpact({ mode: 'change', impact, loadMore: calls.impact })
         if (!choice) return
         cancel = choice === 'cancel'
       }
@@ -554,7 +554,7 @@ export function AdminConstraintsPage() {
       const impact = await getOverrideImpact(token, input)
       let cancel = false
       if (impact.count > 0) {
-        const choice = await askImpact({ mode: 'closure', impact })
+        const choice = await askImpact({ mode: 'closure', impact, loadMore: (skip) => getOverrideImpact(token, input, skip) })
         if (!choice) return
         cancel = choice === 'cancel'
       }

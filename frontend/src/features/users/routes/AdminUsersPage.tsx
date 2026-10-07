@@ -130,7 +130,7 @@ export function AdminUsersPage() {
     try {
       // Upcoming bookings in the building they're leaving: keep or cancel, before moving them.
       const impact = await getReassignImpact(token, userId)
-      if (impact.count > 0 && !(await askImpact({ mode: 'reassign', impact, subject: userLabel }))) return
+      if (impact.count > 0 && !(await askImpact({ mode: 'reassign', impact, subject: userLabel, loadMore: (skip) => getReassignImpact(token, userId, skip) }))) return
 
       await assignUserBuilding(token, userId, buildingId === UNASSIGNED ? null : buildingId)
       // Whole sentences per case (not a "· N cancelled" tail glued on) so each language

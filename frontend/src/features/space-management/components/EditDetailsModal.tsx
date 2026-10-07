@@ -103,7 +103,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
         const impact = await getSpaceUpdateImpact(token, state.id, input)
         let cancelAffectedBookings = false
         if (impact.count > 0) {
-          const choice = await askImpact({ mode: 'change', impact })
+          const choice = await askImpact({ mode: 'change', impact, loadMore: (skip) => getSpaceUpdateImpact(token, state.id, input, skip) })
           if (!choice) {
             setSubmitting(false)
             return

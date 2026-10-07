@@ -431,7 +431,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -2223,7 +2225,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -2332,7 +2336,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -3154,7 +3160,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -3263,7 +3271,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -4996,7 +5006,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -5105,7 +5117,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -5212,7 +5226,9 @@ export interface paths {
         put?: never;
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -5648,7 +5664,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    skip?: number;
+                };
                 header?: never;
                 path: {
                     userId: string;

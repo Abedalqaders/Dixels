@@ -11,21 +11,30 @@ namespace Dixels.Reservations;
 /// reservations" — without space management or user management knowing those modules exist.
 /// The questions are asked in space-management terms; each module answers for what it holds.
 /// Questions only: nothing here changes anything (what happens on save is announced as events).
+///
+/// A preview is read a page at a time, so each answer is the full count plus only the first
+/// <c>first</c> reservations, soonest first (all of them when a save asks: <see cref="int.MaxValue"/>).
 /// </summary>
 public interface IReservationImpactProvider
 {
     /// <summary>What it holds in these rooms that the proposed rules (and an added closure) would no longer allow.</summary>
-    Task<List<AffectedReservationDto>> FindNoLongerFittingAsync(RoomRulesChange change);
+    Task<ReservationImpactPart> FindNoLongerFittingAsync(RoomRulesChange change, int first);
 
-    /// <summary>Everything upcoming it holds in these rooms: a delete takes all of it, for <paramref name="reason"/>.</summary>
-    Task<List<AffectedReservationDto>> FindUpcomingAsync(Building building, IReadOnlyList<(Space Space, Floor Floor)> rooms, string reason);
+    /// <summary>Everything upcoming it holds in <paramref name="scope"/>: a delete takes all of it, for <paramref name="reason"/>.</summary>
+    Task<ReservationImpactPart> FindUpcomingAsync(Building building, RoomScope scope, string reason, int first);
 
     /// <summary>How many upcoming reservations it holds in these rooms — counted, nothing described.</summary>
     Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds);
 
     /// <summary>What a person holds in a building they're leaving (moved or unassigned), for <paramref name="reason"/>.</summary>
-    Task<List<AffectedReservationDto>> FindForPersonLeavingAsync(Guid userId, Building building, string reason);
+    Task<ReservationImpactPart> FindForPersonLeavingAsync(Guid userId, Building building, string reason, int first);
 }
+
+/// <summary>One module's answer: how many in all, and the first of them, soonest first.</summary>
+public sealed record ReservationImpactPart(int Count, IReadOnlyList<RankedReservation> Items);
+
+/// <summary>An affected reservation with its start in UTC, so answers from several modules merge in time order.</summary>
+public sealed record RankedReservation(DateTimeOffset StartsAt, AffectedReservationDto Reservation);
 
 /// <summary>
 /// A proposed change to the rules of some rooms, worked out on unsaved copies — nothing is

@@ -224,19 +224,19 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     }
 
     [Authorize(DixelsPermissions.Buildings.Edit)]
-    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input)
+    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateBuildingConstraintsDto input, int skip = 0)
     {
         await EnsureCanManageBuildingAsync(id);
         var building = await _buildingRepository.GetAsync(id);
-        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, input));
+        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, input), skip);
     }
 
     [Authorize(DixelsPermissions.Buildings.Delete)]
-    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id)
+    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, int skip = 0)
     {
         await EnsureCanManageBuildingAsync(id);
         var building = await _buildingRepository.GetAsync(id);
-        var impact = await _impactPreview.UpcomingAsync(building, await RoomsAsync(id), L["Dixels:Bookings:CancelReason:BuildingRemoved"]);
+        var impact = await _impactPreview.UpcomingAsync(building, new RoomScope(id), L["Dixels:Bookings:CancelReason:BuildingRemoved"], skip);
 
         // They keep the assignment (a restore brings everything back), but can't book meanwhile.
         impact.AssignedEmployees = (int)await _userDirectory.GetCountAsync(filter: null, buildingId: id, roleId: null, grantedPermission: null);

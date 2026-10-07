@@ -34,8 +34,8 @@ public class AvailabilityOverridesController : DixelsController, IAvailabilityOv
         _overridesAppService.CreateAsync(input);
 
     [HttpPost("impact")]
-    public virtual Task<ReservationImpactDto> GetCreateImpactAsync([FromBody] CreateAvailabilityOverrideDto input) =>
-        _overridesAppService.GetCreateImpactAsync(input);
+    public virtual Task<ReservationImpactDto> GetCreateImpactAsync([FromBody] CreateAvailabilityOverrideDto input, [FromQuery] int skip = 0) =>
+        _overridesAppService.GetCreateImpactAsync(input, skip);
 
     [HttpDelete("{id}")]
     public virtual Task DeleteAsync(Guid id) => _overridesAppService.DeleteAsync(id);

@@ -105,55 +105,55 @@ public class BookingImpactService : ITransientDependency
 
     public BookingImpactChecker Checker => _checker;
 
-    /// <summary>The bookings as the admin reads them; <paramref name="fixedReason"/> replaces the per-rule reasons (a delete).</summary>
-    public async Task<List<AffectedReservationDto>> DescribeAsync(Building building, IReadOnlyList<BookingImpact> impacts, string? fixedReason = null)
+    /// <summary>
+    /// The bookings as the admin reads them, each with its UTC start for ordering;
+    /// <paramref name="fixedReason"/> replaces the per-rule reasons (a delete). Pass only the
+    /// ones that will be shown: each name is looked up once for the lot.
+    /// </summary>
+    public async Task<List<RankedReservation>> DescribeAsync(Building building, IReadOnlyList<BookingMisfit> misfits, string? fixedReason = null)
     {
-        var clock = new BuildingClock(building.Timezone);
-        var names = await RoomNamesAsync(impacts);
-        var userIds = impacts.Select(i => i.Booking.UserId).Distinct().ToList();
-        var users = userIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : (await _userRepository.GetListByIdsAsync(userIds)).ToDictionary(
-                u => u.Id,
-                u => string.IsNullOrWhiteSpace(u.Name) ? u.UserName : $"{u.Name} {u.Surname}".Trim());
+        if (misfits.Count == 0)
+        {
+            return new List<RankedReservation>();
+        }
 
-        return impacts.Select(i => new AffectedReservationDto
+        var clock = new BuildingClock(building.Timezone);
+        var places = await PlacesAsync(misfits.Select(m => m.Booking.SpaceId).Distinct().ToList());
+        var userIds = misfits.Select(m => m.Booking.UserId).Distinct().ToList();
+        var users = (await _userRepository.GetListByIdsAsync(userIds)).ToDictionary(
+            u => u.Id,
+            u => string.IsNullOrWhiteSpace(u.Name) ? u.UserName : $"{u.Name} {u.Surname}".Trim());
+
+        return misfits.Select(m => new RankedReservation(m.Booking.StartsAt, new AffectedReservationDto
             {
                 Kind = ReservationKinds.Booking,
-                Id = i.Booking.Id,
-                Title = i.Booking.Title,
-                HeldBy = users.GetValueOrDefault(i.Booking.UserId, "Someone"),
-                PlaceName = names[i.Space.Id],
-                PlaceDetail = names[i.Floor.Id],
-                LocalStart = clock.ToLocal(i.Booking.StartsAt),
-                LocalEnd = clock.ToLocal(i.Booking.EndsAt),
+                Id = m.Booking.Id,
+                Title = m.Booking.Title,
+                HeldBy = users.GetValueOrDefault(m.Booking.UserId, "Someone"),
+                PlaceName = places[m.Booking.SpaceId].Room,
+                PlaceDetail = places[m.Booking.SpaceId].Floor,
+                LocalStart = clock.ToLocal(m.Booking.StartsAt),
+                LocalEnd = clock.ToLocal(m.Booking.EndsAt),
                 Reasons = fixedReason is not null
                     ? new List<string> { fixedReason }
-                    : i.Violations.Select(v => _violationLocalizer.ToDto(v).ShortMessage).Distinct().ToList(),
-            }).ToList();
+                    : m.Violations.Select(v => _violationLocalizer.ToDto(v).ShortMessage).Distinct().ToList(),
+            })).ToList();
     }
 
     /// <summary>
-    /// The rooms' and floors' names in the reader's language, by id. Read afresh with their
-    /// names: the impacts come from many places, not all of which load them. Deleted ones
-    /// included — they're still where the booking is.
+    /// Each room's name and its floor's, in the reader's language. Deleted ones included —
+    /// they're still where the booking is.
     /// </summary>
-    private async Task<Dictionary<Guid, string>> RoomNamesAsync(IReadOnlyList<BookingImpact> impacts)
+    private async Task<Dictionary<Guid, (string Room, string Floor)>> PlacesAsync(IReadOnlyCollection<Guid> spaceIds)
     {
-        if (impacts.Count == 0)
-        {
-            return new Dictionary<Guid, string>();
-        }
-
-        var spaceIds = impacts.Select(i => i.Space.Id).Distinct().ToList();
-        var floorIds = impacts.Select(i => i.Floor.Id).Distinct().ToList();
         using (_dataFilter.Disable<ISoftDelete>())
         {
             var spaces = await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true);
+            var floorIds = spaces.Select(s => s.FloorId).Distinct().ToList();
             var floors = await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id), includeDetails: true);
-            return (await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces))
-                .Concat(await _nameReader.ShownAsync<Floor, FloorTranslation>(floors))
-                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            var roomNames = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+            var floorNames = await _nameReader.ShownAsync<Floor, FloorTranslation>(floors);
+            return spaces.ToDictionary(s => s.Id, s => (roomNames[s.Id], floorNames[s.FloorId]));
         }
     }
 
@@ -210,15 +210,5 @@ public class BookingImpactService : ITransientDependency
         var floorIds = spaces.Select(s => s.FloorId).Distinct().ToList();
         var floors = (await _floorRepository.GetListAsync(f => floorIds.Contains(f.Id))).ToDictionary(f => f.Id);
         return (building, spaces.Where(s => floors.ContainsKey(s.FloorId)).Select(s => (s, floors[s.FloorId])).ToList());
-    }
-
-    /// <summary>Every upcoming booking on these rooms, as impacts with no rule broken — for a delete.</summary>
-    public async Task<IReadOnlyList<BookingImpact>> UpcomingAsync(IReadOnlyList<(Space Space, Floor Floor)> rooms)
-    {
-        var byId = rooms.ToDictionary(r => r.Space.Id);
-        var bookings = await _checker.FindUpcomingAsync(byId.Keys.ToList());
-        return bookings
-            .Select(b => new BookingImpact(b, byId[b.SpaceId].Space, byId[b.SpaceId].Floor, Array.Empty<BookingViolation>()))
-            .ToList();
     }
 }

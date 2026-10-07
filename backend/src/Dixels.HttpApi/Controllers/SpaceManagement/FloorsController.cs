@@ -36,11 +36,11 @@ public class FloorsController : DixelsController, IFloorsAppService
         _floorsAppService.UpdateAsync(id, input);
 
     [HttpPost("{id}/constraints/impact")]
-    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input) =>
-        _floorsAppService.GetConstraintsImpactAsync(id, input);
+    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input, [FromQuery] int skip = 0) =>
+        _floorsAppService.GetConstraintsImpactAsync(id, input, skip);
 
     [HttpGet("{id}/delete-impact")]
-    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id) => _floorsAppService.GetDeleteImpactAsync(id);
+    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => _floorsAppService.GetDeleteImpactAsync(id, skip);
 
     [HttpPut("{id}/constraints")]
     public virtual Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input) =>

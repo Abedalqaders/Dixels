@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AlertDialog,
@@ -9,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { formatCount } from '@/lib/formatCount'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 
@@ -20,6 +22,11 @@ export interface ImpactRequest {
   impact: ReservationImpactDto
   /** What's being deleted, for the delete wording. */
   subject?: string
+  /**
+   * The same preview again from `skip` on: the server sends the affected bookings a page at a
+   * time, and "Show more" adds the next page. Without it only the first page is listed.
+   */
+  loadMore?: (skip: number) => Promise<ReservationImpactDto>
 }
 
 interface BookingImpactDialogProps extends ImpactRequest {
@@ -31,10 +38,36 @@ interface BookingImpactDialogProps extends ImpactRequest {
  * where, why), and the choice — keep them (they were booked under the old rules) or cancel
  * them. A delete or a move always cancels, so it only asks to confirm. Either way the people who
  * booked see on their calendar that an admin cancelled it, and why.
+ *
+ * A long list comes a page at a time: "Showing 50 of 1240" and "Show more". The count and the
+ * buttons are always about all of them — keep or cancel acts on every one, shown or not.
  */
-export function BookingImpactDialog({ mode, impact, subject, onChoose }: BookingImpactDialogProps) {
+export function BookingImpactDialog({ mode, impact, subject, loadMore, onChoose }: BookingImpactDialogProps) {
   const { t } = useTranslation()
   const n = impact.count
+  const [items, setItems] = useState(impact.items)
+  const [loading, setLoading] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const paged = n > impact.items.length
+
+  async function showMore() {
+    if (!loadMore) return
+    setLoading(true)
+    setLoadFailed(false)
+    try {
+      const next = await loadMore(items.length)
+      // Rows can shift if bookings change between pages: never list one twice.
+      setItems((shown) => {
+        const seen = new Set(shown.map((b) => b.id))
+        return [...shown, ...next.items.filter((b) => !seen.has(b.id))]
+      })
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const people = impact.assignedEmployees ?? 0
   const title =
     mode === 'delete'
@@ -83,7 +116,7 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
 
         {n > 0 && (
         <ul className="grid max-h-64 gap-1.5 overflow-y-auto rounded-md border p-1.5" aria-label={t('Hierarchy:AffectedBookings')}>
-          {impact.items.map((b) => (
+          {items.map((b) => (
             <li key={b.id} className="grid gap-0.5 rounded px-2 py-1.5 text-sm odd:bg-muted/50">
               <span className="flex flex-wrap justify-between gap-x-3">
                 <span className="font-medium">
@@ -103,6 +136,22 @@ export function BookingImpactDialog({ mode, impact, subject, onChoose }: Booking
             </li>
           ))}
         </ul>
+        )}
+
+        {paged && (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+            <span aria-live="polite">{t('Hierarchy:ImpactShowing', { shown: formatCount(items.length), total: formatCount(n) })}</span>
+            {loadMore && items.length < n && (
+              <Button variant="ghost" size="sm" onClick={showMore} disabled={loading}>
+                {loading ? t('Hierarchy:ImpactShowMoreLoading') : t('Hierarchy:ImpactShowMore')}
+              </Button>
+            )}
+            {loadFailed && (
+              <span role="alert" className="w-full text-destructive">
+                {t('Hierarchy:ImpactShowMoreFailed')}
+              </span>
+            )}
+          </div>
         )}
 
         <AlertDialogFooter className="gap-2">

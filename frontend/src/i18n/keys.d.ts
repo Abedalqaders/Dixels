@@ -432,6 +432,10 @@ export interface TextKeys {
   "Hierarchy:ImpactReassignDetail": string
   "Hierarchy:ImpactReassignTitle_one": string
   "Hierarchy:ImpactReassignTitle_other": string
+  "Hierarchy:ImpactShowMore": string
+  "Hierarchy:ImpactShowMoreFailed": string
+  "Hierarchy:ImpactShowMoreLoading": string
+  "Hierarchy:ImpactShowing": string
   "Hierarchy:KeepAndAddClosure": string
   "Hierarchy:KeepAndSave": string
   "Hierarchy:Loading": string
