@@ -481,6 +481,8 @@ export function AdminConstraintsPage() {
         maxSeriesHorizonDays: buildingDraft.maxSeriesHorizonDays,
         ownOverlapPolicy: buildingDraft.ownOverlapPolicy,
         concurrencyStamp: data.concurrencyStamp,
+        // The checks ask about this exact change; the save sends the admin's choice instead.
+        cancelAffectedBookings: false,
       }
       return {
         impact: (skip?: number) => getBuildingConstraintsImpact(token, id, input, skip),
@@ -493,6 +495,8 @@ export function AdminConstraintsPage() {
         hours: floorDraft.hours ? operatingWindowToApi(floorDraft.hours) : null,
         maxDurationMinutes: floorDraft.maxDurationMinutes,
         concurrencyStamp: data.concurrencyStamp,
+        // The checks ask about this exact change; the save sends the admin's choice instead.
+        cancelAffectedBookings: false,
       }
       return {
         impact: (skip?: number) => getFloorConstraintsImpact(token, id, input, skip),
@@ -506,6 +510,8 @@ export function AdminConstraintsPage() {
         maxDurationMinutes: spaceDraft.maxDurationMinutes,
         minAttendees: spaceDraft.minAttendees,
         concurrencyStamp: data.concurrencyStamp,
+        // The checks ask about this exact change; the save sends the admin's choice instead.
+        cancelAffectedBookings: false,
       }
       return {
         impact: (skip?: number) => getSpaceConstraintsImpact(token, id, input, skip),

@@ -98,7 +98,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
       } else if (state.kind === 'floor') {
         await updateFloor(token, state.id, { names: toNameList(names), floorNumber: floorNumber.trim() ? Number(floorNumber) : null })
       } else {
-        const input = { names: toNameList(names), spaceTypeId, capacity: Number(capacity) }
+        const input = { names: toNameList(names), spaceTypeId, capacity: Number(capacity), cancelAffectedBookings: false }
         // A lower capacity can leave bookings for more people behind: ask first.
         const impact = await getSpaceUpdateImpact(token, state.id, input)
         let cancelAffectedBookings = false
