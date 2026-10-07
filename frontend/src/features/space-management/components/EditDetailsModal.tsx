@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFieldErrors } from '@/components/FieldError'
 import { LocalizedNameField, languageWithForeignLetters, fromNameList, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
-import { LocalizedAddressField, fromAddressList, toAddressList } from '@/components/LocalizedAddressField'
+import { LocalizedAddressField, addressNote, fromAddressList, toAddressList } from '@/components/LocalizedAddressField'
 import type { LocalizedAddresses } from '@/components/LocalizedAddressField'
 import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
@@ -160,6 +160,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
                 error={f.error('name')}
                 maxLength={MAX_NAME_LENGTH}
                 autoFocus
+                languageNote={state.kind === 'building' ? addressNote(addresses, t('Hierarchy:HasAddress')) : undefined}
               />
             </div>
             {state.kind === 'building' && (

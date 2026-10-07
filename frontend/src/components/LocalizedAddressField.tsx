@@ -37,18 +37,23 @@ interface LocalizedAddressFieldProps {
 /**
  * An optional address in each of the app's languages, typed under a LocalizedNameField and
  * following its language dropdown: switch the name to Arabic and this box shows the Arabic
- * address. It stays disabled until that language has a name.
+ * address. Its label names the language, a line under it says how to switch, and
+ * `addressNote` marks the languages with an address in the name's dropdown. It stays
+ * disabled until that language has a name.
  */
 export function LocalizedAddressField({ id, value, onChange, names, language, maxLength, disabled }: LocalizedAddressFieldProps) {
   const { t } = useTranslation()
   const current = languageInfo(language)
   const named = Boolean(names[language]?.trim())
   const hintId = `${id}-hint`
+  const helpId = `${id}-help`
 
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>
-        {t('Hierarchy:Address')} <span className="font-normal text-muted-foreground">{t('Hierarchy:Optional')}</span>
+        {/* Which language this box is typing in — it follows the name's dropdown above. */}
+        {t('Hierarchy:AddressIn', { language: current.name })}{' '}
+        <span className="font-normal text-muted-foreground">{t('Hierarchy:Optional')}</span>
       </Label>
       <Input
         id={id}
@@ -60,13 +65,21 @@ export function LocalizedAddressField({ id, value, onChange, names, language, ma
         maxLength={maxLength}
         autoComplete="off"
         disabled={disabled || !named}
-        aria-describedby={named ? undefined : hintId}
+        aria-describedby={named ? helpId : `${hintId} ${helpId}`}
       />
       {!named && (
         <p id={hintId} className="text-xs text-muted-foreground">
           {t('Hierarchy:AddressNeedsName', { language: current.name })}
         </p>
       )}
+      <p id={helpId} className="text-xs text-muted-foreground">
+        {t('Hierarchy:AddressOtherLanguages')}
+      </p>
     </div>
   )
+}
+
+/** For LocalizedNameField's `languageNote`: marks the languages that have an address. */
+export function addressNote(addresses: LocalizedAddresses, label: string) {
+  return (code: string) => (addresses[code]?.trim() ? label : undefined)
 }

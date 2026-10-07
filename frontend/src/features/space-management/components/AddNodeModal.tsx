@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFieldErrors } from '@/components/FieldError'
 import { LocalizedNameField, languageWithForeignLetters, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
-import { LocalizedAddressField, toAddressList } from '@/components/LocalizedAddressField'
+import { LocalizedAddressField, addressNote, toAddressList } from '@/components/LocalizedAddressField'
 import type { LocalizedAddresses } from '@/components/LocalizedAddressField'
 import { getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
@@ -166,6 +166,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
                 placeholder={state.kind === 'floor' ? t('Hierarchy:FloorNamePlaceholder') : t('Hierarchy:Name')}
                 maxLength={MAX_NAME_LENGTH}
                 autoFocus
+                languageNote={state.kind === 'building' ? addressNote(addresses, t('Hierarchy:HasAddress')) : undefined}
               />
             </div>
             {state.kind === 'building' && (

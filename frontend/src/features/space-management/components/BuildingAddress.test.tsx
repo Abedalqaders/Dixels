@@ -66,10 +66,30 @@ describe('building address', () => {
 
     const address = screen.getByLabelText(/^Address/)
     expect(address).toBeDisabled()
-    expect(address).toHaveAccessibleDescription('Give it a name in English first, then add the English address.')
+    expect(address).toHaveAccessibleDescription(
+      'Give it a name in English first, then add the English address. Change the language next to the name to add the address in another language.',
+    )
 
     await user.type(screen.getByLabelText(/^Name/), 'HQ')
     expect(screen.getByLabelText(/^Address/)).toBeEnabled()
+  })
+
+  it("names the language it types in, follows the name's dropdown and marks the languages with an address", async () => {
+    const user = userEvent.setup()
+    render(<AddNodeModal state={{ kind: 'building' }} token="t" spaceTypes={[]} onClose={vi.fn()} onCreated={vi.fn()} onError={vi.fn()} />)
+
+    expect(screen.getByLabelText(/^Address/)).toHaveAccessibleName('Address (English) (optional)')
+    expect(screen.getByText('Change the language next to the name to add the address in another language.')).toBeVisible()
+
+    await user.type(screen.getByLabelText(/^Name/), 'HQ')
+    await user.type(screen.getByLabelText(/^Address/), '12 King St')
+    await user.click(screen.getByRole('combobox', { name: 'Language of the name' }))
+    expect(screen.getByRole('option', { name: /English/ })).toHaveTextContent('· address')
+    expect(screen.getByRole('option', { name: /العربية/ })).not.toHaveTextContent('· address')
+    await user.click(screen.getByRole('option', { name: /العربية/ }))
+
+    expect(screen.getByLabelText(/^Address/)).toHaveAccessibleName('Address (العربية) (optional)')
+    expect(screen.getByLabelText(/^Address/)).toHaveValue('')
   })
 
   it('keeps the address when only the name is edited, and clears it when emptied', async () => {
