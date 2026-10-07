@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
@@ -52,6 +53,13 @@ export default defineConfig(({ mode }) => {
       environment: 'node',
       include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
       setupFiles: ['src/test/setupTests.ts'],
+      // By default every core but one runs a worker. The jsdom page tests are CPU-heavy, so
+      // when the machine is also busy (a backend container, a second test run) they starve
+      // and fail on the 5s test timeout, not on what they check: two runs at once failed
+      // 24–58 tests each. A few workers finish about as fast and leave room; the longer
+      // timeout absorbs what contention is left.
+      maxWorkers: Math.max(1, Math.min(4, availableParallelism() - 1)),
+      testTimeout: 15_000,
     },
   }
 })
