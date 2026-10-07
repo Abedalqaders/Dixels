@@ -502,7 +502,7 @@ const DayColumn = memo(function DayColumn({
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
               // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
               // Someone else's booking I'm invited to: an outline on the plain background.
-              b.invited && !b.cancelled && 'border-[1.5px] border-dashed border-brand bg-background shadow-none',
+              b.invited && !b.cancelled && 'border-[1.5px] border-dashed border-brand bg-[var(--surface-raised)] shadow-none',
               b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
             )}
             style={{

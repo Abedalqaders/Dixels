@@ -46,7 +46,7 @@ describe('MonthGrid invites', () => {
     render(<MonthGrid date="2026-10-01" items={[item('Mine', '09'), item('Sync', '10', false, true)]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} />)
 
     const invite = screen.getByRole('button', { name: 'Invite: Sync, 10:00–10:30, Room' })
-    expect(invite).toHaveClass('border-dashed', 'border-brand', 'bg-background')
+    expect(invite).toHaveClass('border-dashed', 'border-brand', 'bg-[var(--surface-raised)]')
     expect(screen.getByRole('button', { name: 'Mine, 09:00–09:30, Room' })).not.toHaveClass('border-dashed')
   })
 
@@ -55,7 +55,7 @@ describe('MonthGrid invites', () => {
 
     const cancelled = screen.getByRole('button', { name: 'Cancelled: Sync, 10:00–10:30, Room' })
     expect(cancelled).toHaveClass('line-through', 'bg-muted')
-    expect(cancelled).not.toHaveClass('bg-background')
+    expect(cancelled).not.toHaveClass('bg-[var(--surface-raised)]')
   })
 })
 

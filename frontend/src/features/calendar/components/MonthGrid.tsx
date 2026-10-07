@@ -132,7 +132,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                     'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-start text-[11px] text-brand hover:border-brand/70',
                     d < today && 'opacity-60',
                     // Someone else's booking I'm invited to: an outline on the plain background.
-                    b.invited && !b.cancelled && 'border-dashed border-brand bg-background',
+                    b.invited && !b.cancelled && 'border-dashed border-brand bg-[var(--surface-raised)]',
                     b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through',
                   )}
                   aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {

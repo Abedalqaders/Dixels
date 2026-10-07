@@ -147,7 +147,7 @@ describe('TimeGrid invites', () => {
     renderGrid('2026-10-02', vi.fn(), WEEK, [invite])
 
     const block = screen.getByRole('button', { name: 'Invite: Sync, 11:00–12:00, Room 301' })
-    expect(block).toHaveClass('border-dashed', 'border-brand', 'bg-background')
+    expect(block).toHaveClass('border-dashed', 'border-brand', 'bg-[var(--surface-raised)]')
     expect(block.querySelector('svg.lucide-users')).not.toBeNull()
   })
 })
