@@ -192,8 +192,9 @@ public class BookingImpactChecker : DomainService
 
     /// <summary>
     /// The next <paramref name="maxCount"/> confirmed bookings on these rooms that haven't
-    /// started yet, earliest first — for working through many a batch at a time (each batch
-    /// cancelled drops out of the next).
+    /// started yet — for working through many a batch at a time (each batch cancelled drops
+    /// out of the next). Grouped by owner, earliest first within each, so a person's bookings
+    /// land in one batch (two at most, at a batch's edge) and they get one email, not one per batch.
     /// </summary>
     public async Task<List<Booking>> FindUpcomingAsync(IReadOnlyCollection<Guid> spaceIds, int maxCount)
     {
@@ -206,7 +207,9 @@ public class BookingImpactChecker : DomainService
         var bookings = await _bookingRepository.GetQueryableAsync();
         return await AsyncExecuter.ToListAsync(bookings
             .Where(b => spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now)
-            .OrderBy(b => b.StartsAt)
+            .OrderBy(b => b.UserId)
+            .ThenBy(b => b.StartsAt)
+            .ThenBy(b => b.Id)
             .Take(maxCount));
     }
 
