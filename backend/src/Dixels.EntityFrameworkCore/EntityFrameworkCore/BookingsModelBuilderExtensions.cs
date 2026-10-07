@@ -43,8 +43,11 @@ public static class BookingsModelBuilderExtensions
             // The overlap check and the availability timeline both look up by space + time.
             b.HasIndex(x => new { x.SpaceId, x.StartsAt, x.EndsAt });
 
-            // "My bookings" lists by user + time.
-            b.HasIndex(x => new { x.UserId, x.StartsAt });
+            // "My bookings" between two times (calendar, own-clash check) asks for
+            // EndsAt > start AND StartsAt < end. EndsAt is what skips the person's history;
+            // bookings are short, so StartsAt < end only trims a few rows. On (UserId, StartsAt)
+            // every past booking was read, more each year.
+            b.HasIndex(x => new { x.UserId, x.EndsAt });
 
             // The reminder job's lookup, every minute: only rows still waiting for one.
             b.HasIndex(x => x.StartsAt)
