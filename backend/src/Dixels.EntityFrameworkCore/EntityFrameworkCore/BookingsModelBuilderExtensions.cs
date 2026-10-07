@@ -144,6 +144,10 @@ public static class BookingsModelBuilderExtensions
         b.Property(x => x.Email).HasMaxLength(BookingConsts.MaxInviteeEmailLength);
         b.Property(x => x.Name).HasMaxLength(BookingConsts.MaxInviteeNameLength);
         b.Property(x => x.ResponseStatus).HasConversion<string>().HasMaxLength(16).IsRequired();
+        b.Property(x => x.IcsUid).HasMaxLength(BookingConsts.MaxIcsUidLength).IsRequired();
+
+        // A reply to an invite is matched to its guest by this alone (E6).
+        b.HasIndex(x => x.IcsUid).IsUnique();
 
         b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
