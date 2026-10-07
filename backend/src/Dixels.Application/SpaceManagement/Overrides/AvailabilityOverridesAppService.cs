@@ -109,10 +109,10 @@ public class AvailabilityOverridesAppService : DixelsAppService, IAvailabilityOv
     }
 
     [Authorize(DixelsPermissions.Overrides.Create)]
-    public async Task<ReservationImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input)
+    public async Task<ReservationImpactDto> GetCreateImpactAsync(CreateAvailabilityOverrideDto input, int skip = 0)
     {
         var change = await ProposedClosureAsync(input);
-        return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change);
+        return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change, skip);
     }
 
     // "Closed: Replacing the chair" — the admin's own words when there are any, else the category.

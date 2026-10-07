@@ -20,7 +20,7 @@ namespace Dixels.Users;
 public interface IUsersAppService : IApplicationService
 {
     /// <summary>An employee's upcoming bookings in the building they're assigned to now — what moving them would leave behind.</summary>
-    Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId);
+    Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, int skip = 0);
 
     /// <summary>
     /// Sets (or clears) the employee's building, optionally cancelling their upcoming bookings

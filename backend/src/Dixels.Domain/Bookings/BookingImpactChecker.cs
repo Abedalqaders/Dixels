@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dixels.SpaceManagement;
 using Microsoft.Extensions.Options;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 using Volo.Abp.EventBus.Local;
@@ -12,6 +14,15 @@ namespace Dixels.Bookings;
 
 /// <summary>An upcoming booking that a change would no longer allow, and which rules it would break.</summary>
 public sealed record BookingImpact(Booking Booking, Space Space, Floor Floor, IReadOnlyList<BookingViolation> Violations);
+
+/// <summary>
+/// An upcoming booking as a preview reads it: only the columns a check or a description needs
+/// (not the stored rules snapshot), and not tracked — previews never save.
+/// </summary>
+public sealed record UpcomingBooking(Guid Id, Guid SpaceId, Guid UserId, string Title, DateTimeOffset StartsAt, DateTimeOffset EndsAt, int Attendees);
+
+/// <summary>An upcoming booking a change would affect, with the rules it would break (none for a delete or a move).</summary>
+public sealed record BookingMisfit(UpcomingBooking Booking, IReadOnlyList<BookingViolation> Violations);
 
 /// <summary>
 /// "Which upcoming bookings would this change break?" — for an admin about to tighten a
@@ -55,10 +66,16 @@ public class BookingImpactChecker : DomainService
         _localEventBus = localEventBus;
     }
 
+    // Only the previews' room lookups need these, so they're resolved when first used.
+    private IRepository<Space, Guid> SpaceRepository => LazyServiceProvider.LazyGetRequiredService<IRepository<Space, Guid>>();
+    private IRepository<Floor, Guid> FloorRepository => LazyServiceProvider.LazyGetRequiredService<IRepository<Floor, Guid>>();
+    private IDataFilter DataFilter => LazyServiceProvider.LazyGetRequiredService<IDataFilter>();
+
     /// <summary>
     /// The upcoming bookings on <paramref name="rooms"/> that <paramref name="proposedRules"/>
-    /// (and <paramref name="addedClosure"/>, if any) would reject. Pass the proposed rules as
-    /// a function so the caller can build them from unsaved copies — nothing here saves.
+    /// (and <paramref name="addedClosure"/>, if any) would reject, as tracked entities — for
+    /// cancelling them. Checked on <see cref="FindMisfitsAsync"/>'s light rows; only the ones
+    /// that fail are then loaded whole.
     /// </summary>
     public async Task<IReadOnlyList<BookingImpact>> FindNoLongerFittingAsync(
         Building building,
@@ -66,19 +83,56 @@ public class BookingImpactChecker : DomainService
         Func<Space, Floor, ResolvedConstraints> proposedRules,
         OverrideWindow? addedClosure = null)
     {
-        var upcoming = await FindUpcomingAsync(rooms.Select(r => r.Space.Id).ToList());
-        if (upcoming.Count == 0)
+        var misfits = await FindMisfitsAsync(building, rooms, proposedRules, addedClosure);
+        if (misfits.Count == 0)
         {
             return Array.Empty<BookingImpact>();
         }
 
+        var ids = misfits.Select(m => m.Booking.Id).ToList();
+        var bookings = (await _bookingRepository.GetListAsync(b => ids.Contains(b.Id))).ToDictionary(b => b.Id);
+        var roomById = rooms.ToDictionary(r => r.Space.Id);
+        return misfits
+            .Where(m => bookings.ContainsKey(m.Booking.Id))
+            .Select(m => new BookingImpact(bookings[m.Booking.Id], roomById[m.Booking.SpaceId].Space, roomById[m.Booking.SpaceId].Floor, m.Violations))
+            .ToList();
+    }
+
+    /// <summary>
+    /// The upcoming bookings on <paramref name="rooms"/> that <paramref name="proposedRules"/>
+    /// (and <paramref name="addedClosure"/>, if any) would reject, soonest first. Pass the
+    /// proposed rules as a function so the caller can build them from unsaved copies — nothing
+    /// here saves. Every upcoming booking in the rooms is checked (the rules are worked out in
+    /// the building's time zone, which SQL can't do), but only the columns the check needs are
+    /// read.
+    /// </summary>
+    public async Task<IReadOnlyList<BookingMisfit>> FindMisfitsAsync(
+        Building building,
+        IReadOnlyList<(Space Space, Floor Floor)> rooms,
+        Func<Space, Floor, ResolvedConstraints> proposedRules,
+        OverrideWindow? addedClosure = null)
+    {
+        var spaceIds = rooms.Select(r => r.Space.Id).ToList();
+        if (spaceIds.Count == 0)
+        {
+            return Array.Empty<BookingMisfit>();
+        }
+
         var now = Now();
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        var upcoming = await AsyncExecuter.ToListAsync(Soonest(bookings
+            .Where(b => spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now)));
+        if (upcoming.Count == 0)
+        {
+            return Array.Empty<BookingMisfit>();
+        }
+
         var until = upcoming.Max(b => b.EndsAt);
         var clock = new BuildingClock(building.Timezone);
         var roomById = rooms.ToDictionary(r => r.Space.Id);
 
-        // Existing closures and special openings over the whole range, loaded once.
-        var spaceIds = rooms.Select(r => r.Space.Id).ToList();
+        // Existing closures and special openings over the whole range, loaded once and looked
+        // up by what they cover (a room, a floor or the building), not rescanned per booking.
         var floorIds = rooms.Select(r => r.Floor.Id).Distinct().ToList();
         var overrides = (await _overrideRepository.GetListAsync(o =>
                 ((o.Scope == OverrideScope.Building && o.ScopeId == building.Id)
@@ -86,16 +140,15 @@ public class BookingImpactChecker : DomainService
                  || (o.Scope == OverrideScope.Space && spaceIds.Contains(o.ScopeId)))
                 && o.StartsAt < until
                 && o.EndsAt > now))
-            .Select(o => (Window: OverrideWindow.From(o), o.ScopeId))
-            .ToList();
+            .ToLookup(o => o.ScopeId, OverrideWindow.From);
 
-        var impacts = new List<BookingImpact>();
+        var misfits = new List<BookingMisfit>();
         foreach (var booking in upcoming)
         {
             var (space, floor) = roomById[booking.SpaceId];
-            var relevant = overrides
-                .Where(o => o.ScopeId == space.Id || o.ScopeId == floor.Id || o.ScopeId == building.Id)
-                .Select(o => o.Window)
+            var relevant = overrides[space.Id]
+                .Concat(overrides[floor.Id])
+                .Concat(overrides[building.Id])
                 .Append(addedClosure)
                 .OfType<OverrideWindow>()
                 .Where(o => o.Range.Overlaps(booking.StartsAt, booking.EndsAt))
@@ -114,11 +167,11 @@ public class BookingImpactChecker : DomainService
 
             if (broken.Count > 0)
             {
-                impacts.Add(new BookingImpact(booking, space, floor, broken));
+                misfits.Add(new BookingMisfit(booking, broken));
             }
         }
 
-        return impacts;
+        return misfits;
     }
 
     /// <summary>Every confirmed booking on these rooms that hasn't started yet, earliest first.</summary>
@@ -169,6 +222,95 @@ public class BookingImpactChecker : DomainService
         return await AsyncExecuter.CountAsync(bookings.Where(b =>
             spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now));
     }
+
+    /// <summary>How many confirmed bookings in <paramref name="scope"/> haven't started yet — one COUNT, no room loaded.</summary>
+    public async Task<int> CountUpcomingAsync(RoomScope scope)
+    {
+        var now = Now();
+        var rooms = await RoomIdsAsync(scope);
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        return await AsyncExecuter.CountAsync(bookings.Where(b =>
+            rooms.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now));
+    }
+
+    /// <summary>
+    /// The first <paramref name="maxCount"/> confirmed bookings in <paramref name="scope"/> that
+    /// haven't started yet, soonest first: the rooms are found in the same query, never loaded.
+    /// </summary>
+    public async Task<List<UpcomingBooking>> FindUpcomingAsync(RoomScope scope, int maxCount)
+    {
+        var now = Now();
+        var rooms = await RoomIdsAsync(scope);
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        return await AsyncExecuter.ToListAsync(Soonest(bookings
+                .Where(b => rooms.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now))
+            .Take(maxCount));
+    }
+
+    /// <summary>How many confirmed bookings this person has in <paramref name="buildingId"/> that haven't started yet.</summary>
+    public async Task<int> CountUpcomingForUserAsync(Guid userId, Guid buildingId)
+    {
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            return await AsyncExecuter.CountAsync(await UpcomingForUserQueryAsync(userId, buildingId));
+        }
+    }
+
+    /// <summary>The first <paramref name="maxCount"/> of them, soonest first.</summary>
+    public async Task<List<UpcomingBooking>> FindUpcomingForUserAsync(Guid userId, Guid buildingId, int maxCount)
+    {
+        using (DataFilter.Disable<ISoftDelete>())
+        {
+            return await AsyncExecuter.ToListAsync(Soonest(await UpcomingForUserQueryAsync(userId, buildingId)).Take(maxCount));
+        }
+    }
+
+    // Rooms in deleted floors or buildings count too (the soft-delete filter is off around the
+    // callers): they're still where the booking is, and a move releases it.
+    private async Task<IQueryable<Booking>> UpcomingForUserQueryAsync(Guid userId, Guid buildingId)
+    {
+        var now = Now();
+        var rooms =
+            from s in await SpaceRepository.GetQueryableAsync()
+            join f in await FloorRepository.GetQueryableAsync() on s.FloorId equals f.Id
+            where f.BuildingId == buildingId
+            select s.Id;
+        var bookings = await _bookingRepository.GetQueryableAsync();
+        // EndsAt > now is implied by StartsAt > now; it's there so the (UserId, EndsAt) index can seek.
+        return bookings.Where(b =>
+            b.UserId == userId && b.Status == BookingStatus.Confirmed && b.StartsAt > now && b.EndsAt > now
+            && rooms.Contains(b.SpaceId));
+    }
+
+    /// <summary>The ids of the rooms in a scope, as a query to use inside another (nothing is loaded).</summary>
+    private async Task<IQueryable<Guid>> RoomIdsAsync(RoomScope scope)
+    {
+        var spaces = await SpaceRepository.GetQueryableAsync();
+        if (scope.SpaceId is { } spaceId)
+        {
+            return spaces.Where(s => s.Id == spaceId).Select(s => s.Id);
+        }
+
+        var floors = (await FloorRepository.GetQueryableAsync()).Where(f => f.BuildingId == scope.BuildingId);
+        if (scope.FloorId is { } floorId)
+        {
+            floors = floors.Where(f => f.Id == floorId);
+        }
+
+        return from s in spaces
+               join f in floors on s.FloorId equals f.Id
+               select s.Id;
+    }
+
+    /// <summary>
+    /// Soonest first, then by id so the order is the same on every call (a preview is read a
+    /// page at a time), as the light rows a preview reads.
+    /// </summary>
+    private static IQueryable<UpcomingBooking> Soonest(IQueryable<Booking> bookings) =>
+        bookings
+            .OrderBy(b => b.StartsAt)
+            .ThenBy(b => b.Id)
+            .Select(b => new UpcomingBooking(b.Id, b.SpaceId, b.UserId, b.Title, b.StartsAt, b.EndsAt, b.Attendees));
 
     /// <summary>
     /// These bookings, by id, that are still confirmed and haven't started — what a check made

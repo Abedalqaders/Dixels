@@ -50,7 +50,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
     }
 
     [Authorize(IdentityPermissions.Users.Update)]
-    public async Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId)
+    public async Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, int skip = 0)
     {
         var user = await _userManager.GetByIdAsync(userId);
         if (user.GetBuildingId() is not { } current)
@@ -62,7 +62,7 @@ public class UsersAppService : DixelsAppService, IUsersAppService
         var building = await _buildingRepository.FindAsync(current);
         return building is null
             ? new ReservationImpactDto()
-            : await _impactPreview.PersonLeavingAsync(userId, building, L["Dixels:Bookings:CancelReason:MovedBuilding"]);
+            : await _impactPreview.PersonLeavingAsync(userId, building, L["Dixels:Bookings:CancelReason:MovedBuilding"], skip);
     }
 
     [Authorize(IdentityPermissions.Users.Update)]

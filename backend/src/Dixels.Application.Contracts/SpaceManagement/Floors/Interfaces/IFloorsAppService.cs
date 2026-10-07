@@ -22,10 +22,10 @@ public interface IFloorsAppService : IApplicationService
     Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, UpdateFloorConstraintsDto input);
 
     /// <summary>The upcoming bookings these proposed rules would no longer allow — nothing is saved.</summary>
-    Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input);
+    Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input, int skip = 0);
 
     /// <summary>The upcoming bookings a delete would cancel.</summary>
-    Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id);
+    Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, int skip = 0);
 
     /// <summary>Resolved values (space→floor→building) plus the Building ancestor trail, in
     /// one round trip — backs the constraints page's "People will see" summary card.</summary>

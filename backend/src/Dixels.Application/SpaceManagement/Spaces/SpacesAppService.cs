@@ -191,14 +191,14 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]
-    public async Task<ReservationImpactDto> GetUpdateImpactAsync(Guid id, UpdateSpaceDto input)
+    public async Task<ReservationImpactDto> GetUpdateImpactAsync(Guid id, UpdateSpaceDto input, int skip = 0)
     {
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
         var floor = await _floorRepository.GetAsync(space.FloorId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
         var change = await ProposedCapacityChangeAsync(space, input.Capacity);
-        return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change);
+        return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change, skip);
     }
 
     // Only the capacity can break a booking among the details; checked on an untracked copy
@@ -272,23 +272,23 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     }
 
     [Authorize(DixelsPermissions.Spaces.Edit)]
-    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateSpaceConstraintsDto input)
+    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateSpaceConstraintsDto input, int skip = 0)
     {
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
         var floor = await _floorRepository.GetAsync(space.FloorId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input));
+        return await _impactPreview.NoLongerFittingAsync(ProposedChange(building, floor, space, input), skip);
     }
 
     [Authorize(DixelsPermissions.Spaces.Delete)]
-    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id)
+    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, int skip = 0)
     {
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
         var floor = await _floorRepository.GetAsync(space.FloorId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _impactPreview.UpcomingAsync(building, new[] { (space, floor) }, L["Dixels:Bookings:CancelReason:SpaceRemoved"]);
+        return await _impactPreview.UpcomingAsync(building, new RoomScope(building.Id, floor.Id, space.Id), L["Dixels:Bookings:CancelReason:SpaceRemoved"], skip);
     }
 
     // The proposed space is a fresh, untracked copy — checking it can never save anything.

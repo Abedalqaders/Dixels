@@ -204,21 +204,21 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
     }
 
     [Authorize(DixelsPermissions.Floors.Edit)]
-    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input)
+    public async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, UpdateFloorConstraintsDto input, int skip = 0)
     {
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, floor, input));
+        return await _impactPreview.NoLongerFittingAsync(await ProposedChangeAsync(building, floor, input), skip);
     }
 
     [Authorize(DixelsPermissions.Floors.Delete)]
-    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id)
+    public async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, int skip = 0)
     {
         var floor = await _floorRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(floor.BuildingId);
         var building = await _buildingRepository.GetAsync(floor.BuildingId);
-        return await _impactPreview.UpcomingAsync(building, await RoomsAsync(floor), L["Dixels:Bookings:CancelReason:FloorRemoved"]);
+        return await _impactPreview.UpcomingAsync(building, new RoomScope(building.Id, floor.Id), L["Dixels:Bookings:CancelReason:FloorRemoved"], skip);
     }
 
     // The proposed floor is a fresh, untracked copy — checking it can never save anything.

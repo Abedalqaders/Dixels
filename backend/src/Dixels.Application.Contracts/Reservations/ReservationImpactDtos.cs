@@ -47,7 +47,14 @@ public class AffectedReservationDto
 /// </summary>
 public class ReservationImpactDto
 {
+    /// <summary>How many in all — what keep or cancel acts on.</summary>
     public int Count { get; set; }
+
+    /// <summary>
+    /// One page of them, soonest first (50 from the <c>skip</c> asked for). Ask again with
+    /// <c>skip</c> = how many are shown for the next page; there are more while fewer than
+    /// <see cref="Count"/> are shown.
+    /// </summary>
     public List<AffectedReservationDto> Items { get; set; } = new();
 
     /// <summary>Deleting a building: how many employees are assigned to it (they can't book until reassigned).</summary>
