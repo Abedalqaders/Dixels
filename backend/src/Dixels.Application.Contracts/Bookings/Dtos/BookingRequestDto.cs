@@ -31,7 +31,7 @@ public class BookingRequestDto
     [StringLength(BookingConsts.MaxTitleLength)]
     public string? Title { get; set; }
 
-    /// <summary>Who else is invited. <see cref="Attendees"/> must be at least one more (the owner).</summary>
+    /// <summary>Who else is invited; left out means nobody. <see cref="Attendees"/> must be at least one more (the owner).</summary>
     [MaxLength(BookingConsts.MaxInvitees)]
-    public List<InviteeDto> Invitees { get; set; } = new();
+    public List<InviteeDto>? Invitees { get; set; }
 }

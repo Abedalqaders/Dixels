@@ -43,7 +43,7 @@ const building: BookableBuildingDto = {
   floors: [{ id: 'f-1', name: 'Level 1', floorNumber: 1, spaces: [space] }],
 }
 
-const valid: BookingPreviewDto = { isValid: true, violations: [], warnings: [], startsAt: '', endsAt: '', timezone: 'UTC' }
+const valid: BookingPreviewDto = { isValid: true, violations: [], warnings: [], startsAt: '', endsAt: '', timezone: 'UTC', invitees: [] }
 
 function renderForm(onBooked = vi.fn(), initialSlot?: Slot) {
   render(

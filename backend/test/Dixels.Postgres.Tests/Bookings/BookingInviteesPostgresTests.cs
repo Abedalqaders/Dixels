@@ -121,7 +121,7 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
             LocalEnd = Tomorrow.AddHours(11),
             Attendees = 2,
             IdempotencyKey = Guid.NewGuid().ToString(),
-            Invitees = { new InviteeDto { UserId = s.ColleagueIds[0] } },
+            Invitees = [new InviteeDto { UserId = s.ColleagueIds[0] }],
         });
 
         (await InsertAttendeeAsync(booking.Id, null, null)).SqlState.ShouldBe(PostgresErrorCodes.CheckViolation);

@@ -78,12 +78,15 @@ function booking(id: string, title: string, from: string, to: string, day = tomo
     recurrence: null,
     cancelledByAdmin: false,
     cancelReason: null,
+    invitees: [],
+    isOwner: true,
+    ownerName: 'Me',
   }
 }
 
 /** What the page gets: the light list for the calendar, and each booking in full once opened. */
 function serve(list: BookingDto[]) {
-  vi.mocked(getMyBookings).mockResolvedValue(list)
+  vi.mocked(getMyBookings).mockResolvedValue(list.map((b) => ({ ...b, isInvited: false })))
   vi.mocked(getBooking).mockImplementation(async (_token, id) => list.find((b) => b.id === id)!)
 }
 

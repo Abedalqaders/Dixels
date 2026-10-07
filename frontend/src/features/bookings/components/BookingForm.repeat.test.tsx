@@ -67,6 +67,7 @@ const occurrence = (date: string, patch: Partial<OccurrencePreviewDto> = {}): Oc
 
 const threeDates: SeriesPreviewDto = {
   seriesViolations: [],
+  invitees: [],
   occurrences: [
     occurrence('2026-10-06'),
     occurrence('2026-10-13', {

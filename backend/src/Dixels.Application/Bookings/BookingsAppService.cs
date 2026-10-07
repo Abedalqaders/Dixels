@@ -207,8 +207,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         }
     }
 
-    private static List<Invitee> ToInvitees(IEnumerable<InviteeDto> dtos) =>
-        dtos.Select(d => new Invitee(d.UserId, d.Email, d.Name)).ToList();
+    private static List<Invitee> ToInvitees(IEnumerable<InviteeDto>? dtos) =>
+        dtos?.Select(d => new Invitee(d.UserId, d.Email, d.Name)).ToList() ?? new List<Invitee>();
 
     /// <summary>A checked invitee as the booker sees them: with their email (only the owner sees guests' emails).</summary>
     private static BookingInviteeDto ToOwnersView(Invitee invitee) => new()

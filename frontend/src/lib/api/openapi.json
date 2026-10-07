@@ -4218,6 +4218,176 @@
         }
       }
     },
+    "/api/app/colleagues": {
+      "get": {
+        "tags": [
+          "Colleagues"
+        ],
+        "parameters": [
+          {
+            "name": "Filter",
+            "in": "query",
+            "schema": {
+              "maxLength": 128,
+              "minLength": 0,
+              "type": "string"
+            }
+          },
+          {
+            "name": "MaxResultCount",
+            "in": "query",
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Users.ColleagueDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Users.ColleagueDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Users.ColleagueDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/app/floors": {
       "get": {
         "tags": [
@@ -10115,8 +10285,11 @@
           "endsAt",
           "floorName",
           "id",
+          "invitees",
+          "isOwner",
           "localEnd",
           "localStart",
+          "ownerName",
           "spaceId",
           "spaceName",
           "startsAt",
@@ -10191,6 +10364,51 @@
               }
             ],
             "nullable": true
+          },
+          "invitees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BookingInviteeDto"
+            }
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "ownerName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.Bookings.BookingInviteeDto": {
+        "required": [
+          "email",
+          "isExternal",
+          "name",
+          "responseStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "isExternal": {
+            "type": "boolean"
+          },
+          "responseStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.InviteeResponseStatus"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -10198,6 +10416,7 @@
       "Dixels.Bookings.BookingPreviewDto": {
         "required": [
           "endsAt",
+          "invitees",
           "isValid",
           "startsAt",
           "timezone",
@@ -10231,6 +10450,12 @@
           },
           "timezone": {
             "type": "string"
+          },
+          "invitees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BookingInviteeDto"
+            }
           }
         },
         "additionalProperties": false
@@ -10267,6 +10492,14 @@
             "minLength": 0,
             "type": "string",
             "nullable": true
+          },
+          "invitees": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.InviteeDto"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -10274,6 +10507,7 @@
       "Dixels.Bookings.BookingSummaryDto": {
         "required": [
           "id",
+          "isInvited",
           "localEnd",
           "localStart",
           "spaceName",
@@ -10307,6 +10541,9 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "isInvited": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -10400,6 +10637,14 @@
             "type": "string",
             "nullable": true
           },
+          "invitees": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.InviteeDto"
+            },
+            "nullable": true
+          },
           "idempotencyKey": {
             "maxLength": 64,
             "minLength": 0,
@@ -10442,6 +10687,14 @@
             "maxLength": 128,
             "minLength": 0,
             "type": "string",
+            "nullable": true
+          },
+          "invitees": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.InviteeDto"
+            },
             "nullable": true
           },
           "recurrence": {
@@ -10487,6 +10740,39 @@
           }
         },
         "additionalProperties": false
+      },
+      "Dixels.Bookings.InviteeDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "email": {
+            "maxLength": 256,
+            "minLength": 0,
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.Bookings.InviteeResponseStatus": {
+        "enum": [
+          0,
+          1,
+          2
+        ],
+        "type": "integer",
+        "format": "int32"
       },
       "Dixels.Bookings.MonthlyRepeat": {
         "enum": [
@@ -10613,6 +10899,7 @@
       "Dixels.Bookings.SeriesPreviewDto": {
         "required": [
           "bookableCount",
+          "invitees",
           "occurrences",
           "seriesViolations",
           "timezone"
@@ -10637,6 +10924,12 @@
           },
           "timezone": {
             "type": "string"
+          },
+          "invitees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BookingInviteeDto"
+            }
           }
         },
         "additionalProperties": false
@@ -10673,6 +10966,14 @@
             "maxLength": 128,
             "minLength": 0,
             "type": "string",
+            "nullable": true
+          },
+          "invitees": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.InviteeDto"
+            },
             "nullable": true
           },
           "recurrence": {
@@ -11950,6 +12251,27 @@
         },
         "additionalProperties": false
       },
+      "Dixels.Users.ColleagueDto": {
+        "required": [
+          "email",
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Dixels.Users.UpdateMyLanguageDto": {
         "required": [
           "language"
@@ -12032,6 +12354,21 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Dixels.SpaceManagement.AvailabilityOverrideDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Volo.Abp.Application.Dtos.ListResultDto`1[[Dixels.Users.ColleagueDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Users.ColleagueDto"
             }
           }
         },
