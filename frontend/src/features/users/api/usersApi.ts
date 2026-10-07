@@ -8,6 +8,7 @@ import { request, query } from '@/lib/api/httpClient'
 import type { PagedResultDto } from '@/lib/api/httpClient'
 import { pageQuery } from '@/lib/api/reservationImpact'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
+import type { ApiResponse } from '@/lib/api/schemaTypes'
 
 export { ApiError } from '@/lib/api/httpClient'
 
@@ -81,14 +82,11 @@ export function getReassignImpact(token: string, userId: string, skip = 0) {
   return request<ReservationImpactDto>(`/api/app/users/${userId}/reassign-impact${pageQuery(skip)}`, token)
 }
 
-export interface UserPageDetailsDto {
-  userId: string
-  /** The assigned building's name, in the reader's language; null when unassigned. */
-  buildingName: string | null
-  /** That building was deleted since: buildingName is its last name. */
-  buildingRemoved: boolean
-  roles: string[]
-}
+/**
+ * - `buildingName`: The assigned building's name, in the reader's language; null when unassigned.
+ * - `buildingRemoved`: That building was deleted since: buildingName is its last name.
+ */
+export type UserPageDetailsDto = ApiResponse<'Dixels.Users.UserPageDetailsDto'>
 
 /**
  * Each of these users' building name and role names — one call for a page of the Users

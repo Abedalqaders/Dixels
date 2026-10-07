@@ -33,6 +33,8 @@ const building: BookableBuildingDto = {
   name: 'Test HQ',
   timezone: 'UTC',
   maxHorizonDays: 30,
+  maxSeriesHorizonDays: 90,
+  isRemoved: false,
   minLeadMinutes: 0,
   slotMinutes: 15,
   ownOverlapPolicy: 1,
@@ -41,7 +43,7 @@ const building: BookableBuildingDto = {
   floors: [{ id: 'f-1', name: 'Level 1', floorNumber: 1, spaces: [space] }],
 }
 
-const valid: BookingPreviewDto = { isValid: true, violations: [], startsAt: '', endsAt: '', timezone: 'UTC' }
+const valid: BookingPreviewDto = { isValid: true, violations: [], warnings: [], startsAt: '', endsAt: '', timezone: 'UTC' }
 
 function renderForm(onBooked = vi.fn(), initialSlot?: Slot) {
   render(

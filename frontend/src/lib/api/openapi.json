@@ -15,7 +15,11 @@
             "name": "Scope",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+                }
+              ]
             }
           },
           {
@@ -205,17 +209,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             }
           }
@@ -520,7 +536,11 @@
             "name": "scope",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+                }
+              ]
             }
           },
           {
@@ -696,17 +716,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateAvailabilityOverrideDto"
+                  }
+                ]
               }
             }
           }
@@ -1386,17 +1418,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateBookingDto"
+                  }
+                ]
               }
             }
           }
@@ -1725,17 +1769,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CancelBookingDto"
+                  }
+                ]
               }
             }
           }
@@ -2062,17 +2118,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.BookingRequestDto"
+                  }
+                ]
               }
             }
           }
@@ -2230,17 +2298,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.CreateSeriesDto"
+                  }
+                ]
               }
             }
           }
@@ -2398,17 +2478,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Bookings.SeriesRequestDto"
+                  }
+                ]
               }
             }
           }
@@ -2756,17 +2848,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateBuildingDto"
+                  }
+                ]
               }
             }
           }
@@ -3093,17 +3197,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingDto"
+                  }
+                ]
               }
             }
           }
@@ -3416,17 +3532,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -3604,17 +3732,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateBuildingConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -4292,17 +4432,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateFloorDto"
+                  }
+                ]
               }
             }
           }
@@ -4629,17 +4781,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorDto"
+                  }
+                ]
               }
             }
           }
@@ -4952,17 +5116,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -5140,17 +5316,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateFloorConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -5783,17 +5971,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.UpdateMyLanguageDto"
+                  }
+                ]
               }
             }
           }
@@ -6551,17 +6751,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceTypeDto"
+                  }
+                ]
               }
             }
           }
@@ -6730,17 +6942,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceTypeDto"
+                  }
+                ]
               }
             }
           }
@@ -7256,17 +7480,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.CreateSpaceDto"
+                  }
+                ]
               }
             }
           }
@@ -7593,17 +7829,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             }
           }
@@ -7916,17 +8164,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -8104,17 +8364,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceConstraintsDto"
+                  }
+                ]
               }
             }
           }
@@ -8461,17 +8733,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.SpaceManagement.UpdateSpaceDto"
+                  }
+                ]
               }
             }
           }
@@ -8946,17 +9230,29 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                  }
+                ]
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                  }
+                ]
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Dixels.Users.AssignUserBuildingDto"
+                  }
+                ]
               }
             }
           }
@@ -9681,7 +9977,11 @@
             "format": "int32"
           },
           "ownOverlapPolicy": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+              }
+            ]
           },
           "slotMinutes": {
             "type": "integer",
@@ -9695,7 +9995,11 @@
             }
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ]
           },
           "floors": {
             "type": "array",
@@ -9764,7 +10068,11 @@
             "type": "string"
           },
           "iconKey": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+              }
+            ]
           },
           "capacity": {
             "type": "integer",
@@ -9776,13 +10084,25 @@
             "nullable": true
           },
           "days": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+              }
+            ]
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+              }
+            ]
           },
           "maxDurationMinutes": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -9865,7 +10185,12 @@
             "nullable": true
           },
           "recurrence": {
-            "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+              }
+            ],
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -10023,7 +10348,11 @@
             "nullable": true
           },
           "scope": {
-            "$ref": "#/components/schemas/Dixels.Bookings.CancelScope"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.CancelScope"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -10116,7 +10445,11 @@
             "nullable": true
           },
           "recurrence": {
-            "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+              }
+            ]
           },
           "skipDates": {
             "type": "array",
@@ -10215,7 +10548,11 @@
         "type": "object",
         "properties": {
           "frequency": {
-            "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceFrequency"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceFrequency"
+              }
+            ]
           },
           "interval": {
             "maximum": 99,
@@ -10231,7 +10568,11 @@
             }
           },
           "monthlyRepeat": {
-            "$ref": "#/components/schemas/Dixels.Bookings.MonthlyRepeat"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.MonthlyRepeat"
+              }
+            ]
           },
           "endDate": {
             "type": "string",
@@ -10335,7 +10676,11 @@
             "nullable": true
           },
           "recurrence": {
-            "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.RecurrenceDto"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -10354,7 +10699,11 @@
         "type": "object",
         "properties": {
           "space": {
-            "$ref": "#/components/schemas/Dixels.Bookings.BookableSpaceDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.Bookings.BookableSpaceDto"
+              }
+            ]
           },
           "floorId": {
             "type": "string",
@@ -10562,7 +10911,11 @@
             "format": "uuid"
           },
           "scope": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+              }
+            ]
           },
           "scopeId": {
             "type": "string",
@@ -10577,10 +10930,18 @@
             "format": "date-time"
           },
           "effect": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideEffect"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideEffect"
+              }
+            ]
           },
           "reasonCategory": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.ReasonCategory"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.ReasonCategory"
+              }
+            ]
           },
           "reasonDetail": {
             "type": "string",
@@ -10635,7 +10996,11 @@
             }
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ]
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -10654,7 +11019,11 @@
             "format": "int32"
           },
           "ownOverlapPolicy": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+              }
+            ]
           },
           "isDeleted": {
             "type": "boolean"
@@ -10702,7 +11071,11 @@
         "type": "object",
         "properties": {
           "scope": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideScope"
+              }
+            ]
           },
           "scopeId": {
             "type": "string",
@@ -10717,10 +11090,18 @@
             "format": "date-time"
           },
           "effect": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideEffect"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OverrideEffect"
+              }
+            ]
           },
           "reasonCategory": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.ReasonCategory"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.ReasonCategory"
+              }
+            ]
           },
           "reasonDetail": {
             "maxLength": 512,
@@ -10773,7 +11154,11 @@
             }
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ]
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -10793,7 +11178,11 @@
             "format": "int32"
           },
           "ownOverlapPolicy": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -10870,19 +11259,28 @@
             }
           },
           "iconKey": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+              }
+            ]
           }
         },
         "additionalProperties": false
       },
       "Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
         "required": [
-          "source"
+          "source",
+          "value"
         ],
         "type": "object",
         "properties": {
           "value": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ]
           },
           "source": {
             "type": "string"
@@ -10909,7 +11307,8 @@
       },
       "Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]": {
         "required": [
-          "source"
+          "source",
+          "value"
         ],
         "type": "object",
         "properties": {
@@ -10918,8 +11317,7 @@
             "items": {
               "type": "integer",
               "format": "int32"
-            },
-            "nullable": true
+            }
           },
           "source": {
             "type": "string"
@@ -10974,7 +11372,12 @@
             "nullable": true
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ],
+            "nullable": true
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -11076,13 +11479,25 @@
             "type": "string"
           },
           "days": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+              }
+            ]
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]"
+              }
+            ]
           },
           "maxDurationMinutes": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.FieldValueDto`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]"
+              }
+            ]
           },
           "maxHorizonDays": {
             "type": "integer",
@@ -11177,7 +11592,12 @@
             "nullable": true
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ],
+            "nullable": true
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -11218,7 +11638,11 @@
             "type": "string"
           },
           "iconKey": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+              }
+            ]
           },
           "names": {
             "type": "array",
@@ -11250,7 +11674,11 @@
             }
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ]
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -11270,7 +11698,11 @@
             "format": "int32"
           },
           "ownOverlapPolicy": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
+              }
+            ]
           },
           "concurrencyStamp": {
             "minLength": 1,
@@ -11326,7 +11758,12 @@
             "nullable": true
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ],
+            "nullable": true
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -11380,7 +11817,12 @@
             "nullable": true
           },
           "hours": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.OperatingWindowDto"
+              }
+            ],
+            "nullable": true
           },
           "maxDurationMinutes": {
             "type": "integer",
@@ -11447,7 +11889,11 @@
             }
           },
           "iconKey": {
-            "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Dixels.SpaceManagement.IconKey"
+              }
+            ]
           }
         },
         "additionalProperties": false
@@ -11687,7 +12133,11 @@
         "type": "object",
         "properties": {
           "error": {
-            "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorInfo"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Volo.Abp.Http.RemoteServiceErrorInfo"
+              }
+            ]
           }
         },
         "additionalProperties": false

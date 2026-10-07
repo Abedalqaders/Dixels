@@ -15,6 +15,7 @@ import { request, query } from '@/lib/api/httpClient'
 import type { ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
 import { pageQuery } from '@/lib/api/reservationImpact'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
+import type { ApiDto, ApiResponse } from '@/lib/api/schemaTypes'
 
 export { ApiError } from '@/lib/api/httpClient'
 export type { ValidationErrorInfo, ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
@@ -32,112 +33,55 @@ export interface PagedListInput {
 // ---- Shared shapes -------------------------------------------------------
 
 /** A name in one language: { language: 'ar', name: 'غرفة اجتماعات' } — space types,
- * buildings, floors and spaces are all named once per language. */
-export interface LocalizedNameDto {
-  /** ABP culture name, one of the app's languages. */
-  language: string
-  name: string
-}
+ * buildings, floors and spaces are all named once per language.
+ *
+ * - `language`: ABP culture name, one of the app's languages.
+ */
+export type LocalizedNameDto = ApiDto<'Dixels.Localization.LocalizedNameDto'>
 
-export interface OperatingWindowDto {
-  isOpen24Hours: boolean
-  open: string
-  close: string
-}
+export type OperatingWindowDto = ApiDto<'Dixels.SpaceManagement.OperatingWindowDto'>
 
-export interface ConstraintsSaveResultDto {
-  concurrencyStamp: string
-  warnings: string[]
-  /** How many upcoming bookings were cancelled because the admin chose to. */
-  cancelledBookings?: number
-}
+/**
+ * - `cancelledBookings`: How many upcoming bookings were cancelled because the admin chose to.
+ */
+export type ConstraintsSaveResultDto = ApiResponse<'Dixels.SpaceManagement.ConstraintsSaveResultDto'>
 
-export interface FieldValueDto<T> {
-  value: T
-  source: string
-}
-
-export interface ResolvedConstraintsDto {
-  timezone: string
-  days: FieldValueDto<number[]>
-  hours: FieldValueDto<OperatingWindowDto>
-  maxDurationMinutes: FieldValueDto<number>
-  maxHorizonDays: number
-  minLeadMinutes: number
-  minAttendees: number | null
-  capacity: number | null
-  buildingId: string
-  buildingName: string
-  floorId: string | null
-  floorName: string | null
-}
+/** Each rule with the level it comes from (`{ value, source }`). */
+export type ResolvedConstraintsDto = ApiResponse<'Dixels.SpaceManagement.ResolvedConstraintsDto'>
 
 // ---- Buildings ------------------------------------------------------------
 
 /** The icon a space type shows (IconKey on the server), in C# declaration order. */
-export const IconKey = { MeetingRoom: 0, FocusPod: 1, Desk: 2, Generic: 3 } as const
-export type IconKey = (typeof IconKey)[keyof typeof IconKey]
+export const IconKey = { MeetingRoom: 0, FocusPod: 1, Desk: 2, Generic: 3 } as const satisfies Record<string, IconKey>
+export type IconKey = ApiDto<'Dixels.SpaceManagement.IconKey'>
 
 /** Whether one person may hold two bookings at the same time in a building (OwnOverlapPolicy on the server). */
-export const OwnOverlapPolicy = { Allow: 0, Warn: 1, Block: 2 } as const
-export type OwnOverlapPolicy = (typeof OwnOverlapPolicy)[keyof typeof OwnOverlapPolicy]
+export const OwnOverlapPolicy = { Allow: 0, Warn: 1, Block: 2 } as const satisfies Record<string, OwnOverlapPolicy>
+export type OwnOverlapPolicy = ApiDto<'Dixels.SpaceManagement.OwnOverlapPolicy'>
 
-export interface BuildingDto {
-  id: string
-  /** The name to show — the server picks it for the request's language (Accept-Language),
-   * falling back to the default language's. */
-  name: string
-  /** Every name it has, one per language — what the edit form shows. */
-  names: LocalizedNameDto[]
-  buildingNumber: string | null
-  timezone: string
-  days: number[]
-  hours: OperatingWindowDto
-  maxDurationMinutes: number
-  maxHorizonDays: number
-  /** How far ahead recurring bookings may run — never shorter than maxHorizonDays. */
-  maxSeriesHorizonDays: number
-  minLeadMinutes: number
-  ownOverlapPolicy: OwnOverlapPolicy
-  isDeleted: boolean
-  concurrencyStamp: string
-}
+/**
+ * - `name`: The name to show — the server picks it for the request's language (Accept-Language), falling back to the default language's.
+ * - `names`: Every name it has, one per language — what the edit form shows.
+ * - `maxSeriesHorizonDays`: How far ahead recurring bookings may run — never shorter than maxHorizonDays.
+ */
+export type BuildingDto = ApiResponse<'Dixels.SpaceManagement.BuildingDto'>
 
-export interface CreateBuildingDto {
-  /** One per language; the default language's is required. */
-  names: LocalizedNameDto[]
-  buildingNumber?: string | null
-  timezone: string
-  days: number[]
-  hours: OperatingWindowDto
-  maxDurationMinutes: number
-  maxHorizonDays: number
-  minLeadMinutes: number
-  /** How far ahead recurring bookings may run; 90 days when left out. */
-  maxSeriesHorizonDays?: number | null
-  /** Whether one person may hold two bookings at once here; Warn when left out. */
-  ownOverlapPolicy?: OwnOverlapPolicy
-}
+/**
+ * - `names`: One per language; the default language's is required.
+ * - `maxSeriesHorizonDays`: How far ahead recurring bookings may run; 90 days when left out.
+ * - `ownOverlapPolicy`: Whether one person may hold two bookings at once here; Warn when left out.
+ */
+export type CreateBuildingDto = ApiDto<'Dixels.SpaceManagement.CreateBuildingDto'>
 
-export interface UpdateBuildingDto {
-  /** Every name it should have — a language left out loses its name. */
-  names: LocalizedNameDto[]
-  buildingNumber?: string | null
-  timezone: string
-}
+/**
+ * - `names`: Every name it should have — a language left out loses its name.
+ */
+export type UpdateBuildingDto = ApiDto<'Dixels.SpaceManagement.UpdateBuildingDto'>
 
-export interface UpdateBuildingConstraintsDto {
-  days: number[]
-  hours: OperatingWindowDto
-  maxDurationMinutes: number
-  maxHorizonDays: number
-  maxSeriesHorizonDays: number
-  minLeadMinutes: number
-  ownOverlapPolicy: OwnOverlapPolicy
-  concurrencyStamp: string
-  /** Also cancel the upcoming bookings the change would break (default: keep them). */
-  cancelAffectedBookings?: boolean
-}
+/**
+ * - `cancelAffectedBookings`: Also cancel the upcoming bookings the change would break (default: keep them).
+ */
+export type UpdateBuildingConstraintsDto = ApiDto<'Dixels.SpaceManagement.UpdateBuildingConstraintsDto'>
 
 export function getBuildings(token: string, input: PagedListInput = {}) {
   return request<PagedResultDto<BuildingDto>>(`/api/app/buildings${query({ ...input })}`, token)
@@ -178,47 +122,27 @@ export function deleteBuilding(token: string, id: string) {
 
 // ---- Floors -----------------------------------------------------------
 
-export interface FloorDto {
-  id: string
-  buildingId: string
-  /** The name to show — the server picks it for the request's language (Accept-Language),
-   * falling back to the default language's. */
-  name: string
-  /** Every name it has, one per language — what the edit form shows. */
-  names: LocalizedNameDto[]
-  /** Set on every list result (the standalone Floors page needs it) — null from a plain
-   * single-floor fetch. */
-  buildingName: string | null
-  floorNumber: number | null
-  days: number[] | null
-  hours: OperatingWindowDto | null
-  maxDurationMinutes: number | null
-  hasOverrides: boolean
-  isDeleted: boolean
-  concurrencyStamp: string
-}
+/**
+ * - `name`: The name to show — the server picks it for the request's language (Accept-Language), falling back to the default language's.
+ * - `names`: Every name it has, one per language — what the edit form shows.
+ * - `buildingName`: Set on every list result (the standalone Floors page needs it) — null from a plain single-floor fetch.
+ */
+export type FloorDto = ApiResponse<'Dixels.SpaceManagement.FloorDto'>
 
-export interface CreateFloorDto {
-  buildingId: string
-  /** One per language; the default language's is required. */
-  names: LocalizedNameDto[]
-  floorNumber?: number | null
-}
+/**
+ * - `names`: One per language; the default language's is required.
+ */
+export type CreateFloorDto = ApiDto<'Dixels.SpaceManagement.CreateFloorDto'>
 
-export interface UpdateFloorDto {
-  /** Every name it should have — a language left out loses its name. */
-  names: LocalizedNameDto[]
-  floorNumber?: number | null
-}
+/**
+ * - `names`: Every name it should have — a language left out loses its name.
+ */
+export type UpdateFloorDto = ApiDto<'Dixels.SpaceManagement.UpdateFloorDto'>
 
-export interface UpdateFloorConstraintsDto {
-  days?: number[] | null
-  hours?: OperatingWindowDto | null
-  maxDurationMinutes?: number | null
-  concurrencyStamp: string
-  /** Also cancel the upcoming bookings the change would break (default: keep them). */
-  cancelAffectedBookings?: boolean
-}
+/**
+ * - `cancelAffectedBookings`: Also cancel the upcoming bookings the change would break (default: keep them).
+ */
+export type UpdateFloorConstraintsDto = ApiDto<'Dixels.SpaceManagement.UpdateFloorConstraintsDto'>
 
 export interface FloorListInput extends PagedListInput {
   /** Omit to list floors across every building (the explorer's search); set to scope to
@@ -269,55 +193,28 @@ export function deleteFloor(token: string, id: string) {
 
 // ---- Spaces -----------------------------------------------------------
 
-export interface SpaceDto {
-  id: string
-  floorId: string
-  /** The name to show — the server picks it for the request's language (Accept-Language),
-   * falling back to the default language's. */
-  name: string
-  /** Every name it has, one per language — what the edit form shows. */
-  names: LocalizedNameDto[]
-  /** Set on every list result (the standalone Spaces page needs these) — null from a plain
-   * single-space fetch. */
-  floorName: string | null
-  buildingName: string | null
-  spaceTypeId: string
-  capacity: number
-  days: number[] | null
-  hours: OperatingWindowDto | null
-  maxDurationMinutes: number | null
-  minAttendees: number | null
-  hasOverrides: boolean
-  isDeleted: boolean
-  concurrencyStamp: string
-}
+/**
+ * - `name`: The name to show — the server picks it for the request's language (Accept-Language), falling back to the default language's.
+ * - `names`: Every name it has, one per language — what the edit form shows.
+ * - `floorName`: Set on every list result (the standalone Spaces page needs these) — null from a plain single-space fetch.
+ */
+export type SpaceDto = ApiResponse<'Dixels.SpaceManagement.SpaceDto'>
 
-export interface CreateSpaceDto {
-  floorId: string
-  /** One per language; the default language's is required. */
-  names: LocalizedNameDto[]
-  spaceTypeId: string
-  capacity: number
-}
+/**
+ * - `names`: One per language; the default language's is required.
+ */
+export type CreateSpaceDto = ApiDto<'Dixels.SpaceManagement.CreateSpaceDto'>
 
-export interface UpdateSpaceDto {
-  /** Every name it should have — a language left out loses its name. */
-  names: LocalizedNameDto[]
-  spaceTypeId: string
-  capacity: number
-  /** Also cancel upcoming bookings for more people than the new capacity (default: keep them). */
-  cancelAffectedBookings?: boolean
-}
+/**
+ * - `names`: Every name it should have — a language left out loses its name.
+ * - `cancelAffectedBookings`: Also cancel upcoming bookings for more people than the new capacity (default: keep them).
+ */
+export type UpdateSpaceDto = ApiDto<'Dixels.SpaceManagement.UpdateSpaceDto'>
 
-export interface UpdateSpaceConstraintsDto {
-  days?: number[] | null
-  hours?: OperatingWindowDto | null
-  maxDurationMinutes?: number | null
-  minAttendees?: number | null
-  concurrencyStamp: string
-  /** Also cancel the upcoming bookings the change would break (default: keep them). */
-  cancelAffectedBookings?: boolean
-}
+/**
+ * - `cancelAffectedBookings`: Also cancel the upcoming bookings the change would break (default: keep them).
+ */
+export type UpdateSpaceConstraintsDto = ApiDto<'Dixels.SpaceManagement.UpdateSpaceConstraintsDto'>
 
 export interface SpaceListInput extends PagedListInput {
   /** Omit to list spaces across every floor (the standalone Spaces page); set to scope to
@@ -374,27 +271,21 @@ export function deleteSpace(token: string, id: string) {
 
 // ---- Space types --------------------------------------------------------
 
-export interface SpaceTypeDto {
-  id: string
-  /** The name to show — the server picks it for the request's language (Accept-Language),
-   * falling back to the default language's. */
-  name: string
-  iconKey: IconKey
-  /** Every name it has, one per language — what the edit form shows. */
-  names: LocalizedNameDto[]
-}
+/**
+ * - `name`: The name to show — the server picks it for the request's language (Accept-Language), falling back to the default language's.
+ * - `names`: Every name it has, one per language — what the edit form shows.
+ */
+export type SpaceTypeDto = ApiResponse<'Dixels.SpaceManagement.SpaceTypeDto'>
 
-export interface CreateSpaceTypeDto {
-  /** One per language; the default language's is required. */
-  names: LocalizedNameDto[]
-  iconKey: IconKey
-}
+/**
+ * - `names`: One per language; the default language's is required.
+ */
+export type CreateSpaceTypeDto = ApiDto<'Dixels.SpaceManagement.CreateSpaceTypeDto'>
 
-export interface UpdateSpaceTypeDto {
-  /** Every name the type should have — a language left out loses its name. */
-  names: LocalizedNameDto[]
-  iconKey: IconKey
-}
+/**
+ * - `names`: Every name the type should have — a language left out loses its name.
+ */
+export type UpdateSpaceTypeDto = ApiDto<'Dixels.SpaceManagement.UpdateSpaceTypeDto'>
 
 /** ABP's largest page (LimitedResultRequestDto.MaxMaxResultCount). */
 const MAX_PAGE_SIZE = 1000
@@ -438,37 +329,21 @@ export function deleteSpaceType(token: string, id: string) {
 //
 // Numeric values confirmed against the live host's swagger.json (no string-enum
 // converter is configured), in C# declaration order:
-export const OverrideScope = { Building: 0, Floor: 1, Space: 2 } as const
-export type OverrideScope = (typeof OverrideScope)[keyof typeof OverrideScope]
+export const OverrideScope = { Building: 0, Floor: 1, Space: 2 } as const satisfies Record<string, OverrideScope>
+export type OverrideScope = ApiDto<'Dixels.SpaceManagement.OverrideScope'>
 
-export const OverrideEffect = { Closed: 0, Open: 1 } as const
-export type OverrideEffect = (typeof OverrideEffect)[keyof typeof OverrideEffect]
+export const OverrideEffect = { Closed: 0, Open: 1 } as const satisfies Record<string, OverrideEffect>
+export type OverrideEffect = ApiDto<'Dixels.SpaceManagement.OverrideEffect'>
 
-export const ReasonCategory = { Maintenance: 0, Holiday: 1, Event: 2, Other: 3 } as const
-export type ReasonCategory = (typeof ReasonCategory)[keyof typeof ReasonCategory]
+export const ReasonCategory = { Maintenance: 0, Holiday: 1, Event: 2, Other: 3 } as const satisfies Record<string, ReasonCategory>
+export type ReasonCategory = ApiDto<'Dixels.SpaceManagement.ReasonCategory'>
 
-export interface AvailabilityOverrideDto {
-  id: string
-  scope: OverrideScope
-  scopeId: string
-  startsAt: string
-  endsAt: string
-  effect: OverrideEffect
-  reasonCategory: ReasonCategory
-  reasonDetail: string | null
-}
+export type AvailabilityOverrideDto = ApiResponse<'Dixels.SpaceManagement.AvailabilityOverrideDto'>
 
-export interface CreateAvailabilityOverrideDto {
-  scope: OverrideScope
-  scopeId: string
-  startsAt: string
-  endsAt: string
-  effect: OverrideEffect
-  reasonCategory: ReasonCategory
-  reasonDetail?: string | null
-  /** Also cancel the upcoming bookings the change would break (default: keep them). */
-  cancelAffectedBookings?: boolean
-}
+/**
+ * - `cancelAffectedBookings`: Also cancel the upcoming bookings the change would break (default: keep them).
+ */
+export type CreateAvailabilityOverrideDto = ApiDto<'Dixels.SpaceManagement.CreateAvailabilityOverrideDto'>
 
 export interface GetOverridesInput {
   /** Also the ones already over, most recent first. Default: upcoming and current only, soonest first. */
