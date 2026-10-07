@@ -36,6 +36,21 @@ public sealed class SqlCapture : DbCommandInterceptor
         return ValueTask.FromResult(result);
     }
 
+    // Writes and scalar reads go through these, so a test counting round trips sees them too.
+    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+    {
+        Record(command);
+        return ValueTask.FromResult(result);
+    }
+
+    public override ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<object> result, CancellationToken cancellationToken = default)
+    {
+        Record(command);
+        return ValueTask.FromResult(result);
+    }
+
     private void Record(DbCommand command)
     {
         if (command is not NpgsqlCommand npgsql)

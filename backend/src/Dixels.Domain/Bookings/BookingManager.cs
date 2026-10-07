@@ -87,9 +87,10 @@ public partial class BookingManager : DomainService
     ///
     /// A retry with the same idempotency key returns the booking the first attempt created
     /// (<c>Replayed = true</c>) instead of creating a second one. Only a new booking raises
-    /// <see cref="BookingConfirmedEvent"/>.
+    /// <see cref="BookingConfirmedEvent"/>. <c>Place</c> is the room, floor and building the
+    /// checks loaded (a replay is for the same room), for showing the result without reloading.
     /// </summary>
-    public async Task<(Booking Booking, bool Replayed)> CreateAsync(
+    public async Task<(Booking Booking, bool Replayed, BookingPlace Place)> CreateAsync(
         Guid userId,
         Guid spaceId,
         DateTime localStart,
@@ -120,7 +121,7 @@ public partial class BookingManager : DomainService
                 throw new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
             }
 
-            return (existing, true);
+            return (existing, true, context.Place);
         }
 
         var evaluation = await ValidateAsync(context, attendees, userId);
@@ -142,7 +143,7 @@ public partial class BookingManager : DomainService
 
         booking = await _bookingRepository.InsertConfirmedAsync(booking);
         await _localEventBus.PublishAsync(new BookingConfirmedEvent(booking));
-        return (booking, false);
+        return (booking, false, context.Place);
     }
 
     /// <summary>
@@ -150,10 +151,12 @@ public partial class BookingManager : DomainService
     /// before it starts: once a booking is under way (or over) it's part of the record.
     /// Raises nothing: the scoped <c>CancelOwnAsync</c> that calls it announces the cancel.
     /// </summary>
-    private async Task<Booking> CancelOneAsync(Guid userId, Guid bookingId, string? reason)
-    {
-        var booking = await _bookingRepository.GetAsync(bookingId);
+    private async Task<Booking> CancelOneAsync(Guid userId, Guid bookingId, string? reason) =>
+        await CancelOneAsync(userId, await _bookingRepository.GetAsync(bookingId), reason);
 
+    /// <summary>The same, for a booking the caller has already loaded.</summary>
+    private async Task<Booking> CancelOneAsync(Guid userId, Booking booking, string? reason)
+    {
         if (booking.UserId != userId)
         {
             throw new BusinessException(DixelsDomainErrorCodes.BookingNotYours);
@@ -428,6 +431,19 @@ public partial class BookingManager : DomainService
         return space is null ? _localizer["Dixels:Bookings:AnotherRoom"].Value : await _nameReader.ShownAsync(space);
     }
 
+    /// <summary>Several rooms' names at once, in one query — "another room" for any deleted since.</summary>
+    private async Task<Dictionary<Guid, string>> RoomNamesAsync(IReadOnlyCollection<Guid> spaceIds)
+    {
+        if (spaceIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var spaces = await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true);
+        var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+        return spaceIds.ToDictionary(id => id, id => names.GetValueOrDefault(id) ?? _localizer["Dixels:Bookings:AnotherRoom"].Value);
+    }
+
     // Closures union across levels, so overrides on the space, its floor and its building
     // all apply. Only ones overlapping the request matter (for both closures and special
     // openings — an opening that doesn't touch the request can't help cover it).
@@ -455,5 +471,8 @@ public partial class BookingManager : DomainService
         Building Building,
         BuildingClock LocalClock,
         DateTimeOffset StartUtc,
-        DateTimeOffset EndUtc);
+        DateTimeOffset EndUtc)
+    {
+        public BookingPlace Place => new(Space, Floor, Building);
+    }
 }

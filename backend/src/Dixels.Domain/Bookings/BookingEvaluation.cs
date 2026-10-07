@@ -4,6 +4,12 @@ using Dixels.SpaceManagement;
 
 namespace Dixels.Bookings;
 
+/// <summary>
+/// The room a booking was made in, with its floor and building, as the create loaded them
+/// (names included), so whoever shows the result needn't load them again.
+/// </summary>
+public sealed record BookingPlace(Space Space, Floor Floor, Building Building);
+
 /// <summary>The outcome of checking one request: where, when (UTC), under which rules, and what failed.</summary>
 public sealed record BookingEvaluation(
     Space Space,

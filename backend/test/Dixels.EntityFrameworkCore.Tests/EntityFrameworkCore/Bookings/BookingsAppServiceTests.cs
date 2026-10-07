@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -11,7 +12,9 @@ using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
+using Volo.Abp.Domain.Entities.Events;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
 using Volo.Abp.Security.Claims;
@@ -219,7 +222,37 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         var retry = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, key: "attempt-1"));
 
         retry.Id.ShouldBe(first.Id);
+        (retry.SpaceName, retry.FloorName, retry.BuildingName, retry.Timezone)
+            .ShouldBe((first.SpaceName, first.FloorName, first.BuildingName, first.Timezone));
+        retry.SpaceName.ShouldBe("Room 1");
         (await CountBookingsAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_new_booking_names_its_place_in_the_readers_language()
+    {
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            (await _spaceRepository.GetAsync(s.Space.Id)).SetName("ar", "الغرفة 1");
+            (await _floorRepository.GetAsync(s.Floor.Id)).SetName("ar", "الطابق 1");
+            (await _buildingRepository.GetAsync(s.Building.Id)).SetName("ar", "المقر");
+        });
+        using var _ = ActAs(s.UserId);
+
+        BookingDto created;
+        using (CultureHelper.Use("ar"))
+        {
+            created = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        }
+
+        (created.SpaceName, created.FloorName, created.BuildingName).ShouldBe(("الغرفة 1", "الطابق 1", "المقر"));
+
+        using (CultureHelper.Use("en"))
+        {
+            var english = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13));
+            (english.SpaceName, english.FloorName).ShouldBe(("Room 1", "Level 1"));
+        }
     }
 
     [Fact]
@@ -635,6 +668,59 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     }
 
     [Fact]
+    public async Task Series_preview_names_each_other_room_already_booked_and_a_deleted_one_as_another_room()
+    {
+        var s = await CreateScenarioAsync();
+        var desk7 = await AddSpaceAsync(s, "Desk 7");
+        var desk8 = await AddSpaceAsync(s, "Desk 8");
+        var desk9 = await AddSpaceAsync(s, "Desk 9");
+        using var _ = ActAs(s.UserId);
+        foreach (var (desk, day) in new[] { (desk7, 0), (desk8, 1), (desk9, 2) })
+        {
+            await _bookingsAppService.CreateAsync(new CreateBookingDto
+            {
+                SpaceId = desk.Id, LocalStart = Tomorrow.AddDays(day).AddHours(10), LocalEnd = Tomorrow.AddDays(day).AddHours(11),
+                Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+            });
+        }
+
+        // Removed straight from the table: the booking stays confirmed, its room is gone.
+        await WithUnitOfWorkAsync(() => _spaceRepository.DeleteAsync(desk9.Id));
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 4));
+
+        preview.Occurrences.Take(3).Select(o => o.Warnings.ShouldHaveSingleItem().Message)
+            .Select(m => m.Contains("Desk 7") ? "Desk 7" : m.Contains("Desk 8") ? "Desk 8" : m.Contains("another room") ? "another room" : m)
+            .ShouldBe(new[] { "Desk 7", "Desk 8", "another room" });
+        preview.Occurrences[3].Warnings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_series_create_announces_each_booking_and_the_series_once()
+    {
+        var s = await CreateScenarioAsync();
+        var bus = GetRequiredService<ILocalEventBus>();
+        var created = 0;
+        var confirmed = new List<int>();
+        using var createdSubscription = bus.Subscribe<EntityCreatedEventData<Booking>>(_ =>
+        {
+            created++;
+            return Task.CompletedTask;
+        });
+        using var confirmedSubscription = bus.Subscribe<BookingSeriesConfirmedEvent>(e =>
+        {
+            confirmed.Add(e.Bookings.Count);
+            return Task.CompletedTask;
+        });
+        using var _ = ActAs(s.UserId);
+
+        await _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 5));
+
+        created.ShouldBe(5);
+        confirmed.ShouldBe(new[] { 5 });
+    }
+
+    [Fact]
     public async Task A_rule_every_date_breaks_alike_is_reported_once_for_the_series()
     {
         var s = await CreateScenarioAsync();
@@ -793,6 +879,64 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         rest.Items.Select(b => b.Id).ShouldBe(new[] { created.Bookings[0].Id, created.Bookings[2].Id, created.Bookings[3].Id });
         (await _bookingsAppService.GetMineAsync(Days(0, 4))).Items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Cancelling_a_single_booking_as_its_series_cancels_just_that_one()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var single = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        var other = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13));
+
+        var cancelled = await _bookingsAppService.CancelAsync(single.Id, new CancelBookingDto { Scope = CancelScope.Series });
+
+        cancelled.Items.ShouldHaveSingleItem().Id.ShouldBe(single.Id);
+        (await _bookingsAppService.GetAsync(other.Id)).Status.ShouldBe(nameof(BookingStatus.Confirmed));
+    }
+
+    [Fact]
+    public async Task The_calendar_still_shows_bookings_in_a_removed_room_or_building_by_name_and_local_time()
+    {
+        // A building on Amman time, so the local times show it's the building's clock, not UTC.
+        var (userId, buildingId, roomA, roomB) = await WithUnitOfWorkAsync(async () =>
+        {
+            var building = await _buildingRepository.InsertAsync(new Building(
+                Guid.NewGuid(), "en", "Amman HQ " + Guid.NewGuid().ToString("N")[..6], null, "Asia/Amman",
+                new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
+                maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
+            var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
+            var spaceType = await _spaceTypeRepository.FirstAsync();
+            var a = await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room A", spaceType.Id, capacity: 8));
+            var b = await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room B", spaceType.Id, capacity: 8));
+            var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io");
+            user.SetBuildingId(building.Id);
+            (await _userManager.CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
+            return (user.Id, building.Id, a.Id, b.Id);
+        });
+
+        using (ActAs(userId))
+        {
+            await _bookingsAppService.CreateAsync(Request(roomA, 10, 11));
+            await _bookingsAppService.CreateAsync(Request(roomB, 13, 14));
+        }
+
+        // Room A removed first, then the whole building (the cancels themselves run later, in a job).
+        using (ActAs(Guid.NewGuid()))
+        {
+            await GetRequiredService<ISpacesAppService>().DeleteAsync(roomA);
+            await GetRequiredService<IBuildingsAppService>().DeleteAsync(buildingId);
+        }
+
+        using (ActAs(userId))
+        {
+            var shown = (await _bookingsAppService.GetMineAsync(Days(0, 1))).Items;
+            shown.Select(b => (b.SpaceName, b.LocalStart, b.LocalEnd)).ShouldBe(new[]
+            {
+                ("Room A", Tomorrow.AddHours(10), Tomorrow.AddHours(11)),
+                ("Room B", Tomorrow.AddHours(13), Tomorrow.AddHours(14)),
+            });
+        }
     }
 
     private static GetMyBookingsInput Days(int fromOffset, int toOffset) => new()

@@ -200,4 +200,17 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             throw new BusinessException(DixelsDomainErrorCodes.BookingOverlap, innerException: ex);
         }
     }
+
+    public async Task InsertManyConfirmedAsync(IReadOnlyCollection<Booking> bookings, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await InsertManyAsync(bookings, autoSave: true, GetCancellationToken(cancellationToken));
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ExclusionViolation })
+        {
+            // As InsertConfirmedAsync: one row lost a race, so the whole save (and request) fails.
+            throw new BusinessException(DixelsDomainErrorCodes.BookingOverlap, innerException: ex);
+        }
+    }
 }
