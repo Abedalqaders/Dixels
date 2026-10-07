@@ -10,7 +10,10 @@ import { createRoutesFromElements, Navigate } from 'react-router-dom'
 import type { RouteObject } from 'react-router-dom'
 import { createQueryClient } from '@/lib/api/queryClient'
 import { queryKeys } from '@/lib/api/queryKeys'
-import { Permissions } from '@/features/auth/permissions/permissionNames'
+import { Flows, Permissions } from '@/features/auth/permissions/permissionNames'
+import { BookingsFlows, BookingsPermissions } from '@/features/bookings/permissions'
+import { SpaceManagementPermissions } from '@/features/space-management/permissions'
+import { UsersPermissions } from '@/features/users/permissions'
 import { landingFor } from '@/features/auth/landing'
 import { matrixRows } from '@/test/permissionMatrix'
 import type { AppModule } from './module'
@@ -104,6 +107,22 @@ describe('the registry', () => {
     expect(duplicates(appPermissionNames)).toEqual([])
     const reexported = Object.values(Permissions).flatMap((group) => Object.values(group))
     expect([...appPermissionNames].sort()).toEqual([...reexported].sort())
+  })
+})
+
+describe('the re-exports (permissionNames.ts, lib/api/queryKeys.ts)', () => {
+  // They merge the features' objects by spreading: a name two features both used would keep
+  // only the later one, silently. So nothing may be lost in the merge.
+  const keyCount = (...objects: object[]) => objects.reduce((sum, o) => sum + Object.keys(o).length, 0)
+
+  it('keep every permission group and flow from every feature', () => {
+    expect(Object.keys(Permissions)).toHaveLength(keyCount(SpaceManagementPermissions, BookingsPermissions, UsersPermissions))
+    expect(Object.keys(Flows)).toHaveLength(keyCount(BookingsFlows))
+  })
+
+  it('keep every query-key family from every feature', () => {
+    const files = import.meta.glob<Record<string, object>>('/src/features/*/queryKeys.ts', { eager: true })
+    expect(Object.keys(queryKeys)).toHaveLength(keyCount(...Object.values(files).flatMap((file) => Object.values(file))))
   })
 })
 
