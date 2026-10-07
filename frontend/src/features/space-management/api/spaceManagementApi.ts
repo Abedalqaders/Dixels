@@ -89,6 +89,8 @@ export interface BuildingDto {
   name: string
   /** Every name it has, one per language — what the edit form shows. */
   names: LocalizedNameDto[]
+  /** Its street address per language (only languages it has a name in); empty when none. */
+  addresses: BuildingAddressDto[]
   buildingNumber: string | null
   timezone: string
   days: number[]
@@ -103,9 +105,16 @@ export interface BuildingDto {
   concurrencyStamp: string
 }
 
+export interface BuildingAddressDto {
+  language: string
+  address: string
+}
+
 export interface CreateBuildingDto {
   /** One per language; the default language's is required. */
   names: LocalizedNameDto[]
+  /** Optional, one per language it has a name in. */
+  addresses?: BuildingAddressDto[]
   buildingNumber?: string | null
   timezone: string
   days: number[]
@@ -122,6 +131,8 @@ export interface CreateBuildingDto {
 export interface UpdateBuildingDto {
   /** Every name it should have — a language left out loses its name. */
   names: LocalizedNameDto[]
+  /** Every address it should have — a language left out loses its address. */
+  addresses?: BuildingAddressDto[]
   buildingNumber?: string | null
   timezone: string
 }

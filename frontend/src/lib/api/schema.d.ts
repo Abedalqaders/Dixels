@@ -6254,7 +6254,12 @@ export interface components {
             /** Format: date-time */
             startsAt: string;
         };
+        "Dixels.SpaceManagement.BuildingAddressDto": {
+            address: string;
+            language: string;
+        };
         "Dixels.SpaceManagement.BuildingDto": {
+            addresses: components["schemas"]["Dixels.SpaceManagement.BuildingAddressDto"][];
             buildingNumber?: string | null;
             concurrencyStamp: string;
             days: number[];
@@ -6295,6 +6300,7 @@ export interface components {
             startsAt: string;
         };
         "Dixels.SpaceManagement.CreateBuildingDto": {
+            addresses: components["schemas"]["Dixels.SpaceManagement.BuildingAddressDto"][];
             buildingNumber?: string | null;
             days: number[];
             hours: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
@@ -6457,6 +6463,7 @@ export interface components {
             ownOverlapPolicy: components["schemas"]["Dixels.SpaceManagement.OwnOverlapPolicy"];
         };
         "Dixels.SpaceManagement.UpdateBuildingDto": {
+            addresses: components["schemas"]["Dixels.SpaceManagement.BuildingAddressDto"][];
             buildingNumber?: string | null;
             names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             timezone: string;
@@ -6595,6 +6602,7 @@ export type SchemaDixelsLocalizationLocalizedNameDto = components['schemas']['Di
 export type SchemaDixelsReservationsAffectedReservationDto = components['schemas']['Dixels.Reservations.AffectedReservationDto'];
 export type SchemaDixelsReservationsReservationImpactDto = components['schemas']['Dixels.Reservations.ReservationImpactDto'];
 export type SchemaDixelsSpaceManagementAvailabilityOverrideDto = components['schemas']['Dixels.SpaceManagement.AvailabilityOverrideDto'];
+export type SchemaDixelsSpaceManagementBuildingAddressDto = components['schemas']['Dixels.SpaceManagement.BuildingAddressDto'];
 export type SchemaDixelsSpaceManagementBuildingDto = components['schemas']['Dixels.SpaceManagement.BuildingDto'];
 export type SchemaDixelsSpaceManagementConstraintsSaveResultDto = components['schemas']['Dixels.SpaceManagement.ConstraintsSaveResultDto'];
 export type SchemaDixelsSpaceManagementCreateAvailabilityOverrideDto = components['schemas']['Dixels.SpaceManagement.CreateAvailabilityOverrideDto'];
