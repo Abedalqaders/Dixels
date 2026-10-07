@@ -1,24 +1,17 @@
-import { Flows, HierarchyViewers, hierarchyPermissions, Permissions } from '@/features/auth/permissions/permissionNames'
-import type { HierarchyLevel } from '@/features/auth/permissions/permissionNames'
 import type { PermissionRequirement } from '@/features/auth/permissions/usePermission'
+import { appPages } from './modules'
 
 /**
- * What each page needs, in one table: App.tsx gates every route with it, and
- * permissionMatrix.test.tsx checks it against the grants each API call needs. Each entry is
- * the permission the page's *first* API call checks, so a user let in never lands on a 403.
+ * What each page needs, in one table, from the module registry: every page's <Gate> is given
+ * the same value (see each features/<feature>/module.tsx), and permissionMatrix.test.tsx
+ * checks it against the grants each API call needs. Each entry is the permission the page's
+ * *first* API call checks, so a user let in never lands on a 403. Pages anyone signed in may
+ * open, and the one that picks its permission from the URL, aren't in it.
  */
-export const ROUTE_REQUIREMENTS = {
-  '/my-calendar': Permissions.Bookings.Default,
-  '/find-space': Flows.FindSpace,
-  '/admin/buildings': HierarchyViewers.Buildings,
-  '/admin/buildings/:buildingId/floors': HierarchyViewers.Floors,
-  '/admin/buildings/:buildingId/floors/:floorId/spaces': HierarchyViewers.Spaces,
-  '/admin/space-types': Permissions.SpaceTypes.Default,
-  '/admin/users': Permissions.Identity.Users,
-} as const satisfies Record<string, PermissionRequirement>
+export const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = Object.fromEntries(
+  appPages.flatMap((page) =>
+    page.permission === null || typeof page.permission === 'function' ? [] : [[page.path, page.permission]],
+  ),
+)
 
-/** The constraints page reads the level it opens on, so it needs that level's own read grant. */
-export function constraintsRequirement(level: string | undefined): PermissionRequirement {
-  const known = level === 'building' || level === 'floor' || level === 'space'
-  return known ? hierarchyPermissions(level as HierarchyLevel).Default : Permissions.Buildings.Default
-}
+export { constraintsRequirement } from '@/features/space-management/constraintsRequirement'

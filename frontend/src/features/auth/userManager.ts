@@ -11,11 +11,14 @@ import { UserManager } from 'oidc-client-ts'
 //
 // One instance for the app, made here rather than inside <AuthProvider>: a route loader
 // runs outside React and reads the signed-in user from it too (see myBuildingLoader).
+// `globalThis.location` (the same as window.location in a browser) so that merely loading
+// this file outside one — a test of the module registry — doesn't throw.
+const origin = globalThis.location?.origin
 export const userManager = new UserManager({
   authority: import.meta.env.VITE_OIDC_AUTHORITY ?? 'https://localhost:44334',
   client_id: import.meta.env.VITE_OIDC_CLIENT_ID ?? 'Dixels_App',
-  redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URI ?? `${window.location.origin}/callback`,
-  post_logout_redirect_uri: import.meta.env.VITE_OIDC_POST_LOGOUT_REDIRECT_URI ?? `${window.location.origin}/`,
+  redirect_uri: import.meta.env.VITE_OIDC_REDIRECT_URI ?? `${origin}/callback`,
+  post_logout_redirect_uri: import.meta.env.VITE_OIDC_POST_LOGOUT_REDIRECT_URI ?? `${origin}/`,
   response_type: 'code', // Authorization Code flow (the library adds PKCE automatically)
   // PKCE needs crypto.subtle, which browsers only offer over https (or on localhost).
   // VITE_OIDC_DISABLE_PKCE=true is solely for a LAN test server on plain http — it

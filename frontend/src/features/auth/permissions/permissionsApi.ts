@@ -11,9 +11,11 @@ interface ApplicationConfigurationDto {
   }
 }
 
-/** The names in Permissions (permissionNames.ts) that the backend doesn't define. */
-export function unknownPermissionNames(definedPolicies: Record<string, boolean>): string[] {
-  const used = Object.values(Permissions).flatMap((group) => Object.values(group))
+/** The names the frontend uses (by default, all of Permissions) that the backend doesn't define. */
+export function unknownPermissionNames(
+  definedPolicies: Record<string, boolean>,
+  used: string[] = Object.values(Permissions).flatMap((group) => Object.values(group)),
+): string[] {
   return used.filter((name) => !(name in definedPolicies))
 }
 
@@ -28,12 +30,14 @@ export async function getGrantedPolicies(token: string): Promise<Record<string, 
     '/api/abp/application-configuration?includeLocalizationResources=false',
     token,
   )
-  // permissionNames.ts is a hand-kept copy of DixelsPermissions.cs. A rename on one side
-  // silently hides pages on the other, so in development say so the moment the names arrive.
+  // Each module's permissions.ts is a hand-kept copy of part of DixelsPermissions.cs. A rename
+  // on one side silently hides pages on the other, so in development say so the moment the
+  // names arrive. Every module's names, from the registry — loaded here only in development.
   if (import.meta.env.DEV) {
-    const unknown = unknownPermissionNames(config.auth.policies ?? {})
+    const { appPermissionNames } = await import('@/app/modules')
+    const unknown = unknownPermissionNames(config.auth.policies ?? {}, appPermissionNames)
     if (unknown.length > 0) {
-      console.warn(`Permissions unknown to the backend (check permissionNames.ts against DixelsPermissions.cs): ${unknown.join(', ')}`)
+      console.warn(`Permissions unknown to the backend (check the modules' permissions.ts against DixelsPermissions.cs): ${unknown.join(', ')}`)
     }
   }
   return config.auth.grantedPolicies ?? {}
