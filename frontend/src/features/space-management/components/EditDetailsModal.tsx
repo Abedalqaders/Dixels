@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFieldErrors } from '@/components/FieldError'
 import { LocalizedNameField, languageWithForeignLetters, fromNameList, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
+import { LocalizedAddressField, fromAddressList, toAddressList } from '@/components/LocalizedAddressField'
+import type { LocalizedAddresses } from '@/components/LocalizedAddressField'
 import { currentLanguage, getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
 import { ApiError, updateBuilding, updateFloor, updateSpace, getSpaceUpdateImpact } from '@/features/space-management/api/spaceManagementApi'
-import type { LocalizedNameDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
+import type { BuildingAddressDto, LocalizedNameDto, SpaceTypeDto } from '@/features/space-management/api/spaceManagementApi'
 import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBookingImpactPrompt'
 
 // The identity-fields counterpart to AddNodeModal — Name/BuildingNumber/Timezone (Building),
@@ -25,13 +27,15 @@ import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBoo
 // and the title is announced — none of which the old hand-rolled overlay did.
 // `names` is every name the row has, one per language (its DTO's `names`).
 export type EditDetailsState =
-  | { kind: 'building'; id: string; names: LocalizedNameDto[]; buildingNumber: string | null; timezone: string }
+  | { kind: 'building'; id: string; names: LocalizedNameDto[]; addresses?: BuildingAddressDto[]; buildingNumber: string | null; timezone: string }
   | { kind: 'floor'; id: string; names: LocalizedNameDto[]; floorNumber: number | null }
   | { kind: 'space'; id: string; names: LocalizedNameDto[]; spaceTypeId: string; capacity: number }
   | null
 
 /** LocalizedNameConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
+/** BuildingConsts.MaxAddressLength on the backend. */
+const MAX_ADDRESS_LENGTH = 512
 
 interface EditDetailsModalProps {
   state: NonNullable<EditDetailsState>
@@ -50,6 +54,8 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
   // language; the default language's is required.
   const defaultLanguage = getDefaultLanguage()
   const [names, setNames] = useState<LocalizedNames>(() => fromNameList(state.names))
+  // A building's address, per language like its name; optional.
+  const [addresses, setAddresses] = useState<LocalizedAddresses>(() => (state.kind === 'building' ? fromAddressList(state.addresses) : {}))
   const [language, setLanguage] = useState(currentLanguage())
   const [buildingNumber, setBuildingNumber] = useState(state.kind === 'building' ? (state.buildingNumber ?? '') : '')
   const [timezone, setTimezone] = useState(state.kind === 'building' ? state.timezone : 'UTC')
@@ -94,7 +100,12 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
     setSubmitting(true)
     try {
       if (state.kind === 'building') {
-        await updateBuilding(token, state.id, { names: toNameList(names), buildingNumber: buildingNumber.trim() || null, timezone })
+        await updateBuilding(token, state.id, {
+          names: toNameList(names),
+          addresses: toAddressList(names, addresses),
+          buildingNumber: buildingNumber.trim() || null,
+          timezone,
+        })
       } else if (state.kind === 'floor') {
         await updateFloor(token, state.id, { names: toNameList(names), floorNumber: floorNumber.trim() ? Number(floorNumber) : null })
       } else {
@@ -151,6 +162,18 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
                 autoFocus
               />
             </div>
+            {state.kind === 'building' && (
+              <div className="sm:col-span-2">
+                <LocalizedAddressField
+                  id="edit-address"
+                  value={addresses}
+                  onChange={setAddresses}
+                  names={names}
+                  language={language}
+                  maxLength={MAX_ADDRESS_LENGTH}
+                />
+              </div>
+            )}
 
             {state.kind === 'building' && (
               <div className="grid gap-2">

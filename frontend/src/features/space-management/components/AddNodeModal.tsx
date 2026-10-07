@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useFieldErrors } from '@/components/FieldError'
 import { LocalizedNameField, languageWithForeignLetters, toNameList } from '@/components/LocalizedNameField'
 import type { LocalizedNames } from '@/components/LocalizedNameField'
+import { LocalizedAddressField, toAddressList } from '@/components/LocalizedAddressField'
+import type { LocalizedAddresses } from '@/components/LocalizedAddressField'
 import { getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
 import {
@@ -36,6 +38,8 @@ const DEFAULT_BUILDING_MIN_LEAD_MINUTES = 0
 
 /** LocalizedNameConsts.MaxNameLength on the backend. */
 const MAX_NAME_LENGTH = 128
+/** BuildingConsts.MaxAddressLength on the backend. */
+const MAX_ADDRESS_LENGTH = 512
 
 interface AddNodeModalProps {
   state: NonNullable<ModalState>
@@ -53,6 +57,8 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   // A name per language, typed in one box (LocalizedNameField); the default language's is required.
   const defaultLanguage = getDefaultLanguage()
   const [names, setNames] = useState<LocalizedNames>({})
+  // A building's address, per language like its name; optional.
+  const [addresses, setAddresses] = useState<LocalizedAddresses>({})
   const [language, setLanguage] = useState(defaultLanguage)
   const [meta, setMeta] = useState('')
   const [timezone, setTimezone] = useState('UTC')
@@ -105,6 +111,7 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
       if (state.kind === 'building') {
         await createBuilding(token, {
           names: toNameList(names),
+          addresses: toAddressList(names, addresses),
           buildingNumber: meta.trim() || null,
           timezone,
           days: DEFAULT_BUILDING_DAYS,
@@ -161,6 +168,18 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
                 autoFocus
               />
             </div>
+            {state.kind === 'building' && (
+              <div className="sm:col-span-2">
+                <LocalizedAddressField
+                  id="add-address"
+                  value={addresses}
+                  onChange={setAddresses}
+                  names={names}
+                  language={language}
+                  maxLength={MAX_ADDRESS_LENGTH}
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor={f.id('meta')}>
                 {metaLabel}
