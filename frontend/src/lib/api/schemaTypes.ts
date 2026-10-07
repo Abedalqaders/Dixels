@@ -29,7 +29,7 @@ type Present<T> = T extends readonly (infer U)[] ? Present<U>[] : T extends obje
 
 /**
  * `true` when a const object (`{ Allow: 0, Warn: 1, Block: 2 }`) names exactly the values of
- * the API's enum — no stale value, none missing. Used through `Check<…>` in enumChecks.ts.
+ * the API's enum — no stale value, none missing. Used through `Check<…>` in each feature's api/enumChecks.ts.
  */
 export type NamesEvery<Obj, Enum> = [Obj[keyof Obj]] extends [Enum] ? ([Enum] extends [Obj[keyof Obj]] ? true : false) : false
 
