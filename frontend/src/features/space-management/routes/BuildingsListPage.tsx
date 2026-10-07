@@ -192,6 +192,7 @@ export function BuildingsListPage() {
                                   kind: 'building',
                                   id: building.id,
                                   names: building.names,
+                                  addresses: building.addresses,
                                   buildingNumber: building.buildingNumber,
                                   timezone: building.timezone,
                                 }),

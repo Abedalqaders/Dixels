@@ -85,6 +85,8 @@ interface LocalizedNameFieldProps {
   maxLength?: number
   disabled?: boolean
   autoFocus?: boolean
+  /** A few words beside a language in the dropdown — e.g. that it has an address too. */
+  languageNote?: (code: string) => string | undefined
 }
 
 /**
@@ -114,6 +116,7 @@ export function LocalizedNameField({
   maxLength,
   disabled,
   autoFocus,
+  languageNote,
 }: LocalizedNameFieldProps) {
   const { t } = useTranslation()
   const languages = availableLanguages()
@@ -145,6 +148,7 @@ export function LocalizedNameField({
                     {l.name}
                   </span>
                   {l.code === defaultLanguage && <span className="text-xs text-muted-foreground">{t('Names:Required')}</span>}
+                  {languageNote?.(l.code) && <span className="text-xs text-muted-foreground">· {languageNote(l.code)}</span>}
                   {problemOf(l.code) ? (
                     <CircleAlertIcon className="text-destructive" aria-label={t('Names:NeedsFixing')} />
                   ) : (

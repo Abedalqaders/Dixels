@@ -10950,8 +10950,29 @@
         },
         "additionalProperties": false
       },
+      "Dixels.SpaceManagement.BuildingAddressDto": {
+        "required": [
+          "address",
+          "language"
+        ],
+        "type": "object",
+        "properties": {
+          "language": {
+            "maxLength": 10,
+            "minLength": 0,
+            "type": "string"
+          },
+          "address": {
+            "maxLength": 512,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "Dixels.SpaceManagement.BuildingDto": {
         "required": [
+          "addresses",
           "concurrencyStamp",
           "days",
           "hours",
@@ -10979,6 +11000,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Dixels.Localization.LocalizedNameDto"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.BuildingAddressDto"
             }
           },
           "buildingNumber": {
@@ -11117,6 +11144,7 @@
       },
       "Dixels.SpaceManagement.CreateBuildingDto": {
         "required": [
+          "addresses",
           "days",
           "hours",
           "maxDurationMinutes",
@@ -11140,6 +11168,12 @@
             "minLength": 0,
             "type": "string",
             "nullable": true
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.BuildingAddressDto"
+            }
           },
           "timezone": {
             "maxLength": 64,
@@ -11732,6 +11766,13 @@
             "maxLength": 32,
             "minLength": 0,
             "type": "string",
+            "nullable": true
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.SpaceManagement.BuildingAddressDto"
+            },
             "nullable": true
           },
           "timezone": {

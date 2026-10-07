@@ -361,6 +361,10 @@ export interface TextKeys {
   "Hierarchy:AddSpace": string
   "Hierarchy:AddedUnder": string
   "Hierarchy:Adding": string
+  "Hierarchy:AddressIn": string
+  "Hierarchy:AddressNeedsName": string
+  "Hierarchy:AddressOtherLanguages": string
+  "Hierarchy:AddressPlaceholder": string
   "Hierarchy:AffectedBookings": string
   "Hierarchy:AllBuildings": string
   "Hierarchy:AllTypes": string
@@ -416,6 +420,7 @@ export interface TextKeys {
   "Hierarchy:FloorsLoadFailed": string
   "Hierarchy:FloorsLoadFailedShort": string
   "Hierarchy:GoBack": string
+  "Hierarchy:HasAddress": string
   "Hierarchy:HidePanel": string
   "Hierarchy:ImpactAssignedDetail": string
   "Hierarchy:ImpactAssigned_one": string
@@ -457,6 +462,7 @@ export interface TextKeys {
   "Hierarchy:NoFloorsYet": string
   "Hierarchy:NoSpaces": string
   "Hierarchy:NoSpacesHint": string
+  "Hierarchy:Optional": string
   "Hierarchy:Retry": string
   "Hierarchy:RowActions": string
   "Hierarchy:SaveDetails": string

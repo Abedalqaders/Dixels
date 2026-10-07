@@ -15,6 +15,9 @@ public class BuildingDto : EntityDto<Guid>
 
     /// <summary>Every name it has, one per language — what the edit form shows.</summary>
     public List<LocalizedNameDto> Names { get; set; } = [];
+
+    /// <summary>Every address it has, one per language — what the edit form shows.</summary>
+    public List<BuildingAddressDto> Addresses { get; set; } = [];
     public string? BuildingNumber { get; set; }
     public string Timezone { get; set; } = string.Empty;
 

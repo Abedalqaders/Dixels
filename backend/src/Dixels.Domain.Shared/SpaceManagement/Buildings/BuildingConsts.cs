@@ -8,4 +8,7 @@ public static class BuildingConsts
 {
     public const int MaxBuildingNumberLength = 32;
     public const int MaxTimezoneLength = 64;
+
+    /// <summary>Per language, like the name (on BuildingTranslation). Shown in guest emails and the .ics location.</summary>
+    public const int MaxAddressLength = 512;
 }

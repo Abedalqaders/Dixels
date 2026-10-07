@@ -62,12 +62,17 @@ export type OwnOverlapPolicy = ApiDto<'Dixels.SpaceManagement.OwnOverlapPolicy'>
 /**
  * - `name`: The name to show — the server picks it for the request's language (Accept-Language), falling back to the default language's.
  * - `names`: Every name it has, one per language — what the edit form shows.
+ * - `addresses`: Its street address per language (only languages it has a name in); empty when none.
  * - `maxSeriesHorizonDays`: How far ahead recurring bookings may run — never shorter than maxHorizonDays.
  */
 export type BuildingDto = ApiResponse<'Dixels.SpaceManagement.BuildingDto'>
 
+/** A building's street address in one language, shown to guests. */
+export type BuildingAddressDto = ApiDto<'Dixels.SpaceManagement.BuildingAddressDto'>
+
 /**
  * - `names`: One per language; the default language's is required.
+ * - `addresses`: Optional, one per language it has a name in.
  * - `maxSeriesHorizonDays`: How far ahead recurring bookings may run; 90 days when left out.
  * - `ownOverlapPolicy`: Whether one person may hold two bookings at once here; Warn when left out.
  */
@@ -75,6 +80,7 @@ export type CreateBuildingDto = ApiDto<'Dixels.SpaceManagement.CreateBuildingDto
 
 /**
  * - `names`: Every name it should have — a language left out loses its name.
+ * - `addresses`: Left out (null): unchanged. Given: exactly these — a language left out loses its address.
  */
 export type UpdateBuildingDto = ApiDto<'Dixels.SpaceManagement.UpdateBuildingDto'>
 
