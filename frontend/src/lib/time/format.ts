@@ -138,9 +138,21 @@ export function formatClock(time: HhMm | string): string {
   return time
 }
 
-/** "10:00–11:30" */
+/**
+ * Keeps text that reads left to right (a time range) in that order inside a right-to-left
+ * language. In Arabic "04:00–05:00" otherwise shows as "05:00–04:00": the bidi algorithm
+ * treats the two numbers as right-to-left around the dash and swaps them. Wrapped in the
+ * invisible isolate marks LRI…PDI (U+2066…U+2069), only when the language is RTL, so English
+ * text stays exactly as it was. A plain string, so it works in JSX, toasts and aria-labels.
+ * Messages that join {start}–{end} themselves wrap it in their own text instead (ar.json).
+ */
+export function isolateLtr(text: string): string {
+  return languageInfo().dir === 'rtl' ? `⁦${text}⁩` : text
+}
+
+/** "10:00–11:30", kept in that order in a right-to-left language too. */
 export function formatClockRange(from: HhMm | string, to: HhMm | string): string {
-  return `${formatClock(from)}–${formatClock(to)}`
+  return isolateLtr(`${formatClock(from)}–${formatClock(to)}`)
 }
 
 /** A browser-local Date's own calendar day as an API date string — for date pickers, whose value is a Date. */

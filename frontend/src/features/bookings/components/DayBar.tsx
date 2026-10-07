@@ -3,6 +3,7 @@ import type { KeyboardEvent, PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { fromMinutes } from '@/lib/time/buildingTime'
+import { formatClockRange } from '@/lib/time/format'
 import type { DayRangeDto } from '@/features/bookings/api/bookingsApi'
 import type { DayAxis } from '@/features/bookings/dayAxis'
 import { clickRange, dragRange, freeStretchAt } from '@/features/bookings/dragRange'
@@ -160,7 +161,7 @@ export function DayBar({ axis, open, closed, busy, selection, label, pick }: Day
           style={{ insetInlineStart: `${(((preview.start + preview.end) / 2 - axis.from) / span) * 100}%` }}
           aria-hidden="true"
         >
-          {fromMinutes(preview.start)}–{fromMinutes(preview.end)}
+          {formatClockRange(fromMinutes(preview.start), fromMinutes(preview.end))}
         </span>
       )}
 

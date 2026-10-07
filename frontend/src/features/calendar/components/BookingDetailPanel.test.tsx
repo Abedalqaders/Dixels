@@ -49,7 +49,7 @@ describe('BookingDetailPanel', () => {
     const panel = screen.getByRole('region', { name: 'Booking details' })
     expect(panel).toHaveAttribute('aria-busy', 'true')
     expect(panel).toHaveTextContent('Sunday 10 January 2027')
-    expect(panel).toHaveTextContent('13:30 – 15:30')
+    expect(panel).toHaveTextContent('13:30–15:30')
     expect(panel).toHaveTextContent('Meeting Room 302')
     expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
   })

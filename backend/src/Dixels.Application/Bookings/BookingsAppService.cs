@@ -108,20 +108,25 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         // more) still sees what they booked — on UTC days, the one neutral choice left.
         var userId = CurrentUser.GetId();
         var buildingId = await _accessChecker.FindBookableBuildingIdAsync(userId);
-        Building? building = null;
+        string? timezone = null;
         if (buildingId is not null)
         {
             // Deleted included: an employee whose building was removed still sees their
-            // (cancelled) bookings on that building's clock.
+            // (cancelled) bookings on that building's clock. Only its timezone: the calendar
+            // shows no building name, so the building and its names aren't loaded.
             using (_dataFilter.Disable<ISoftDelete>())
             {
-                building = await _buildingRepository.FindAsync(buildingId.Value);
+                var buildings = await _buildingRepository.GetQueryableAsync();
+                timezone = await AsyncExecuter.FirstOrDefaultAsync(
+                    buildings.Where(b => b.Id == buildingId.Value).Select(b => b.Timezone));
             }
         }
-        var clock = new BuildingClock(building?.Timezone ?? "UTC");
+        var clock = new BuildingClock(timezone ?? "UTC");
 
+        // A building that's gone altogether (not found) filters nothing, as before.
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
-        var bookings = await _bookingRepository.GetCalendarForUserAsync(userId, clock.ToUtc(from), clock.ToUtc(to), now, building?.Id);
+        var bookings = await _bookingRepository.GetCalendarForUserAsync(
+            userId, clock.ToUtc(from), clock.ToUtc(to), now, timezone is null ? null : buildingId);
         return new ListResultDto<BookingSummaryDto>(await MapToSummariesAsync(bookings));
     }
 

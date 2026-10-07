@@ -549,7 +549,7 @@ const DayColumn = memo(function DayColumn({
             aria-hidden="true"
           >
             <span className="font-mono">
-              {fromMinutes(draft.start)}–{fromMinutes(draft.end)}
+              {formatClockRange(fromMinutes(draft.start), fromMinutes(draft.end))}
             </span>
             {hint.suffix && <span className="px-1 text-center leading-tight">{hint.suffix}</span>}
           </div>
