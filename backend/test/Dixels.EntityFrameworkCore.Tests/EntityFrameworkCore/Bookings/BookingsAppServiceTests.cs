@@ -825,6 +825,50 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         (await _bookingsAppService.GetMineAsync(Days(0, 4))).Items.ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task The_calendar_still_shows_bookings_in_a_removed_room_or_building_by_name_and_local_time()
+    {
+        // A building on Amman time, so the local times show it's the building's clock, not UTC.
+        var (userId, buildingId, roomA, roomB) = await WithUnitOfWorkAsync(async () =>
+        {
+            var building = await _buildingRepository.InsertAsync(new Building(
+                Guid.NewGuid(), "en", "Amman HQ " + Guid.NewGuid().ToString("N")[..6], null, "Asia/Amman",
+                new OperatingDays(OperatingDays.AllDaysMask), new OperatingWindow(true, TimeOnly.MinValue, TimeOnly.MinValue),
+                maxDurationMinutes: 120, maxHorizonDays: 30, minLeadMinutes: 0));
+            var floor = await _floorRepository.InsertAsync(new Floor(Guid.NewGuid(), building.Id, "en", "Level 1", 1));
+            var spaceType = await _spaceTypeRepository.FirstAsync();
+            var a = await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room A", spaceType.Id, capacity: 8));
+            var b = await _spaceRepository.InsertAsync(new Space(Guid.NewGuid(), floor.Id, "en", "Room B", spaceType.Id, capacity: 8));
+            var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io");
+            user.SetBuildingId(building.Id);
+            (await _userManager.CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
+            return (user.Id, building.Id, a.Id, b.Id);
+        });
+
+        using (ActAs(userId))
+        {
+            await _bookingsAppService.CreateAsync(Request(roomA, 10, 11));
+            await _bookingsAppService.CreateAsync(Request(roomB, 13, 14));
+        }
+
+        // Room A removed first, then the whole building (the cancels themselves run later, in a job).
+        using (ActAs(Guid.NewGuid()))
+        {
+            await GetRequiredService<ISpacesAppService>().DeleteAsync(roomA);
+            await GetRequiredService<IBuildingsAppService>().DeleteAsync(buildingId);
+        }
+
+        using (ActAs(userId))
+        {
+            var shown = (await _bookingsAppService.GetMineAsync(Days(0, 1))).Items;
+            shown.Select(b => (b.SpaceName, b.LocalStart, b.LocalEnd)).ShouldBe(new[]
+            {
+                ("Room A", Tomorrow.AddHours(10), Tomorrow.AddHours(11)),
+                ("Room B", Tomorrow.AddHours(13), Tomorrow.AddHours(14)),
+            });
+        }
+    }
+
     private static GetMyBookingsInput Days(int fromOffset, int toOffset) => new()
     {
         From = Tomorrow.AddDays(fromOffset),

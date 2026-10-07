@@ -265,21 +265,47 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             names);
     }
 
-    /// <summary>The calendar's light rows: no floor/building names, no series rule — just what's drawn.</summary>
+    /// <summary>
+    /// The calendar's light rows: no floor/building names, no series rule — just what's drawn.
+    /// So only the rooms are loaded (for their names); each floor gives just its building's
+    /// timezone, in one small query, instead of whole floors and buildings with their names.
+    /// </summary>
     private async Task<List<BookingSummaryDto>> MapToSummariesAsync(IReadOnlyCollection<Booking> bookings)
     {
-        var places = await LoadPlacesAsync(bookings);
+        if (bookings.Count == 0)
+        {
+            return new List<BookingSummaryDto>();
+        }
+
+        // Deleted ones included, as in LoadPlacesAsync: a booking in a removed room or building
+        // still shows (struck through), under its name and on its building's clock.
+        using var _ = _dataFilter.Disable<ISoftDelete>();
+
+        var spaceIds = bookings.Select(b => b.SpaceId).Distinct().ToList();
+        var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true)).ToDictionary(s => s.Id);
+        var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces.Values);
+
+        var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
+        var floors = await _floorRepository.GetQueryableAsync();
+        var buildings = await _buildingRepository.GetQueryableAsync();
+        var timezoneByFloor = (await AsyncExecuter.ToListAsync(
+                from f in floors
+                join b in buildings on f.BuildingId equals b.Id
+                where floorIds.Contains(f.Id)
+                select new { FloorId = f.Id, b.Timezone }))
+            .ToDictionary(x => x.FloorId, x => x.Timezone);
+
         return bookings.Select(booking =>
         {
-            var (space, _, building) = places.Of(booking);
-            var clock = new BuildingClock(building.Timezone);
+            var space = spaces[booking.SpaceId];
+            var clock = new BuildingClock(timezoneByFloor[space.FloorId]);
             return new BookingSummaryDto
             {
                 Id = booking.Id,
                 Title = booking.Title,
                 LocalStart = clock.ToLocal(booking.StartsAt),
                 LocalEnd = clock.ToLocal(booking.EndsAt),
-                SpaceName = places.Names[space.Id],
+                SpaceName = names[space.Id],
                 Status = booking.Status.ToString(),
                 SeriesId = booking.SeriesId,
             };
