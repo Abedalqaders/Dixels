@@ -255,7 +255,7 @@ export function BookingForm({
         </DialogHeader>
 
         <form className="grid gap-4" onSubmit={handleSubmit}>
-          <p className="font-mono text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground tabular-nums">
             {t('BookingForm:Rules', {
               hours: formatHours(space.hours.value),
               days: formatDays(space.days.value),

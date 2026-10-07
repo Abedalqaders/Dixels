@@ -46,7 +46,7 @@ export function ErrorMessage({ error, scope, onTryAgain }: { error: Error; scope
     <div role="alert" className="mx-auto max-w-md p-6 text-center">
       <h1 className="text-lg font-semibold">{i18n.t('Error:BoundaryTitle')}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{i18n.t('Error:BoundaryDetail')}</p>
-      <p className="mt-2 font-mono text-xs text-muted-foreground">{error.message}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{error.message}</p>
       <button
         type="button"
         className="mt-4 rounded-md border px-3 py-1.5 text-sm"
