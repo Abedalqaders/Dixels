@@ -72,6 +72,9 @@ export interface TextKeys {
   "Booking:FewerPeople": string
   "Booking:From": string
   "Booking:InProgress": string
+  "Booking:Invitees": string
+  "Booking:InviteesCount_one": string
+  "Booking:InviteesCount_other": string
   "Booking:Keep": string
   "Booking:ListAnd": string
   "Booking:ListSeparator": string
@@ -113,6 +116,7 @@ export interface TextKeys {
   "BookingForm:Dates": string
   "BookingForm:DatesCheckFailed": string
   "BookingForm:Free": string
+  "BookingForm:InvitePeople": string
   "BookingForm:Midnight": string
   "BookingForm:NoFreeDays": string
   "BookingForm:NoTimesLeft": string
@@ -526,6 +530,24 @@ export interface TextKeys {
   "Pagination:Range": string
   "Pagination:Rows": string
   "Pagination:RowsPerPage": string
+  "People:AddGuest": string
+  "People:AlreadyAdded": string
+  "People:EmailInvalid": string
+  "People:Full": string
+  "People:Guest": string
+  "People:GuestEmail": string
+  "People:GuestName": string
+  "People:HowToAdd": string
+  "People:NoMatch": string
+  "People:Optional": string
+  "People:Picked": string
+  "People:Remove": string
+  "People:Search": string
+  "People:SearchFailed": string
+  "People:Searching": string
+  "People:TabColleague": string
+  "People:TabGuest": string
+  "People:TypeMore": string
   "Permission:Bookings": string
   "Permission:Buildings": string
   "Permission:Cancel": string

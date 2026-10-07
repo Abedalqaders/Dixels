@@ -31,6 +31,7 @@ const FIELD_BY_CODE: Record<string, IssueField> = {
   'Dixels:Bookings:OverCapacity': 'attendees',
   'Dixels:Bookings:BelowMinAttendees': 'attendees',
   'Dixels:Bookings:AttendeesMustBePositive': 'attendees',
+  'Dixels:Bookings:AttendeesBelowInvitees': 'attendees',
 }
 
 export function fieldFor(code: string): IssueField {

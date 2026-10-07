@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
@@ -83,5 +83,33 @@ describe('BookingDetailPanel', () => {
 
     expect(screen.getByText('Upcoming')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
+  it("lists the owner's guests with their emails, outside ones tagged Guest", () => {
+    const withGuests: BookingDto = {
+      ...booking,
+      isOwner: true,
+      invitees: [
+        { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 },
+        { userId: null, name: 'Omar Farouk', email: 'omar@acme.com', isExternal: true, responseStatus: 0 },
+      ],
+    }
+    renderPanel(withGuests)
+
+    const panel = screen.getByRole('region', { name: 'Booking details' })
+    expect(panel).toHaveTextContent('2 invited')
+    const list = within(panel).getByRole('list', { name: 'Invited' })
+    const [sara, omar] = within(list).getAllByRole('listitem')
+    expect(sara).toHaveTextContent('Sara Ali')
+    expect(sara).toHaveTextContent('sara@dixels.io')
+    expect(sara).not.toHaveTextContent('Guest')
+    expect(omar).toHaveTextContent('Omar Farouk')
+    expect(omar).toHaveTextContent('omar@acme.com')
+    expect(omar).toHaveTextContent('Guest')
+  })
+
+  it('shows no guest list when nobody was invited', () => {
+    renderPanel(booking)
+    expect(screen.queryByRole('list', { name: 'Invited' })).not.toBeInTheDocument()
   })
 })
