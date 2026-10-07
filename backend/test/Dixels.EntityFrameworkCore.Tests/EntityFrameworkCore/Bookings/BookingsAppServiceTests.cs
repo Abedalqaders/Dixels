@@ -219,7 +219,37 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         var retry = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, key: "attempt-1"));
 
         retry.Id.ShouldBe(first.Id);
+        (retry.SpaceName, retry.FloorName, retry.BuildingName, retry.Timezone)
+            .ShouldBe((first.SpaceName, first.FloorName, first.BuildingName, first.Timezone));
+        retry.SpaceName.ShouldBe("Room 1");
         (await CountBookingsAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_new_booking_names_its_place_in_the_readers_language()
+    {
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            (await _spaceRepository.GetAsync(s.Space.Id)).SetName("ar", "الغرفة 1");
+            (await _floorRepository.GetAsync(s.Floor.Id)).SetName("ar", "الطابق 1");
+            (await _buildingRepository.GetAsync(s.Building.Id)).SetName("ar", "المقر");
+        });
+        using var _ = ActAs(s.UserId);
+
+        BookingDto created;
+        using (CultureHelper.Use("ar"))
+        {
+            created = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        }
+
+        (created.SpaceName, created.FloorName, created.BuildingName).ShouldBe(("الغرفة 1", "الطابق 1", "المقر"));
+
+        using (CultureHelper.Use("en"))
+        {
+            var english = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13));
+            (english.SpaceName, english.FloorName).ShouldBe(("Room 1", "Level 1"));
+        }
     }
 
     [Fact]

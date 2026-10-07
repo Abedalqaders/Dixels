@@ -74,7 +74,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     {
         try
         {
-            var (booking, _) = await _bookingManager.CreateAsync(
+            var (booking, _, place) = await _bookingManager.CreateAsync(
                 CurrentUser.GetId(),
                 input.SpaceId,
                 input.LocalStart,
@@ -83,7 +83,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.Title,
                 input.IdempotencyKey);
 
-            return (await MapToDtosAsync(new[] { booking })).Single();
+            return (await MapToDtosAsync(new[] { booking }, await PlacesOfAsync(place))).Single();
         }
         catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
         {
@@ -173,7 +173,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     {
         try
         {
-            var (series, bookings, _) = await _bookingManager.CreateSeriesAsync(
+            var (series, bookings, _, place) = await _bookingManager.CreateSeriesAsync(
                 CurrentUser.GetId(),
                 input.SpaceId,
                 input.LocalStart,
@@ -184,7 +184,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.SkipDates,
                 input.IdempotencyKey);
 
-            return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList()) };
+            return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList(), await PlacesOfAsync(place)) };
         }
         catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
         {
@@ -248,6 +248,23 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         return new Places(spaces, floors, buildings, names);
     }
 
+    /// <summary>The one room a create already loaded (with its names), as <see cref="Places"/>: nothing read again.</summary>
+    private async Task<Places> PlacesOfAsync(BookingPlace place)
+    {
+        var names = new Dictionary<Guid, string>
+        {
+            [place.Space.Id] = await _nameReader.ShownAsync(place.Space),
+            [place.Floor.Id] = await _nameReader.ShownAsync(place.Floor),
+            [place.Building.Id] = await _nameReader.ShownAsync(place.Building),
+        };
+
+        return new Places(
+            new Dictionary<Guid, Space> { [place.Space.Id] = place.Space },
+            new Dictionary<Guid, Floor> { [place.Floor.Id] = place.Floor },
+            new Dictionary<Guid, Building> { [place.Building.Id] = place.Building },
+            names);
+    }
+
     /// <summary>The calendar's light rows: no floor/building names, no series rule — just what's drawn.</summary>
     private async Task<List<BookingSummaryDto>> MapToSummariesAsync(IReadOnlyCollection<Booking> bookings)
     {
@@ -269,10 +286,13 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         }).ToList();
     }
 
-    /// <summary>Builds full DTOs for a batch of bookings with one query per table (not one per booking).</summary>
-    private async Task<List<BookingDto>> MapToDtosAsync(IReadOnlyCollection<Booking> bookings)
+    /// <summary>
+    /// Builds full DTOs for a batch of bookings with one query per table (not one per booking),
+    /// or none for the places when the caller already has them (a create).
+    /// </summary>
+    private async Task<List<BookingDto>> MapToDtosAsync(IReadOnlyCollection<Booking> bookings, Places? knownPlaces = null)
     {
-        var places = await LoadPlacesAsync(bookings);
+        var places = knownPlaces ?? await LoadPlacesAsync(bookings);
 
         var seriesIds = bookings.Where(b => b.SeriesId != null).Select(b => b.SeriesId!.Value).Distinct().ToList();
         var seriesById = seriesIds.Count == 0

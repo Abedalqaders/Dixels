@@ -66,8 +66,9 @@ public partial class BookingManager
     /// transaction: if any date that should be booked no longer fits (someone took it since
     /// the preview), nothing is booked at all. A retry with the same key returns the series
     /// the first attempt created; only a new series raises <see cref="BookingSeriesConfirmedEvent"/>.
+    /// <c>Place</c> is the room, floor and building every date is in, as the checks loaded them.
     /// </summary>
-    public async Task<(BookingSeries Series, IReadOnlyList<Booking> Bookings, bool Replayed)> CreateSeriesAsync(
+    public async Task<(BookingSeries Series, IReadOnlyList<Booking> Bookings, bool Replayed, BookingPlace Place)> CreateSeriesAsync(
         Guid userId,
         Guid spaceId,
         DateTime localStart,
@@ -95,7 +96,7 @@ public partial class BookingManager
             }
 
             var made = await _bookingRepository.GetListAsync(b => b.SeriesId == existing.Id);
-            return (existing, made.OrderBy(b => b.StartsAt).ToList(), true);
+            return (existing, made.OrderBy(b => b.StartsAt).ToList(), true, context.Place);
         }
 
         var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, rule);
@@ -150,7 +151,7 @@ public partial class BookingManager
         }
 
         await _localEventBus.PublishAsync(new BookingSeriesConfirmedEvent(series, bookings));
-        return (series, bookings, false);
+        return (series, bookings, false, context.Place);
     }
 
     private async Task<SeriesEvaluation> EvaluateSeriesAsync(

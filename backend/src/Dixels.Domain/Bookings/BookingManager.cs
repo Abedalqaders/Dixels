@@ -87,9 +87,10 @@ public partial class BookingManager : DomainService
     ///
     /// A retry with the same idempotency key returns the booking the first attempt created
     /// (<c>Replayed = true</c>) instead of creating a second one. Only a new booking raises
-    /// <see cref="BookingConfirmedEvent"/>.
+    /// <see cref="BookingConfirmedEvent"/>. <c>Place</c> is the room, floor and building the
+    /// checks loaded (a replay is for the same room), for showing the result without reloading.
     /// </summary>
-    public async Task<(Booking Booking, bool Replayed)> CreateAsync(
+    public async Task<(Booking Booking, bool Replayed, BookingPlace Place)> CreateAsync(
         Guid userId,
         Guid spaceId,
         DateTime localStart,
@@ -120,7 +121,7 @@ public partial class BookingManager : DomainService
                 throw new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
             }
 
-            return (existing, true);
+            return (existing, true, context.Place);
         }
 
         var evaluation = await ValidateAsync(context, attendees, userId);
@@ -142,7 +143,7 @@ public partial class BookingManager : DomainService
 
         booking = await _bookingRepository.InsertConfirmedAsync(booking);
         await _localEventBus.PublishAsync(new BookingConfirmedEvent(booking));
-        return (booking, false);
+        return (booking, false, context.Place);
     }
 
     /// <summary>
@@ -455,5 +456,8 @@ public partial class BookingManager : DomainService
         Building Building,
         BuildingClock LocalClock,
         DateTimeOffset StartUtc,
-        DateTimeOffset EndUtc);
+        DateTimeOffset EndUtc)
+    {
+        public BookingPlace Place => new(Space, Floor, Building);
+    }
 }
