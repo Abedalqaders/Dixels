@@ -191,7 +191,8 @@ public class BookingImpactChecker : DomainService
     {
         var now = Now();
         return (await _bookingRepository.GetListAsync(b =>
-                b.UserId == userId && b.Status == BookingStatus.Confirmed && b.StartsAt > now))
+                // EndsAt > now is implied by StartsAt > now; it's there so the (UserId, EndsAt) index can seek.
+                b.UserId == userId && b.Status == BookingStatus.Confirmed && b.StartsAt > now && b.EndsAt > now))
             .OrderBy(b => b.StartsAt)
             .ToList();
     }
