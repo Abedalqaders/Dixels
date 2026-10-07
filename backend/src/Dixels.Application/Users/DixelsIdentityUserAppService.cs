@@ -83,8 +83,7 @@ public class DixelsIdentityUserAppService : IdentityUserAppService
 
         // ABP's IIdentityUserRepository can filter by neither an extra-property column nor a
         // role or permission, so a filtered list goes through our own query (same text filter semantics).
-        var count = await _userDirectoryRepository.GetCountAsync(input.Filter, buildingId, roleId, permissionName);
-        var users = await _userDirectoryRepository.GetListAsync(
+        var (count, users) = await _userDirectoryRepository.GetPageAsync(
             input.Filter, buildingId, roleId, permissionName, input.SkipCount, input.MaxResultCount);
 
         return new PagedResultDto<IdentityUserDto>(count, ObjectMapper.Map<List<IdentityUser>, List<IdentityUserDto>>(users));

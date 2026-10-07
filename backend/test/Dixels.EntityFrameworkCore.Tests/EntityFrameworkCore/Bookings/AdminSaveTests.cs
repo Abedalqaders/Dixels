@@ -421,6 +421,81 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
         events.ShouldBeEmpty();
     }
 
+    private async Task<UpdateSpaceDto> CapacityAsync(Guid spaceId, int capacity, bool cancel)
+    {
+        var room = await _spaces.GetAsync(spaceId);
+        return new UpdateSpaceDto { Names = room.Names, SpaceTypeId = room.SpaceTypeId, Capacity = capacity, CancelAffectedBookings = cancel };
+    }
+
+    [Fact]
+    public async Task A_smaller_room_keeps_or_cancels_the_bigger_bookings_and_passes_on_what_it_found()
+    {
+        var s = await CreateScenarioAsync();
+        var big = await BookAsync(s, s.Rooms[0][0], 10, 11, attendees: 6);
+        var small = await BookAsync(s, s.Rooms[0][0], 12, 13, attendees: 2);
+
+        var (events, subscription) = Listen<SpaceRulesChangedEvent>();
+        using (subscription)
+        using (ActAs(Admin))
+        {
+            await _spaces.UpdateAsync(s.Rooms[0][0], await CapacityAsync(s.Rooms[0][0], 4, cancel: false));
+            (await CancelReasonsAsync(new[] { big, small })).Values.ShouldAllBe(r => r == null);
+
+            await _spaces.UpdateAsync(s.Rooms[0][0], await CapacityAsync(s.Rooms[0][0], 3, cancel: true));
+        }
+
+        (await CancelReasonsAsync(new[] { big, small })).ShouldBe(new Dictionary<Guid, string?>
+        {
+            [big] = "Rules changed: Seats 3 — you need 6",
+            [small] = null,
+        });
+        events.ShouldAllBe(e => e.BuildingId == s.BuildingId && e.SpaceIds.SequenceEqual(new[] { s.Rooms[0][0] }));
+        events[0].Affected.ShouldBeNull();
+        events[1].Affected!.Select(a => a.Id).ShouldBe(new[] { big });
+    }
+
+    [Fact]
+    public async Task A_bigger_room_with_cancel_still_cancels_what_its_rules_already_reject()
+    {
+        // As before: a capacity save that cancels re-checks the room against all its rules, so a
+        // booking kept through an earlier tightening goes now, whichever way the capacity moved.
+        var s = await CreateScenarioAsync();
+        var late = await BookAsync(s, s.Rooms[0][0], 17, 18);
+        using (ActAs(Admin))
+        {
+            await _buildings.UpdateConstraintsAsync(s.BuildingId, await BuildingRulesAsync(s, "09:00", "16:00", 180, cancel: false));
+            await _spaces.UpdateAsync(s.Rooms[0][0], await CapacityAsync(s.Rooms[0][0], 10, cancel: true));
+        }
+
+        (await StoredAsync(late)).CancelReason.ShouldBe("Rules changed: Open 09:00–16:00 only");
+    }
+
+    [Fact]
+    public async Task A_parent_that_has_to_exist_answers_the_same_not_found()
+    {
+        var s = await CreateScenarioAsync();
+        var missing = Guid.NewGuid();
+        var spaceType = await WithUnitOfWorkAsync(() => GetRequiredService<IRepository<SpaceType, Guid>>().FirstAsync());
+        var names = new List<Dixels.Localization.LocalizedNameDto> { new() { Language = "en", Name = "New" } };
+        using var _ = ActAs(Admin);
+
+        async Task NotFoundAsync<T>(Func<Task> act)
+        {
+            var notFound = await Should.ThrowAsync<EntityNotFoundException>(act);
+            notFound.EntityType.ShouldBe(typeof(T));
+            notFound.Id.ShouldBe(missing);
+        }
+
+        await NotFoundAsync<Building>(() => _floors.CreateAsync(new CreateFloorDto { BuildingId = missing, Names = names }));
+        await NotFoundAsync<Floor>(() => _spaces.CreateAsync(new CreateSpaceDto { FloorId = missing, Names = names, SpaceTypeId = spaceType.Id, Capacity = 4 }));
+        await NotFoundAsync<SpaceType>(() => _spaces.CreateAsync(new CreateSpaceDto { FloorId = s.FloorIds[0], Names = names, SpaceTypeId = missing, Capacity = 4 }));
+        var update = await CapacityAsync(s.Rooms[0][0], 8, cancel: false);
+        update.SpaceTypeId = missing;
+        await NotFoundAsync<SpaceType>(() => _spaces.UpdateAsync(s.Rooms[0][0], update));
+        await NotFoundAsync<Building>(() => _buildings.DeleteAsync(missing));
+        await NotFoundAsync<IdentityUser>(() => GetRequiredService<IUsersAppService>().GetReassignImpactAsync(missing));
+    }
+
     [Fact]
     public async Task A_time_zone_change_is_refused_while_bookings_are_ahead_and_allowed_without()
     {

@@ -149,8 +149,8 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
 
         // GetAsync answers an unknown or soft-deleted id with a 404 — otherwise the missing
         // parent surfaces as a foreign-key failure from the database, i.e. a 500.
-        await _floorRepository.GetAsync(input.FloorId);
-        await _spaceTypeRepository.GetAsync(input.SpaceTypeId);
+        await _floorRepository.EnsureExistsAsync(input.FloorId);
+        await _spaceTypeRepository.EnsureExistsAsync(input.SpaceTypeId);
 
         var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
         var space = new Space(GuidGenerator.Create(), input.FloorId, names[0].Language, names[0].Name, input.SpaceTypeId, input.Capacity);
@@ -166,13 +166,23 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
 
-        // A smaller room can leave bookings with more people than it now seats.
+        // A smaller room can leave bookings with more people than it now seats. When the admin
+        // chose to cancel what no longer fits, it's found now (on an unsaved copy, against all
+        // the room's rules, as a listener would check the saved room) and carried by the event,
+        // so no listener checks it again.
         var capacityChanged = input.Capacity != space.Capacity;
+        RoomRulesChange? change = null;
+        IReadOnlyList<AffectedReservation>? affected = null;
+        if (capacityChanged && input.CancelAffectedBookings)
+        {
+            change = await ProposedCapacityChangeAsync(space, input.Capacity, evenIfGrowing: true);
+            affected = await _impactPreview.AffectedAsync(change!);
+        }
 
         space.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
         if (space.SpaceTypeId != input.SpaceTypeId)
         {
-            await _spaceTypeRepository.GetAsync(input.SpaceTypeId); // 404 for unknown or deleted
+            await _spaceTypeRepository.EnsureExistsAsync(input.SpaceTypeId); // 404 for unknown or deleted
         }
         space.SetSpaceType(input.SpaceTypeId);
         space.SetCapacity(input.Capacity);
@@ -182,9 +192,9 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         if (capacityChanged)
         {
             // What the room holds is released (or kept, as the admin chose) by its own module.
-            var floor = await _floorRepository.GetAsync(space.FloorId);
+            var buildingId = change?.Building.Id ?? (await _floorRepository.GetAsync(space.FloorId)).BuildingId;
             await _localEventBus.PublishAsync(new SpaceRulesChangedEvent(
-                floor.BuildingId, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId()));
+                buildingId, new[] { space.Id }, input.CancelAffectedBookings, CurrentUser.GetId(), affected));
         }
 
         return await MapToDtoAsync(space);
@@ -195,18 +205,19 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
     {
         var space = await _spaceRepository.GetAsync(id);
         await EnsureCanManageBuildingAsync(space.FloorId);
-        var floor = await _floorRepository.GetAsync(space.FloorId);
-        var building = await _buildingRepository.GetAsync(floor.BuildingId);
         var change = await ProposedCapacityChangeAsync(space, input.Capacity);
         return change is null ? new ReservationImpactDto() : await _impactPreview.NoLongerFittingAsync(change, skip);
     }
 
     // Only the capacity can break a booking among the details; checked on an untracked copy
     // carrying the room's own rules, so nothing here saves.
-    /// <summary>The room with a smaller capacity, on an unsaved copy; null when it isn't shrinking (nothing can break).</summary>
-    private async Task<RoomRulesChange?> ProposedCapacityChangeAsync(Space space, int capacity)
+    /// <summary>
+    /// The room with its new capacity, on an unsaved copy; null when it isn't shrinking (the
+    /// preview: nothing new can break) unless <paramref name="evenIfGrowing"/> (a save re-checking the room).
+    /// </summary>
+    private async Task<RoomRulesChange?> ProposedCapacityChangeAsync(Space space, int capacity, bool evenIfGrowing = false)
     {
-        if (capacity >= space.Capacity)
+        if (capacity >= space.Capacity && !evenIfGrowing)
         {
             return null;
         }
