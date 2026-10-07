@@ -9,8 +9,15 @@ import { LocaleRoot } from '@/components/LocaleRoot'
 import { Toaster } from '@/components/Toast'
 import { AuthProvider } from '@/features/auth/components/AuthProvider.tsx'
 import { AuthStatusScreen } from '@/features/auth/components/AuthStatusScreen'
+import { reloadForNewVersion } from '@/lib/staleChunk'
 
 const root = createRoot(document.getElementById('root')!)
+
+// A tab left open across a deploy asks for page files that are gone the first time it opens a
+// new page: reload (once) to get the new version, instead of failing. See lib/staleChunk.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadForNewVersion()) event.preventDefault()
+})
 
 // LocaleRoot sits inside the auth and query providers: a language change re-renders the
 // pages, but keeps the signed-in session and the cached data (which it refetches).
