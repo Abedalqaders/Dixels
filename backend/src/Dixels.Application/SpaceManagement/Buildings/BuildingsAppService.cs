@@ -162,7 +162,12 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         }
 
         building.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
-        building.SetAddresses(ToAddressMap(input.Addresses));
+        // Null: the caller isn't changing addresses, so they stay as they are.
+        if (input.Addresses is not null)
+        {
+            building.SetAddresses(ToAddressMap(input.Addresses));
+        }
+
         building.SetBuildingNumber(input.BuildingNumber);
         building.SetTimezone(input.Timezone);
 
@@ -359,11 +364,14 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return Task.CompletedTask;
     }
 
-    /// <summary>By language; a language given twice keeps its last address.</summary>
+    /// <summary>
+    /// By language, ignoring case ("AR" finds the "ar" name row); a language given twice keeps
+    /// its last address.
+    /// </summary>
     private static Dictionary<string, string?> ToAddressMap(IEnumerable<BuildingAddressDto> addresses) =>
         addresses
-            .GroupBy(a => a.Language)
-            .ToDictionary(g => g.Key, g => (string?)g.Last().Address);
+            .GroupBy(a => a.Language.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => (string?)g.Last().Address, StringComparer.OrdinalIgnoreCase);
 
     private async Task<BuildingDto> MapToDtoAsync(Building building)
     {

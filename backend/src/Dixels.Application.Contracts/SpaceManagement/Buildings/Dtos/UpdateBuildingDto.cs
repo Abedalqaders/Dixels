@@ -17,8 +17,11 @@ public class UpdateBuildingDto
     [StringLength(BuildingConsts.MaxBuildingNumberLength)]
     public string? BuildingNumber { get; set; }
 
-    /// <summary>Optional, one per language (only languages it has a name in). A language left out loses its address.</summary>
-    public List<BuildingAddressDto> Addresses { get; set; } = [];
+    /// <summary>
+    /// Left out (null): the addresses stay as they are. Given: exactly these, one per language
+    /// it has a name in — a language left out loses its address.
+    /// </summary>
+    public List<BuildingAddressDto>? Addresses { get; set; }
 
     [Required]
     [StringLength(BuildingConsts.MaxTimezoneLength)]

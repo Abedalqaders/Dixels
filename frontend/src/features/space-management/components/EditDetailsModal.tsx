@@ -27,7 +27,7 @@ import { useBookingImpactPrompt } from '@/features/space-management/hooks/useBoo
 // and the title is announced — none of which the old hand-rolled overlay did.
 // `names` is every name the row has, one per language (its DTO's `names`).
 export type EditDetailsState =
-  | { kind: 'building'; id: string; names: LocalizedNameDto[]; addresses?: BuildingAddressDto[]; buildingNumber: string | null; timezone: string }
+  | { kind: 'building'; id: string; names: LocalizedNameDto[]; addresses: BuildingAddressDto[]; buildingNumber: string | null; timezone: string }
   | { kind: 'floor'; id: string; names: LocalizedNameDto[]; floorNumber: number | null }
   | { kind: 'space'; id: string; names: LocalizedNameDto[]; spaceTypeId: string; capacity: number }
   | null

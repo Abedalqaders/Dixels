@@ -131,8 +131,8 @@ export interface CreateBuildingDto {
 export interface UpdateBuildingDto {
   /** Every name it should have — a language left out loses its name. */
   names: LocalizedNameDto[]
-  /** Every address it should have — a language left out loses its address. */
-  addresses?: BuildingAddressDto[]
+  /** Left out (or null): addresses unchanged. Given: exactly these — a language left out loses its address. */
+  addresses?: BuildingAddressDto[] | null
   buildingNumber?: string | null
   timezone: string
 }

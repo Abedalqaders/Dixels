@@ -36,7 +36,7 @@ public class BuildingAddressTests : DixelsApplicationTestBase<DixelsEntityFramew
             MinLeadMinutes = 0,
         });
 
-    private Task<BuildingDto> UpdateAsync(BuildingDto building, List<LocalizedNameDto> names, List<BuildingAddressDto> addresses) =>
+    private Task<BuildingDto> UpdateAsync(BuildingDto building, List<LocalizedNameDto> names, List<BuildingAddressDto>? addresses) =>
         _buildings.UpdateAsync(building.Id, new UpdateBuildingDto
         {
             Names = names,
@@ -92,6 +92,24 @@ public class BuildingAddressTests : DixelsApplicationTestBase<DixelsEntityFramew
 
         updated.Name.ShouldBe("North Tower A");
         Shown(updated).ShouldBe(new[] { ("en", "12 King Road") });
+    }
+
+    [Fact]
+    public async Task An_update_that_leaves_addresses_out_keeps_them()
+    {
+        var building = await CreateBuildingAsync(En("North Tower"), [Address("en", "12 King Road")]);
+
+        var updated = await UpdateAsync(building, En("North Tower A"), addresses: null);
+
+        Shown(updated).ShouldBe(new[] { ("en", "12 King Road") });
+    }
+
+    [Fact]
+    public async Task An_address_language_matches_its_name_whatever_the_case()
+    {
+        var building = await CreateBuildingAsync(EnAr("North Tower", "البرج الشمالي"), [Address("AR", "١٢ شارع الملك")]);
+
+        Shown(await _buildings.GetAsync(building.Id)).ShouldBe(new[] { ("ar", "١٢ شارع الملك") });
     }
 
     [Fact]
