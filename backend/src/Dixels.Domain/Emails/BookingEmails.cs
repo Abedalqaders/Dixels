@@ -10,6 +10,8 @@ using Dixels.Users;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Volo.Abp;
+using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 using Volo.Abp.Emailing;
@@ -27,12 +29,14 @@ namespace Dixels.Emails;
 /// booking, so a booking that fails to save sends nothing, and a mail server that's down only
 /// delays the email (ABP retries) — the booking itself is never held up by it.
 ///
-/// Sent by <see cref="BookingEmailHandler"/> when the booking events are raised; admin
-/// cancellations deliberately send nothing (the employee sees them in their calendar).
+/// Sent by <see cref="BookingEmailHandler"/> when the booking events are raised. Admin
+/// cancellations are the one exception: they're gathered into one email per person, written
+/// later by <see cref="AdminCancelledEmailJob"/> (see <see cref="AdminCancelEmailQueue"/>).
 /// </summary>
 public class BookingEmails : DomainService
 {
     private readonly IIdentityUserRepository _userRepository;
+    private readonly IBookingRepository _bookingRepository;
     private readonly UserLanguageManager _userLanguage;
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
@@ -41,10 +45,12 @@ public class BookingEmails : DomainService
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IEmailSender _emailSender;
     private readonly IStringLocalizer<DixelsResource> _localizer;
+    private readonly IDataFilter _dataFilter;
     private readonly EmailOptions _options;
 
     public BookingEmails(
         IIdentityUserRepository userRepository,
+        IBookingRepository bookingRepository,
         UserLanguageManager userLanguage,
         IRepository<Space, Guid> spaceRepository,
         IRepository<Floor, Guid> floorRepository,
@@ -53,9 +59,11 @@ public class BookingEmails : DomainService
         ITemplateRenderer templateRenderer,
         IEmailSender emailSender,
         IStringLocalizer<DixelsResource> localizer,
+        IDataFilter dataFilter,
         IOptions<EmailOptions> options)
     {
         _userRepository = userRepository;
+        _bookingRepository = bookingRepository;
         _userLanguage = userLanguage;
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -64,6 +72,7 @@ public class BookingEmails : DomainService
         _templateRenderer = templateRenderer;
         _emailSender = emailSender;
         _localizer = localizer;
+        _dataFilter = dataFilter;
         _options = options.Value;
     }
 
@@ -134,6 +143,99 @@ public class BookingEmails : DomainService
     }
 
     /// <summary>
+    /// "An admin cancelled your bookings" — everything one admin action cancelled of this
+    /// person's, in one email: each booking with its own room, time and reason, the soonest
+    /// <paramref name="bookingIds"/> listed and the rest counted. Sent by
+    /// <see cref="AdminCancelledEmailJob"/>, so it sends right away (and throws, for the job
+    /// to retry). Nobody is emailed whose account is gone or switched off.
+    /// </summary>
+    public async Task SendAdminCancelledAsync(Guid userId, IReadOnlyCollection<Guid> bookingIds, int count)
+    {
+        var user = await _userRepository.FindAsync(userId);
+        if (user is null || !user.IsActive || string.IsNullOrWhiteSpace(user.Email))
+        {
+            return;
+        }
+
+        var bookings = (await _bookingRepository.GetListAsync(b => bookingIds.Contains(b.Id) && b.UserId == userId))
+            .OrderBy(b => b.StartsAt)
+            .ThenBy(b => b.Id)
+            .ToList();
+        if (bookings.Count == 0)
+        {
+            return;
+        }
+
+        // A removed room (or its floor or building) is why many of these were cancelled: read
+        // them anyway, for their names and time zone.
+        List<Space> spaces;
+        List<Floor> floors;
+        List<Building> buildings;
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            var spaceIds = bookings.Select(b => b.SpaceId).Distinct().ToList();
+            spaces = await AsyncExecuter.ToListAsync((await _spaceRepository.WithDetailsAsync()).Where(s => spaceIds.Contains(s.Id)));
+            var floorIds = spaces.Select(s => s.FloorId).Distinct().ToList();
+            floors = await AsyncExecuter.ToListAsync((await _floorRepository.WithDetailsAsync()).Where(f => floorIds.Contains(f.Id)));
+            var buildingIds = floors.Select(f => f.BuildingId).Distinct().ToList();
+            buildings = await AsyncExecuter.ToListAsync((await _buildingRepository.WithDetailsAsync()).Where(b => buildingIds.Contains(b.Id)));
+        }
+
+        var spaceById = spaces.ToDictionary(s => s.Id);
+        var floorById = floors.ToDictionary(f => f.Id);
+        var clocks = buildings.ToDictionary(b => b.Id, b => new BuildingClock(b.Timezone));
+
+        var language = await _userLanguage.GetAsync(userId);
+        using (CultureHelper.Use(language))
+        {
+            var spaceNames = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+            var floorNames = await _nameReader.ShownAsync<Floor, FloorTranslation>(floors);
+            var buildingNames = await _nameReader.ShownAsync<Building, BuildingTranslation>(buildings);
+
+            var model = new BookingEmailModel
+            {
+                RecipientName = DisplayName(user),
+                AppUrl = _options.AppUrl.TrimEnd('/') + "/my-calendar",
+                Count = Math.Max(count, bookings.Count),
+            };
+            foreach (var booking in bookings)
+            {
+                // Rooms are only ever soft-deleted; a missing one is skipped rather than failing the email.
+                if (!spaceById.TryGetValue(booking.SpaceId, out var space)
+                    || !floorById.TryGetValue(space.FloorId, out var floor)
+                    || !clocks.TryGetValue(floor.BuildingId, out var clock))
+                {
+                    continue;
+                }
+
+                model.Rows.Add(new BookingEmailRow
+                {
+                    SpaceName = spaceNames[booking.SpaceId],
+                    FloorName = floorNames[floor.Id],
+                    BuildingName = buildingNames[floor.BuildingId],
+                    Date = BookingFormat.Date(clock.LocalDate(booking.StartsAt)),
+                    Time = TimeRange(clock.ToLocal(booking.StartsAt), clock.ToLocal(booking.EndsAt)),
+                    Title = booking.Title,
+                    Reason = booking.CancelReason,
+                });
+            }
+            if (model.Rows.Count == 0)
+            {
+                return;
+            }
+
+            model.More = model.Count - model.Rows.Count;
+
+            var first = model.Rows[0];
+            var subject = model.Count == 1
+                ? _localizer["Email:AdminCancelled:Subject", first.SpaceName, first.Date]
+                : _localizer["Email:AdminCancelled:SubjectMany", model.Count];
+
+            await _emailSender.SendAsync(user.Email, subject, await RenderAsync(DixelsEmailTemplates.AdminCancelled, model, language));
+        }
+    }
+
+    /// <summary>
     /// Writes the email in the recipient's language and queues it. <paramref name="fill"/>
     /// adds the booking-specific parts (it runs in that language) and returns the subject.
     /// Never throws: an email that can't be written is logged, and the booking goes ahead.
@@ -165,19 +267,23 @@ public class BookingEmails : DomainService
                 };
                 var subject = fill(model, new BuildingClock(building.Timezone));
 
-                var body = await _templateRenderer.RenderAsync(template, model, language, new Dictionary<string, object>
-                {
-                    ["lang"] = language,
-                    ["dir"] = CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr",
-                });
-
-                await _emailSender.QueueAsync(user.Email, subject, body);
+                await _emailSender.QueueAsync(user.Email, subject, await RenderAsync(template, model, language));
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Could not write the {Template} email to user {UserId}.", template, userId);
         }
+    }
+
+    /// <summary>The template in <paramref name="language"/> (the current culture), inside the layout.</summary>
+    private Task<string> RenderAsync(string template, BookingEmailModel model, string language)
+    {
+        return _templateRenderer.RenderAsync(template, model, language, new Dictionary<string, object>
+        {
+            ["lang"] = language,
+            ["dir"] = CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? "rtl" : "ltr",
+        });
     }
 
     private static string DisplayName(IdentityUser user)

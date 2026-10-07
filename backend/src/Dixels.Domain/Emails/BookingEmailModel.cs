@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Dixels.Emails;
 
 /// <summary>
@@ -28,4 +30,22 @@ public class BookingEmailModel
 
     /// <summary>Where "Open Dixels" goes.</summary>
     public string AppUrl { get; set; } = string.Empty;
+
+    /// <summary>An admin cancel: the bookings shown, one block each, soonest first.</summary>
+    public List<BookingEmailRow> Rows { get; set; } = new();
+
+    /// <summary>An admin cancel: how many more were cancelled than <see cref="Rows"/> shows.</summary>
+    public int More { get; set; }
+}
+
+/// <summary>One booking in an email about several, worded like the model (<c>row.space_name</c>…).</summary>
+public class BookingEmailRow
+{
+    public string SpaceName { get; set; } = string.Empty;
+    public string FloorName { get; set; } = string.Empty;
+    public string BuildingName { get; set; } = string.Empty;
+    public string Date { get; set; } = string.Empty;
+    public string Time { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? Reason { get; set; }
 }
