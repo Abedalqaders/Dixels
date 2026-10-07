@@ -352,7 +352,8 @@ public class BookingImpactChecker : DomainService
             ids, adminId, Now(), checkedReason!, Clock.Now, currentUser.Id);
         if (cancelled.Count > 0)
         {
-            await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: true));
+            var invitees = await _bookingRepository.GetInviteesAsync(cancelled.Select(b => b.Id).ToList());
+            await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: true, invitees));
         }
 
         return cancelled;

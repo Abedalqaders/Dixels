@@ -381,6 +381,27 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
             .ShouldBe(new[] { ((Guid?)s.Rana.Id, (string?)null, (string?)null), (null, "guest@outside.io", "Sara") }, ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task An_admin_cancel_by_ids_carries_a_copy_of_the_guests_too()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+        }
+
+        BookingsCancelledEvent? cancelled = null;
+        using (GetRequiredService<ILocalEventBus>().Subscribe<BookingsCancelledEvent>(e => { cancelled = e; return Task.CompletedTask; }))
+        {
+            await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactChecker>()
+                .CancelUpcomingAsAdminAsync(new[] { created.Id }, Guid.NewGuid(), "The room was removed"));
+        }
+
+        cancelled.ShouldNotBeNull().ByAdmin.ShouldBeTrue();
+        cancelled.InviteesByBooking[created.Id].ShouldHaveSingleItem().UserId.ShouldBe(s.Rana.Id);
+    }
+
     // ---- Colleague search ----
 
     [Fact]
