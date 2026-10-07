@@ -13,6 +13,7 @@ import { rangeLabel } from '@/features/calendar/calendarDates'
 import { formatClockRange } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import type { TextKeys } from '@/i18n/keys'
+import { Initials } from '@/components/PeoplePicker'
 import { InviteeList } from './InviteeList'
 
 const PHASE_LABEL: Record<BookingPhase, keyof TextKeys> = {
@@ -83,6 +84,13 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
 
   return (
     <>
+      {booking && !booking.isOwner && (
+        // Someone else's booking: say whose before anything else — it's why there's no Cancel.
+        <p className="m-0 flex items-center gap-2.5 rounded-lg bg-slot-open px-3 py-2 text-sm">
+          <Initials name={booking.ownerName} />
+          <span className="min-w-0">{t('Booking:InvitedBy', { name: booking.ownerName })}</span>
+        </p>
+      )}
       <dl className="grid gap-3 text-sm">
         <Row icon={CalendarDays} label={t('Booking:Date')}>
           <dd className="font-medium">{rangeLabel('day', date)}</dd>

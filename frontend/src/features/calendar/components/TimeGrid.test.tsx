@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { buildDurationLimits } from '@/features/calendar/durationLimits'
 import { HOUR_PX, itemsByDay } from '@/features/calendar/dayLayout'
+import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { TimeGrid } from './TimeGrid'
 
 // jsdom has no layout: every column starts at y = 0, so a minute's y is just its offset.
@@ -26,11 +27,11 @@ const limits = buildDurationLimits({
   ],
 })
 
-function renderGrid(day: string, onPickRange = vi.fn(), openDays = WEEK) {
+function renderGrid(day: string, onPickRange = vi.fn(), openDays = WEEK, items: CalendarItem[] = []) {
   const { container } = render(
     <TimeGrid
       days={[day]}
-      items={[]}
+      items={items}
       openDays={openDays}
       openHours={{ isOpen24Hours: false, open: '08:00', close: '20:00' }}
       today="2026-10-01"
@@ -127,5 +128,26 @@ describe('TimeGrid', () => {
     fireEvent.pointerUp(column, { pointerId: 1 })
 
     expect(onPickRange).toHaveBeenCalledWith({ date: '2026-10-02', start: 9 * 60, end: 12 * 60 })
+  })
+})
+
+describe('TimeGrid invites', () => {
+  it("draws a booking I'm invited to as a dashed outline with a people icon", () => {
+    const invite: CalendarItem = {
+      id: 'sync',
+      kind: 'booking',
+      title: 'Sync',
+      localStart: '2026-10-02T11:00:00',
+      localEnd: '2026-10-02T12:00:00',
+      location: 'Room 301',
+      cancelled: false,
+      repeats: false,
+      invited: true,
+    }
+    renderGrid('2026-10-02', vi.fn(), WEEK, [invite])
+
+    const block = screen.getByRole('button', { name: 'Invite: Sync, 11:00–12:00, Room 301' })
+    expect(block).toHaveClass('border-dashed', 'border-brand', 'bg-background')
+    expect(block.querySelector('svg.lucide-users')).not.toBeNull()
   })
 })

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Repeat } from 'lucide-react'
+import { Repeat, Users } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
 import { formatDate, fromMinutes, timeOf } from '@/lib/time/buildingTime'
@@ -501,6 +501,8 @@ const DayColumn = memo(function DayColumn({
               'transition-colors hover:border-brand/70 hover:bg-[color-mix(in_srgb,var(--focus-ring)_22%,var(--surface-raised))]',
               'focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
               // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
+              // Someone else's booking I'm invited to: an outline on the plain background.
+              b.invited && !b.cancelled && 'border-[1.5px] border-dashed border-brand bg-background shadow-none',
               b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
             )}
             style={{
@@ -511,7 +513,7 @@ const DayColumn = memo(function DayColumn({
               width: `calc(${100 / lanes}% - 4px)`,
               ...(started && !b.cancelled ? { backgroundImage: STARTED_HATCH } : {}),
             }}
-            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : 'Calendar:Item', {
+            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
               title: b.title,
               start: timeOf(b.localStart),
               end: timeOf(b.localEnd),
@@ -521,6 +523,7 @@ const DayColumn = memo(function DayColumn({
             onClick={() => onOpenItem(b)}
           >
             <span className={cn('flex min-w-0 items-center gap-1 font-semibold', !b.cancelled && 'text-brand')}>
+              {b.invited && <Users className="size-3 flex-none" aria-hidden="true" />}
               {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
               <span className="truncate">
                 {lines < 2 ? `${formatClock(timeOf(b.localStart))} · ${b.location}` : b.location}

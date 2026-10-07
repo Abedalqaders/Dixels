@@ -72,6 +72,7 @@ export interface TextKeys {
   "Booking:FewerPeople": string
   "Booking:From": string
   "Booking:InProgress": string
+  "Booking:InvitedBy": string
   "Booking:Invitees": string
   "Booking:InviteesCount_one": string
   "Booking:InviteesCount_other": string
@@ -154,6 +155,7 @@ export interface TextKeys {
   "Calendar:DayHeading": string
   "Calendar:DayPassed": string
   "Calendar:DayView": string
+  "Calendar:InvitedItem": string
   "Calendar:Item": string
   "Calendar:Lead": string
   "Calendar:MaxLength": string

@@ -41,7 +41,7 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
       <BookingDetails item={item} booking={booking} error={error} />
 
       <div className="flex flex-wrap gap-2">
-        {canCancel && booking && phase === 'upcoming' && (
+        {canCancel && booking?.isOwner && phase === 'upcoming' && (
           <Button variant="destructive" size="sm" onClick={() => onCancel(booking)}>
             {t('Booking:Cancel')}
           </Button>
