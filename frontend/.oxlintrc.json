@@ -31,7 +31,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -56,7 +55,7 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
               }
             ]
           }
@@ -84,7 +83,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -109,7 +107,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
@@ -137,7 +141,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -162,7 +165,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
@@ -190,7 +199,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -215,7 +223,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
@@ -243,7 +257,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -268,7 +281,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
@@ -296,7 +315,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -321,7 +339,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
@@ -349,7 +373,6 @@
                   "!@/features/auth/hooks/useAuthRole",
                   "!@/features/auth/permissions/group",
                   "!@/features/auth/permissions/permissionNames",
-                  "!@/features/auth/permissions/permissionsContext",
                   "!@/features/auth/permissions/usePermission",
                   "!@/features/auth/roles",
                   "!@/features/auth/userManager",
@@ -374,7 +397,13 @@
                   "!@/features/space-management/components/spaceTypeIcons",
                   "!@/features/space-management/hooks/useBookingImpactPrompt"
                 ],
-                "message": "That file is inside another feature. Use one of its public files (listed in .oxlintrc.json), or make this one public there on purpose."
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
               }
             ]
           }
