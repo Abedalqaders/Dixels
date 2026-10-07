@@ -292,7 +292,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
     public async Task DeleteAsync(Guid id)
     {
         await EnsureCanManageBuildingAsync(id);
-        await _buildingRepository.GetAsync(id); // 404 for a missing or already deleted building
+        await _buildingRepository.EnsureExistsAsync(id); // 404 for a missing or already deleted building
 
         // One UPDATE per table, however many rooms: the whole building under one batch id.
         var spaceIds = await _hierarchyBulk.SoftDeleteBuildingAsync(id, GuidGenerator.Create(), Clock.Now, CurrentUser.Id);
