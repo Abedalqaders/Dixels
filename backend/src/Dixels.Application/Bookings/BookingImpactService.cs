@@ -175,7 +175,7 @@ public class BookingImpactService : ITransientDependency
         var reasons = impacts.ToDictionary(
             i => i.Booking.Id,
             i => _localizer["Dixels:Bookings:CancelReason:RulesChanged", _violationLocalizer.ToDto(i.Violations[0]).ShortMessage].Value);
-        return CancelInBatchesAsync(impacts, adminId, b => reasons[b.Id]);
+        return CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
     }
 
     /// <summary>
@@ -184,39 +184,35 @@ public class BookingImpactService : ITransientDependency
     /// </summary>
     public async Task CancelForRuleChangeAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId)
     {
-        var reasons = OwnOf(affected).ToDictionary(a => a.Id, a => a.Reason);
-        await CancelInBatchesAsync(reasons.Keys, adminId, b => _localizer["Dixels:Bookings:CancelReason:RulesChanged", reasons[b.Id]].Value);
+        var reasons = OwnOf(affected).ToDictionary(a => a.Id, a => _localizer["Dixels:Bookings:CancelReason:RulesChanged", a.Reason].Value);
+        await CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
     }
 
     /// <summary>Cancels bookings with one reason for all (a closure, a removed room).</summary>
     public Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
-        CancelInBatchesAsync(impacts, adminId, _ => reason);
+        CancelInBatchesAsync(impacts.Select(i => i.Booking.Id), adminId, _ => reason);
 
     /// <summary>The same, for what the save's own preview already found (bookings only).</summary>
     public Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason) =>
         CancelInBatchesAsync(OwnOf(affected).Select(a => a.Id), adminId, _ => reason);
 
-    /// <summary>How many bookings one round cancels (one query, one save, one event), like CancelBookingsInRemovedRoomsJob.</summary>
+    /// <summary>How many bookings one round cancels (one UPDATE and one event per reason), like CancelBookingsInRemovedRoomsJob.</summary>
     public const int CancelBatchSize = 500;
 
-    // A building-wide change can cancel thousands: they go a round at a time, so no statement
-    // carries thousands of ids or rows. All in the admin's own unit of work, so the save and
-    // its cancels still commit (or roll back) together.
-    private async Task CancelInBatchesAsync(IEnumerable<Guid> ids, Guid adminId, Func<Booking, string> reason)
+    // A building-wide change can cancel thousands: they go a round at a time, each round one
+    // UPDATE per reason (one for a closure; one per broken rule for a rule change), so no
+    // statement carries thousands of ids and no booking is loaded and saved one by one. A
+    // booking that was cancelled or began since the check is left alone (the UPDATE's own
+    // condition). All in the admin's own unit of work, so the save and its cancels still
+    // commit (or roll back) together.
+    private async Task CancelInBatchesAsync(IEnumerable<Guid> ids, Guid adminId, Func<Guid, string> reason)
     {
         foreach (var batch in ids.Chunk(CancelBatchSize))
         {
-            // Read again by id: one that was cancelled or began since the check is left alone.
-            var bookings = await _checker.FindUpcomingByIdsAsync(batch);
-            await _checker.CancelAsAdminAsync(bookings, adminId, reason);
-        }
-    }
-
-    private async Task CancelInBatchesAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, Func<Booking, string> reason)
-    {
-        foreach (var batch in impacts.Chunk(CancelBatchSize))
-        {
-            await _checker.CancelAsAdminAsync(batch.Select(i => i.Booking).ToList(), adminId, reason);
+            foreach (var sameReason in batch.GroupBy(reason))
+            {
+                await _checker.CancelUpcomingAsAdminAsync(sameReason.ToList(), adminId, sameReason.Key);
+            }
         }
     }
 

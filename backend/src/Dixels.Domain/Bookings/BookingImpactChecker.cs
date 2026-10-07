@@ -9,6 +9,7 @@ using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 using Volo.Abp.EventBus.Local;
+using Volo.Abp.Users;
 
 namespace Dixels.Bookings;
 
@@ -328,6 +329,32 @@ public class BookingImpactChecker : DomainService
 
         await _bookingRepository.UpdateManyAsync(bookings, autoSave: true);
         await _localEventBus.PublishAsync(new BookingsCancelledEvent(bookings.ToList(), byAdmin: true));
+    }
+
+    /// <summary>
+    /// The same as <see cref="CancelAsAdminAsync"/> for bookings named by id, in one UPDATE
+    /// instead of loading and saving each — for a cancel of thousands. The rules
+    /// <see cref="Booking.Cancel"/> enforces are repeated: only bookings still confirmed (and,
+    /// as everywhere here, not started) are cancelled, and the reason is checked the same way.
+    /// The ones actually cancelled are announced in one <see cref="BookingsCancelledEvent"/>.
+    /// </summary>
+    public virtual async Task<List<Booking>> CancelUpcomingAsAdminAsync(IReadOnlyCollection<Guid> ids, Guid adminId, string reason)
+    {
+        if (ids.Count == 0)
+        {
+            return new List<Booking>();
+        }
+
+        var checkedReason = Check.Length(reason?.Trim(), nameof(reason), BookingConsts.MaxCancelReasonLength);
+        var currentUser = LazyServiceProvider.LazyGetRequiredService<ICurrentUser>();
+        var cancelled = await _bookingRepository.CancelUpcomingAsAdminAsync(
+            ids, adminId, Now(), checkedReason!, Clock.Now, currentUser.Id);
+        if (cancelled.Count > 0)
+        {
+            await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: true));
+        }
+
+        return cancelled;
     }
 
     private DateTimeOffset Now() => new(Clock.Now.ToUniversalTime(), TimeSpan.Zero);

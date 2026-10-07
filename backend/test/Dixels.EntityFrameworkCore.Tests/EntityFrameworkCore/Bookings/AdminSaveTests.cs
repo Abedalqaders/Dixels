@@ -231,7 +231,40 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
         // Three rounds of at most 500, each an admin cancel: nobody is emailed for those.
         rounds.Select(r => r.Bookings.Count).ShouldBe(new[] { 500, 500, 200 });
         rounds.ShouldAllBe(r => r.ByAdmin);
+        // Each round announces exactly what it cancelled, as cancelled.
+        rounds.SelectMany(r => r.Bookings).Select(b => b.Id).OrderBy(id => id).ShouldBe(outside.OrderBy(id => id));
+        rounds.SelectMany(r => r.Bookings).ShouldAllBe(b => b.Status == BookingStatus.Cancelled && b.CancelledById == Admin);
         emails.Sent.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_booking_that_changed_since_the_check_is_left_as_it_is()
+    {
+        var s = await CreateScenarioAsync();
+        var upcoming = await BookAsync(s, s.Rooms[0][0], 10, 11);
+        var cancelledMeanwhile = await BookAsync(s, s.Rooms[0][1], 10, 11);
+        var started = await WithUnitOfWorkAsync(async () =>
+            (await _bookingRepository.InsertAsync(new Booking(
+                Guid.NewGuid(), s.Rooms[1][0], s.UserId,
+                DateTimeOffset.UtcNow.AddMinutes(-30), DateTimeOffset.UtcNow.AddMinutes(30),
+                2, title: "Under way", resolvedConstraintsJson: "{}", idempotencyKey: Guid.NewGuid().ToString()))).Id);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var booking = await _bookingRepository.GetAsync(cancelledMeanwhile);
+            booking.Cancel(s.UserId, DateTimeOffset.UtcNow, "Not needed", byAdmin: false);
+        });
+
+        // As if the check had found all three a moment ago.
+        var affected = new[] { upcoming, cancelledMeanwhile, started }
+            .Select(id => new AffectedReservation(ReservationKinds.Booking, id, "Closed"))
+            .ToList();
+        await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactService>().CancelAllAsync(affected, Admin, "Closed: Floor works"));
+
+        var stored = await CancelReasonsAsync(new[] { upcoming, cancelledMeanwhile, started });
+        stored[upcoming].ShouldBe("Closed: Floor works");
+        stored[cancelledMeanwhile].ShouldBe("Not needed");
+        (await StoredAsync(cancelledMeanwhile)).CancelledByAdmin.ShouldBeFalse();
+        stored[started].ShouldBeNull();
     }
 
     [Fact]

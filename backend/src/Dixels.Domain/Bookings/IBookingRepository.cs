@@ -74,6 +74,22 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     Task<Booking> InsertConfirmedAsync(Booking booking, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Cancels these bookings as an admin in one UPDATE, for a cancel too big to load and save
+    /// booking by booking. Only what <see cref="Booking.Cancel"/> would accept, and only what
+    /// hasn't started: still confirmed and starting after <paramref name="cancelledAt"/>. Sets
+    /// what <c>Cancel</c> and an ABP save would (who, when, why, by an admin, last modified, a
+    /// new concurrency stamp). Returns the bookings it cancelled, read back untracked.
+    /// </summary>
+    Task<List<Booking>> CancelUpcomingAsAdminAsync(
+        IReadOnlyCollection<Guid> ids,
+        Guid adminId,
+        DateTimeOffset cancelledAt,
+        string reason,
+        DateTime modificationTime,
+        Guid? modifierId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The same for many at once (a series' dates): one save, which the database receives in
     /// a few batched round trips instead of one per row. If any row is rejected, none is
     /// saved and the same <c>Overlap</c> error is thrown.
