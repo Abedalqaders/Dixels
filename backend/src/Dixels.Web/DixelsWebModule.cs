@@ -298,7 +298,13 @@ public class DixelsWebModule : AbpModule
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowCredentials();
+                    .AllowCredentials()
+                    // The app is on another origin, so every call carrying the access token is
+                    // preceded by an OPTIONS "may I?" check. Without a max age Chrome forgets the
+                    // answer after 5 seconds and asks again; 2 hours is Chrome's own cap. The cost:
+                    // a CORS change (a new allowed header) can take that long to reach a browser
+                    // that already asked.
+                    .SetPreflightMaxAge(TimeSpan.FromHours(2));
             });
         });
     }
