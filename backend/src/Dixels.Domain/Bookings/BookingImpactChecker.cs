@@ -209,20 +209,6 @@ public class BookingImpactChecker : DomainService
             .Take(maxCount));
     }
 
-    /// <summary>How many confirmed bookings on these rooms haven't started yet — one COUNT, nothing loaded.</summary>
-    public async Task<int> CountUpcomingAsync(IReadOnlyCollection<Guid> spaceIds)
-    {
-        if (spaceIds.Count == 0)
-        {
-            return 0;
-        }
-
-        var now = Now();
-        var bookings = await _bookingRepository.GetQueryableAsync();
-        return await AsyncExecuter.CountAsync(bookings.Where(b =>
-            spaceIds.Contains(b.SpaceId) && b.Status == BookingStatus.Confirmed && b.StartsAt > now));
-    }
-
     /// <summary>How many confirmed bookings in <paramref name="scope"/> haven't started yet — one COUNT, no room loaded.</summary>
     public async Task<int> CountUpcomingAsync(RoomScope scope)
     {
@@ -282,25 +268,9 @@ public class BookingImpactChecker : DomainService
             && rooms.Contains(b.SpaceId));
     }
 
-    /// <summary>The ids of the rooms in a scope, as a query to use inside another (nothing is loaded).</summary>
-    private async Task<IQueryable<Guid>> RoomIdsAsync(RoomScope scope)
-    {
-        var spaces = await SpaceRepository.GetQueryableAsync();
-        if (scope.SpaceId is { } spaceId)
-        {
-            return spaces.Where(s => s.Id == spaceId).Select(s => s.Id);
-        }
-
-        var floors = (await FloorRepository.GetQueryableAsync()).Where(f => f.BuildingId == scope.BuildingId);
-        if (scope.FloorId is { } floorId)
-        {
-            floors = floors.Where(f => f.Id == floorId);
-        }
-
-        return from s in spaces
-               join f in floors on s.FloorId equals f.Id
-               select s.Id;
-    }
+    // Space management's own room query: the same rooms its saves and deletes name.
+    private Task<IQueryable<Guid>> RoomIdsAsync(RoomScope scope) =>
+        LazyServiceProvider.LazyGetRequiredService<RoomIdReader>().QueryAsync(scope);
 
     /// <summary>
     /// Soonest first, then by id so the order is the same on every call (a preview is read a

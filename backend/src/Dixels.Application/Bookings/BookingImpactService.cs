@@ -141,6 +141,18 @@ public class BookingImpactService : ITransientDependency
     }
 
     /// <summary>
+    /// As a save carries them on: each booking with the first rule it breaks, in the words
+    /// <see cref="DescribeAsync"/> shows it (its first reason) — nothing else is looked up.
+    /// </summary>
+    public List<AffectedReservation> ToAffected(IReadOnlyList<BookingMisfit> misfits) =>
+        misfits
+            .Select(m => new AffectedReservation(
+                ReservationKinds.Booking,
+                m.Booking.Id,
+                m.Violations.Count == 0 ? string.Empty : _violationLocalizer.ToDto(m.Violations[0]).ShortMessage))
+            .ToList();
+
+    /// <summary>
     /// Each room's name and its floor's, in the reader's language. Deleted ones included —
     /// they're still where the booking is.
     /// </summary>
