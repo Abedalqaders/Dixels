@@ -18,4 +18,13 @@ public static class BookingConsts
 
     /// <summary>Shorter than a booking's key: each occurrence's key is the series key plus ":yyyyMMdd".</summary>
     public const int MaxSeriesIdempotencyKeyLength = 50;
+
+    /// <summary>
+    /// The most people one booking may invite. A series copies its list to every date, so the
+    /// worst case is this times <see cref="MaxSeriesOccurrences"/> rows in one save.
+    /// </summary>
+    public const int MaxInvitees = 50;
+
+    public const int MaxInviteeEmailLength = 256;
+    public const int MaxInviteeNameLength = 128;
 }

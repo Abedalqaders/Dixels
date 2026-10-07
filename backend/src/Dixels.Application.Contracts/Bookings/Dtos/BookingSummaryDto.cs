@@ -28,4 +28,7 @@ public class BookingSummaryDto : EntityDto<Guid>
 
     /// <summary>Set when this booking is one date of a recurring series.</summary>
     public Guid? SeriesId { get; set; }
+
+    /// <summary>Someone else's booking I'm invited to (read-only), rather than my own.</summary>
+    public bool IsInvited { get; set; }
 }

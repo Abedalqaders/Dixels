@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Timing;
 
@@ -34,4 +35,12 @@ public class BookingDto : EntityDto<Guid>
     public bool CancelledByAdmin { get; set; }
     public string? CancelReason { get; set; }
     public RecurrenceDto? Recurrence { get; set; }
+
+    public List<BookingInviteeDto> Invitees { get; set; } = new();
+
+    /// <summary>False when I'm only invited: then it's read-only for me (no cancel, no editing guests).</summary>
+    public bool IsOwner { get; set; }
+
+    /// <summary>Who booked it, for "Invited by …".</summary>
+    public string OwnerName { get; set; } = string.Empty;
 }

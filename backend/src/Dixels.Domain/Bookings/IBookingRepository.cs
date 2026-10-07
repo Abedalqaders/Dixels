@@ -64,6 +64,13 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task<List<Booking>> GetDueForReminderAsync(DateTimeOffset after, DateTimeOffset until, int maxCount, IReadOnlyCollection<Guid> skipIds, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The guests of each of these bookings, in one query: a copy for an event, so a listener
+    /// still knows who to tell after the rows change or are cleaned up. Bookings without
+    /// guests are left out.
+    /// </summary>
+    Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
+
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using Dixels.Localization;
 using Dixels.Permissions;
 using Dixels.SpaceManagement;
+using Dixels.Users;
 using Microsoft.AspNetCore.Authorization;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 using Volo.Abp.Users;
 
 namespace Dixels.Bookings;
@@ -28,6 +30,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IDataFilter _dataFilter;
     private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly LocalizedNameReader _nameReader;
+    private readonly IIdentityUserRepository _userRepository;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -39,7 +42,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         BookingAccessChecker accessChecker,
         IDataFilter dataFilter,
         IRepository<BookingSeries, Guid> seriesRepository,
-        LocalizedNameReader nameReader)
+        LocalizedNameReader nameReader,
+        IIdentityUserRepository userRepository)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -51,12 +55,13 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _dataFilter = dataFilter;
         _seriesRepository = seriesRepository;
         _nameReader = nameReader;
+        _userRepository = userRepository;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateAsync(
-            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees);
+            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToInvitees(input.Invitees));
 
         return new BookingPreviewDto
         {
@@ -66,6 +71,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             StartsAt = evaluation.StartUtc,
             EndsAt = evaluation.EndUtc,
             Timezone = evaluation.Building.Timezone,
+            Invitees = evaluation.Invitees.Select(ToOwnersView).ToList(),
         };
     }
 
@@ -80,6 +86,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.LocalStart,
                 input.LocalEnd,
                 input.Attendees,
+                ToInvitees(input.Invitees),
                 input.Title,
                 input.IdempotencyKey);
 
@@ -153,7 +160,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateSeriesAsync(
-            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToRule(input.Recurrence));
+            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToInvitees(input.Invitees), ToRule(input.Recurrence));
 
         var seriesWide = evaluation.SeriesViolations.Count > 0;
         return new SeriesPreviewDto
@@ -170,6 +177,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             }).ToList(),
             BookableCount = evaluation.BookableCount,
             Timezone = evaluation.Building.Timezone,
+            Invitees = evaluation.Invitees.Select(ToOwnersView).ToList(),
         };
     }
 
@@ -184,6 +192,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.LocalStart,
                 input.LocalEnd,
                 input.Attendees,
+                ToInvitees(input.Invitees),
                 input.Title,
                 ToRule(input.Recurrence),
                 input.SkipDates,
@@ -197,6 +206,18 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             throw;
         }
     }
+
+    private static List<Invitee> ToInvitees(IEnumerable<InviteeDto> dtos) =>
+        dtos.Select(d => new Invitee(d.UserId, d.Email, d.Name)).ToList();
+
+    /// <summary>A checked invitee as the booker sees them: with their email (only the owner sees guests' emails).</summary>
+    private static BookingInviteeDto ToOwnersView(Invitee invitee) => new()
+    {
+        UserId = invitee.UserId,
+        Name = invitee.Name ?? string.Empty,
+        Email = invitee.Email ?? string.Empty,
+        IsExternal = invitee.IsExternal,
+    };
 
     private static RecurrenceRule ToRule(RecurrenceDto dto) =>
         new(dto.Frequency, dto.Interval, dto.Weekdays.Select(d => (DayOfWeek)d), dto.MonthlyRepeat, dto.EndDate);
@@ -317,6 +338,19 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         }).ToList();
     }
 
+    private static BookingInviteeDto ToInviteeDto(BookingAttendee invitee, IReadOnlyDictionary<Guid, IdentityUser> users, bool showEmail)
+    {
+        var colleague = invitee.UserId is { } id ? users.GetValueOrDefault(id) : null;
+        return new BookingInviteeDto
+        {
+            UserId = invitee.UserId,
+            Name = colleague?.DisplayName() ?? invitee.Name ?? string.Empty,
+            Email = showEmail ? colleague?.Email ?? invitee.Email ?? string.Empty : string.Empty,
+            IsExternal = invitee.UserId is null,
+            ResponseStatus = invitee.ResponseStatus,
+        };
+    }
+
     /// <summary>
     /// Builds full DTOs for a batch of bookings with one query per table (not one per booking),
     /// or none for the places when the caller already has them (a create).
@@ -329,6 +363,19 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var seriesById = seriesIds.Count == 0
             ? new Dictionary<Guid, BookingSeries>()
             : (await _seriesRepository.GetListAsync(s => seriesIds.Contains(s.Id))).ToDictionary(s => s.Id);
+
+        // The owners and the colleagues invited, in one query, for their current names (and
+        // emails). Deleted users included: a booking still names who made it.
+        var me = CurrentUser.GetId();
+        var userIds = bookings.Select(b => b.UserId)
+            .Concat(bookings.SelectMany(b => b.Invitees).Where(i => i.UserId != null).Select(i => i.UserId!.Value))
+            .Distinct()
+            .ToList();
+        Dictionary<Guid, IdentityUser> users;
+        using (_dataFilter.Disable<ISoftDelete>())
+        {
+            users = (await _userRepository.GetListByIdsAsync(userIds)).ToDictionary(u => u.Id);
+        }
 
         return bookings.Select(booking =>
         {
@@ -345,6 +392,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             dto.Recurrence = booking.SeriesId is { } seriesId && seriesById.TryGetValue(seriesId, out var series)
                 ? ToDto(series.Rule)
                 : null;
+            dto.IsOwner = booking.UserId == me;
+            dto.OwnerName = users.TryGetValue(booking.UserId, out var owner) ? owner.DisplayName() : string.Empty;
+            dto.Invitees = booking.Invitees.Select(i => ToInviteeDto(i, users, dto.IsOwner)).ToList();
             return dto;
         }).ToList();
     }

@@ -64,6 +64,9 @@ public class SeriesPreviewDto
 
     public int BookableCount { get; set; }
     public string Timezone { get; set; } = string.Empty;
+
+    /// <summary>The guest list as every date would get it (see <see cref="BookingPreviewDto.Invitees"/>).</summary>
+    public List<BookingInviteeDto> Invitees { get; set; } = new();
 }
 
 public class SeriesCreatedDto

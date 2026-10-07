@@ -90,6 +90,13 @@
     "Dixels:Bookings:SeriesBeyondHorizon": "Recurring bookings can run up to {horizonDays} days ahead — the latest end date is {lastDate}.",
     "Dixels:Bookings:SeriesNothingToBook": "Every date is unticked, so there's nothing to book.",
     "Dixels:Bookings:SeriesDateUnavailable": "{date} was just taken or no longer fits the rules, so nothing was booked. Check the dates again and book the rest.",
+    "Dixels:Bookings:AttendeesBelowInvitees": "You invited {invitees} people, so the booking needs at least {needed} attendees (you included), but it says {attendees}. Raise the number of attendees or invite fewer people.",
+    "Dixels:Bookings:AttendeesBelowInvitees:Short": "Needs at least {needed} attendees for everyone invited",
+    "Dixels:Bookings:InviteeNotInBuilding": "Some of the colleagues you invited can't be found in this building. Invite them by email as external guests instead.",
+    "Dixels:Bookings:InviteeDuplicate": "{invitee} is on the guest list twice. Remove one of them.",
+    "Dixels:Bookings:InviteeIsOwner": "You don't need to invite yourself: you're already counted as an attendee.",
+    "Dixels:Bookings:InviteeInvalid": "Each guest needs either a colleague picked from the list or an email address, not both.",
+    "Dixels:Bookings:ExternalGuestsDisabled": "Inviting people from outside the company isn't turned on yet. Invite colleagues from the list instead.",
 
     "PermissionGroup:Dixels": "Dixels",
     "Permission:Buildings": "Buildings",

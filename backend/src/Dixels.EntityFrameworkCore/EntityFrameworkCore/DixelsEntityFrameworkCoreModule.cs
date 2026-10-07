@@ -60,6 +60,11 @@ public class DixelsEntityFrameworkCoreModule : AbpModule
             options.Entity<Building>(o => o.DefaultWithDetailsFunc = q => q.Include(b => b.Translations));
             options.Entity<Floor>(o => o.DefaultWithDetailsFunc = q => q.Include(f => f.Translations));
             options.Entity<Space>(o => o.DefaultWithDetailsFunc = q => q.Include(s => s.Translations));
+
+            // Likewise a booking (or series) and its guests. Lists (calendar, overlap checks)
+            // don't ask for details, so they don't pay for the join.
+            options.Entity<Booking>(o => o.DefaultWithDetailsFunc = q => q.Include(b => b.Invitees));
+            options.Entity<BookingSeries>(o => o.DefaultWithDetailsFunc = q => q.Include(s => s.Invitees));
         });
 
         Configure<AbpDbContextOptions>(options =>

@@ -1,6 +1,7 @@
 using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Volo.Abp.EntityFrameworkCore.Modeling;
 using Volo.Abp.Identity;
 
@@ -67,6 +68,32 @@ public static class BookingsModelBuilderExtensions
             b.HasOne<BookingSeries>().WithMany().HasForeignKey(x => x.SeriesId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => x.SeriesId);
+
+            // Its guests, through the read-only Invitees list's backing field.
+            b.HasMany(x => x.Invitees).WithOne().HasForeignKey(x => x.BookingId)
+                .OnDelete(DeleteBehavior.Cascade).IsRequired();
+            b.Navigation(x => x.Invitees).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        builder.Entity<BookingAttendee>(b =>
+        {
+            b.ToTable(DixelsConsts.DbTablePrefix + "BookingAttendees", DixelsConsts.DbSchema, tb =>
+                tb.HasCheckConstraint("CK_AppBookingAttendees_UserOrEmail", "(\"UserId\" IS NULL) <> (\"Email\" IS NULL)"));
+            b.ConfigureByConvention();
+            ConfigureInviteeRow(b);
+
+            // Loading a booking's guests. (The unique index below only holds colleagues.)
+            b.HasIndex(x => x.BookingId);
+
+            // A colleague is on a booking once (the domain checks this first; this is the backstop).
+            b.HasIndex(x => new { x.BookingId, x.UserId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
+
+            // "Bookings I'm invited to between two times" — seeks to the ones ending after the
+            // window starts, like (UserId, EndsAt) on the bookings themselves, instead of reading
+            // every invitation the person ever had. Only colleagues have a UserId.
+            b.HasIndex(x => new { x.UserId, x.EndsAt })
+                .HasFilter("\"UserId\" IS NOT NULL")
+                .IncludeProperties(x => x.BookingId);
         });
 
         builder.Entity<BookingSeries>(b =>
@@ -89,6 +116,36 @@ public static class BookingsModelBuilderExtensions
                 .OnDelete(DeleteBehavior.Restrict).IsRequired();
             b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict).IsRequired();
+
+            b.HasMany(x => x.Invitees).WithOne().HasForeignKey(x => x.SeriesId)
+                .OnDelete(DeleteBehavior.Cascade).IsRequired();
+            b.Navigation(x => x.Invitees).UsePropertyAccessMode(PropertyAccessMode.Field);
         });
+
+        builder.Entity<BookingSeriesAttendee>(b =>
+        {
+            b.ToTable(DixelsConsts.DbTablePrefix + "BookingSeriesAttendees", DixelsConsts.DbSchema, tb =>
+                tb.HasCheckConstraint("CK_AppBookingSeriesAttendees_UserOrEmail", "(\"UserId\" IS NULL) <> (\"Email\" IS NULL)"));
+            b.ConfigureByConvention();
+            ConfigureInviteeRow(b);
+
+            b.HasIndex(x => x.SeriesId);
+            b.HasIndex(x => new { x.SeriesId, x.UserId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
+        });
+    }
+
+    /// <summary>
+    /// What a booking's and a series' guest rows share. Restrict to the user: users are only
+    /// soft-deleted, and a colleague who leaves is taken off upcoming bookings by the app.
+    /// </summary>
+    private static void ConfigureInviteeRow<T>(EntityTypeBuilder<T> b)
+        where T : InviteeRow
+    {
+        b.Property(x => x.Email).HasMaxLength(BookingConsts.MaxInviteeEmailLength);
+        b.Property(x => x.Name).HasMaxLength(BookingConsts.MaxInviteeNameLength);
+        b.Property(x => x.ResponseStatus).HasConversion<string>().HasMaxLength(16).IsRequired();
+
+        b.HasOne<IdentityUser>().WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

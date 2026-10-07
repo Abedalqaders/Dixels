@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.Guids;
 
 namespace Dixels.Bookings;
 
@@ -54,6 +57,13 @@ public class Booking : AuditedAggregateRoot<Guid>
     /// <summary>When the "starts soon" reminder email was queued; null until then (see BookingReminders).</summary>
     public DateTimeOffset? ReminderSentAt { get; private set; }
 
+    /// <summary>
+    /// Who else is invited (colleagues and external guests). The owner isn't on it but counts
+    /// toward <see cref="Attendees"/>, so there's always room: Attendees ≥ 1 + invitees.
+    /// </summary>
+    public IReadOnlyCollection<BookingAttendee> Invitees => _invitees;
+    private readonly List<BookingAttendee> _invitees = new();
+
     private Booking()
     {
         // EF Core
@@ -102,9 +112,36 @@ public class Booking : AuditedAggregateRoot<Guid>
     /// Same key but different details is a client bug or a reused key, not a retry, so it
     /// must be rejected rather than silently answered with this booking.
     /// </summary>
-    public bool MatchesRequest(Guid spaceId, DateTimeOffset startsAt, DateTimeOffset endsAt, int attendees)
+    public bool MatchesRequest(Guid spaceId, DateTimeOffset startsAt, DateTimeOffset endsAt, int attendees, IReadOnlyCollection<Invitee> invitees)
     {
-        return SpaceId == spaceId && StartsAt == startsAt && EndsAt == endsAt && Attendees == attendees;
+        return SpaceId == spaceId && StartsAt == startsAt && EndsAt == endsAt && Attendees == attendees
+               && SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);
+    }
+
+    /// <summary>
+    /// Makes the guest list exactly <paramref name="invitees"/> (already checked by
+    /// <see cref="BookingInviteeResolver"/>) and returns who was added and who was removed.
+    /// </summary>
+    public (List<Invitee> Added, List<Invitee> Removed) SetInvitees(IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        if (Attendees < 1 + invitees.Count)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees)
+                .WithData("invitees", invitees.Count)
+                .WithData("attendees", Attendees)
+                .WithData("needed", 1 + invitees.Count);
+        }
+
+        return _invitees.Replace(invitees, invitee => new BookingAttendee(guidGenerator.Create(), Id, EndsAt, invitee));
+    }
+
+    /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
+    internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)
+    {
+        static string Describe(Invitee i) => i.IsExternal ? $"{i.Key}\n{i.Name?.Trim()}" : i.Key;
+
+        return stored.Select(Describe).Order(StringComparer.Ordinal)
+            .SequenceEqual(requested.Select(Describe).Order(StringComparer.Ordinal));
     }
 
     /// <summary>

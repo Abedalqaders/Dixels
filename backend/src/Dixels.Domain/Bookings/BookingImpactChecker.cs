@@ -357,7 +357,8 @@ public class BookingImpactChecker : DomainService
         }
 
         await _bookingRepository.UpdateManyAsync(bookings, autoSave: true);
-        await _localEventBus.PublishAsync(new BookingsCancelledEvent(bookings.ToList(), byAdmin: true));
+        var invitees = await _bookingRepository.GetInviteesAsync(bookings.Select(b => b.Id).ToList());
+        await _localEventBus.PublishAsync(new BookingsCancelledEvent(bookings.ToList(), byAdmin: true, invitees));
     }
 
     private DateTimeOffset Now() => new(Clock.Now.ToUniversalTime(), TimeSpan.Zero);

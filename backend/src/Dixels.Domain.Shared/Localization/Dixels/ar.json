@@ -90,6 +90,13 @@
     "Dixels:Bookings:SeriesBeyondHorizon": "يمكن أن تمتد الحجوزات المتكررة حتى {horizonDays} يومًا مقدمًا، وآخر تاريخ انتهاء متاح هو {lastDate}.",
     "Dixels:Bookings:SeriesNothingToBook": "أُلغي تحديد كل التواريخ، لذا لا يوجد ما يُحجز.",
     "Dixels:Bookings:SeriesDateUnavailable": "حُجز يوم {date} للتو أو لم يعد يطابق القواعد، لذلك لم يُحجز شيء. راجع التواريخ مجددًا واحجز الباقي.",
+    "Dixels:Bookings:AttendeesBelowInvitees": "دعوت {invitees} أشخاص، لذا يحتاج الحجز إلى {needed} حاضرين على الأقل (بما فيهم أنت)، لكن العدد المُدخل {attendees}. ارفع عدد الحاضرين أو ادعُ عددًا أقل.",
+    "Dixels:Bookings:AttendeesBelowInvitees:Short": "يلزم {needed} حاضرين على الأقل لكل المدعوين",
+    "Dixels:Bookings:InviteeNotInBuilding": "تعذّر العثور على بعض الزملاء الذين دعوتهم في هذا المبنى. ادعُهم بالبريد الإلكتروني كضيوف خارجيين بدلًا من ذلك.",
+    "Dixels:Bookings:InviteeDuplicate": "{invitee} مذكور في قائمة الضيوف مرتين. احذف أحدهما.",
+    "Dixels:Bookings:InviteeIsOwner": "لا داعي لدعوة نفسك: أنت محسوب ضمن الحاضرين أصلًا.",
+    "Dixels:Bookings:InviteeInvalid": "يحتاج كل ضيف إلى زميل مختار من القائمة أو إلى بريد إلكتروني، وليس كليهما.",
+    "Dixels:Bookings:ExternalGuestsDisabled": "دعوة أشخاص من خارج الشركة غير مفعّلة بعد. ادعُ زملاءك من القائمة بدلًا من ذلك.",
 
     "PermissionGroup:Dixels": "Dixels",
     "Permission:Buildings": "المباني",

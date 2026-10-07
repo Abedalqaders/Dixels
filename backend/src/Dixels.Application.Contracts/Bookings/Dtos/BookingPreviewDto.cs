@@ -21,4 +21,7 @@ public class BookingPreviewDto
     public DateTimeOffset StartsAt { get; set; }
     public DateTimeOffset EndsAt { get; set; }
     public string Timezone { get; set; } = string.Empty;
+
+    /// <summary>The guest list as it would be saved: a typed colleague's email already shown as that colleague.</summary>
+    public List<BookingInviteeDto> Invitees { get; set; } = new();
 }

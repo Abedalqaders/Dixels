@@ -201,6 +201,8 @@ export interface TextKeys {
   "Common:TryAgain": string
   "Dixels:Bookings:AlreadyStarted": string
   "Dixels:Bookings:AnotherRoom": string
+  "Dixels:Bookings:AttendeesBelowInvitees": string
+  "Dixels:Bookings:AttendeesBelowInvitees:Short": string
   "Dixels:Bookings:AttendeesMustBePositive": string
   "Dixels:Bookings:BelowMinAttendees": string
   "Dixels:Bookings:BelowMinAttendees:Short": string
@@ -216,9 +218,14 @@ export interface TextKeys {
   "Dixels:Bookings:CancelReason:SpaceRemoved": string
   "Dixels:Bookings:ClosedDay": string
   "Dixels:Bookings:ClosedDay:Short": string
+  "Dixels:Bookings:ExternalGuestsDisabled": string
   "Dixels:Bookings:IdempotencyKeyReused": string
   "Dixels:Bookings:InvalidDateRange": string
   "Dixels:Bookings:InvalidTimeRange": string
+  "Dixels:Bookings:InviteeDuplicate": string
+  "Dixels:Bookings:InviteeInvalid": string
+  "Dixels:Bookings:InviteeIsOwner": string
+  "Dixels:Bookings:InviteeNotInBuilding": string
   "Dixels:Bookings:NotAligned": string
   "Dixels:Bookings:NotAligned:Short": string
   "Dixels:Bookings:NotAssignedToBuilding": string

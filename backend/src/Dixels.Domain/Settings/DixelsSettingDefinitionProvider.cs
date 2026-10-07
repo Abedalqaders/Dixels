@@ -25,5 +25,8 @@ public class DixelsSettingDefinitionProvider : SettingDefinitionProvider
         // whichever user happened to make the first request.
         context.Add(new SettingDefinition(DixelsSettings.Language)
             .WithProviders(UserSettingValueProvider.ProviderName));
+
+        // App-wide. Visible to clients, so the booking form can hide the "External guest" tab.
+        context.Add(new SettingDefinition(DixelsSettings.ExternalGuestsEnabled, defaultValue: "false", isVisibleToClients: true));
     }
 }

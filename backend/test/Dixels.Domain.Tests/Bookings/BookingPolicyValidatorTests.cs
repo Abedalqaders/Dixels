@@ -55,11 +55,12 @@ public class BookingPolicyValidatorTests
         int attendees = 4,
         ResolvedConstraints? rules = null,
         IReadOnlyList<OverrideWindow>? overrides = null,
-        bool overlaps = false)
+        bool overlaps = false,
+        int invitees = 0)
         => _validator.Validate(
             rules ?? Rules(),
             _clock,
-            new BookingRequest(start, end, attendees),
+            new BookingRequest(start, end, attendees, invitees),
             overrides ?? Array.Empty<OverrideWindow>(),
             overlaps,
             Now,
@@ -94,6 +95,24 @@ public class BookingPolicyValidatorTests
 
         violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingBelowMinAttendees);
         violation.Data["minAttendees"].ShouldBe(4);
+    }
+
+    [Fact]
+    public void The_head_count_must_leave_room_for_everyone_invited_and_the_owner()
+    {
+        var violation = Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 4, invitees: 4).ShouldHaveSingleItem();
+
+        violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
+        violation.Level.ShouldBeNull();
+        violation.Data["invitees"].ShouldBe(4);
+        violation.Data["attendees"].ShouldBe(4);
+        violation.Data["needed"].ShouldBe(5);
+    }
+
+    [Fact]
+    public void A_head_count_of_exactly_the_invitees_plus_the_owner_passes()
+    {
+        Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 5, invitees: 4).ShouldBeEmpty();
     }
 
     [Fact]

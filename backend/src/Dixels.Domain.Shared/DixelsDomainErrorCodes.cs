@@ -80,4 +80,13 @@ public static class DixelsDomainErrorCodes
     public const string SeriesBeyondHorizon = BookingsPrefix + "SeriesBeyondHorizon";
     public const string SeriesNothingToBook = BookingsPrefix + "SeriesNothingToBook";
     public const string SeriesDateUnavailable = BookingsPrefix + "SeriesDateUnavailable";
+
+    // Invitees: a rule violation (more invitees than the head count allows), then the ways the
+    // guest list itself can be wrong — thrown before any rule is evaluated.
+    public const string BookingAttendeesBelowInvitees = BookingsPrefix + "AttendeesBelowInvitees";
+    public const string InviteeNotInBuilding = BookingsPrefix + "InviteeNotInBuilding";
+    public const string InviteeDuplicate = BookingsPrefix + "InviteeDuplicate";
+    public const string InviteeIsOwner = BookingsPrefix + "InviteeIsOwner";
+    public const string InviteeInvalid = BookingsPrefix + "InviteeInvalid";
+    public const string ExternalGuestsDisabled = BookingsPrefix + "ExternalGuestsDisabled";
 }
