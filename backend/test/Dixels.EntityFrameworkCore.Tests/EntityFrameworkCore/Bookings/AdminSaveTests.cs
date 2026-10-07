@@ -187,7 +187,7 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
     }
 
     [Fact]
-    public async Task A_big_cancel_goes_in_rounds_and_still_cancels_every_one_without_emails()
+    public async Task A_big_cancel_goes_in_rounds_and_still_cancels_every_one_with_one_email()
     {
         var s = await CreateScenarioAsync();
         // 1,200 one-minute bookings from 16:00 (the new closing time) on, 300 a room; 10 that still fit.
@@ -228,13 +228,18 @@ public class AdminSaveTests : DixelsApplicationTestBase<DixelsEntityFrameworkCor
             b.Status == BookingStatus.Cancelled && b.CancelledByAdmin && b.CancelReason == "Rules changed: Open 09:00–16:00 only");
         stored.Where(b => inside.Contains(b.Id)).ShouldAllBe(b => b.Status == BookingStatus.Confirmed);
 
-        // Three rounds of at most 500, each an admin cancel: nobody is emailed for those.
+        // Three rounds of at most 500, each an admin cancel.
         rounds.Select(r => r.Bookings.Count).ShouldBe(new[] { 500, 500, 200 });
         rounds.ShouldAllBe(r => r.ByAdmin);
         // Each round announces exactly what it cancelled, as cancelled.
         rounds.SelectMany(r => r.Bookings).Select(b => b.Id).OrderBy(id => id).ShouldBe(outside.OrderBy(id => id));
         rounds.SelectMany(r => r.Bookings).ShouldAllBe(b => b.Status == BookingStatus.Cancelled && b.CancelledById == Admin);
+        // The rounds are one admin action: the employee gets one email about all 1,200, written later by a job.
         emails.Sent.ShouldBeEmpty();
+        var job = (await QueuedJobs.WaitingAsync(ServiceProvider))
+            .Where(j => j.JobName == "Dixels.Emails.AdminCancelled" && j.JobArgs.Contains(s.UserId.ToString()))
+            .ShouldHaveSingleItem();
+        job.JobArgs.ShouldContain("1200");
     }
 
     [Fact]

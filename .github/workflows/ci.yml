@@ -95,6 +95,13 @@ jobs:
           npm run i18n:types
           git diff --exit-code -- src/i18n/keys.d.ts
 
+      - name: Feature boundaries match their list
+        # The lint rule in .oxlintrc.json is generated from scripts/feature-boundaries.mjs.
+        # If this fails: run `npm run lint:boundaries` and commit the result.
+        run: |
+          npm run lint:boundaries
+          git diff --exit-code -- .oxlintrc.json
+
       - name: Typecheck
         run: npx tsc -b
 

@@ -1,9 +1,426 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/only-export-components": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/auth/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/auth/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/bookings/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/bookings/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/calendar/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/calendar/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/profile/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/profile/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/space-management/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/space-management/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/features/users/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/users/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/app/**",
+        "src/main.tsx",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/test/**"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }

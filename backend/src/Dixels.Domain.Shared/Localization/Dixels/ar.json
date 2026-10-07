@@ -1081,6 +1081,11 @@
     "Email:BookingReminder:Subject": "تذكير: {0} الساعة {1}",
     "Email:BookingReminder:Intro": "يبدأ حجزك قريبًا.",
     "Email:SeriesConfirmed:Subject": "تم تأكيد الحجز المتكرر: {0}",
-    "Email:SeriesConfirmed:Intro": "تم تأكيد حجزك المتكرر."
+    "Email:SeriesConfirmed:Intro": "تم تأكيد حجزك المتكرر.",
+    "Email:AdminCancelled:Subject": "ألغى أحد المسؤولين الحجز: {0}، {1}",
+    "Email:AdminCancelled:SubjectMany": "ألغى أحد المسؤولين {0} من حجوزاتك",
+    "Email:AdminCancelled:Intro": "ألغى أحد المسؤولين حجزك.",
+    "Email:AdminCancelled:IntroMany": "ألغى أحد المسؤولين {0} من حجوزاتك.",
+    "Email:AdminCancelled:More": "…و{0} غيرها. افتح Dixels لرؤيتها كلها."
   }
 }
