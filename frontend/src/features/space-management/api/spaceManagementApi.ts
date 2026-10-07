@@ -13,6 +13,7 @@
 
 import { request, query } from '@/lib/api/httpClient'
 import type { ListResultDto, PagedResultDto } from '@/lib/api/httpClient'
+import { pageQuery } from '@/lib/api/reservationImpact'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 
 export { ApiError } from '@/lib/api/httpClient'
@@ -162,13 +163,13 @@ export function updateBuildingConstraints(token: string, id: string, input: Upda
 }
 
 /** The upcoming bookings these proposed building rules would break — nothing is saved. */
-export function getBuildingConstraintsImpact(token: string, id: string, input: UpdateBuildingConstraintsDto) {
-  return request<ReservationImpactDto>(`/api/app/buildings/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+export function getBuildingConstraintsImpact(token: string, id: string, input: UpdateBuildingConstraintsDto, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/buildings/${id}/constraints/impact${pageQuery(skip)}`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
 /** The upcoming bookings deleting this building would cancel. */
-export function getBuildingDeleteImpact(token: string, id: string) {
-  return request<ReservationImpactDto>(`/api/app/buildings/${id}/delete-impact`, token)
+export function getBuildingDeleteImpact(token: string, id: string, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/buildings/${id}/delete-impact${pageQuery(skip)}`, token)
 }
 
 export function deleteBuilding(token: string, id: string) {
@@ -250,12 +251,12 @@ export function updateFloorConstraints(token: string, id: string, input: UpdateF
   })
 }
 
-export function getFloorConstraintsImpact(token: string, id: string, input: UpdateFloorConstraintsDto) {
-  return request<ReservationImpactDto>(`/api/app/floors/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+export function getFloorConstraintsImpact(token: string, id: string, input: UpdateFloorConstraintsDto, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/floors/${id}/constraints/impact${pageQuery(skip)}`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
-export function getFloorDeleteImpact(token: string, id: string) {
-  return request<ReservationImpactDto>(`/api/app/floors/${id}/delete-impact`, token)
+export function getFloorDeleteImpact(token: string, id: string, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/floors/${id}/delete-impact${pageQuery(skip)}`, token)
 }
 
 export function getFloorResolvedConstraints(token: string, id: string) {
@@ -350,17 +351,17 @@ export function updateSpaceConstraints(token: string, id: string, input: UpdateS
   })
 }
 
-export function getSpaceConstraintsImpact(token: string, id: string, input: UpdateSpaceConstraintsDto) {
-  return request<ReservationImpactDto>(`/api/app/spaces/${id}/constraints/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+export function getSpaceConstraintsImpact(token: string, id: string, input: UpdateSpaceConstraintsDto, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/spaces/${id}/constraints/impact${pageQuery(skip)}`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
 /** The upcoming bookings a room details change (a lower capacity) would break — nothing is saved. */
-export function getSpaceUpdateImpact(token: string, id: string, input: UpdateSpaceDto) {
-  return request<ReservationImpactDto>(`/api/app/spaces/${id}/impact`, token, { method: 'POST', body: JSON.stringify(input) })
+export function getSpaceUpdateImpact(token: string, id: string, input: UpdateSpaceDto, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/spaces/${id}/impact${pageQuery(skip)}`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
-export function getSpaceDeleteImpact(token: string, id: string) {
-  return request<ReservationImpactDto>(`/api/app/spaces/${id}/delete-impact`, token)
+export function getSpaceDeleteImpact(token: string, id: string, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/spaces/${id}/delete-impact${pageQuery(skip)}`, token)
 }
 
 export function getSpaceResolvedConstraints(token: string, id: string) {
@@ -503,8 +504,8 @@ export function createOverride(token: string, input: CreateAvailabilityOverrideD
 }
 
 /** The upcoming bookings this closure would fall on — nothing is saved. */
-export function getOverrideImpact(token: string, input: CreateAvailabilityOverrideDto) {
-  return request<ReservationImpactDto>('/api/app/availability-overrides/impact', token, { method: 'POST', body: JSON.stringify(input) })
+export function getOverrideImpact(token: string, input: CreateAvailabilityOverrideDto, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/availability-overrides/impact${pageQuery(skip)}`, token, { method: 'POST', body: JSON.stringify(input) })
 }
 
 export function deleteOverride(token: string, id: string) {

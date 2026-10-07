@@ -82,7 +82,7 @@ export function FloorsListPage() {
 
   // A delete also cancels the upcoming bookings in what's deleted: when there are any, say
   // which (and whose) before going ahead; otherwise the plain confirm is enough.
-  async function confirmDelete(name: string, confirmMessage: string, impact: () => Promise<ReservationImpactDto>, remove: () => Promise<unknown>) {
+  async function confirmDelete(name: string, confirmMessage: string, impact: (skip?: number) => Promise<ReservationImpactDto>, remove: () => Promise<unknown>) {
     let affected: ReservationImpactDto
     try {
       affected = await impact()
@@ -94,7 +94,7 @@ export function FloorsListPage() {
       confirmAndRun(name, confirmMessage, remove, t('Hierarchy:Deleted', { name }))
       return
     }
-    if ((await askImpact({ mode: 'delete', impact: affected, subject: name })) !== 'cancel') return
+    if ((await askImpact({ mode: 'delete', impact: affected, subject: name, loadMore: impact })) !== 'cancel') return
     runAction(
       remove,
       affected.count > 0 ? t('Hierarchy:DeletedWithBookings', { name, count: affected.count }) : t('Hierarchy:Deleted', { name }),
@@ -220,7 +220,7 @@ export function FloorsListPage() {
                                 confirmDelete(
                                   floor.name,
                                   t('Hierarchy:DeleteFloorConfirm', { name: floor.name }),
-                                  () => getFloorDeleteImpact(token, floor.id),
+                                  (skip?: number) => getFloorDeleteImpact(token, floor.id, skip),
                                   () => deleteFloor(token, floor.id),
                                 ),
                             },

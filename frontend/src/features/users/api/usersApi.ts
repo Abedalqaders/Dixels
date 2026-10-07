@@ -6,6 +6,7 @@
 
 import { request, query } from '@/lib/api/httpClient'
 import type { PagedResultDto } from '@/lib/api/httpClient'
+import { pageQuery } from '@/lib/api/reservationImpact'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 
 export { ApiError } from '@/lib/api/httpClient'
@@ -76,8 +77,8 @@ export function assignUserBuilding(token: string, userId: string, buildingId: st
 }
 
 /** A user's upcoming bookings in their current building — what moving them would leave behind. */
-export function getReassignImpact(token: string, userId: string) {
-  return request<ReservationImpactDto>(`/api/app/users/${userId}/reassign-impact`, token)
+export function getReassignImpact(token: string, userId: string, skip = 0) {
+  return request<ReservationImpactDto>(`/api/app/users/${userId}/reassign-impact${pageQuery(skip)}`, token)
 }
 
 export interface UserPageDetailsDto {

@@ -25,8 +25,15 @@ export interface AffectedReservationDto {
 }
 
 export interface ReservationImpactDto {
+  /** How many in all — what keep or cancel acts on. */
   count: number
+  /** One page of them, soonest first: ask again with `skip` = how many are shown for the next. */
   items: AffectedReservationDto[]
   /** Deleting a building: employees assigned to it — they can't book until reassigned. */
   assignedEmployees?: number
+}
+
+/** The query string for a page of a preview after the first (`?skip=50`); the first page needs none. */
+export function pageQuery(skip: number): string {
+  return skip > 0 ? `?skip=${skip}` : ''
 }

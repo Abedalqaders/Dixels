@@ -98,6 +98,71 @@ describe('BookingImpactDialog', () => {
     expect(onChoose).toHaveBeenLastCalledWith('cancel')
   })
 
+  it('lists a long preview a page at a time and adds the next page on "Show more"', async () => {
+    await setLanguage('en')
+    const user = userEvent.setup()
+    let resolve: (page: ReservationImpactDto) => void = () => {}
+    const loadMore = vi.fn((skip: number) => {
+      void skip
+      return new Promise<ReservationImpactDto>((r) => (resolve = r))
+    })
+    const onChoose = vi.fn()
+    render(<BookingImpactDialog mode="change" impact={{ ...impact, count: 3 }} loadMore={loadMore} onChoose={onChoose} />)
+
+    // The count is all of them; the list is what has been sent so far.
+    expect(screen.getByRole('alertdialog', { name: 'This change affects 3 upcoming bookings' })).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByText('Showing 2 of 3')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(loadMore).toHaveBeenCalledWith(2)
+    expect(screen.getByRole('button', { name: 'Loading…' })).toBeDisabled()
+
+    resolve({
+      count: 3,
+      items: [{ ...impact.items[1], id: 'b3', placeName: 'Room 3', localStart: '2026-10-02T08:00:00', localEnd: '2026-10-02T09:00:00' }],
+    })
+    expect(await screen.findByText('Showing 3 of 3')).toBeInTheDocument()
+    const rows = screen.getAllByRole('listitem')
+    expect(rows).toHaveLength(3)
+    expect(rows[2]).toHaveTextContent('Room 3 · Level 2')
+    // All shown: nothing more to ask for.
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument()
+
+    // Keep or cancel is still about every one of them.
+    await user.click(screen.getByRole('button', { name: 'Cancel 3 and save' }))
+    expect(onChoose).toHaveBeenLastCalledWith('cancel')
+  })
+
+  it('says so when the next page fails, and lets the admin try again', async () => {
+    await setLanguage('en')
+    const user = userEvent.setup()
+    const loadMore = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ count: 3, items: [{ ...impact.items[1], id: 'b3' }] })
+    render(<BookingImpactDialog mode="delete" subject="Level 2" impact={{ ...impact, count: 3 }} loadMore={loadMore} onChoose={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load more. Try again.")
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(await screen.findByText('Showing 3 of 3')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('groups a big total the way the reader writes numbers', async () => {
+    await setLanguage('en')
+    render(<BookingImpactDialog mode="delete" subject="Riverside HQ" impact={{ ...impact, count: 1240 }} loadMore={vi.fn()} onChoose={vi.fn()} />)
+
+    expect(screen.getByText('Showing 2 of 1,240')).toBeInTheDocument()
+  })
+
+  it('shows no paging line when everything fits on one page', async () => {
+    await setLanguage('en')
+    render(<BookingImpactDialog mode="change" impact={impact} loadMore={vi.fn()} onChoose={vi.fn()} />)
+
+    expect(screen.queryByText(/Showing/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show more' })).not.toBeInTheDocument()
+  })
+
   it('counts in Arabic with the right plural form', async () => {
     await setLanguage('ar')
     const { rerender } = render(<BookingImpactDialog mode="change" impact={impact} onChoose={vi.fn()} />)
