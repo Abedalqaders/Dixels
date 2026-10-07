@@ -62,6 +62,33 @@ public class BookingsCancelledEvent
     }
 }
 
+/// <summary>
+/// The owner changed who's invited: on one booking (<see cref="BookingId"/>), or on a series
+/// and all its upcoming dates (<see cref="SeriesId"/>; <see cref="Added"/>/<see cref="Removed"/>
+/// are against the series' list, so one message per person covers the whole series). Raised
+/// only when someone was added or removed. A colleague is only their UserId here.
+/// </summary>
+public class BookingInviteesChangedEvent
+{
+    public Guid? BookingId { get; }
+    public Guid? SeriesId { get; }
+
+    /// <summary>The bookings whose guests changed: the one booking, or the series' upcoming dates.</summary>
+    public IReadOnlyList<Booking> Bookings { get; }
+
+    public IReadOnlyList<Invitee> Added { get; }
+    public IReadOnlyList<Invitee> Removed { get; }
+
+    public BookingInviteesChangedEvent(Guid? bookingId, Guid? seriesId, IReadOnlyList<Booking> bookings, IReadOnlyList<Invitee> added, IReadOnlyList<Invitee> removed)
+    {
+        BookingId = bookingId;
+        SeriesId = seriesId;
+        Bookings = bookings;
+        Added = added;
+        Removed = removed;
+    }
+}
+
 /// <summary>A booking starts soon and is due its one reminder (see BookingReminders).</summary>
 public class BookingReminderDueEvent
 {

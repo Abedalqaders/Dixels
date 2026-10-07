@@ -37,4 +37,14 @@ public interface IBookingsAppService : IApplicationService
 
     /// <summary>Books a series' dates (minus the skipped ones) in one go — all of them, or none.</summary>
     Task<SeriesCreatedDto> CreateSeriesAsync(CreateSeriesDto input);
+
+    /// <summary>
+    /// The owner changing who's invited (and the head count) on one of their bookings that
+    /// hasn't started. Not for a date of a series — that's <see cref="UpdateSeriesInviteesAsync"/>.
+    /// Anyone else gets 404.
+    /// </summary>
+    Task<BookingDto> UpdateInviteesAsync(Guid id, UpdateInviteesDto input);
+
+    /// <summary>The same for a whole series: its list and every upcoming date. Returns those dates.</summary>
+    Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, UpdateInviteesDto input);
 }

@@ -97,6 +97,8 @@
     "Dixels:Bookings:InviteeIsOwner": "لا داعي لدعوة نفسك: أنت محسوب ضمن الحاضرين أصلًا.",
     "Dixels:Bookings:InviteeInvalid": "يحتاج كل ضيف إلى زميل مختار من القائمة أو إلى بريد إلكتروني، وليس كليهما.",
     "Dixels:Bookings:ExternalGuestsDisabled": "دعوة أشخاص من خارج الشركة غير مفعّلة بعد. ادعُ زملاءك من القائمة بدلًا من ذلك.",
+    "Dixels:Bookings:GuestsNotEditable": "بدأ هذا الحجز أو أُلغي، لذا لا يمكن تغيير ضيوفه.",
+    "Dixels:Bookings:EditSeriesGuests": "هذا التاريخ جزء من سلسلة. غيّر الضيوف للسلسلة كاملة بدلًا من ذلك.",
 
     "PermissionGroup:Dixels": "Dixels",
     "Permission:Buildings": "المباني",

@@ -31,6 +31,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly LocalizedNameReader _nameReader;
     private readonly IIdentityUserRepository _userRepository;
+    private readonly ConstraintResolver _constraintResolver;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -43,7 +44,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         IDataFilter dataFilter,
         IRepository<BookingSeries, Guid> seriesRepository,
         LocalizedNameReader nameReader,
-        IIdentityUserRepository userRepository)
+        IIdentityUserRepository userRepository,
+        ConstraintResolver constraintResolver)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -56,6 +58,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _seriesRepository = seriesRepository;
         _nameReader = nameReader;
         _userRepository = userRepository;
+        _constraintResolver = constraintResolver;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -198,6 +201,38 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.SkipDates,
                 input.IdempotencyKey);
 
+            return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList(), await PlacesOfAsync(place)) };
+        }
+        catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
+        {
+            ex.WithData("level", _violationLocalizer.LevelName(level));
+            throw;
+        }
+    }
+
+    [Authorize(DixelsPermissions.Bookings.Create)]
+    public async Task<BookingDto> UpdateInviteesAsync(Guid id, UpdateInviteesDto input)
+    {
+        try
+        {
+            var (booking, place) = await _bookingManager.ChangeInviteesAsync(
+                CurrentUser.GetId(), id, input.Attendees, ToInvitees(input.Invitees));
+            return (await MapToDtosAsync(new[] { booking }, await PlacesOfAsync(place))).Single();
+        }
+        catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
+        {
+            ex.WithData("level", _violationLocalizer.LevelName(level));
+            throw;
+        }
+    }
+
+    [Authorize(DixelsPermissions.Bookings.Create)]
+    public async Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, UpdateInviteesDto input)
+    {
+        try
+        {
+            var (series, bookings, place) = await _bookingManager.ChangeSeriesInviteesAsync(
+                CurrentUser.GetId(), seriesId, input.Attendees, ToInvitees(input.Invitees));
             return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList(), await PlacesOfAsync(place)) };
         }
         catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
@@ -392,6 +427,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             dto.Recurrence = booking.SeriesId is { } seriesId && seriesById.TryGetValue(seriesId, out var series)
                 ? ToDto(series.Rule)
                 : null;
+            var rules = _constraintResolver.Resolve(building, floor, space);
+            dto.Capacity = rules.Capacity;
+            dto.MinAttendees = rules.MinAttendees;
             dto.IsOwner = booking.UserId == me;
             dto.OwnerName = users.TryGetValue(booking.UserId, out var owner) ? owner.DisplayName() : string.Empty;
             dto.Invitees = booking.Invitees.Select(i => ToInviteeDto(i, users, dto.IsOwner)).ToList();
