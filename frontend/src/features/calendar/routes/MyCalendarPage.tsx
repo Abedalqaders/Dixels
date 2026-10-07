@@ -50,6 +50,7 @@ import { canBookOn } from '@/features/bookings/buildingRules'
 import { BookingDetailDialog } from '@/features/calendar/components/BookingDetailDialog'
 import { BookingDetailPanel } from '@/features/calendar/components/BookingDetailPanel'
 import { CancelBookingDialog } from '@/features/calendar/components/CancelBookingDialog'
+import { EditGuestsDialog } from '@/features/bookings/components/EditGuestsDialog'
 import { MiniCalendar } from '@/features/calendar/components/MiniCalendar'
 import { MonthGrid } from '@/features/calendar/components/MonthGrid'
 import { QuickBookDialog } from '@/features/calendar/components/QuickBookDialog'
@@ -201,6 +202,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         : t('Calendar:BookingLoadFailed')
       : null
   const [cancelling, setCancelling] = useState<BookingDto | null>(null)
+  const [editingGuests, setEditingGuests] = useState<BookingDto | null>(null)
 
   // The heading: the day itself in Day view, otherwise the month with the exact range under it.
   // Word order is the language's ("October 4, 2026", "4 أكتوبر 2026").
@@ -214,7 +216,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         : { big: monthHeading, small: formatDaySpan(startOfMonth(date), addDays(startOfMonth(date), daysInMonth(date) - 1)) }
   const [quickBook, setQuickBook] = useState<QuickBookWindow | null>(null)
   const [form, setForm] = useState<{ room: SpaceAvailabilityDto; window: QuickBookWindow; attendees: number } | null>(null)
-  const anyDialog = Boolean(detail || cancelling || quickBook || form)
+  const anyDialog = Boolean(detail || cancelling || editingGuests || quickBook || form)
 
   // T = today, ←/→ = back/forward, D/W/M = view. Not while typing or in a dialog.
   useEffect(() => {
@@ -270,6 +272,12 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     // Jump to the new booking if it's off screen.
     const day = dateOf(created.localStart)
     if (day < range.from || day >= range.to) go({ date: day })
+  }
+
+  function handleGuestsSaved() {
+    setEditingGuests(null)
+    emitBookingsChanged()
+    showToast(t('Calendar:GuestsSaved'))
   }
 
   function handleCancelled(all: BookingDto[]) {
@@ -423,6 +431,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
                 canCancel={canCancel}
                 onClose={() => setDetail(null)}
                 onCancel={setCancelling}
+                onEditGuests={canCreate ? setEditingGuests : undefined}
               />
             )}
           </aside>
@@ -438,7 +447,12 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           canCancel={canCancel}
           onClose={() => setDetail(null)}
           onCancel={setCancelling}
+          onEditGuests={canCreate ? setEditingGuests : undefined}
         />
+      )}
+
+      {editingGuests && (
+        <EditGuestsDialog token={token} booking={editingGuests} onClose={() => setEditingGuests(null)} onSaved={handleGuestsSaved} />
       )}
 
       {cancelling && (
