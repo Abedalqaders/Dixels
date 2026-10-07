@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import type { ComponentProps, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider, useParams } from 'react-router-dom'
 import type { TextKeys } from '@/i18n/keys'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
@@ -12,6 +15,7 @@ import { LandingPage } from '@/features/auth/routes/LandingPage'
 import { SignOutPage } from '@/features/auth/routes/SignOutPage'
 import { HomePage } from '@/features/auth/routes/HomePage'
 import { EmployeeLayout } from '@/components/EmployeeLayout'
+import { loadOnce, myBuildingLoader } from '@/features/bookings/myBuildingLoader'
 
 // Every page is gated by the permission its API needs (see DixelsPermissions.cs), so what
 // someone can open follows their ABP grants — change a grant and the page follows it.
@@ -57,9 +61,10 @@ function ConstraintsRoute({ children }: { children: ReactNode }) {
 }
 
 // A data router (not a plain <BrowserRouter>): pages can hold a navigation with useBlocker
-// to ask about unsaved changes, and routes can load their code lazily.
-export const router = createBrowserRouter(
-  createRoutesFromElements(
+// to ask about unsaved changes, routes can load their code lazily, and a loader can start a
+// page's data before the page itself renders.
+function appRoutes(queryClient: QueryClient) {
+  return (
     // RouteLoading while the first page's code downloads; RouteError if it can't be (a tab
     // left open across a deploy asks for files that are gone — it reloads once).
     <Route HydrateFallback={RouteLoading} ErrorBoundary={RouteError}>
@@ -76,6 +81,9 @@ export const router = createBrowserRouter(
       >
         <Route
           path="/my-calendar"
+          // The building's request starts now, beside the permissions check, not after it.
+          loader={myBuildingLoader(queryClient)}
+          shouldRevalidate={loadOnce}
           lazy={() =>
             import('@/features/calendar/routes/MyCalendarPage').then(({ MyCalendarPage }) => ({
               element: (
@@ -92,6 +100,8 @@ export const router = createBrowserRouter(
         />
         <Route
           path="/find-space"
+          loader={myBuildingLoader(queryClient)}
+          shouldRevalidate={loadOnce}
           lazy={() =>
             import('@/features/bookings/routes/FindSpacePage').then(({ FindSpacePage }) => ({
               element: (
@@ -228,11 +238,16 @@ export const router = createBrowserRouter(
           }))
         }
       />
-    </Route>,
-  ),
-)
+    </Route>
+  )
+}
 
 function App() {
+  const queryClient = useQueryClient()
+  // Created once, on the first render: a router made again on a later render would drop
+  // where the app is. Made here rather than when this file loads because the loaders need
+  // the app's query cache, which <AppQueryProvider> above has created by now.
+  const [router] = useState(() => createBrowserRouter(createRoutesFromElements(appRoutes(queryClient))))
   return <RouterProvider router={router} />
 }
 
