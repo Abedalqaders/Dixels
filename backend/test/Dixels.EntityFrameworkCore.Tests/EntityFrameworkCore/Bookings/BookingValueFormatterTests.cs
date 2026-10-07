@@ -60,7 +60,8 @@ public class BookingValueFormatterTests : DixelsApplicationTestBase<DixelsEntity
         _formatter.Format(SunToThu).ShouldBe("الأحد إلى الخميس");
         _formatter.Format(OperatingDays.FromDayOfWeeks(new[] { DayOfWeek.Sunday, DayOfWeek.Tuesday })).ShouldBe("الأحد، الثلاثاء");
         _formatter.Format(OperatingDays.Everyday).ShouldBe("كل يوم");
-        _formatter.Format(OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0))).ShouldBe("07:00–20:00");
+        // Isolated left to right (LRI…PDI), or it would show as "20:00–07:00" in an Arabic sentence.
+        _formatter.Format(OperatingWindow.Create(new TimeOnly(7, 0), new TimeOnly(20, 0))).ShouldBe("⁦07:00–20:00⁩");
         _formatter.Format(OperatingWindow.FullDay).ShouldBe("24 ساعة");
         _formatter.Format(new DateOnly(2026, 10, 12)).ShouldBe("الاثنين 12 أكتوبر 2026");
         _formatter.Format(ReasonCategory.Holiday).ShouldBe("عطلة");

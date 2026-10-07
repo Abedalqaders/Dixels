@@ -172,7 +172,7 @@ describe('FindSpacePage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByRole('heading', { name: /^مساحة واحدة متاحة · الخميس 1 أكتوبر، 10:00–11:00$/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /^مساحة واحدة متاحة · الخميس 1 أكتوبر، ⁦10:00–11:00⁩$/ })).toBeInTheDocument()
     expect(screen.getByText(/يمكن الحجز قبل 30 يومًا كحد أقصى/)).toBeInTheDocument()
     expect(screen.getAllByText('متاحة حتى 14:00').length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: 'مساحتان غير متاحتين في هذا الوقت' }))
@@ -181,7 +181,7 @@ describe('FindSpacePage', () => {
     await user.click(screen.getByRole('button', { name: 'احجز Meeting Room 201' }))
     const dialog = screen.getByRole('dialog', { name: 'حجز Meeting Room 201' })
     expect(within(dialog).getByLabelText('عدد الحاضرين')).toHaveValue(4)
-    expect(within(dialog).getByText(/^مفتوحة 07:00–20:00، كل يوم · حتى ساعتين · 12 مقعدًا$/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/^مفتوحة ⁦07:00–20:00⁩، كل يوم · حتى ساعتين · 12 مقعدًا$/)).toBeInTheDocument()
   })
 
   describe('floor filter', () => {

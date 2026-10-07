@@ -2,7 +2,7 @@ import i18n from '@/i18n'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
 import { addDays } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import { formatWeekday } from '@/lib/time/format'
+import { formatClockRange, formatWeekday } from '@/lib/time/format'
 
 // Display wording for booking rules — kept in step with the backend's BookingFormat so a
 // rule reads the same in the space list as it does in a rejection message. Weekday names
@@ -45,7 +45,7 @@ export function joinNames(names: string[]): string {
 }
 
 export function formatHours(hours: OperatingWindowDto): string {
-  return hours.isOpen24Hours ? i18n.t('Booking:Open24Hours') : `${hours.open}–${hours.close}`
+  return hours.isOpen24Hours ? i18n.t('Booking:Open24Hours') : formatClockRange(hours.open, hours.close)
 }
 
 /** "45 min", "2h", "1h 30m" — and in the reader's language ("ساعتان و30 دقيقة"). */

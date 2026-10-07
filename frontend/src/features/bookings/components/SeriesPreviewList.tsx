@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
+import { formatClockRange } from '@/lib/time/format'
 import type { SeriesPreviewState } from '@/features/bookings/hooks/useSeriesPreview'
 
 interface SeriesPreviewListProps {
@@ -85,7 +86,7 @@ export function SeriesPreviewList({ state, skipped, onToggle }: SeriesPreviewLis
                 {/* Arabic weekday names are full words ("الثلاثاء"), so the column is wider there. */}
                 <span className="w-28 flex-none font-medium rtl:w-36">{formatDate(o.date)}</span>
                 <span className="font-mono text-xs leading-5 text-muted-foreground">
-                  {timeOf(o.localStart)}–{timeOf(o.localEnd)}
+                  {formatClockRange(timeOf(o.localStart), timeOf(o.localEnd))}
                 </span>
                 <span className="ms-auto flex flex-col items-end gap-0.5 text-end text-xs leading-5">
                   {o.isValid ? (

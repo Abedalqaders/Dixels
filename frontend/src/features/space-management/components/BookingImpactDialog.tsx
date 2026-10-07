@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { formatCount } from '@/lib/formatCount'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
+import { formatClockRange } from '@/lib/time/format'
 import type { ReservationImpactDto } from '@/lib/api/reservationImpact'
 
 export type ImpactMode = 'change' | 'closure' | 'delete' | 'reassign'
@@ -122,7 +123,7 @@ export function BookingImpactDialog({ mode, impact, subject, loadMore, onChoose 
                 <span className="font-medium">
                   {formatDate(dateOf(b.localStart))} ·{' '}
                   <span className="font-mono">
-                    {timeOf(b.localStart)}–{timeOf(b.localEnd)}
+                    {formatClockRange(timeOf(b.localStart), timeOf(b.localEnd))}
                   </span>
                 </span>
                 <span className="text-muted-foreground">

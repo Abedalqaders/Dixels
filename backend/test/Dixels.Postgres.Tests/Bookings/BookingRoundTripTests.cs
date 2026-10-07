@@ -118,8 +118,9 @@ public class BookingRoundTripTests : DixelsApplicationTestBase<DixelsPostgresTes
         }
 
         calendar.Items.Select(b => b.SpaceName).ShouldBe(new[] { "Room 1", "Room 1" });
-        // 10 on main: whole floors and buildings with their names, for one timezone each.
-        commands.Count.ShouldBeLessThanOrEqualTo(7);
+        // 10 before #43 (whole floors and buildings with their names, for one timezone each),
+        // 7 before the user's own building was read as just its timezone.
+        commands.Count.ShouldBeLessThanOrEqualTo(6);
     }
 
     [PostgresFact]

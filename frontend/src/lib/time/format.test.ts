@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { setLanguage } from '@/i18n'
-import { formatClock, formatClockRange, formatDay, formatDaySpan, formatMonthYear, formatWeekday, localDateToIso } from './format'
+import i18n, { setLanguage } from '@/i18n'
+import { formatClock, formatClockRange, formatDay, formatDaySpan, formatMonthYear, formatWeekday, isolateLtr, localDateToIso } from './format'
+
+// The invisible isolate marks around left-to-right text in a right-to-left language.
+const LRI = '⁦'
+const PDI = '⁩'
 
 describe('formatDay', () => {
   it('has one spelling per style, independent of the browser zone', () => {
@@ -50,6 +54,26 @@ describe('in Arabic', () => {
     expect(formatMonthYear('2026-09-29')).toBe('سبتمبر 2026')
     expect(formatWeekday('2026-09-29', 'short')).toBe('الثلاثاء')
     expect(formatDaySpan('2026-09-28', '2026-10-04')).toBe('28 سبتمبر – 4 أكتوبر 2026')
-    expect(formatClockRange('09:00', '10:30')).toBe('09:00–10:30')
+  })
+
+  it('keeps a time range in reading order: isolated left to right, so it never shows as 10:30–09:00', async () => {
+    await setLanguage('ar')
+    expect(formatClockRange('09:00', '10:30')).toBe(`${LRI}09:00–10:30${PDI}`)
+    expect(isolateLtr('07:00 – 20:00')).toBe(`${LRI}07:00 – 20:00${PDI}`)
+  })
+
+  it('wraps a message’s own {start}–{end} once, around the range only', async () => {
+    await setLanguage('ar')
+    const label = i18n.t('Calendar:Item', { title: 'تخطيط', start: '09:00', end: '10:30', location: 'الغرفة 1' })
+    expect(label).toBe(`تخطيط، ${LRI}09:00–10:30${PDI}، الغرفة 1`)
+    expect(label.split(LRI)).toHaveLength(2)
+    expect(label.split(PDI)).toHaveLength(2)
+  })
+})
+
+describe('isolateLtr in English', () => {
+  it('leaves text exactly as it was', () => {
+    expect(isolateLtr('09:00–10:30')).toBe('09:00–10:30')
+    expect(i18n.t('Calendar:Item', { title: 'Planning', start: '09:00', end: '10:30', location: 'Room 1' })).toBe('Planning, 09:00–10:30, Room 1')
   })
 })

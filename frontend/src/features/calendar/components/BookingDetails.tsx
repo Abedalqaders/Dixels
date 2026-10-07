@@ -10,7 +10,7 @@ import { describeRecurrence } from '@/features/bookings/recurrence'
 import { bookingPhase } from '@/features/calendar/bookingPhase'
 import type { BookingPhase } from '@/features/calendar/bookingPhase'
 import { rangeLabel } from '@/features/calendar/calendarDates'
-import { formatClock } from '@/lib/time/format'
+import { formatClockRange } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import type { TextKeys } from '@/i18n/keys'
 
@@ -87,7 +87,7 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
         </Row>
         <Row icon={Clock} label={t('Booking:Time')}>
           <dd className="font-medium">
-            {formatClock(timeOf(item.localStart))} – {formatClock(timeOf(item.localEnd))}
+            {formatClockRange(timeOf(item.localStart), timeOf(item.localEnd))}
           </dd>
           {booking ? (
             <dd className="text-muted-foreground">{t('Booking:TimezoneTime', { timezone: booking.timezone })}</dd>

@@ -64,11 +64,20 @@ public class BookingValueFormatter : ITransientDependency
         return string.Join(_localizer["Booking:ListSeparator"].Value, list.Select(BookingFormat.ShortWeekday));
     }
 
+    /// <summary>
+    /// "09:00–17:00". In a right-to-left language it's wrapped in the invisible isolate marks
+    /// LRI…PDI, or it would show as "17:00–09:00" (as the frontend's <c>isolateLtr</c>);
+    /// English text is unchanged.
+    /// </summary>
     public string Hours(OperatingWindow window)
     {
-        return window.IsOpen24Hours
-            ? _localizer["Booking:Open24Hours"]
-            : $"{BookingFormat.Clock(window.Open)}–{BookingFormat.Clock(window.Close)}";
+        if (window.IsOpen24Hours)
+        {
+            return _localizer["Booking:Open24Hours"];
+        }
+
+        var range = $"{BookingFormat.Clock(window.Open)}–{BookingFormat.Clock(window.Close)}";
+        return CultureInfo.CurrentUICulture.TextInfo.IsRightToLeft ? $"⁦{range}⁩" : range;
     }
 
     /// <summary>"45 min", "2h", "2h 30m".</summary>
