@@ -6044,7 +6044,7 @@ export interface components {
             localEnd: string;
             /** Format: date-time */
             localStart: string;
-            recurrence?: components["schemas"]["Dixels.Bookings.RecurrenceDto"];
+            recurrence?: components["schemas"]["Dixels.Bookings.RecurrenceDto"] | null;
             /** Format: uuid */
             seriesId?: string | null;
             /** Format: uuid */
@@ -6332,7 +6332,7 @@ export interface components {
         };
         "Dixels.SpaceManagement.FieldValueDto`1[[Dixels.SpaceManagement.OperatingWindowDto, Dixels.Application.Contracts, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]": {
             source: string;
-            value?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            value: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
         };
         "Dixels.SpaceManagement.FieldValueDto`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]": {
             source: string;
@@ -6341,7 +6341,7 @@ export interface components {
         };
         "Dixels.SpaceManagement.FieldValueDto`1[[System.Int32[], System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]": {
             source: string;
-            value?: number[] | null;
+            value: number[];
         };
         "Dixels.SpaceManagement.FloorDto": {
             /** Format: uuid */
@@ -6352,7 +6352,7 @@ export interface components {
             /** Format: int32 */
             floorNumber?: number | null;
             hasOverrides: boolean;
-            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"] | null;
             /** Format: uuid */
             id: string;
             isDeleted: boolean;
@@ -6421,7 +6421,7 @@ export interface components {
             floorId: string;
             floorName?: string | null;
             hasOverrides: boolean;
-            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"] | null;
             /** Format: uuid */
             id: string;
             isDeleted: boolean;
@@ -6465,7 +6465,7 @@ export interface components {
             cancelAffectedBookings: boolean;
             concurrencyStamp: string;
             days?: number[] | null;
-            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"] | null;
             /** Format: int32 */
             maxDurationMinutes?: number | null;
         };
@@ -6478,7 +6478,7 @@ export interface components {
             cancelAffectedBookings: boolean;
             concurrencyStamp: string;
             days?: number[] | null;
-            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            hours?: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"] | null;
             /** Format: int32 */
             maxDurationMinutes?: number | null;
             /** Format: int32 */

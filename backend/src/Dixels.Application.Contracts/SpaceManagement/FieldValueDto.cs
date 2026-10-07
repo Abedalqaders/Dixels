@@ -5,7 +5,7 @@ namespace Dixels.SpaceManagement;
 /// "Floor", or "Space" — so the frontend's "People will see" summary can label each value
 /// "Custom for this room" / "Same as {level}" without guessing.
 /// </summary>
-public class FieldValueDto<T>
+public class FieldValueDto<T> where T : notnull
 {
     public T Value { get; set; } = default!;
     public string Source { get; set; } = string.Empty;

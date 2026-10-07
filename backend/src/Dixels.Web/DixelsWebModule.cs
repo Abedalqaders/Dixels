@@ -325,6 +325,10 @@ public class DixelsWebModule : AbpModule
                 options.SupportNonNullableReferenceTypes();
                 options.NonNullableReferenceTypesAsRequired();
                 options.SchemaFilter<Dixels.Swagger.RequireNonNullablePropertiesSchemaFilter>();
+                // OpenAPI 3.0 can't put "nullable" on a bare $ref, so a nullable DTO property
+                // (a booking's RecurrenceDto?) came out as the DTO alone, never null. Wrapped in
+                // allOf it can say both: the generated type reads "RecurrenceDto | null".
+                options.UseAllOfToExtendReferenceSchemas();
             }
         );
     }
