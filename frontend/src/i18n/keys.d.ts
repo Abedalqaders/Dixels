@@ -286,6 +286,11 @@ export interface TextKeys {
   "Duration:MinutesShort_other": string
   "Duration:Minutes_one": string
   "Duration:Minutes_other": string
+  "Email:AdminCancelled:Intro": string
+  "Email:AdminCancelled:IntroMany": string
+  "Email:AdminCancelled:More": string
+  "Email:AdminCancelled:Subject": string
+  "Email:AdminCancelled:SubjectMany": string
   "Email:Attendees": string
   "Email:BookingCancelled:Intro": string
   "Email:BookingCancelled:Subject": string
