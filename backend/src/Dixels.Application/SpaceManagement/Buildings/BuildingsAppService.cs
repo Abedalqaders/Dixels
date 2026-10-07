@@ -135,6 +135,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
             input.OwnOverlapPolicy,
             input.MaxSeriesHorizonDays);
         building.SetNames(names);
+        building.SetAddresses(ToAddressMap(input.Addresses));
 
         await _buildingRepository.InsertAsync(building);
 
@@ -161,6 +162,7 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         }
 
         building.SetNames(await _nameValidator.NormalizeAsync(input.Names.ToNames()));
+        building.SetAddresses(ToAddressMap(input.Addresses));
         building.SetBuildingNumber(input.BuildingNumber);
         building.SetTimezone(input.Timezone);
 
@@ -357,11 +359,22 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         return Task.CompletedTask;
     }
 
+    /// <summary>By language; a language given twice keeps its last address.</summary>
+    private static Dictionary<string, string?> ToAddressMap(IEnumerable<BuildingAddressDto> addresses) =>
+        addresses
+            .GroupBy(a => a.Language)
+            .ToDictionary(g => g.Key, g => (string?)g.Last().Address);
+
     private async Task<BuildingDto> MapToDtoAsync(Building building)
     {
         var dto = ObjectMapper.Map<Building, BuildingDto>(building);
         dto.Name = await _nameReader.ShownAsync(building);
         dto.Names = building.Translations.ToNameDtos();
+        dto.Addresses = building.Translations
+            .Where(t => t.Address is not null)
+            .OrderBy(t => t.Language, StringComparer.Ordinal)
+            .Select(t => new BuildingAddressDto { Language = t.Language, Address = t.Address! })
+            .ToList();
         dto.Days = ConstraintDtoConversions.ToDayArray(building.Days);
         dto.Hours = ConstraintDtoConversions.ToWindowDto(building.Hours);
         dto.IsDeleted = building.IsDeleted;

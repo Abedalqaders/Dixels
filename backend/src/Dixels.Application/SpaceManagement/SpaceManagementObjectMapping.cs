@@ -89,6 +89,7 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreSource(nameof(Building.Translations))]
     [MapperIgnoreTarget(nameof(BuildingDto.Name))]
     [MapperIgnoreTarget(nameof(BuildingDto.Names))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Addresses))]
     public partial BuildingDto Map(Building source);
 
     [MapperIgnoreSource(nameof(Building.DeletionBatchId))]
@@ -110,6 +111,7 @@ public partial class SpaceManagementObjectMapping :
     [MapperIgnoreSource(nameof(Building.Translations))]
     [MapperIgnoreTarget(nameof(BuildingDto.Name))]
     [MapperIgnoreTarget(nameof(BuildingDto.Names))]
+    [MapperIgnoreTarget(nameof(BuildingDto.Addresses))]
     public partial void Map(Building source, BuildingDto destination);
 
     public void BeforeMap(Building source)

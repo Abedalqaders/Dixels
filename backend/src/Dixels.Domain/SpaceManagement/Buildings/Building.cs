@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Dixels.Localization;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
@@ -99,6 +100,21 @@ public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<Buil
     public void SetNames(IReadOnlyCollection<LocalizedName> names) => Translations.SetNames(names, NewTranslation);
 
     private BuildingTranslation NewTranslation(string language, string name) => new(Id, language, name);
+
+    /// <summary>The address in exactly this language, if it has one (no fallback).</summary>
+    public string? FindAddress(string language) => Translations.FirstOrDefault(t => t.Language == language)?.Address;
+
+    /// <summary>
+    /// Sets each language's address (blank clears it). Call after <see cref="SetNames"/>: an
+    /// address lives on its language's name row, so it's only kept for a language that has a name.
+    /// </summary>
+    public void SetAddresses(IReadOnlyDictionary<string, string?> addressByLanguage)
+    {
+        foreach (var translation in Translations)
+        {
+            translation.SetAddress(addressByLanguage.GetValueOrDefault(translation.Language));
+        }
+    }
 
     public void SetBuildingNumber(string? buildingNumber)
     {

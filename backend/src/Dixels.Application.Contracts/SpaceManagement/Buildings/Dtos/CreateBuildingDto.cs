@@ -15,6 +15,9 @@ public class CreateBuildingDto
     [StringLength(BuildingConsts.MaxBuildingNumberLength)]
     public string? BuildingNumber { get; set; }
 
+    /// <summary>Optional, one per language (only languages it has a name in). Left out or empty: no address.</summary>
+    public List<BuildingAddressDto> Addresses { get; set; } = [];
+
     [Required]
     [StringLength(BuildingConsts.MaxTimezoneLength)]
     public string Timezone { get; set; } = string.Empty;

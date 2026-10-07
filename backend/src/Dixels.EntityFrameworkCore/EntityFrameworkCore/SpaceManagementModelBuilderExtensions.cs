@@ -137,6 +137,7 @@ public static class SpaceManagementModelBuilderExtensions
         {
             ConfigureNameTranslation(b, "BuildingTranslations");
             b.HasKey(x => new { x.BuildingId, x.Language });
+            b.Property(x => x.Address).HasMaxLength(BuildingConsts.MaxAddressLength);
         });
 
         builder.Entity<FloorTranslation>(b =>
