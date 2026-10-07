@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Dixels.Bookings;
@@ -46,10 +47,18 @@ public class BookingsCancelledEvent
     public IReadOnlyList<Booking> Bookings { get; }
     public bool ByAdmin { get; }
 
-    public BookingsCancelledEvent(IReadOnlyList<Booking> bookings, bool byAdmin)
+    /// <summary>
+    /// Each cancelled booking's guests (by booking id; none = no entry), copied when it was
+    /// cancelled — so a listener can still tell an external guest after the cleanup has
+    /// deleted their row. A colleague is only their UserId here.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, IReadOnlyList<Invitee>> InviteesByBooking { get; }
+
+    public BookingsCancelledEvent(IReadOnlyList<Booking> bookings, bool byAdmin, IReadOnlyDictionary<Guid, IReadOnlyList<Invitee>> inviteesByBooking)
     {
         Bookings = bookings;
         ByAdmin = byAdmin;
+        InviteesByBooking = inviteesByBooking;
     }
 }
 

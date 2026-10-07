@@ -10,4 +10,5 @@ export type EnumObjectsAreComplete = [
   Check<NamesEvery<typeof Bookings.CancelScope, Bookings.CancelScope>>,
   Check<NamesEvery<typeof Bookings.RecurrenceFrequency, Bookings.RecurrenceFrequency>>,
   Check<NamesEvery<typeof Bookings.MonthlyRepeat, Bookings.MonthlyRepeat>>,
+  Check<NamesEvery<typeof Bookings.InviteeResponseStatus, Bookings.InviteeResponseStatus>>,
 ]

@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities.Auditing;
+using Volo.Abp.Guids;
 
 namespace Dixels.Bookings;
 
@@ -33,6 +36,10 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
 
     /// <summary>A retry of the same create (same key) returns this series instead of making a second.</summary>
     public string IdempotencyKey { get; private set; } = null!;
+
+    /// <summary>Who's invited to every date; each new date gets a copy (see <see cref="Booking.Invitees"/>).</summary>
+    public IReadOnlyCollection<BookingSeriesAttendee> Invitees => _invitees;
+    private readonly List<BookingSeriesAttendee> _invitees = new();
 
     private BookingSeries()
     {
@@ -69,4 +76,17 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
     }
 
     public RecurrenceRule Rule => new(Frequency, Interval, RecurrenceRule.WeekdaysFromMask(WeekdaysMask), MonthlyRepeat, EndDate);
+
+    /// <summary>
+    /// Makes the series' guest list exactly <paramref name="invitees"/> (already checked) and
+    /// returns who was added and who was removed. Its dates each hold their own copy.
+    /// </summary>
+    public (List<Invitee> Added, List<Invitee> Removed) SetInvitees(IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        return _invitees.Replace(invitees, invitee => new BookingSeriesAttendee(guidGenerator.Create(), Id, invitee));
+    }
+
+    /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>
+    public bool MatchesInvitees(IReadOnlyCollection<Invitee> invitees) =>
+        Booking.SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);
 }

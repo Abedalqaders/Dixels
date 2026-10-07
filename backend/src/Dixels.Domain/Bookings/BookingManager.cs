@@ -36,6 +36,7 @@ public partial class BookingManager : DomainService
     private readonly LocalizedNameReader _nameReader;
     private readonly IStringLocalizer<DixelsResource> _localizer;
     private readonly ILocalEventBus _localEventBus;
+    private readonly BookingInviteeResolver _inviteeResolver;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -51,7 +52,8 @@ public partial class BookingManager : DomainService
         IOptions<BookingOptions> options,
         LocalizedNameReader nameReader,
         IStringLocalizer<DixelsResource> localizer,
-        ILocalEventBus localEventBus)
+        ILocalEventBus localEventBus,
+        BookingInviteeResolver inviteeResolver)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -67,16 +69,20 @@ public partial class BookingManager : DomainService
         _nameReader = nameReader;
         _localizer = localizer;
         _localEventBus = localEventBus;
+        _inviteeResolver = inviteeResolver;
     }
 
     /// <summary>
     /// Checks a request without reserving anything. "Available now" is not a reservation —
-    /// the slot can still be taken before the real create commits.
+    /// the slot can still be taken before the real create commits. The guest list comes back
+    /// as it would be saved (a typed colleague's email already turned into the colleague).
     /// </summary>
-    public async Task<BookingEvaluation> EvaluateAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)
+    public async Task<BookingEvaluation> EvaluateAsync(
+        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, IReadOnlyCollection<Invitee> invitees)
     {
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
-        return await ValidateAsync(context, attendees, userId);
+        var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+        return await ValidateAsync(context, attendees, userId, resolved);
     }
 
     /// <summary>
@@ -96,6 +102,7 @@ public partial class BookingManager : DomainService
         DateTime localStart,
         DateTime localEnd,
         int attendees,
+        IReadOnlyCollection<Invitee> invitees,
         string? title,
         string idempotencyKey)
     {
@@ -110,13 +117,15 @@ public partial class BookingManager : DomainService
             await _bookingRepository.LockUserAsync(userId);
         }
 
+        var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+
         var existing = await _bookingRepository.FindByIdempotencyKeyAsync(userId, idempotencyKey);
         if (existing is not null)
         {
             // A replay must match what the key was first used for. A booking that has since been
             // cancelled is not "already created" either: the caller needs a fresh key (and a
             // fresh check) rather than a cancelled record handed back as a success.
-            if (existing.Status == BookingStatus.Cancelled || !existing.MatchesRequest(spaceId, context.StartUtc, context.EndUtc, attendees))
+            if (existing.Status == BookingStatus.Cancelled || !existing.MatchesRequest(spaceId, context.StartUtc, context.EndUtc, attendees, resolved))
             {
                 throw new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
             }
@@ -124,7 +133,7 @@ public partial class BookingManager : DomainService
             return (existing, true, context.Place);
         }
 
-        var evaluation = await ValidateAsync(context, attendees, userId);
+        var evaluation = await ValidateAsync(context, attendees, userId, resolved);
         if (!evaluation.IsValid)
         {
             throw new BookingRejectedException(evaluation.Violations);
@@ -140,7 +149,9 @@ public partial class BookingManager : DomainService
             title,
             _jsonSerializer.Serialize(BookingRuleSnapshot.From(evaluation.Rules)),
             idempotencyKey);
+        booking.SetInvitees(resolved, GuidGenerator);
 
+        // Saved with its guests, so listeners of the event below see them on the booking.
         booking = await _bookingRepository.InsertConfirmedAsync(booking);
         await _localEventBus.PublishAsync(new BookingConfirmedEvent(booking));
         return (booking, false, context.Place);
@@ -357,7 +368,7 @@ public partial class BookingManager : DomainService
         return new BookingContext(space, floor, building, clock, startUtc, endUtc);
     }
 
-    private async Task<BookingEvaluation> ValidateAsync(BookingContext context, int attendees, Guid userId)
+    private async Task<BookingEvaluation> ValidateAsync(BookingContext context, int attendees, Guid userId, IReadOnlyList<Invitee> invitees)
     {
         var rules = _constraintResolver.Resolve(context.Building, context.Floor, context.Space);
         var overrides = await LoadOverlappingOverridesAsync(context);
@@ -366,7 +377,7 @@ public partial class BookingManager : DomainService
         var violations = _validator.Validate(
             rules,
             context.LocalClock,
-            new BookingRequest(context.StartUtc, context.EndUtc, attendees),
+            new BookingRequest(context.StartUtc, context.EndUtc, attendees, invitees.Count),
             overrides,
             overlaps,
             new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero),
@@ -390,7 +401,7 @@ public partial class BookingManager : DomainService
         }
 
         return new BookingEvaluation(
-            context.Space, context.Floor, context.Building, context.LocalClock, rules, context.StartUtc, context.EndUtc, violations, warnings);
+            context.Space, context.Floor, context.Building, context.LocalClock, rules, context.StartUtc, context.EndUtc, violations, warnings, invitees);
     }
 
     private readonly record struct OwnClash(BookingViolation Violation, Guid SpaceId, bool Blocks);

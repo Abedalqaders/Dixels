@@ -10,7 +10,10 @@ namespace Dixels.Bookings;
 /// </summary>
 public sealed record BookingPlace(Space Space, Floor Floor, Building Building);
 
-/// <summary>The outcome of checking one request: where, when (UTC), under which rules, and what failed.</summary>
+/// <summary>
+/// The outcome of checking one request: where, when (UTC), under which rules, what failed,
+/// and the guest list as it would be saved.
+/// </summary>
 public sealed record BookingEvaluation(
     Space Space,
     Floor Floor,
@@ -20,7 +23,8 @@ public sealed record BookingEvaluation(
     DateTimeOffset StartUtc,
     DateTimeOffset EndUtc,
     IReadOnlyList<BookingViolation> Violations,
-    IReadOnlyList<BookingViolation> Warnings)
+    IReadOnlyList<BookingViolation> Warnings,
+    IReadOnlyList<Invitee> Invitees)
 {
     public bool IsValid => Violations.Count == 0;
 }

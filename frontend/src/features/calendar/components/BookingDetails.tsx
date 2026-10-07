@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Building2, CalendarDays, Clock, Repeat, Users } from 'lucide-react'
+import { Building2, CalendarDays, Clock, Repeat, UserPlus, Users } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -13,6 +13,7 @@ import { rangeLabel } from '@/features/calendar/calendarDates'
 import { formatClockRange } from '@/lib/time/format'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import type { TextKeys } from '@/i18n/keys'
+import { InviteeList } from './InviteeList'
 
 const PHASE_LABEL: Record<BookingPhase, keyof TextKeys> = {
   upcoming: 'Booking:Upcoming',
@@ -78,6 +79,7 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const date = dateOf(item.localStart)
+  const invitees = booking?.invitees ?? []
 
   return (
     <>
@@ -112,6 +114,14 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
             <Skeleton className="h-4 w-16" />
           )}
         </Row>
+        {invitees.length > 0 && (
+          <Row icon={UserPlus} label={t('Booking:Invitees')}>
+            <dd className="font-medium">{t('Booking:InviteesCount', { count: invitees.length })}</dd>
+            <dd className="mt-2">
+              <InviteeList invitees={invitees} />
+            </dd>
+          </Row>
+        )}
         {booking?.recurrence && (
           <Row icon={Repeat} label={t('Booking:Repeats')}>
             <dd>{describeRecurrence(booking.recurrence, date)}</dd>

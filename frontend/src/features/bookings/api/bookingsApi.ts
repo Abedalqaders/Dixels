@@ -45,6 +45,21 @@ export type BookingDto = ApiResponse<'Dixels.Bookings.BookingDto'>
  */
 export type BookingSummaryDto = ApiResponse<'Dixels.Bookings.BookingSummaryDto'>
 
+// ---- Guests ----
+
+/** One person to invite: a colleague by `userId`, or an outsider by `email` (+ an optional `name`) — exactly one of the two. */
+export type InviteeDto = ApiDto<'Dixels.Bookings.InviteeDto'>
+
+/** A guest as saved (or as a preview would save them). `email` is empty unless I own the booking. */
+export type BookingInviteeDto = ApiResponse<'Dixels.Bookings.BookingInviteeDto'>
+
+/** A guest's answer to the invitation (InviteeResponseStatus on the server); Pending until accept/decline exists. */
+export const InviteeResponseStatus = { Pending: 0, Accepted: 1, Declined: 2 } as const satisfies Record<string, InviteeResponseStatus>
+export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatus'>
+
+/** Someone in my building the guest picker offers (`GET /api/app/colleagues`). */
+export type ColleagueDto = ApiResponse<'Dixels.Users.ColleagueDto'>
+
 /** A stretch of the searched day, in minutes from the building's local midnight (0–1440); `isMine` on busy ranges only. */
 export type DayRangeDto = ApiResponse<'Dixels.Bookings.DayRangeDto'>
 

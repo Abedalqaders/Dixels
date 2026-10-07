@@ -179,9 +179,30 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(
+        IReadOnlyCollection<Guid> bookingIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (bookingIds.Count == 0)
+        {
+            return new Dictionary<Guid, IReadOnlyList<Invitee>>();
+        }
+
+        var dbContext = await GetDbContextAsync();
+        var rows = await dbContext.Set<BookingAttendee>()
+            .AsNoTracking()
+            .Where(a => bookingIds.Contains(a.BookingId))
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return rows
+            .GroupBy(a => a.BookingId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<Invitee>)g.Select(a => a.ToInvitee()).ToList());
+    }
+
     public async Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)
     {
-        var bookings = await GetQueryableAsync();
+        // With its guests: a retry must ask for the same ones.
+        var bookings = await WithDetailsAsync();
         return await bookings.FirstOrDefaultAsync(
             b => b.UserId == userId && b.IdempotencyKey == idempotencyKey,
             GetCancellationToken(cancellationToken));

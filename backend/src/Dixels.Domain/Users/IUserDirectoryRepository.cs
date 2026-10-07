@@ -38,6 +38,28 @@ public interface IUserDirectoryRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Active users in <paramref name="buildingId"/> who have one of these ids or one of these
+    /// emails (<paramref name="normalizedEmails"/> upper-cased, like IdentityUser.NormalizedEmail)
+    /// — the people a booking there may invite as colleagues, in one query.
+    /// </summary>
+    Task<List<IdentityUser>> GetActiveInBuildingAsync(
+        Guid buildingId,
+        IReadOnlyCollection<Guid> ids,
+        IReadOnlyCollection<string> normalizedEmails,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Active users in <paramref name="buildingId"/> matching <paramref name="filter"/> (as in
+    /// GetListAsync), except <paramref name="exceptUserId"/>, by name — the guest picker's search.
+    /// </summary>
+    Task<List<IdentityUser>> SearchColleaguesAsync(
+        Guid buildingId,
+        string filter,
+        Guid exceptUserId,
+        int maxResultCount,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// <see cref="GetCountAsync"/> and <see cref="GetListAsync"/> together, for a page with its
     /// total: the filters (and a permission's direct grants) are worked out once for both.
     /// </summary>

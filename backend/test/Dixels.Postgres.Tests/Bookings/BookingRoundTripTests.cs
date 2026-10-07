@@ -97,8 +97,9 @@ public class BookingRoundTripTests : DixelsApplicationTestBase<DixelsPostgresTes
         created.SpaceName.ShouldBe("Room 1");
         created.FloorName.ShouldBe("Level 1");
         created.BuildingName.ShouldStartWith("PG Trips");
-        // 35 on main: the room, floor and building were loaded again (2 commands each) to describe the result.
-        commands.Count.ShouldBeLessThanOrEqualTo(29);
+        // 35 before the result reused the room, floor and building the checks loaded; +1 since
+        // the result names the owner and the invited colleagues (one query for all of them).
+        commands.Count.ShouldBeLessThanOrEqualTo(30);
     }
 
     [PostgresFact]

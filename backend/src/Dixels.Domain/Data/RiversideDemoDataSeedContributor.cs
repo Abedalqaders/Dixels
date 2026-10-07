@@ -256,7 +256,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
     {
         try
         {
-            await _bookingManager.CreateAsync(userId, spaceId, localStart, localEnd, attendees, title, key);
+            await _bookingManager.CreateAsync(userId, spaceId, localStart, localEnd, attendees, Array.Empty<Invitee>(), title, key);
         }
         catch (BusinessException)
         {

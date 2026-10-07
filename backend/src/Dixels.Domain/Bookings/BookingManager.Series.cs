@@ -32,7 +32,8 @@ public sealed record SeriesEvaluation(
     BuildingClock LocalClock,
     ResolvedConstraints Rules,
     IReadOnlyList<BookingViolation> SeriesViolations,
-    IReadOnlyList<OccurrenceEvaluation> Occurrences)
+    IReadOnlyList<OccurrenceEvaluation> Occurrences,
+    IReadOnlyList<Invitee> Invitees)
 {
     public int BookableCount => SeriesViolations.Count > 0 ? 0 : Occurrences.Count(o => o.IsValid);
 }
@@ -47,6 +48,7 @@ public partial class BookingManager
         DixelsDomainErrorCodes.BookingOverCapacity,
         DixelsDomainErrorCodes.BookingBelowMinAttendees,
         DixelsDomainErrorCodes.BookingTooLong,
+        DixelsDomainErrorCodes.BookingAttendeesBelowInvitees,
     };
 
     /// <summary>
@@ -55,10 +57,11 @@ public partial class BookingManager
     /// date repeats that wall-clock time.
     /// </summary>
     public async Task<SeriesEvaluation> EvaluateSeriesAsync(
-        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, RecurrenceRule rule)
+        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, IReadOnlyCollection<Invitee> invitees, RecurrenceRule rule)
     {
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
-        return await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, rule);
+        var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+        return await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, resolved, rule);
     }
 
     /// <summary>
@@ -74,6 +77,7 @@ public partial class BookingManager
         DateTime localStart,
         DateTime localEnd,
         int attendees,
+        IReadOnlyCollection<Invitee> invitees,
         string? title,
         RecurrenceRule rule,
         IReadOnlyCollection<DateOnly> skipDates,
@@ -87,19 +91,22 @@ public partial class BookingManager
             await _bookingRepository.LockUserAsync(userId);
         }
 
+        var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+
+        // With its guests (the default details), to compare them with the retry's.
         var existing = await _seriesRepository.FindAsync(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey);
         if (existing is not null)
         {
-            if (existing.SpaceId != spaceId)
+            if (existing.SpaceId != spaceId || !existing.MatchesInvitees(resolved))
             {
                 throw new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused);
             }
 
-            var made = await _bookingRepository.GetListAsync(b => b.SeriesId == existing.Id);
+            var made = await _bookingRepository.GetListAsync(b => b.SeriesId == existing.Id, includeDetails: true);
             return (existing, made.OrderBy(b => b.StartsAt).ToList(), true, context.Place);
         }
 
-        var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, rule);
+        var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, resolved, rule);
         if (evaluation.SeriesViolations.Count > 0)
         {
             throw new BookingRejectedException(evaluation.SeriesViolations);
@@ -119,7 +126,7 @@ public partial class BookingManager
         }
 
         var normalizedTitle = string.IsNullOrWhiteSpace(title) ? string.Empty : title.Trim();
-        var series = await _seriesRepository.InsertAsync(new BookingSeries(
+        var series = new BookingSeries(
             GuidGenerator.Create(),
             userId,
             spaceId,
@@ -129,7 +136,9 @@ public partial class BookingManager
             TimeOnly.FromDateTime(localStart),
             (int)(localEnd - localStart).TotalMinutes,
             rule,
-            idempotencyKey), autoSave: true);
+            idempotencyKey);
+        series.SetInvitees(resolved, GuidGenerator);
+        await _seriesRepository.InsertAsync(series, autoSave: true);
 
         var snapshot = _jsonSerializer.Serialize(BookingRuleSnapshot.From(evaluation.Rules));
         var bookings = chosen.Select(occurrence => new Booking(
@@ -145,6 +154,12 @@ public partial class BookingManager
                 series.Id))
             .ToList();
 
+        // Each date gets its own copy of the guest list.
+        foreach (var booking in bookings)
+        {
+            booking.SetInvitees(resolved, GuidGenerator);
+        }
+
         // Saved together, in one go. Each row still goes through the database's no-overlap
         // rule: a race the locks didn't cover fails the save and rolls the whole series back.
         await _bookingRepository.InsertManyConfirmedAsync(bookings);
@@ -154,7 +169,7 @@ public partial class BookingManager
     }
 
     private async Task<SeriesEvaluation> EvaluateSeriesAsync(
-        BookingContext context, Guid userId, DateTime localStart, DateTime localEnd, int attendees, RecurrenceRule rule)
+        BookingContext context, Guid userId, DateTime localStart, DateTime localEnd, int attendees, IReadOnlyList<Invitee> invitees, RecurrenceRule rule)
     {
         var building = context.Building;
         var clock = context.LocalClock;
@@ -224,7 +239,7 @@ public partial class BookingManager
             var violations = _validator.Validate(
                     rules,
                     clock,
-                    new BookingRequest(slot.StartUtc, slot.EndUtc, attendees),
+                    new BookingRequest(slot.StartUtc, slot.EndUtc, attendees, invitees.Count),
                     overrides.Where(o => o.Range.Overlaps(slot.StartUtc, slot.EndUtc)).ToList(),
                     roomBookings.Any(b => b.StartsAt < slot.EndUtc && b.EndsAt > slot.StartUtc),
                     now,
@@ -251,7 +266,7 @@ public partial class BookingManager
                 .ToList();
         }
 
-        return new SeriesEvaluation(context.Space, context.Floor, building, clock, rules, seriesViolations, occurrences);
+        return new SeriesEvaluation(context.Space, context.Floor, building, clock, rules, seriesViolations, occurrences, invitees);
     }
 
     /// <summary>
@@ -263,7 +278,8 @@ public partial class BookingManager
     public async Task<IReadOnlyList<Booking>> CancelOwnAsync(Guid userId, Guid bookingId, string? reason, CancelScope scope)
     {
         var cancelled = await CancelOwnInScopeAsync(userId, bookingId, reason, scope);
-        await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: false));
+        var invitees = await _bookingRepository.GetInviteesAsync(cancelled.Select(b => b.Id).ToList());
+        await _localEventBus.PublishAsync(new BookingsCancelledEvent(cancelled, byAdmin: false, invitees));
         return cancelled;
     }
 
@@ -295,7 +311,8 @@ public partial class BookingManager
                 b.SeriesId == seriesId
                 && b.Status == BookingStatus.Confirmed
                 && b.StartsAt > now
-                && (!fromThisOne || b.StartsAt >= thisStart)))
+                && (!fromThisOne || b.StartsAt >= thisStart),
+                includeDetails: true))
             .OrderBy(b => b.StartsAt)
             .ToList();
 

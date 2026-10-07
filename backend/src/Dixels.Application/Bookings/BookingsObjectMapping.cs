@@ -37,6 +37,11 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.LocalStart))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalEnd))]
     [MapperIgnoreTarget(nameof(BookingDto.Recurrence))]
+    // The guests need their users' current names, and whether the reader is the owner: the app service fills them.
+    [MapperIgnoreSource(nameof(Booking.Invitees))]
+    [MapperIgnoreTarget(nameof(BookingDto.Invitees))]
+    [MapperIgnoreTarget(nameof(BookingDto.IsOwner))]
+    [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
     public partial BookingDto Map(Booking source);
 
     [MapperIgnoreSource(nameof(Booking.UserId))]
@@ -57,6 +62,11 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.LocalStart))]
     [MapperIgnoreTarget(nameof(BookingDto.LocalEnd))]
     [MapperIgnoreTarget(nameof(BookingDto.Recurrence))]
+    // The guests need their users' current names, and whether the reader is the owner: the app service fills them.
+    [MapperIgnoreSource(nameof(Booking.Invitees))]
+    [MapperIgnoreTarget(nameof(BookingDto.Invitees))]
+    [MapperIgnoreTarget(nameof(BookingDto.IsOwner))]
+    [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
     public partial void Map(Booking source, BookingDto destination);
 
     public void BeforeMap(Booking source)

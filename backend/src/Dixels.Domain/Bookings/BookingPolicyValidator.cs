@@ -44,6 +44,9 @@ public class BookingPolicyValidator : IDomainService
         CheckCapacity(rules, request, violations);
         CheckMinAttendees(rules, request, violations);
 
+        // The head count leaves no room for everyone invited (plus the owner).
+        CheckInvitees(request, violations);
+
         // Someone has it. (The database's exclusion constraint is the real enforcement — a
         // double-booking can be a race — this is the friendly early answer.)
         if (overlapsExistingBooking)
@@ -116,6 +119,19 @@ public class BookingPolicyValidator : IDomainService
                 DixelsDomainErrorCodes.BookingBelowMinAttendees,
                 ConstraintSource.Space,
                 BookingFormat.Data(("minAttendees", minAttendees), ("attendees", request.Attendees))));
+        }
+    }
+
+    // Not a level's rule (no source): the booker's own numbers disagree.
+    private static void CheckInvitees(BookingRequest request, List<BookingViolation> violations)
+    {
+        var needed = 1 + request.Invitees;
+        if (request.Attendees < needed)
+        {
+            violations.Add(new BookingViolation(
+                DixelsDomainErrorCodes.BookingAttendeesBelowInvitees,
+                null,
+                BookingFormat.Data(("invitees", request.Invitees), ("attendees", request.Attendees), ("needed", needed))));
         }
     }
 

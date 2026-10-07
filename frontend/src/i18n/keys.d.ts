@@ -72,6 +72,9 @@ export interface TextKeys {
   "Booking:FewerPeople": string
   "Booking:From": string
   "Booking:InProgress": string
+  "Booking:Invitees": string
+  "Booking:InviteesCount_one": string
+  "Booking:InviteesCount_other": string
   "Booking:Keep": string
   "Booking:ListAnd": string
   "Booking:ListSeparator": string
@@ -113,6 +116,7 @@ export interface TextKeys {
   "BookingForm:Dates": string
   "BookingForm:DatesCheckFailed": string
   "BookingForm:Free": string
+  "BookingForm:InvitePeople": string
   "BookingForm:Midnight": string
   "BookingForm:NoFreeDays": string
   "BookingForm:NoTimesLeft": string
@@ -201,6 +205,8 @@ export interface TextKeys {
   "Common:TryAgain": string
   "Dixels:Bookings:AlreadyStarted": string
   "Dixels:Bookings:AnotherRoom": string
+  "Dixels:Bookings:AttendeesBelowInvitees": string
+  "Dixels:Bookings:AttendeesBelowInvitees:Short": string
   "Dixels:Bookings:AttendeesMustBePositive": string
   "Dixels:Bookings:BelowMinAttendees": string
   "Dixels:Bookings:BelowMinAttendees:Short": string
@@ -216,9 +222,14 @@ export interface TextKeys {
   "Dixels:Bookings:CancelReason:SpaceRemoved": string
   "Dixels:Bookings:ClosedDay": string
   "Dixels:Bookings:ClosedDay:Short": string
+  "Dixels:Bookings:ExternalGuestsDisabled": string
   "Dixels:Bookings:IdempotencyKeyReused": string
   "Dixels:Bookings:InvalidDateRange": string
   "Dixels:Bookings:InvalidTimeRange": string
+  "Dixels:Bookings:InviteeDuplicate": string
+  "Dixels:Bookings:InviteeInvalid": string
+  "Dixels:Bookings:InviteeIsOwner": string
+  "Dixels:Bookings:InviteeNotInBuilding": string
   "Dixels:Bookings:NotAligned": string
   "Dixels:Bookings:NotAligned:Short": string
   "Dixels:Bookings:NotAssignedToBuilding": string
@@ -524,6 +535,24 @@ export interface TextKeys {
   "Pagination:Range": string
   "Pagination:Rows": string
   "Pagination:RowsPerPage": string
+  "People:AddGuest": string
+  "People:AlreadyAdded": string
+  "People:EmailInvalid": string
+  "People:Full": string
+  "People:Guest": string
+  "People:GuestEmail": string
+  "People:GuestName": string
+  "People:HowToAdd": string
+  "People:NoMatch": string
+  "People:Optional": string
+  "People:Picked": string
+  "People:Remove": string
+  "People:Search": string
+  "People:SearchFailed": string
+  "People:Searching": string
+  "People:TabColleague": string
+  "People:TabGuest": string
+  "People:TypeMore": string
   "Permission:Bookings": string
   "Permission:Buildings": string
   "Permission:Cancel": string

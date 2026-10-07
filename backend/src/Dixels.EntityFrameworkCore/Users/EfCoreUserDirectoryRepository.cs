@@ -50,6 +50,44 @@ public class EfCoreUserDirectoryRepository : IUserDirectoryRepository, ITransien
         return await query.LongCountAsync(cancellationToken);
     }
 
+    public async Task<List<IdentityUser>> GetActiveInBuildingAsync(
+        Guid buildingId,
+        IReadOnlyCollection<Guid> ids,
+        IReadOnlyCollection<string> normalizedEmails,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0 && normalizedEmails.Count == 0)
+        {
+            return new List<IdentityUser>();
+        }
+
+        var dbContext = await _dbContextProvider.GetDbContextAsync();
+        // Tracked, as in BuildQueryAsync: BuildingId reaches ExtraProperties only through tracking.
+        return await dbContext.Users
+            .Where(u => u.IsActive
+                        && EF.Property<Guid?>(u, DixelsUserConsts.BuildingIdPropertyName) == buildingId
+                        && (ids.Contains(u.Id) || normalizedEmails.Contains(u.NormalizedEmail)))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<IdentityUser>> SearchColleaguesAsync(
+        Guid buildingId,
+        string filter,
+        Guid exceptUserId,
+        int maxResultCount,
+        CancellationToken cancellationToken = default)
+    {
+        var query = await BuildQueryAsync(filter, buildingId, roleId: null, grantedPermission: null, cancellationToken);
+
+        return await query
+            .Where(u => u.IsActive && u.Id != exceptUserId)
+            .OrderBy(u => u.Name)
+            .ThenBy(u => u.Surname)
+            .ThenBy(u => u.UserName)
+            .Take(maxResultCount)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(long TotalCount, List<IdentityUser> Users)> GetPageAsync(
         string? filter,
         Guid? buildingId,

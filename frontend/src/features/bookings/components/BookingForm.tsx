@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FieldError } from '@/components/FieldError'
+import { PeoplePicker } from '@/components/PeoplePicker'
 import { randomUuid } from '@/lib/uuid'
 import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/violationFields'
 import {
@@ -35,6 +36,9 @@ import { defaultEndDate, NO_REPEAT, repeatPresets } from '@/features/bookings/re
 import type { RepeatValue } from '@/features/bookings/recurrence'
 import { closingMinute, rememberDuration } from '@/features/bookings/preferences'
 import { emitBookingsChanged } from '@/features/bookings/bookingEvents'
+import { getExternalGuestsEnabled, searchColleagues } from '@/features/bookings/api/inviteesApi'
+import { headCountFor, MAX_INVITEES, resolvedInvitees, toInviteeDtos } from '@/features/bookings/invitees'
+import type { Invitee } from '@/features/bookings/invitees'
 import { suggestSlot } from '@/features/bookings/suggestSlot'
 import type { Slot } from '@/features/bookings/suggestSlot'
 import type { FreeTimeRules } from '@/features/bookings/dragRange'
@@ -75,6 +79,7 @@ export function BookingForm({
   const [start, setStart] = useState(initial.start)
   const [end, setEnd] = useState(initial.end)
   const [attendees, setAttendees] = useState(initialAttendees ?? space.minAttendees ?? 1)
+  const [invitees, setInvitees] = useState<Invitee[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -98,6 +103,8 @@ export function BookingForm({
   // The room's days, today … the last bookable date, in one request: the date picker and
   // both time lists then offer only free times. Until they arrive the plain limits apply —
   // the preview checks everything either way.
+  const guestsAllowed = useApiQuery(queryKeys.bookings.externalGuestsEnabled(), () => getExternalGuestsEnabled(token))
+
   const days = useApiQuery(queryKeys.bookings.spaceDays(space.id, today, lastDate), () => getSpaceDays(token, space.id, today, lastDate))
   const dayByDate = useMemo(() => new Map((days.data?.days ?? []).map((d) => [d.date, d])), [days.data])
   const minStartOn = (d: IsoDate) => (d === today ? now.minutes + building.minLeadMinutes : 0)
@@ -168,8 +175,9 @@ export function BookingForm({
       localStart: toLocalDateTime(date, start),
       localEnd: toLocalDateTime(date, end),
       attendees,
+      invitees: toInviteeDtos(invitees),
     }
-  }, [space.id, date, start, end, attendees, attendeesError])
+  }, [space.id, date, start, end, attendees, attendeesError, invitees])
 
   const seriesRequest = useMemo<SeriesRequestDto | null>(
     () => (request && rule ? { ...request, recurrence: rule } : null),
@@ -188,6 +196,22 @@ export function BookingForm({
   const dateMessage = issueText(issues.date)
   const timeMessage = issueText(issues.time)
   const { state: seriesPreview, recheck: recheckSeries } = useSeriesPreview(token, seriesRequest)
+
+  // The preview answers with the guests as the server resolved them: an email typed as a
+  // guest that belongs to a colleague in this building comes back as that colleague. The
+  // list follows it (adjusted while rendering), so the form shows it before booking.
+  const resolved = rule
+    ? seriesPreview.status === 'done' ? seriesPreview.preview.invitees : undefined
+    : preview.status === 'done' ? preview.preview.invitees : undefined
+  const followed = resolvedInvitees(invitees, resolved)
+  if (followed !== invitees) setInvitees(followed)
+
+  // Adding people raises the head count to fit them (you + everyone invited); removing
+  // someone leaves it, since the number may count people who aren't named.
+  function changeInvitees(next: Invitee[]) {
+    setInvitees(next)
+    setAttendees((current) => headCountFor(current, next.length))
+  }
   const toBook =
     seriesPreview.status === 'done' && seriesPreview.preview.seriesViolations.length === 0
       ? seriesPreview.preview.occurrences.filter((o) => o.isValid && !skipped.has(o.date))
@@ -322,6 +346,21 @@ export function BookingForm({
             onChange={setRepeat}
           />
 
+          <div className="grid gap-2" role="group" aria-labelledby="bk-people-label">
+            <span id="bk-people-label" className="text-sm leading-none font-medium">
+              {t('BookingForm:InvitePeople')}
+            </span>
+            <PeoplePicker
+              id="bk-people"
+              value={invitees}
+              onChange={changeInvitees}
+              searchKey={queryKeys.bookings.colleagues}
+              search={(filter) => searchColleagues(token, filter)}
+              allowGuests={guestsAllowed.data === true}
+              max={MAX_INVITEES}
+            />
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="bk-attendees">{t('BookingForm:Attendees')}</Label>
             <div className="flex max-w-64 items-center gap-2">
@@ -329,7 +368,7 @@ export function BookingForm({
                 id="bk-attendees"
                 type="number"
                 className="font-mono"
-                min={1}
+                min={1 + invitees.length}
                 max={space.capacity}
                 value={Number.isNaN(attendees) ? '' : attendees}
                 onChange={(e) => setAttendees(e.target.valueAsNumber)}
