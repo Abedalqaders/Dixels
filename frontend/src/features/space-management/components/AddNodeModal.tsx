@@ -168,7 +168,9 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
               </Label>
               <Input
                 {...f.field('meta')}
-                className="font-mono"
+                // A building number is free text (it can be Arabic, which the mono font breaks
+                // apart); a floor number or capacity is a number.
+                className={state.kind === 'building' ? 'tabular-nums' : 'font-mono'}
                 placeholder={metaPlaceholder}
                 value={meta}
                 onChange={(e) => setMeta(e.target.value)}

@@ -43,7 +43,7 @@
 .node .lbl2 { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .node > .m, .node > .badge { flex: none; white-space: nowrap; }
 .node:hover { background: var(--surface-sunken); }
-.node .m { font-size: 13px; color: var(--ink-secondary); font-family: var(--font-mono); }
+.node .m { font-size: 13px; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
 .node > svg.ic { width: 16px; height: 16px; color: var(--ink-secondary); flex: none; }
 
 /* space rows get a small icon chip instead of a bare stroked glyph, so the row scans as a
@@ -146,7 +146,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
 .effgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3) var(--space-4); }
 .effitem { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .effitem .k { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-secondary); }
-.effitem .v { font-family: var(--font-mono); font-size: 13px; font-weight: 500; line-height: 18px; }
+.effitem .v { font-size: 13px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums; }
 .src {
   align-self: flex-start; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
   padding: 2px 6px; border-radius: var(--radius-sm); margin-top: 2px;
@@ -219,7 +219,7 @@ mark.hl { background: var(--accent-soft); color: var(--accent-ink); border-radiu
   padding: var(--space-3) var(--space-5) var(--space-4); border-top: 1px solid var(--border-subtle);
   font-size: 13px; color: var(--ink-secondary);
 }
-.pager-range { font-family: var(--font-mono); min-width: 120px; }
+.pager-range { font-variant-numeric: tabular-nums; min-width: 120px; }
 .pager-pages { display: flex; align-items: center; gap: 2px; }
 .pagebtn {
   min-width: 32px; height: 32px; padding: 0 6px; border: 1px solid transparent; border-radius: var(--radius-md);

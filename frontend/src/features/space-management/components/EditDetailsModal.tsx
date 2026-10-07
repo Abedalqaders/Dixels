@@ -157,7 +157,7 @@ export function EditDetailsModal({ state, token, spaceTypes, onClose, onSaved, o
                 <Label htmlFor="edit-buildingNumber">{t('Hierarchy:BuildingNumber')}</Label>
                 <Input
                   id="edit-buildingNumber"
-                  className="font-mono"
+                  className="tabular-nums"
                   value={buildingNumber}
                   onChange={(e) => setBuildingNumber(e.target.value)}
                 />
