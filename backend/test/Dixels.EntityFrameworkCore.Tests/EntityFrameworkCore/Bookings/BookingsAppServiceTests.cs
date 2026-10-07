@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -11,7 +12,9 @@ using Dixels.Users;
 using Shouldly;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
+using Volo.Abp.Domain.Entities.Events;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
 using Volo.Abp.Security.Claims;
@@ -665,6 +668,59 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     }
 
     [Fact]
+    public async Task Series_preview_names_each_other_room_already_booked_and_a_deleted_one_as_another_room()
+    {
+        var s = await CreateScenarioAsync();
+        var desk7 = await AddSpaceAsync(s, "Desk 7");
+        var desk8 = await AddSpaceAsync(s, "Desk 8");
+        var desk9 = await AddSpaceAsync(s, "Desk 9");
+        using var _ = ActAs(s.UserId);
+        foreach (var (desk, day) in new[] { (desk7, 0), (desk8, 1), (desk9, 2) })
+        {
+            await _bookingsAppService.CreateAsync(new CreateBookingDto
+            {
+                SpaceId = desk.Id, LocalStart = Tomorrow.AddDays(day).AddHours(10), LocalEnd = Tomorrow.AddDays(day).AddHours(11),
+                Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+            });
+        }
+
+        // Removed straight from the table: the booking stays confirmed, its room is gone.
+        await WithUnitOfWorkAsync(() => _spaceRepository.DeleteAsync(desk9.Id));
+
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 4));
+
+        preview.Occurrences.Take(3).Select(o => o.Warnings.ShouldHaveSingleItem().Message)
+            .Select(m => m.Contains("Desk 7") ? "Desk 7" : m.Contains("Desk 8") ? "Desk 8" : m.Contains("another room") ? "another room" : m)
+            .ShouldBe(new[] { "Desk 7", "Desk 8", "another room" });
+        preview.Occurrences[3].Warnings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_series_create_announces_each_booking_and_the_series_once()
+    {
+        var s = await CreateScenarioAsync();
+        var bus = GetRequiredService<ILocalEventBus>();
+        var created = 0;
+        var confirmed = new List<int>();
+        using var createdSubscription = bus.Subscribe<EntityCreatedEventData<Booking>>(_ =>
+        {
+            created++;
+            return Task.CompletedTask;
+        });
+        using var confirmedSubscription = bus.Subscribe<BookingSeriesConfirmedEvent>(e =>
+        {
+            confirmed.Add(e.Bookings.Count);
+            return Task.CompletedTask;
+        });
+        using var _ = ActAs(s.UserId);
+
+        await _bookingsAppService.CreateSeriesAsync(Daily(s.Space.Id, 5));
+
+        created.ShouldBe(5);
+        confirmed.ShouldBe(new[] { 5 });
+    }
+
+    [Fact]
     public async Task A_rule_every_date_breaks_alike_is_reported_once_for_the_series()
     {
         var s = await CreateScenarioAsync();
@@ -823,6 +879,20 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         rest.Items.Select(b => b.Id).ShouldBe(new[] { created.Bookings[0].Id, created.Bookings[2].Id, created.Bookings[3].Id });
         (await _bookingsAppService.GetMineAsync(Days(0, 4))).Items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Cancelling_a_single_booking_as_its_series_cancels_just_that_one()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.UserId);
+        var single = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
+        var other = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 12, 13));
+
+        var cancelled = await _bookingsAppService.CancelAsync(single.Id, new CancelBookingDto { Scope = CancelScope.Series });
+
+        cancelled.Items.ShouldHaveSingleItem().Id.ShouldBe(single.Id);
+        (await _bookingsAppService.GetAsync(other.Id)).Status.ShouldBe(nameof(BookingStatus.Confirmed));
     }
 
     [Fact]

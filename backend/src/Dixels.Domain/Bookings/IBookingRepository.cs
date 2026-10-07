@@ -72,4 +72,11 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// error the validator would have produced, and the whole transaction rolls back.
     /// </summary>
     Task<Booking> InsertConfirmedAsync(Booking booking, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The same for many at once (a series' dates): one save, which the database receives in
+    /// a few batched round trips instead of one per row. If any row is rejected, none is
+    /// saved and the same <c>Overlap</c> error is thrown.
+    /// </summary>
+    Task InsertManyConfirmedAsync(IReadOnlyCollection<Booking> bookings, CancellationToken cancellationToken = default);
 }

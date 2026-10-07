@@ -132,12 +132,7 @@ public partial class BookingManager
             idempotencyKey), autoSave: true);
 
         var snapshot = _jsonSerializer.Serialize(BookingRuleSnapshot.From(evaluation.Rules));
-        var bookings = new List<Booking>();
-        foreach (var occurrence in chosen)
-        {
-            // Each row still goes through the database's no-overlap rule: a race the locks
-            // didn't cover fails this insert and rolls the whole series back.
-            bookings.Add(await _bookingRepository.InsertConfirmedAsync(new Booking(
+        var bookings = chosen.Select(occurrence => new Booking(
                 GuidGenerator.Create(),
                 spaceId,
                 userId,
@@ -147,8 +142,12 @@ public partial class BookingManager
                 normalizedTitle,
                 snapshot,
                 $"{idempotencyKey}:{occurrence.Date:yyyyMMdd}",
-                series.Id)));
-        }
+                series.Id))
+            .ToList();
+
+        // Saved together, in one go. Each row still goes through the database's no-overlap
+        // rule: a race the locks didn't cover fails the save and rolls the whole series back.
+        await _bookingRepository.InsertManyConfirmedAsync(bookings);
 
         await _localEventBus.PublishAsync(new BookingSeriesConfirmedEvent(series, bookings));
         return (series, bookings, false, context.Place);
@@ -217,11 +216,7 @@ public partial class BookingManager
         var myOtherBookings = building.OwnOverlapPolicy == OwnOverlapPolicy.Allow
             ? new List<Booking>()
             : (await _bookingRepository.GetConfirmedForUserAsync(userId, rangeStart, rangeEnd)).Where(b => b.SpaceId != spaceId).ToList();
-        var otherRoomNames = new Dictionary<Guid, string>();
-        foreach (var id in myOtherBookings.Select(b => b.SpaceId).Distinct())
-        {
-            otherRoomNames[id] = await RoomNameAsync(id);
-        }
+        var otherRoomNames = await RoomNamesAsync(myOtherBookings.Select(b => b.SpaceId).Distinct().ToList());
 
         var blocks = building.OwnOverlapPolicy == OwnOverlapPolicy.Block;
         var occurrences = slots.Select(slot =>
@@ -287,13 +282,20 @@ public partial class BookingManager
 
         if (booking.SeriesId is null)
         {
-            return new[] { await CancelOneAsync(userId, bookingId, reason) };
+            return new[] { await CancelOneAsync(userId, booking, reason) };
         }
 
+        // Only the ones not yet started, and for "this and following" from this one on: asked
+        // of the database, rather than loading the whole series to pick from.
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
         var seriesId = booking.SeriesId;
-        var targets = (await _bookingRepository.GetListAsync(b => b.SeriesId == seriesId && b.Status == BookingStatus.Confirmed))
-            .Where(b => b.StartsAt > now && (scope == CancelScope.Series || b.StartsAt >= booking.StartsAt))
+        var fromThisOne = scope != CancelScope.Series;
+        var thisStart = booking.StartsAt;
+        var targets = (await _bookingRepository.GetListAsync(b =>
+                b.SeriesId == seriesId
+                && b.Status == BookingStatus.Confirmed
+                && b.StartsAt > now
+                && (!fromThisOne || b.StartsAt >= thisStart)))
             .OrderBy(b => b.StartsAt)
             .ToList();
 

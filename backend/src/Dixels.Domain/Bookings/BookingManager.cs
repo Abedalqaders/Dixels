@@ -151,10 +151,12 @@ public partial class BookingManager : DomainService
     /// before it starts: once a booking is under way (or over) it's part of the record.
     /// Raises nothing: the scoped <c>CancelOwnAsync</c> that calls it announces the cancel.
     /// </summary>
-    private async Task<Booking> CancelOneAsync(Guid userId, Guid bookingId, string? reason)
-    {
-        var booking = await _bookingRepository.GetAsync(bookingId);
+    private async Task<Booking> CancelOneAsync(Guid userId, Guid bookingId, string? reason) =>
+        await CancelOneAsync(userId, await _bookingRepository.GetAsync(bookingId), reason);
 
+    /// <summary>The same, for a booking the caller has already loaded.</summary>
+    private async Task<Booking> CancelOneAsync(Guid userId, Booking booking, string? reason)
+    {
         if (booking.UserId != userId)
         {
             throw new BusinessException(DixelsDomainErrorCodes.BookingNotYours);
@@ -427,6 +429,19 @@ public partial class BookingManager : DomainService
     {
         var space = await _spaceRepository.FindAsync(spaceId);
         return space is null ? _localizer["Dixels:Bookings:AnotherRoom"].Value : await _nameReader.ShownAsync(space);
+    }
+
+    /// <summary>Several rooms' names at once, in one query — "another room" for any deleted since.</summary>
+    private async Task<Dictionary<Guid, string>> RoomNamesAsync(IReadOnlyCollection<Guid> spaceIds)
+    {
+        if (spaceIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var spaces = await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true);
+        var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces);
+        return spaceIds.ToDictionary(id => id, id => names.GetValueOrDefault(id) ?? _localizer["Dixels:Bookings:AnotherRoom"].Value);
     }
 
     // Closures union across levels, so overrides on the space, its floor and its building

@@ -149,6 +149,35 @@ public class BookingRoundTripTests : DixelsApplicationTestBase<DixelsPostgresTes
 
         created.Bookings.Count.ShouldBe(BookingConsts.MaxSeriesOccurrences);
         created.Bookings.ShouldAllBe(b => b.SpaceName == "Room 1" && b.FloorName == "Level 1");
-        bookingInserts.ShouldBeLessThanOrEqualTo(int.MaxValue);
+        // 100 on main: one insert and save per date.
+        bookingInserts.ShouldBeLessThanOrEqualTo(MostSeriesInsertCommands);
+    }
+
+    // EF batches the rows of one save into a few commands; however many, far fewer than the dates.
+    private const int MostSeriesInsertCommands = 5;
+
+    [PostgresFact]
+    public async Task A_batch_with_one_clashing_date_saves_none_and_says_already_booked()
+    {
+        // The race the locks didn't cover: a date taken after the checks. The database's
+        // no-overlap rule rejects that row, and with it the whole batch.
+        var s = await CreateScenarioAsync();
+        var repository = GetRequiredService<IBookingRepository>();
+        var at = new DateTimeOffset(Tomorrow, TimeSpan.Zero);
+        await WithUnitOfWorkAsync(() => repository.InsertAsync(new Booking(
+            Guid.NewGuid(), s.SpaceId, s.UserId, at.AddDays(1).AddHours(9), at.AddDays(1).AddHours(10),
+            attendees: 1, "Taken", "{}", Guid.NewGuid().ToString())));
+
+        var batch = Enumerable.Range(0, 3).Select(day => new Booking(
+                Guid.NewGuid(), s.SpaceId, s.UserId, at.AddDays(day).AddHours(9), at.AddDays(day).AddHours(10),
+                attendees: 1, "Series", "{}", Guid.NewGuid().ToString()))
+            .ToList();
+
+        var error = await Should.ThrowAsync<Volo.Abp.BusinessException>(() =>
+            WithUnitOfWorkAsync(() => repository.InsertManyConfirmedAsync(batch)));
+
+        error.Code.ShouldBe(DixelsDomainErrorCodes.BookingOverlap);
+        var saved = await WithUnitOfWorkAsync(() => repository.GetListAsync(b => b.SpaceId == s.SpaceId));
+        saved.ShouldHaveSingleItem().Title.ShouldBe("Taken");
     }
 }
