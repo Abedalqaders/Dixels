@@ -32,6 +32,16 @@ public class DixelsSettingDefinitionProvider : SettingDefinitionProvider
         // App-wide, server-only.
         context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxAddress, defaultValue: "rsvp@dixels.local"));
 
+        // App-wide, server-only: answering in the mail app itself (E6). Off until the rsvp@
+        // mailbox exists; appsettings.Development.json turns it on against smtp4dev. Like the
+        // SMTP password, the IMAP one comes as plain text from the environment, never the database.
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxEnabled, defaultValue: "false"));
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxImapHost, defaultValue: "smtp4dev"));
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxImapPort, defaultValue: "143"));
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxImapUseSsl, defaultValue: "false"));
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxImapUserName, defaultValue: "rsvp@dixels.local"));
+        context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxImapPassword, defaultValue: ""));
+
         // App-wide, server-only: configuration, not an admin screen.
         context.Add(new SettingDefinition(DixelsSettings.ExternalGuestRetentionDays, defaultValue: "90"));
     }

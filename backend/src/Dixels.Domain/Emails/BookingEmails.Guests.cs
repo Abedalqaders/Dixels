@@ -69,6 +69,8 @@ public partial class BookingEmails
             var fromName = string.Format(ViaDixels, ownerName);
             var ownerLanguage = await _userLanguage.GetAsync(ownerId);
             var rsvpMailbox = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxAddress) ?? "rsvp@dixels.local";
+            // A real meeting request (the mail app's own Accept / Decline) only while rsvp@ is read.
+            var askToAnswer = await _settingProvider.IsTrueAsync(DixelsSettings.RsvpMailboxEnabled);
 
             var colleagueIds = guests.Where(g => g.UserId is not null).Select(g => g.UserId!.Value).ToList();
             var colleagues = (await _userRepository.GetListByIdsAsync(colleagueIds)).ToDictionary(u => u.Id);
@@ -131,6 +133,7 @@ public partial class BookingEmails
 
                     var calendar = Calendar(model, clock, guest.IcsUid, guest.IcsSequence, startsAt, endsAt, series?.Rule, skipped,
                         new IcsPerson(fromName, rsvpMailbox), new IcsPerson(name, to));
+                    calendar = askToAnswer ? calendar with { Method = IcsMethods.Request, AskToAnswer = true } : calendar;
 
                     await _backgroundJobManager.EnqueueAsync(new SendEmailArgs
                     {
