@@ -107,9 +107,10 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
     public async Task A_new_booking_emails_its_details_to_the_employee()
     {
         var s = await CreateScenarioAsync();
+        BookingDto created;
         using (ActAs(s.UserId))
         {
-            await _bookingsAppService.CreateAsync(Request(s.Space.Id));
+            created = await _bookingsAppService.CreateAsync(Request(s.Space.Id));
         }
 
         var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
@@ -122,7 +123,8 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         email.Body.ShouldContain("Level 1");
         email.Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">UTC</span>");
         email.Body.ShouldContain("dir=\"ltr\"");
-        email.Body.ShouldContain($"http://localhost:5173/my-calendar?view=day&amp;date={Tomorrow:yyyy-MM-dd}");
+        // "View booking" opens this booking on its day in My calendar.
+        email.Body.ShouldContain($"http://localhost:5173/my-calendar?view=day&amp;date={Tomorrow:yyyy-MM-dd}&amp;booking={created.Id}");
         email.Body.ShouldContain("http://localhost:5173/find-space");
         email.Body.ShouldNotContain(">Address<"); // the building has none
     }

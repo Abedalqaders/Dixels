@@ -350,6 +350,7 @@
     "Calendar:NewBooking": "حجز جديد",
     "Calendar:BookingsLoadFailed": "تعذّر تحميل حجوزاتك — حاول مرة أخرى.",
     "Calendar:BookingLoadFailed": "تعذّر تحميل هذا الحجز — حاول مرة أخرى.",
+    "Calendar:BookingUnavailable": "هذا الحجز لم يعد في تقويمك — ربما أُلغي.",
     "Calendar:NothingThisDay": "لا توجد حجوزات في هذا اليوم.",
     "Calendar:NothingThisWeek": "لا توجد حجوزات في هذا الأسبوع.",
     "Calendar:NothingThisMonth": "لا توجد حجوزات في هذا الشهر.",

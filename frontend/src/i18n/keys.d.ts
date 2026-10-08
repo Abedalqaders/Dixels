@@ -161,6 +161,7 @@ export interface TextKeys {
   "Calendar:BookedSeries_one": string
   "Calendar:BookedSeries_other": string
   "Calendar:BookingLoadFailed": string
+  "Calendar:BookingUnavailable": string
   "Calendar:BookingsLoadFailed": string
   "Calendar:BuildingLoadFailed": string
   "Calendar:Cancelled": string

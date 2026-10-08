@@ -203,6 +203,33 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         ? detailBooking.error.message
         : t('Calendar:BookingLoadFailed')
       : null
+  // ?booking=<id>, from "View booking" in an email (with view and date set to its day): open
+  // it once its month is in, then drop the id so closing it doesn't open it again. One that
+  // isn't on the calendar (cancelled by its organiser, or not this person's) gets a note.
+  const requestedBooking = searchParams.get('booking')
+  useEffect(() => {
+    if (!requestedBooking) return
+    let alive = true
+    const forget = () => setSearchParams({ view: chosenView, date }, { replace: true })
+    cache
+      .get(gridMonth)
+      .then((items) => {
+        if (!alive) return
+        const item = items.find((i) => i.id === requestedBooking)
+        if (item) setDetail(item)
+        else showToast(t('Calendar:BookingUnavailable'))
+        forget()
+      })
+      .catch(() => {
+        if (!alive) return
+        showToast(t('Calendar:BookingUnavailable'))
+        forget()
+      })
+    return () => {
+      alive = false
+    }
+  }, [requestedBooking, cache, gridMonth, chosenView, date, setSearchParams, showToast, t])
+
   const [cancelling, setCancelling] = useState<BookingDto | null>(null)
   const [editingGuests, setEditingGuests] = useState<BookingDto | null>(null)
 
