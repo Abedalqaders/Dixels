@@ -83,4 +83,40 @@ describe('InviteResponse', () => {
     expect(screen.getByRole('button', { name: 'قبول' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'رفض' })).toBeInTheDocument()
   })
+
+  it('offers Accept, Maybe and Decline in that order, and marks Maybe in soft amber', async () => {
+    const { onRespond, user } = renderAnswer()
+    const buttons = screen.getAllByRole('button').map((b) => b.textContent?.trim())
+    expect(buttons).toEqual(['Accept', 'Maybe', 'Decline'])
+
+    await user.click(screen.getByRole('button', { name: 'Maybe' }))
+    expect(onRespond).toHaveBeenCalledWith(InviteeResponseStatus.Maybe, 'date')
+  })
+
+  it('shows a Maybe already given as chosen', () => {
+    renderAnswer({ answer: InviteeResponseStatus.Maybe })
+    const maybe = screen.getByRole('button', { name: 'Maybe' })
+    expect(maybe).toHaveAttribute('aria-pressed', 'true')
+    expect(maybe.className).toContain('state-expired-soft')
+  })
+
+  it('on a series, a Maybe asks which dates too', async () => {
+    const { onRespond, user } = renderAnswer({ isSeries: true })
+    await user.click(screen.getByRole('button', { name: 'Maybe' }))
+    await user.click(within(screen.getByRole('group', { name: 'Answer for…' })).getByRole('button', { name: 'Maybe' }))
+    expect(onRespond).toHaveBeenCalledWith(InviteeResponseStatus.Maybe, 'series')
+  })
+
+  it('a Maybe to another meeting then is a softer note of its own', () => {
+    renderAnswer({
+      busyTimes: [
+        { localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' },
+        { localStart: '2026-10-13T10:30:00', localEnd: '2026-10-13T11:00:00', isTentative: true },
+      ],
+    })
+    const notes = screen.getAllByRole('note')
+    expect(notes).toHaveLength(2)
+    expect(notes[0]).toHaveTextContent(/You have another booking at this time \(\W?10:00\W?–\W?10:30\W?\)/)
+    expect(notes[1]).toHaveTextContent(/You said Maybe to another meeting then \(\W?10:30\W?–\W?11:00\W?\)\./)
+  })
 })

@@ -16,6 +16,7 @@ const item = (id: string, hour: string, cancelled = false, invited = false, decl
   repeats: false,
   invited,
   declined,
+  maybe: false,
 })
 const four = [item('One', '09'), item('Two', '10'), item('Three', '11'), item('Four', '12')]
 

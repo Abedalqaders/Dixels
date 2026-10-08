@@ -54,7 +54,7 @@ export type InviteeDto = ApiDto<'Dixels.Bookings.InviteeDto'>
 export type BookingInviteeDto = ApiResponse<'Dixels.Bookings.BookingInviteeDto'>
 
 /** A guest's answer to the invitation (InviteeResponseStatus on the server): Pending until they accept or decline. */
-export const InviteeResponseStatus = { Pending: 0, Accepted: 1, Declined: 2 } as const satisfies Record<string, InviteeResponseStatus>
+export const InviteeResponseStatus = { Pending: 0, Accepted: 1, Declined: 2, Maybe: 3 } as const satisfies Record<string, InviteeResponseStatus>
 export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatus'>
 
 /** A colleague guest's answer: Accepted or Declined (Pending is refused). */

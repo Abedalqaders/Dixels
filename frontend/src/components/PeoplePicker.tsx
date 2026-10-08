@@ -341,6 +341,8 @@ const RING: Record<Presence, string> = {
   busy: 'var(--presence-busy)',
   // Half red, half green — busy on some of a series' dates.
   part: 'var(--presence-busy) var(--presence-free) var(--presence-free) var(--presence-busy)',
+  // Amber: only maybe busy (they said Maybe to another meeting then).
+  maybe: 'var(--presence-maybe)',
 }
 
 /** The avatar with a presence ring and a dot at its corner; just the avatar when there's none to show. */

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, X } from 'lucide-react'
+import { Check, CircleHelp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FieldError } from '@/components/FieldError'
 import { cn } from '@/lib/utils'
@@ -22,17 +22,18 @@ export interface InviteResponseProps {
   /** The booking's date, for "This date only (…)" on a series. */
   date: IsoDate
   isSeries: boolean
-  /** When I'm already taken at this time (my own bookings, other meetings I accepted): a heads-up next to Accept. */
+  /** When I'm already taken at this time (my own bookings, other meetings I accepted; tentative: ones I said Maybe to): a heads-up next to Accept. */
   busyTimes?: BusyTime[]
   onRespond: (status: InviteeResponseStatus, scope: AnswerScope) => Promise<void>
 }
 
 const ACCEPTED_ON = 'border-[var(--state-confirmed-ink)]/40 bg-[var(--state-confirmed-soft)] text-[var(--state-confirmed-ink)] hover:bg-[var(--state-confirmed-soft)]'
 const DECLINED_ON = 'border-[var(--state-cancelled-ink)]/40 bg-[var(--state-cancelled-soft)] text-[var(--state-cancelled-ink)] hover:bg-[var(--state-cancelled-soft)]'
+const MAYBE_ON = 'border-[var(--state-expired-ink)]/40 bg-[var(--state-expired-soft)] text-[var(--state-expired-ink)] hover:bg-[var(--state-expired-soft)]'
 
 /**
- * A colleague guest's answer to an invitation: Accept / Decline, the chosen one soft green or
- * soft red. On a series a click first asks "this date only, or all upcoming dates?" (all by
+ * A colleague guest's answer to an invitation: Accept / Maybe / Decline, the chosen one soft
+ * green, soft amber or soft red. On a series a click first asks "this date only, or all upcoming dates?" (all by
  * default). Once the meeting has started, or was cancelled, the answer only shows.
  */
 export function InviteResponse({ answer, open, date, isSeries, busyTimes = [], onRespond }: InviteResponseProps) {
@@ -68,7 +69,16 @@ export function InviteResponse({ answer, open, date, isSeries, busyTimes = [], o
     ? t('Booking:AnswerAccepted')
     : answer === InviteeResponseStatus.Declined
       ? t('Booking:AnswerDeclined')
-      : t('Booking:AnswerNone')
+      : answer === InviteeResponseStatus.Maybe
+        ? t('Booking:AnswerMaybe')
+        : t('Booking:AnswerNone')
+
+  // In the order Outlook and Teams use: Accept, Maybe, Decline.
+  const choices = [
+    { status: InviteeResponseStatus.Accepted, icon: <Check />, label: t('Booking:Accept'), chosen: t('Booking:AnswerAccepted'), on: ACCEPTED_ON },
+    { status: InviteeResponseStatus.Maybe, icon: <CircleHelp />, label: t('Booking:Maybe'), chosen: t('Booking:AnswerMaybe'), on: MAYBE_ON },
+    { status: InviteeResponseStatus.Declined, icon: <X />, label: t('Booking:Decline'), chosen: t('Booking:AnswerDeclined'), on: DECLINED_ON },
+  ]
 
   return (
     <section className="grid gap-2" aria-labelledby="invite-answer-label">
@@ -80,28 +90,20 @@ export function InviteResponse({ answer, open, date, isSeries, busyTimes = [], o
 
       {open ? (
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            aria-pressed={answer === InviteeResponseStatus.Accepted}
-            className={cn(answer === InviteeResponseStatus.Accepted && ACCEPTED_ON)}
-            onClick={() => choose(InviteeResponseStatus.Accepted)}
-          >
-            <Check /> {answer === InviteeResponseStatus.Accepted ? t('Booking:AnswerAccepted') : t('Booking:Accept')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            aria-pressed={answer === InviteeResponseStatus.Declined}
-            className={cn(answer === InviteeResponseStatus.Declined && DECLINED_ON)}
-            onClick={() => choose(InviteeResponseStatus.Declined)}
-          >
-            <X /> {answer === InviteeResponseStatus.Declined ? t('Booking:AnswerDeclined') : t('Booking:Decline')}
-          </Button>
+          {choices.map((c) => (
+            <Button
+              key={c.status}
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              aria-pressed={answer === c.status}
+              className={cn(answer === c.status && c.on)}
+              onClick={() => choose(c.status)}
+            >
+              {c.icon} {answer === c.status ? c.chosen : c.label}
+            </Button>
+          ))}
         </div>
       ) : (
         <>
@@ -134,7 +136,7 @@ export function InviteResponse({ answer, open, date, isSeries, busyTimes = [], o
               variant={asking === InviteeResponseStatus.Declined ? 'destructive' : 'default'}
               onClick={() => void send(asking, scope)}
             >
-              {asking === InviteeResponseStatus.Declined ? t('Booking:Decline') : t('Booking:Accept')}
+              {choices.find((c) => c.status === asking)?.label}
             </Button>
           </div>
         </fieldset>
