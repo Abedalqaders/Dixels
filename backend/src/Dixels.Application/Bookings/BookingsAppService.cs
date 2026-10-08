@@ -161,7 +161,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         // A guest about to answer: am I already taken then? Only while answers are open, and
         // never counting this booking itself.
         var me = CurrentUser.GetId();
-        if (!dto.IsOwner && booking.Status == BookingStatus.Confirmed && booking.StartsAt > Clock.Now)
+        if (!dto.IsOwner && booking.Status == BookingStatus.Confirmed && booking.StartsAt > new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero))
         {
             var busy = await _busyFinder.FindBusyAsync(
                 new[] { me }, new[] { new TimeRange(booking.StartsAt, booking.EndsAt) }, new[] { booking.Id });
