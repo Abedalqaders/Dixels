@@ -20,6 +20,7 @@ public static class DixelsEmailTemplates
     public const string Invite = "Dixels.Email.Invite";
     public const string GuestCancelled = "Dixels.Email.GuestCancelled";
     public const string GuestReminder = "Dixels.Email.GuestReminder";
+    public const string GuestDeclined = "Dixels.Email.GuestDeclined";
 }
 
 public class DixelsEmailTemplateDefinitionProvider : TemplateDefinitionProvider
@@ -35,6 +36,7 @@ public class DixelsEmailTemplateDefinitionProvider : TemplateDefinitionProvider
         context.Add(Template(DixelsEmailTemplates.Invite, "Invite"));
         context.Add(Template(DixelsEmailTemplates.GuestCancelled, "GuestCancelled"));
         context.Add(Template(DixelsEmailTemplates.GuestReminder, "GuestReminder"));
+        context.Add(Template(DixelsEmailTemplates.GuestDeclined, "GuestDeclined"));
     }
 
     private static TemplateDefinition Template(string name, string file, bool isLayout = false)

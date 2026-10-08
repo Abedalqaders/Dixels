@@ -42,6 +42,7 @@ public class DixelsHttpApiModule : AbpModule
             options.Map(DixelsDomainErrorCodes.BookingOrganiserOnly, HttpStatusCode.Forbidden);
             options.Map(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels, HttpStatusCode.Forbidden);
             options.Map(DixelsDomainErrorCodes.BookingOrganiserCannotRespond, HttpStatusCode.Forbidden);
+            options.Map(DixelsDomainErrorCodes.GuestLinkNotFound, HttpStatusCode.NotFound);
         });
     }
 

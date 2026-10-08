@@ -685,15 +685,22 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         outsider.Mail!.ReplyToList.ShouldHaveSingleItem().Address.ShouldBe(s.Dana.Email);
         outsider.Mail.Attachments.ShouldBeEmpty(); // a plain email: no second event in their calendar
         outsider.Mail.AlternateViews.ShouldBeEmpty();
+        // Not answered yet: the two answer buttons, on their own link.
+        outsider.Body.ShouldContain("heard from you yet. Let them know if you"); // after "Dana Test hasn't"
+        outsider.Body.ShouldContain("Yes, I'm coming");
+        outsider.Body.ShouldContain("No, I can't make it");
+        outsider.Body.ShouldContain("/rsvp/");
+        outsider.Body.ShouldContain("answer=accepted");
+        outsider.Body.ShouldContain("answer=declined");
 
         var rana = To(s.Rana.Email);
         rana.Subject.ShouldStartWith("تذكير: Planning الساعة ");
         rana.Body.ShouldContain("dir=\"rtl\"");
-        rana.Body.ShouldContain("افتح في Dixels"); // a colleague can open it
+        rana.Body.ShouldContain("نعم، سأحضر"); // not answered yet: the Yes / No buttons (in place of "Open in Dixels")
     }
 
     [Fact]
-    public async Task A_guest_who_declined_is_not_reminded()
+    public async Task A_guest_who_declined_is_not_reminded_and_one_who_accepted_gets_no_buttons()
     {
         var s = await CreateScenarioAsync();
         var booking = await BookSoonAsync(s, Colleague(s.Rana), Colleague(s.Omar));
@@ -701,13 +708,20 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         {
             await _bookings.RespondAsync(booking.Id, new RespondToInviteDto { Status = InviteeResponseStatus.Declined });
         }
+        using (ActAs(s.Omar.Id))
+        {
+            await _bookings.RespondAsync(booking.Id, new RespondToInviteDto { Status = InviteeResponseStatus.Accepted });
+        }
         await QueuedJobs.RunAllAsync(ServiceProvider);
         _emails.Clear();
 
         await SendDueRemindersAsync();
 
         _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
-        To(s.Omar.Email).Subject.ShouldStartWith("Reminder: Planning at ");
+        var omar = To(s.Omar.Email);
+        omar.Subject.ShouldStartWith("Reminder: Planning at ");
+        omar.Body.ShouldNotContain("/rsvp/"); // already answered: the plain reminder
+        omar.Body.ShouldContain("Open in Dixels");
     }
 
     [Fact]

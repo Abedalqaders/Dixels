@@ -242,6 +242,65 @@
     },
     {
       "files": [
+        "src/features/guest-links/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "!@/features/guest-links/**",
+                  "!@/features/*/module",
+                  "!@/features/*/permissions",
+                  "!@/features/*/queryKeys",
+                  "!@/features/auth/components/Can",
+                  "!@/features/auth/components/Gate",
+                  "!@/features/auth/hooks/useAuthRole",
+                  "!@/features/auth/permissions/group",
+                  "!@/features/auth/permissions/permissionNames",
+                  "!@/features/auth/permissions/usePermission",
+                  "!@/features/auth/roles",
+                  "!@/features/auth/userManager",
+                  "!@/features/bookings/api/bookingsApi",
+                  "!@/features/bookings/bookingEvents",
+                  "!@/features/bookings/buildingRules",
+                  "!@/features/bookings/components/BookingForm",
+                  "!@/features/bookings/components/BuildingRemovedNotice",
+                  "!@/features/bookings/components/EditGuestsDialog",
+                  "!@/features/bookings/components/FromToFields",
+                  "!@/features/bookings/components/OwnClashNotice",
+                  "!@/features/bookings/format",
+                  "!@/features/bookings/myBuildingLoader",
+                  "!@/features/bookings/preferences",
+                  "!@/features/bookings/recurrence",
+                  "!@/features/bookings/suggestSlot",
+                  "!@/features/calendar/calendarDates",
+                  "!@/features/profile/api/profileApi",
+                  "!@/features/profile/hooks/useMyPicture",
+                  "!@/features/profile/hooks/useMyProfile",
+                  "!@/features/space-management/api/spaceManagementApi",
+                  "!@/features/space-management/components/BuildingPicker",
+                  "!@/features/space-management/components/spaceTypeIcons",
+                  "!@/features/space-management/hooks/useBookingImpactPrompt"
+                ],
+                "message": "That file is inside another feature. Use one of its public files (scripts/feature-boundaries.mjs), or make this one public there on purpose."
+              },
+              {
+                "group": [
+                  "../**"
+                ],
+                "message": "Import other folders with '@/…', not '../'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
         "src/features/profile/**"
       ],
       "rules": {

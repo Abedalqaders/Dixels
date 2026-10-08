@@ -270,6 +270,7 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
                 where a.UserId == null
                       && ((b.Status != BookingStatus.Cancelled && a.EndsAt < cutoff)
                           || (b.Status == BookingStatus.Cancelled && b.CancelledAt < cutoff))
+                orderby a.EndsAt
                 select a.Id)
             .Take(batchSize)
             .ToListAsync(GetCancellationToken(cancellationToken));
@@ -291,6 +292,7 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
                         && !dbContext.Bookings.Any(b => b.SeriesId == a.SeriesId
                                                         && ((b.Status != BookingStatus.Cancelled && b.EndsAt >= cutoff)
                                                             || (b.Status == BookingStatus.Cancelled && b.CancelledAt >= cutoff))))
+            .OrderBy(a => a.SeriesId)
             .Select(a => a.Id)
             .Take(batchSize)
             .ToListAsync(GetCancellationToken(cancellationToken));

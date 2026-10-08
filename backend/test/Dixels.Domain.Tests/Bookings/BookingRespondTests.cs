@@ -28,8 +28,8 @@ public class BookingRespondTests
         var row = booking.Invitees.Single();
         row.ResponseStatus.ShouldBe(InviteeResponseStatus.Pending);
 
-        booking.Respond(GuestId, InviteeResponseStatus.Accepted, Start.AddDays(-2));
-        booking.Respond(GuestId, InviteeResponseStatus.Declined, Start.AddMinutes(-1));
+        booking.Respond(GuestId.ToString(), InviteeResponseStatus.Accepted, Start.AddDays(-2));
+        booking.Respond(GuestId.ToString(), InviteeResponseStatus.Declined, Start.AddMinutes(-1));
 
         row.ResponseStatus.ShouldBe(InviteeResponseStatus.Declined);
         row.RespondedAt.ShouldBe(Start.AddMinutes(-1));
@@ -40,7 +40,7 @@ public class BookingRespondTests
     {
         var booking = NewBooking();
 
-        Should.Throw<BusinessException>(() => booking.Respond(GuestId, InviteeResponseStatus.Accepted, Start))
+        Should.Throw<BusinessException>(() => booking.Respond(GuestId.ToString(), InviteeResponseStatus.Accepted, Start))
             .Code.ShouldBe(DixelsDomainErrorCodes.BookingResponseClosed);
     }
 
@@ -50,8 +50,23 @@ public class BookingRespondTests
         var booking = NewBooking();
         booking.Cancel(Guid.NewGuid(), Start.AddDays(-1), reason: null, byAdmin: true);
 
-        Should.Throw<BusinessException>(() => booking.Respond(GuestId, InviteeResponseStatus.Declined, Start.AddDays(-1)))
+        Should.Throw<BusinessException>(() => booking.Respond(GuestId.ToString(), InviteeResponseStatus.Declined, Start.AddDays(-1)))
             .Code.ShouldBe(DixelsDomainErrorCodes.BookingResponseClosed);
+    }
+
+    [Fact]
+    public void An_outside_guest_answers_by_their_email_and_each_answer_returns_the_one_it_replaced()
+    {
+        var booking = new Booking(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Start, Start.AddHours(1),
+            attendees: 3, "Planning", "{}", Guid.NewGuid().ToString());
+        booking.SetInvitees(new[] { new Invitee(GuestId, null, null), new Invitee(null, " Dana@Outside.io ", "Dana") }, SimpleGuidGenerator.Instance);
+        var dana = Invitee.NormalizeEmail("dana@outside.io");
+
+        booking.Respond(dana, InviteeResponseStatus.Accepted, Start.AddDays(-1)).ShouldBe(InviteeResponseStatus.Pending);
+        booking.Respond(dana, InviteeResponseStatus.Declined, Start.AddDays(-1)).ShouldBe(InviteeResponseStatus.Accepted);
+
+        booking.Invitees.Single(i => i.Email is not null).ResponseStatus.ShouldBe(InviteeResponseStatus.Declined);
+        booking.Invitees.Single(i => i.UserId == GuestId).ResponseStatus.ShouldBe(InviteeResponseStatus.Pending);
     }
 
     [Fact]
@@ -59,6 +74,6 @@ public class BookingRespondTests
     {
         var booking = NewBooking();
 
-        Should.Throw<ArgumentOutOfRangeException>(() => booking.Respond(GuestId, InviteeResponseStatus.Pending, Start.AddDays(-1)));
+        Should.Throw<ArgumentOutOfRangeException>(() => booking.Respond(GuestId.ToString(), InviteeResponseStatus.Pending, Start.AddDays(-1)));
     }
 }

@@ -85,6 +85,16 @@ public class BookingEmailModel
     /// <summary>The booker's cancel email: how many guests were told it's off (0: no line).</summary>
     public int GuestsTold { get; set; }
 
+    /// <summary>A guest's reminder, when they haven't answered: "Sara Ali hasn't heard from you yet…", above the Yes / No buttons.</summary>
+    public string? AnswerNudge { get; set; }
+
+    /// <summary>A guest's invite: their own Accept / Decline links (the public answer page).</summary>
+    public string? AcceptUrl { get; set; }
+    public string? DeclineUrl { get; set; }
+
+    /// <summary>The booker's "can't make it" email: the guest who declined.</summary>
+    public string? AnsweredBy { get; set; }
+
     /// <summary>The calendar file the email carries, if any (not shown; attached by <see cref="SendEmailJob"/>).</summary>
     public IcsEvent? Calendar { get; set; }
 }
@@ -117,4 +127,5 @@ public static class EmailStatus
     public const string Invitation = "Invitation";
     public const string Cancelled = "Cancelled";
     public const string Updated = "Updated";
+    public const string Declined = "Declined";
 }

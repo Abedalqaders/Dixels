@@ -98,6 +98,14 @@ export function request<T>(path: string, token: string, init?: RequestInit): Pro
   return send<T>(path, token, init, false, readJson)
 }
 
+/**
+ * A call that needs no sign-in (the public answer page behind a guest's link): no token is
+ * sent, and a 401 is just an error — it never signs anyone out.
+ */
+export function requestAnonymous<T>(path: string, init?: RequestInit): Promise<T> {
+  return send<T>(path, null, init, false, readJson)
+}
+
 /** A file the API answers with (a picture, say), or null when it answers 204: there is none. */
 export function requestBlob(path: string, token: string, init?: RequestInit): Promise<Blob | null> {
   return send(path, token, init, false, readBlob)
@@ -119,7 +127,7 @@ async function readBlob(response: Response): Promise<Blob | null> {
   return blob.size === 0 ? null : blob
 }
 
-async function send<T>(path: string, token: string, init: RequestInit | undefined, retried: boolean, read: ReadBody<T>): Promise<T> {
+async function send<T>(path: string, token: string | null, init: RequestInit | undefined, retried: boolean, read: ReadBody<T>): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -130,7 +138,7 @@ async function send<T>(path: string, token: string, init: RequestInit | undefine
         // ABP answers in this language: validation and business-rule messages, and later
         // the names of buildings, floors and spaces.
         'Accept-Language': currentLanguage(),
-        Authorization: `Bearer ${token}`,
+        ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
         ...init?.headers,
       },
     })
@@ -141,7 +149,7 @@ async function send<T>(path: string, token: string, init: RequestInit | undefine
     throw new ApiError(0, null)
   }
 
-  if (response.status === 401) {
+  if (response.status === 401 && token !== null) {
     // An expired token is the usual reason. Try once to renew it quietly and repeat the
     // request; only when that fails (or the fresh token is refused too) is the session gone.
     if (!retried) {
