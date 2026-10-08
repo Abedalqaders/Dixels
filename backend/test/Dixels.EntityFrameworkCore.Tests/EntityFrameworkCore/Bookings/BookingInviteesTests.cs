@@ -103,7 +103,6 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = attendees,
         Title = "Planning",
         IdempotencyKey = Guid.NewGuid().ToString(),
         Invitees = invitees.ToList(),
@@ -258,25 +257,6 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         }
     }
 
-    // ---- Head count ----
-
-    [Fact]
-    public async Task Too_low_a_head_count_is_a_preview_violation_and_a_rejected_create()
-    {
-        var s = await CreateScenarioAsync();
-        using var _ = ActAs(s.Owner.Id);
-
-        var preview = await _bookings.PreviewAsync(Request(s.SpaceId, 2, Colleague(s.Rana), Colleague(s.Omar)));
-        preview.IsValid.ShouldBeFalse();
-        var violation = preview.Violations.ShouldHaveSingleItem();
-        violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
-        violation.Message.ShouldContain("at least 3 attendees");
-
-        (await RejectionCodeAsync(() => _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana), Colleague(s.Omar)))))
-            .ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
-        (await WithUnitOfWorkAsync(() => _bookingRepository.GetCountAsync())).ShouldBe(0);
-    }
-
     // ---- Retries ----
 
     [Fact]
@@ -304,7 +284,6 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = attendees,
         Title = "Stand-up",
         Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(days - 1)) },
         IdempotencyKey = Guid.NewGuid().ToString(),
@@ -333,20 +312,6 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
 
         var stored = await WithUnitOfWorkAsync(() => _bookingRepository.GetListAsync(b => b.SeriesId == created.SeriesId, includeDetails: true));
         stored.ShouldAllBe(b => b.Invitees.Count == 2 && b.Invitees.All(i => i.EndsAt == b.EndsAt));
-    }
-
-    [Fact]
-    public async Task A_series_reports_too_low_a_head_count_once_for_the_whole_series()
-    {
-        var s = await CreateScenarioAsync();
-        using var _ = ActAs(s.Owner.Id);
-
-        var preview = await _bookings.PreviewSeriesAsync(Daily(s.SpaceId, 3, 2, Colleague(s.Rana), Colleague(s.Omar)));
-
-        preview.SeriesViolations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
-        preview.Occurrences.ShouldAllBe(o => o.Violations.Count == 0);
-        preview.BookableCount.ShouldBe(0);
-        preview.Invitees.Count.ShouldBe(2);
     }
 
     [Fact]

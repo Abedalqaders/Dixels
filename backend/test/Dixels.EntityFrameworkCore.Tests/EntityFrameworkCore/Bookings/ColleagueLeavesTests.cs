@@ -22,7 +22,7 @@ namespace Dixels.EntityFrameworkCore.Bookings;
 /// <summary>
 /// A colleague guest who is deactivated, removed or moved to another building comes off the
 /// upcoming meetings they were invited to (in the building they left, for a move), silently
-/// and with the head count kept. Meetings under way, over or cancelled keep them.
+/// and off the head count. Meetings under way, over or cancelled keep them.
 /// </summary>
 [Collection(DixelsTestConsts.CollectionDefinitionName)]
 public class ColleagueLeavesTests : DixelsApplicationTestBase<DixelsEntityFrameworkCoreTestModule>
@@ -93,7 +93,6 @@ public class ColleagueLeavesTests : DixelsApplicationTestBase<DixelsEntityFramew
             SpaceId = s.RoomA,
             LocalStart = Tomorrow.AddHours(hour),
             LocalEnd = Tomorrow.AddHours(hour + 1),
-            Attendees = 1 + colleagues.Length,
             IdempotencyKey = Guid.NewGuid().ToString(),
             Invitees = Colleagues(colleagues),
         });
@@ -107,7 +106,6 @@ public class ColleagueLeavesTests : DixelsApplicationTestBase<DixelsEntityFramew
             SpaceId = s.RoomA,
             LocalStart = Tomorrow.AddHours(hour),
             LocalEnd = Tomorrow.AddHours(hour + 1),
-            Attendees = 1 + colleagues.Length,
             Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(days - 1)) },
             IdempotencyKey = Guid.NewGuid().ToString(),
             Invitees = Colleagues(colleagues),
@@ -193,10 +191,10 @@ public class ColleagueLeavesTests : DixelsApplicationTestBase<DixelsEntityFramew
             await DeactivateAsync(s.Rana);
         }
 
-        // Off the upcoming single booking, with the head count and Omar's answer kept.
+        // Off the upcoming single booking and its head count; Omar's answer kept.
         (await GuestsOfAsync(single.Id)).ShouldBe(new Guid?[] { s.Omar });
         var stored = await WithUnitOfWorkAsync(() => _bookingRepository.GetAsync(single.Id));
-        stored.Attendees.ShouldBe(3);
+        stored.Attendees.ShouldBe(2);
         stored.Invitees.Single().ResponseStatus.ShouldBe(InviteeResponseStatus.Accepted);
 
         // Off the series' own list and every upcoming date.
@@ -282,7 +280,6 @@ public class ColleagueLeavesTests : DixelsApplicationTestBase<DixelsEntityFramew
                 SpaceId = s.RoomA,
                 LocalStart = Tomorrow.AddHours(14),
                 LocalEnd = Tomorrow.AddHours(15),
-                Attendees = 1,
                 IdempotencyKey = Guid.NewGuid().ToString(),
             });
         }

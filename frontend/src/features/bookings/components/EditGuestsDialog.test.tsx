@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ApiError, getBusyGuests, getSeriesBusyGuests, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
@@ -29,6 +29,7 @@ beforeAll(() => {
 })
 
 const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, busyTimes: [] }
+const omar = { ...rana, userId: 'u-omar', name: 'Omar Haddad', email: 'omar@dixels.io' }
 
 function booking(patch: Partial<BookingDto> = {}): BookingDto {
   return {
@@ -65,12 +66,12 @@ function renderDialog(b: BookingDto, onSaved = vi.fn()) {
   return onSaved
 }
 
-const attendees = () => screen.getByLabelText('Attendees')
+const people = () => screen.getByRole('group', { name: 'People' })
 const save = () => screen.getByRole('button', { name: 'Save' })
 
-async function typeAttendees(user: ReturnType<typeof userEvent.setup>, value: string) {
-  await user.clear(attendees())
-  await user.type(attendees(), value)
+async function inviteOmar(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByRole('combobox', { name: 'Search colleagues by name or email' }), 'om')
+  await user.click(await screen.findByRole('option', { name: /Omar Haddad/ }))
 }
 
 describe('EditGuestsDialog', () => {
@@ -87,54 +88,45 @@ describe('EditGuestsDialog', () => {
     const user = userEvent.setup()
     const onSaved = renderDialog(booking())
     expect(screen.getByText('Rana Saleh')).toBeInTheDocument()
-    expect(attendees()).toHaveValue(2)
+    expect(people()).toHaveTextContent('2 people · you + 1 guest')
 
-    await user.type(screen.getByRole('combobox', { name: 'Search colleagues by name or email' }), 'om')
-    await user.click(await screen.findByRole('option', { name: /Omar Haddad/ }))
-    expect(attendees()).toHaveValue(3)
+    await inviteOmar(user)
+    expect(people()).toHaveTextContent('3 people · you + 2 guests')
 
     await user.click(save())
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
-    expect(updateInvitees).toHaveBeenCalledWith('t', 'b-1', { attendees: 3, invitees: [{ userId: 'u-rana' }, { userId: 'u-omar' }] })
+    expect(updateInvitees).toHaveBeenCalledWith('t', 'b-1', { invitees: [{ userId: 'u-rana' }, { userId: 'u-omar' }] })
     expect(updateSeriesInvitees).not.toHaveBeenCalled()
   })
 
-  it('keeps Save off while the head count leaves no room for everyone', async () => {
+  it('lets a booking kept over a shrunk room lose people, but not grow past it', async () => {
     const user = userEvent.setup()
-    renderDialog(booking())
-
-    await typeAttendees(user, '1')
-
-    expect(screen.getByText('Needs at least 2 attendees for everyone invited')).toBeInTheDocument()
-    expect(save()).toBeDisabled()
-  })
-
-  it('refuses a higher number than the room seats, but not one already over it', async () => {
-    const user = userEvent.setup()
-    // Kept at 6 when the room shrank to 4.
-    renderDialog(booking({ attendees: 6, capacity: 4 }))
-
+    // Kept at 6 (one guest named) when the room shrank to 4: taking Rana off is fine.
+    const { unmount } = render(<EditGuestsDialog token="t" booking={booking({ attendees: 6, capacity: 4 })} onClose={vi.fn()} onSaved={vi.fn()} />, {
+      wrapper: TestProviders,
+    })
     await user.click(screen.getByRole('button', { name: 'Remove Rana Saleh' }))
+    expect(people()).toHaveTextContent('1 person · just you')
     expect(save()).toBeEnabled()
-    await typeAttendees(user, '5')
-    expect(save()).toBeEnabled()
+    unmount()
 
-    await typeAttendees(user, '7')
-    expect(screen.getByText('This room seats 4.')).toBeInTheDocument()
+    // Full at 2 in a 2-seat room: one more guest doesn't fit.
+    renderDialog(booking({ attendees: 2, capacity: 2 }))
+    await inviteOmar(user)
+    expect(screen.getByText('This room seats 2.')).toBeInTheDocument()
     expect(save()).toBeDisabled()
   })
 
-  it('refuses a lower number than the room needs, but not one already under it', async () => {
+  it('says how many to invite when removing guests drops below the room minimum, but not when already under it', async () => {
     const user = userEvent.setup()
-    // Kept at 3 when the room's minimum rose to 5.
-    renderDialog(booking({ attendees: 3, minAttendees: 5 }))
-
-    await typeAttendees(user, '4')
+    // Kept at 3 (Rana and Omar) when the room's minimum rose to 5: still fine as it is.
+    renderDialog(booking({ attendees: 3, minAttendees: 5, invitees: [rana, omar] }))
+    expect(screen.queryByText(/This room needs at least/)).not.toBeInTheDocument()
     expect(save()).toBeEnabled()
 
-    await typeAttendees(user, '2')
-    expect(screen.getByText('Needs at least 5 people')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove Omar Haddad' }))
+    expect(screen.getByText('This room needs at least 5 people: invite 3 more.')).toBeInTheDocument()
     expect(save()).toBeDisabled()
   })
 
@@ -146,7 +138,7 @@ describe('EditGuestsDialog', () => {
     await user.click(save())
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
-    expect(updateSeriesInvitees).toHaveBeenCalledWith('t', 'series-1', { attendees: 2, invitees: [{ userId: 'u-rana' }] })
+    expect(updateSeriesInvitees).toHaveBeenCalledWith('t', 'series-1', { invitees: [{ userId: 'u-rana' }] })
   })
 
   it('asks who of the listed colleagues is busy, and shows when', async () => {
@@ -197,16 +189,16 @@ describe('EditGuestsDialog', () => {
     expect(screen.getByText(/^\W?10:00\W?–\W?11:00\W?$/)).toBeInTheDocument()
   })
 
-  it("shows the server's answer under Attendees when it's about the head count", async () => {
+  it("shows the server's answer under the head count when it's about it", async () => {
     const user = userEvent.setup()
     vi.mocked(updateInvitees).mockRejectedValue(
-      new ApiError(400, { error: { code: 'Dixels:Bookings:OverCapacity', message: 'This space seats 6, but you asked for 3.' } }),
+      new ApiError(400, { error: { code: 'Dixels:Bookings:OverCapacity', message: "This space seats 6, but with your guests you're 7 people." } }),
     )
     const onSaved = renderDialog(booking())
 
     await user.click(save())
 
-    expect(await screen.findByText('This space seats 6, but you asked for 3.')).toBeInTheDocument()
+    expect(await within(people()).findByText("This space seats 6, but with your guests you're 7 people.")).toBeInTheDocument()
     expect(onSaved).not.toHaveBeenCalled()
   })
 })

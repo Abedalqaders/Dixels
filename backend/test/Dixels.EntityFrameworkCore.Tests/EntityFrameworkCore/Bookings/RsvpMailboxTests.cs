@@ -111,7 +111,6 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
                 SpaceId = s.SpaceId,
                 LocalStart = start,
                 LocalEnd = start.AddHours(1),
-                Attendees = 2,
                 Title = "Planning",
                 IdempotencyKey = Guid.NewGuid().ToString(),
                 Invitees = new List<InviteeDto> { new() { UserId = s.Rana.Id } },
@@ -129,7 +128,6 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
                 SpaceId = s.SpaceId,
                 LocalStart = Tomorrow.AddHours(9),
                 LocalEnd = Tomorrow.AddHours(9).AddMinutes(30),
-                Attendees = 2,
                 Title = "Stand-up",
                 Recurrence = new RecurrenceDto
                 {

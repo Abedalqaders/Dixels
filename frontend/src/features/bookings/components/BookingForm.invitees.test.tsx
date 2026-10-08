@@ -81,49 +81,20 @@ describe('BookingForm invitees', () => {
     vi.mocked(searchColleagues).mockReset().mockResolvedValue([{ id: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io' }])
   })
 
-  it('raises Attendees to fit everyone invited, and checks the guests with the slot', async () => {
+  it('counts you plus each guest as they come and go, and checks the guests with the slot', async () => {
     const user = userEvent.setup()
     renderForm()
-    expect(screen.getByLabelText('Attendees')).toHaveValue(1)
+    const people = screen.getByRole('group', { name: 'People' })
+    expect(people).toHaveTextContent('1 person · just you')
 
     await inviteSara(user)
 
-    expect(screen.getByLabelText('Attendees')).toHaveValue(2)
-    await waitFor(() => expect(lastPreview()).toMatchObject({ attendees: 2, invitees: [{ userId: 'u-sara' }] }))
-  })
+    expect(people).toHaveTextContent('2 people · you + 1 guest')
+    await waitFor(() => expect(lastPreview()).toMatchObject({ invitees: [{ userId: 'u-sara' }] }))
+    expect(lastPreview()).not.toHaveProperty('attendees')
 
-  it('keeps a higher number typed by the booker when a guest is removed', async () => {
-    const user = userEvent.setup()
-    renderForm()
-    await inviteSara(user)
-
-    const attendees = screen.getByLabelText('Attendees')
-    await user.clear(attendees)
-    await user.type(attendees, '5')
     await user.click(screen.getByRole('button', { name: 'Remove Sara Ali' }))
-
-    expect(attendees).toHaveValue(5)
-  })
-
-  it('says under Attendees when the number is lower than the people invited', async () => {
-    vi.mocked(previewBooking).mockResolvedValue({
-      ...valid,
-      isValid: false,
-      violations: [
-        {
-          code: 'Dixels:Bookings:AttendeesBelowInvitees',
-          level: null,
-          message: 'You invited 1 person, so at least 2 attendees are needed.',
-          shortMessage: 'At least 2 people',
-        },
-      ],
-    })
-    renderForm()
-
-    const attendees = screen.getByLabelText('Attendees')
-    await waitFor(() => expect(attendees).toHaveAccessibleDescription('You invited 1 person, so at least 2 attendees are needed.'))
-    expect(attendees).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByRole('button', { name: 'Book' })).toBeDisabled()
+    expect(people).toHaveTextContent('1 person · just you')
   })
 
   it("shows a guest's email that belongs to a colleague as that colleague once the server says so", async () => {
@@ -160,8 +131,8 @@ describe('BookingForm invitees', () => {
     await user.click(screen.getByRole('button', { name: 'Book' }))
 
     await waitFor(() => expect(onBooked).toHaveBeenCalledWith(booking))
+    expect(screen.getByRole('group', { name: 'People' })).toHaveTextContent('3 people · you + 2 guests')
     expect(vi.mocked(createBooking).mock.calls[0][1]).toMatchObject({
-      attendees: 3,
       invitees: [{ userId: 'u-sara' }, { email: 'omar@acme.com', name: 'Omar' }],
     })
   })

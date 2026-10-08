@@ -355,7 +355,6 @@ function SpaceSearch({ token, building }: { token: string; building: BookableBui
           space={booking.room.space}
           floorName={booking.room.floorName}
           initialSlot={booking.slot}
-          initialAttendees={values.people}
           onClose={() => setBooking(null)}
           onBooked={handleBooked}
         />

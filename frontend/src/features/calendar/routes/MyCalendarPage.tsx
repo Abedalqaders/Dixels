@@ -244,7 +244,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
         ? { big: monthHeading, small: rangeLabel('week', date) }
         : { big: monthHeading, small: formatDaySpan(startOfMonth(date), addDays(startOfMonth(date), daysInMonth(date) - 1)) }
   const [quickBook, setQuickBook] = useState<QuickBookWindow | null>(null)
-  const [form, setForm] = useState<{ room: SpaceAvailabilityDto; window: QuickBookWindow; attendees: number } | null>(null)
+  const [form, setForm] = useState<{ room: SpaceAvailabilityDto; window: QuickBookWindow } | null>(null)
   const anyDialog = Boolean(detail || cancelling || editingGuests || quickBook || form)
 
   // T = today, ←/→ = back/forward, D/W/M = view. Not while typing or in a dialog.
@@ -504,8 +504,9 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           window={quickBook}
           building={building}
           onClose={() => setQuickBook(null)}
-          onPick={(room, attendees, picked) => {
-            setForm({ room, window: picked, attendees })
+          // The number of people only picked which rooms fit; the booking counts its guests.
+          onPick={(room, _people, picked) => {
+            setForm({ room, window: picked })
             setQuickBook(null)
           }}
         />
@@ -522,7 +523,6 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
             start: fromMinutes(form.window.start),
             end: fromMinutes(form.window.end),
           }}
-          initialAttendees={form.attendees}
           onClose={() => setForm(null)}
           onBooked={handleBooked}
         />

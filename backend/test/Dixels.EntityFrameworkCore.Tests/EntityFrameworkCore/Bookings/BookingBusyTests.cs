@@ -75,7 +75,6 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         SpaceId = room,
         LocalStart = Tomorrow.AddHours(fromHour),
         LocalEnd = Tomorrow.AddHours(toHour),
-        Attendees = attendees,
         IdempotencyKey = Guid.NewGuid().ToString(),
         Invitees = guests.Select(g => new InviteeDto { UserId = g }).ToList(),
     };
@@ -109,7 +108,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         await BookAsAsync(s.Rana, Booking(s.OtherRoom, 10, 11));
         var meeting = await BookAsAsync(s.Lina, new CreateBookingDto
         {
-            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(11), LocalEnd = Tomorrow.AddHours(12), Attendees = 2,
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(11), LocalEnd = Tomorrow.AddHours(12), 
             IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Omar }],
         });
         await AnswerAsync(meeting.Id, s.Omar, InviteeResponseStatus.Accepted);
@@ -140,12 +139,12 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         // Rana: her own room 08–10:30, and a meeting she accepted 10–11:30 (back to back with it).
         await BookAsAsync(s.Rana, new CreateBookingDto
         {
-            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(8), LocalEnd = Tomorrow.AddHours(10.5), Attendees = 1,
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(8), LocalEnd = Tomorrow.AddHours(10.5), 
             IdempotencyKey = Guid.NewGuid().ToString(),
         });
         var meeting = await BookAsAsync(s.Lina, new CreateBookingDto
         {
-            SpaceId = s.Room, LocalStart = Tomorrow.AddHours(10), LocalEnd = Tomorrow.AddHours(11.5), Attendees = 2,
+            SpaceId = s.Room, LocalStart = Tomorrow.AddHours(10), LocalEnd = Tomorrow.AddHours(11.5), 
             IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
         });
         await AnswerAsync(meeting.Id, s.Rana, InviteeResponseStatus.Accepted);
@@ -153,7 +152,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         using var _ = ActAs(s.Owner);
         var preview = await _bookings.PreviewAsync(new CreateBookingDto
         {
-            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(12), Attendees = 2,
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(12), 
             IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
         });
 
@@ -192,7 +191,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         await BookAsAsync(s.Rana, new CreateBookingDto
         {
             SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddDays(2).AddHours(10), LocalEnd = Tomorrow.AddDays(2).AddHours(11),
-            Attendees = 1, IdempotencyKey = Guid.NewGuid().ToString(),
+            IdempotencyKey = Guid.NewGuid().ToString(),
         });
 
         using var _ = ActAs(s.Owner);
@@ -201,7 +200,6 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
             SpaceId = s.Room,
             LocalStart = Tomorrow.AddHours(10),
             LocalEnd = Tomorrow.AddHours(11),
-            Attendees = 3,
             Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(3)) },
             Invitees = [new InviteeDto { UserId = s.Rana }, new InviteeDto { UserId = s.Omar }],
         });
@@ -245,7 +243,6 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
                 SpaceId = s.Room,
                 LocalStart = Tomorrow.AddHours(10),
                 LocalEnd = Tomorrow.AddHours(11),
-                Attendees = 2,
                 Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(2)) },
                 IdempotencyKey = Guid.NewGuid().ToString()[..30],
                 Invitees = [new InviteeDto { UserId = s.Rana }],
@@ -290,12 +287,12 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         // Rana's own room 10:30–11:30, and a meeting she accepted 09:00–10:15.
         await BookAsAsync(s.Rana, new CreateBookingDto
         {
-            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(11.5), Attendees = 1,
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(11.5), 
             IdempotencyKey = Guid.NewGuid().ToString(),
         });
         var earlier = await BookAsAsync(s.Lina, new CreateBookingDto
         {
-            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(9), LocalEnd = Tomorrow.AddHours(10.25), Attendees = 2,
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(9), LocalEnd = Tomorrow.AddHours(10.25), 
             IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
         });
         await AnswerAsync(earlier.Id, s.Rana, InviteeResponseStatus.Accepted);
@@ -386,7 +383,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         var meeting = await BookAsAsync(s.Rana, new CreateBookingDto
         {
             SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddDays(1).AddHours(10), LocalEnd = Tomorrow.AddDays(1).AddHours(11),
-            Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Owner }],
+            IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Owner }],
         });
         await AnswerAsync(meeting.Id, s.Owner, InviteeResponseStatus.Accepted);
 
@@ -396,7 +393,6 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
             SpaceId = s.Room,
             LocalStart = Tomorrow.AddHours(10),
             LocalEnd = Tomorrow.AddHours(11),
-            Attendees = 1,
             Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(2)) },
         });
 

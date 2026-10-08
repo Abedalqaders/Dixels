@@ -49,7 +49,6 @@ public partial class BookingManager
         DixelsDomainErrorCodes.BookingOverCapacity,
         DixelsDomainErrorCodes.BookingBelowMinAttendees,
         DixelsDomainErrorCodes.BookingTooLong,
-        DixelsDomainErrorCodes.BookingAttendeesBelowInvitees,
     };
 
     /// <summary>
@@ -58,11 +57,11 @@ public partial class BookingManager
     /// date repeats that wall-clock time.
     /// </summary>
     public async Task<SeriesEvaluation> EvaluateSeriesAsync(
-        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, IReadOnlyCollection<Invitee> invitees, RecurrenceRule rule)
+        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, IReadOnlyCollection<Invitee> invitees, RecurrenceRule rule)
     {
-        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
+        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd);
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
-        var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, resolved, rule);
+        var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, Booking.HeadCount(resolved), resolved, rule);
 
         // Heads-ups only a preview shows (a create returns none, so it doesn't pay for them).
         var dates = evaluation.Occurrences.Select(o => new TimeRange(o.StartUtc, o.EndUtc)).ToList();
@@ -96,7 +95,6 @@ public partial class BookingManager
         Guid spaceId,
         DateTime localStart,
         DateTime localEnd,
-        int attendees,
         IReadOnlyCollection<Invitee> invitees,
         string? title,
         RecurrenceRule rule,
@@ -105,13 +103,14 @@ public partial class BookingManager
     {
         // Same locks as a single booking, taken once for the whole series.
         await _bookingRepository.LockSpaceAsync(spaceId);
-        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
+        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd);
         if (context.Building.OwnOverlapPolicy == OwnOverlapPolicy.Block)
         {
             await _bookingRepository.LockUserAsync(userId);
         }
 
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+        var attendees = Booking.HeadCount(resolved);
 
         // With its guests (the default details), to compare them with the retry's.
         var existing = await _seriesRepository.FindAsync(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey);

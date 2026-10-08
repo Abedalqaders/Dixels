@@ -73,7 +73,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateAsync(
-            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToInvitees(input.Invitees));
+            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, ToInvitees(input.Invitees));
 
         return new BookingPreviewDto
         {
@@ -97,7 +97,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.SpaceId,
                 input.LocalStart,
                 input.LocalEnd,
-                input.Attendees,
                 ToInvitees(input.Invitees),
                 input.Title,
                 input.IdempotencyKey);
@@ -197,7 +196,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateSeriesAsync(
-            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, input.Attendees, ToInvitees(input.Invitees), ToRule(input.Recurrence));
+            CurrentUser.GetId(), input.SpaceId, input.LocalStart, input.LocalEnd, ToInvitees(input.Invitees), ToRule(input.Recurrence));
 
         var seriesWide = evaluation.SeriesViolations.Count > 0;
         return new SeriesPreviewDto
@@ -228,7 +227,6 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 input.SpaceId,
                 input.LocalStart,
                 input.LocalEnd,
-                input.Attendees,
                 ToInvitees(input.Invitees),
                 input.Title,
                 ToRule(input.Recurrence),
@@ -250,7 +248,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         try
         {
             var (booking, place) = await _bookingManager.ChangeInviteesAsync(
-                CurrentUser.GetId(), id, input.Attendees, ToInvitees(input.Invitees));
+                CurrentUser.GetId(), id, ToInvitees(input.Invitees));
             return (await MapToDtosAsync(new[] { booking }, await PlacesOfAsync(place))).Single();
         }
         catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)
@@ -266,7 +264,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         try
         {
             var (series, bookings, place) = await _bookingManager.ChangeSeriesInviteesAsync(
-                CurrentUser.GetId(), seriesId, input.Attendees, ToInvitees(input.Invitees));
+                CurrentUser.GetId(), seriesId, ToInvitees(input.Invitees));
             return new SeriesCreatedDto { SeriesId = series.Id, Bookings = await MapToDtosAsync(bookings.ToList(), await PlacesOfAsync(place)) };
         }
         catch (BookingRejectedException ex) when (ex.Violations[0].Level is { } level)

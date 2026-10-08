@@ -11995,7 +11995,6 @@
       },
       "Dixels.Bookings.BookingRequestDto": {
         "required": [
-          "attendees",
           "localEnd",
           "localStart",
           "spaceId"
@@ -12013,12 +12012,6 @@
           "localEnd": {
             "type": "string",
             "format": "date-time"
-          },
-          "attendees": {
-            "maximum": 2147483647,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           },
           "title": {
             "maxLength": 128,
@@ -12226,7 +12219,6 @@
       },
       "Dixels.Bookings.CreateBookingDto": {
         "required": [
-          "attendees",
           "idempotencyKey",
           "localEnd",
           "localStart",
@@ -12245,12 +12237,6 @@
           "localEnd": {
             "type": "string",
             "format": "date-time"
-          },
-          "attendees": {
-            "maximum": 2147483647,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           },
           "title": {
             "maxLength": 128,
@@ -12276,7 +12262,6 @@
       },
       "Dixels.Bookings.CreateSeriesDto": {
         "required": [
-          "attendees",
           "idempotencyKey",
           "localEnd",
           "localStart",
@@ -12297,12 +12282,6 @@
           "localEnd": {
             "type": "string",
             "format": "date-time"
-          },
-          "attendees": {
-            "maximum": 2147483647,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           },
           "title": {
             "maxLength": 128,
@@ -12679,7 +12658,6 @@
       },
       "Dixels.Bookings.SeriesRequestDto": {
         "required": [
-          "attendees",
           "localEnd",
           "localStart",
           "recurrence",
@@ -12698,12 +12676,6 @@
           "localEnd": {
             "type": "string",
             "format": "date-time"
-          },
-          "attendees": {
-            "maximum": 2147483647,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           },
           "title": {
             "maxLength": 128,
@@ -12845,7 +12817,6 @@
       },
       "Dixels.Bookings.UpdateInviteesDto": {
         "required": [
-          "attendees",
           "invitees"
         ],
         "type": "object",
@@ -12856,12 +12827,6 @@
             "items": {
               "$ref": "#/components/schemas/Dixels.Bookings.InviteeDto"
             }
-          },
-          "attendees": {
-            "maximum": 2147483647,
-            "minimum": 1,
-            "type": "integer",
-            "format": "int32"
           }
         },
         "additionalProperties": false

@@ -84,7 +84,6 @@ public class GuestAnswerLinksTests : DixelsApplicationTestBase<DixelsEntityFrame
                 SpaceId = s.SpaceId,
                 LocalStart = Tomorrow.AddHours(10),
                 LocalEnd = Tomorrow.AddHours(11),
-                Attendees = 3,
                 Title = "Planning",
                 IdempotencyKey = Guid.NewGuid().ToString(),
                 Invitees = new() { new InviteeDto { UserId = s.Rana.Id }, new InviteeDto { Email = s.Sam, Name = "Sam Lee" } },
@@ -105,7 +104,6 @@ public class GuestAnswerLinksTests : DixelsApplicationTestBase<DixelsEntityFrame
                 SpaceId = s.SpaceId,
                 LocalStart = Tomorrow.AddHours(12),
                 LocalEnd = Tomorrow.AddHours(13),
-                Attendees = 3,
                 Title = "Stand-up",
                 Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(2)) },
                 IdempotencyKey = Guid.NewGuid().ToString(),
@@ -284,7 +282,7 @@ public class GuestAnswerLinksTests : DixelsApplicationTestBase<DixelsEntityFrame
         // Taken off the list: their row is gone, and the link with it.
         using (ActAs(s.Dana.Id))
         {
-            await _bookings.UpdateInviteesAsync(booking.Id, new UpdateInviteesDto { Attendees = 3, Invitees = new() { new InviteeDto { UserId = s.Rana.Id } } });
+            await _bookings.UpdateInviteesAsync(booking.Id, new UpdateInviteesDto { Invitees = new() { new InviteeDto { UserId = s.Rana.Id } } });
         }
 
         (await Should.ThrowAsync<BusinessException>(() => AnswerAsync(token, InviteeResponseStatus.Accepted)))

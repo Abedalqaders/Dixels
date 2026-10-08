@@ -85,7 +85,6 @@ public class PeopleAndTimezoneImpactTests : DixelsApplicationTestBase<DixelsEnti
             SpaceId = s.Space.Id,
             LocalStart = Tomorrow.AddHours(startHour),
             LocalEnd = Tomorrow.AddHours(endHour),
-            Attendees = 2,
             IdempotencyKey = Guid.NewGuid().ToString(),
         });
     }

@@ -158,7 +158,7 @@ describe('FindSpacePage', () => {
     )
   })
 
-  it('opens the booking form pre-filled with the searched time and head count', async () => {
+  it('opens the booking form pre-filled with the searched time; the head count is the booker plus their guests', async () => {
     const user = userEvent.setup()
     renderPage()
 
@@ -167,7 +167,8 @@ describe('FindSpacePage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Book Meeting Room 201' })
     expect(within(dialog).getByLabelText('From')).toHaveTextContent('10:00')
     expect(within(dialog).getByLabelText('To')).toHaveTextContent('11:00')
-    expect(within(dialog).getByLabelText('Attendees')).toHaveValue(4)
+    // "4 people" picked which rooms fit; the booking counts whoever is invited.
+    expect(within(dialog).getByRole('group', { name: 'People' })).toHaveTextContent('1 person · just you')
   })
 
   it('reads in Arabic, with Arabic plural forms and day names', async () => {
@@ -183,7 +184,7 @@ describe('FindSpacePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'احجز Meeting Room 201' }))
     const dialog = screen.getByRole('dialog', { name: 'حجز Meeting Room 201' })
-    expect(within(dialog).getByLabelText('عدد الحاضرين')).toHaveValue(4)
+    expect(within(dialog).getByRole('group', { name: 'الأشخاص' })).toHaveTextContent('شخص واحد · أنت فقط')
     expect(within(dialog).getByText(/^مفتوحة ⁦07:00–20:00⁩، كل يوم · حتى ساعتين · 12 مقعدًا$/)).toBeInTheDocument()
   })
 

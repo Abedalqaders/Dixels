@@ -109,7 +109,4 @@ public class UpdateInviteesDto
 {
     [MaxLength(BookingConsts.MaxInvitees)]
     public List<InviteeDto> Invitees { get; set; } = new();
-
-    [Range(1, int.MaxValue)]
-    public int Attendees { get; set; } = 1;
 }

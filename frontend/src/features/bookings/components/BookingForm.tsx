@@ -39,7 +39,8 @@ import type { RepeatValue } from '@/features/bookings/recurrence'
 import { closingMinute, rememberDuration } from '@/features/bookings/preferences'
 import { emitBookingsChanged } from '@/features/bookings/bookingEvents'
 import { getExternalGuestsEnabled, searchColleagues } from '@/features/bookings/api/inviteesApi'
-import { headCountFor, MAX_INVITEES, resolvedInvitees, toInviteeDtos } from '@/features/bookings/invitees'
+import { MAX_INVITEES, resolvedInvitees, toInviteeDtos } from '@/features/bookings/invitees'
+import { HeadCount } from './HeadCount'
 import type { Invitee } from '@/features/bookings/invitees'
 import { suggestSlot } from '@/features/bookings/suggestSlot'
 import type { Slot } from '@/features/bookings/suggestSlot'
@@ -61,7 +62,6 @@ interface BookingFormProps {
   onBooked: (booking: BookingDto, count?: number) => void
   /** Pre-fill from a search ("free 10:00–11:00"); otherwise the next sensible slot is suggested. */
   initialSlot?: Slot
-  initialAttendees?: number
 }
 
 export function BookingForm({
@@ -72,7 +72,6 @@ export function BookingForm({
   onClose,
   onBooked,
   initialSlot,
-  initialAttendees,
 }: BookingFormProps) {
   const { t } = useTranslation()
   const [initial] = useState(() => initialSlot ?? suggestSlot(building, space))
@@ -80,7 +79,6 @@ export function BookingForm({
   const [date, setDate] = useState(initial.date)
   const [start, setStart] = useState(initial.start)
   const [end, setEnd] = useState(initial.end)
-  const [attendees, setAttendees] = useState(initialAttendees ?? space.minAttendees ?? 1)
   const [invitees, setInvitees] = useState<Invitee[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -145,13 +143,6 @@ export function BookingForm({
     }
   }
 
-  // A problem with the one field is said under it; the rules that need the room and the
-  // time together (too long, closed, taken, too few people) are the verdict panel's job.
-  const attendeesError = !Number.isInteger(attendees) || attendees < 1
-    ? t('BookingForm:AttendeesRequired')
-    : attendees > space.capacity
-      ? t('BookingForm:RoomSeats', { count: space.capacity })
-      : null
 
   // The rule the Repeat field stands for on the current date: a quick choice follows the
   // date ("Weekly on Tuesday" becomes "…on Wednesday" when the date moves), keeping its end
@@ -169,17 +160,16 @@ export function BookingForm({
   // Only the fields that affect the rules — the title is deliberately left out, so typing
   // one doesn't re-check availability on every keystroke.
   const request = useMemo<BookingRequestDto | null>(() => {
-    if (!date || attendeesError || toMinutes(end) <= toMinutes(start)) {
+    if (!date || toMinutes(end) <= toMinutes(start)) {
       return null
     }
     return {
       spaceId: space.id,
       localStart: toLocalDateTime(date, start),
       localEnd: toLocalDateTime(date, end),
-      attendees,
       invitees: toInviteeDtos(invitees),
     }
-  }, [space.id, date, start, end, attendees, attendeesError, invitees])
+  }, [space.id, date, start, end, invitees])
 
   const seriesRequest = useMemo<SeriesRequestDto | null>(
     () => (request && rule ? { ...request, recurrence: rule } : null),
@@ -194,7 +184,7 @@ export function BookingForm({
   const rejected = preview.status === 'done' && !preview.preview.isValid
   const issues = rejected ? groupViolations(preview.preview.violations) : NO_ISSUES
   const panelState = rejected ? { ...preview, preview: { ...preview.preview, violations: issues.other } } : preview
-  const attendeesMessage = attendeesError ?? issueText(issues.attendees)
+  const attendeesMessage = issueText(issues.attendees)
   const dateMessage = issueText(issues.date)
   const timeMessage = issueText(issues.time)
   const { state: seriesPreview, recheck: recheckSeries } = useSeriesPreview(token, seriesRequest)
@@ -216,11 +206,9 @@ export function BookingForm({
   const dateCount = rule && seriesPreview.status === 'done' ? seriesPreview.preview.occurrences.length : 1
   const knowsBusy = (p: Invitee) => resolved !== undefined && !p.isExternal && Boolean(p.userId)
 
-  // Adding people raises the head count to fit them (you + everyone invited); removing
-  // someone leaves it, since the number may count people who aren't named.
+  // The head count follows the guests (you + everyone invited): see HeadCount.
   function changeInvitees(next: Invitee[]) {
     setInvitees(next)
-    setAttendees((current) => headCountFor(current, next.length))
   }
   const toBook =
     seriesPreview.status === 'done' && seriesPreview.preview.seriesViolations.length === 0
@@ -378,25 +366,7 @@ export function BookingForm({
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="bk-attendees">{t('BookingForm:Attendees')}</Label>
-            <div className="flex max-w-64 items-center gap-2">
-              <Input
-                id="bk-attendees"
-                type="number"
-                className="font-mono"
-                min={1 + invitees.length}
-                max={space.capacity}
-                value={Number.isNaN(attendees) ? '' : attendees}
-                onChange={(e) => setAttendees(e.target.valueAsNumber)}
-                aria-invalid={attendeesMessage ? true : undefined}
-                aria-describedby={attendeesMessage ? 'bk-attendees-error' : undefined}
-                required
-              />
-              <span className="whitespace-nowrap text-sm text-muted-foreground">{t('BookingForm:OfSeats', { count: space.capacity })}</span>
-            </div>
-            {attendeesMessage && <FieldError id="bk-attendees-error" message={attendeesMessage} />}
-          </div>
+          <HeadCount id="bk-headcount" guests={invitees.length} minAttendees={space.minAttendees} message={attendeesMessage} />
 
           <p className="text-sm text-muted-foreground">
             {t('BookingForm:TimesNote', { timezone: building.timezone, building: building.name, date: formatDate(lastDate) })}

@@ -66,7 +66,6 @@ public class BookingRoundTripTests : DixelsApplicationTestBase<DixelsPostgresTes
         SpaceId = s.SpaceId,
         LocalStart = Tomorrow.AddHours(startHour),
         LocalEnd = Tomorrow.AddHours(startHour + 1),
-        Attendees = 2,
         Title = "Planning",
         IdempotencyKey = key ?? Guid.NewGuid().ToString(),
     };
@@ -136,7 +135,6 @@ public class BookingRoundTripTests : DixelsApplicationTestBase<DixelsPostgresTes
             SpaceId = s.SpaceId,
             LocalStart = Tomorrow.AddHours(9),
             LocalEnd = Tomorrow.AddHours(10),
-            Attendees = 2,
             Title = "Stand-up",
             Recurrence = new RecurrenceDto
             {

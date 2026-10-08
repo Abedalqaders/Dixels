@@ -106,7 +106,6 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
             SpaceId = s.SpaceId,
             LocalStart = Tomorrow.AddHours(10),
             LocalEnd = Tomorrow.AddHours(11),
-            Attendees = 4,
             Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(19)) },
             IdempotencyKey = Guid.NewGuid().ToString(),
             Invitees = s.ColleagueIds.Select(id => new InviteeDto { UserId = id }).ToList(),
@@ -130,7 +129,6 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
             SpaceId = s.SpaceId,
             LocalStart = Tomorrow.AddHours(10),
             LocalEnd = Tomorrow.AddHours(11),
-            Attendees = 4,
             Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(99)) },
             IdempotencyKey = Guid.NewGuid().ToString(),
             Invitees = s.ColleagueIds.Take(2).Select(id => new InviteeDto { UserId = id }).ToList(),
@@ -140,7 +138,6 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
         SqlCapture.Instance.Clear();
         var updated = await _bookings.UpdateSeriesInviteesAsync(created.SeriesId, new UpdateInviteesDto
         {
-            Attendees = 4,
             Invitees = s.ColleagueIds.Skip(1).Select(id => new InviteeDto { UserId = id }).ToList(),
         });
         var commands = SqlCapture.Instance.Commands.Count;
@@ -162,7 +159,6 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
             SpaceId = s.SpaceId,
             LocalStart = Tomorrow.AddHours(10),
             LocalEnd = Tomorrow.AddHours(11),
-            Attendees = 2,
             IdempotencyKey = Guid.NewGuid().ToString(),
             Invitees = [new InviteeDto { UserId = s.ColleagueIds[0] }],
         });

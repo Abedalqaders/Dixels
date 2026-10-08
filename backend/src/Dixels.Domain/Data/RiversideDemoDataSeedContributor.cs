@@ -208,22 +208,21 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
         }
 
         // A typical day — repeated for each of the next few days, shifted a little on
-        // odd days so the week doesn't look copy-pasted.
-        var day = new (Space? Space, IdentityUser User, int Start, int End, int Attendees, string Title)[]
+        // odd days so the week doesn't look copy-pasted. Each is for the booker alone (the head
+        // count is the booker plus their guests), so the rooms with a minimum group aren't booked.
+        var day = new (Space? Space, IdentityUser User, int Start, int End, string Title)[]
         {
-            (s.Room101, amira, Hm(9, 0), Hm(10, 0), 5, "Product stand-up"),
-            (s.Room101, leo, Hm(13, 0), Hm(14, 30), 6, "Design review"),
-            (s.Room102, leo, Hm(10, 30), Hm(11, 30), 3, "1:1 with Sara"),
-            (s.Room201, amira, Hm(11, 0), Hm(13, 0), 8, "Quarterly planning"),
-            (s.Room202, jordan, Hm(15, 0), Hm(16, 0), 4, "Sprint retro"),
-            (s.Room301, leo, Hm(9, 30), Hm(11, 0), 6, "Client call — Acme"),
-            (s.Room301, amira, Hm(14, 0), Hm(15, 0), 4, "Hiring sync"),
-            (s.Room302, jordan, Hm(12, 0), Hm(12, 45), 2, "Lunch & learn prep"),
-            (s.BoardRoom, amira, Hm(10, 0), Hm(12, 0), 10, "Leadership meeting"),
-            (s.Pod301, leo, Hm(8, 0), Hm(9, 30), 1, "Deep work"),
-            (s.Pod302, amira, Hm(16, 0), Hm(17, 0), 1, "Focus time"),
-            (s.Training401, leo, Hm(13, 0), Hm(15, 0), 12, "Onboarding session"),
-            (s.Room402, jordan, Hm(9, 0), Hm(10, 30), 5, "Roadmap walkthrough"),
+            (s.Room101, amira, Hm(9, 0), Hm(10, 0), "Product stand-up"),
+            (s.Room101, leo, Hm(13, 0), Hm(14, 30), "Design review"),
+            (s.Room102, leo, Hm(10, 30), Hm(11, 30), "1:1 with Sara"),
+            (s.Room201, amira, Hm(11, 0), Hm(13, 0), "Quarterly planning"),
+            (s.Room202, jordan, Hm(15, 0), Hm(16, 0), "Sprint retro"),
+            (s.Room301, leo, Hm(9, 30), Hm(11, 0), "Client call — Acme"),
+            (s.Room301, amira, Hm(14, 0), Hm(15, 0), "Hiring sync"),
+            (s.Room302, jordan, Hm(12, 0), Hm(12, 45), "Lunch & learn prep"),
+            (s.Pod301, leo, Hm(8, 0), Hm(9, 30), "Deep work"),
+            (s.Pod302, amira, Hm(16, 0), Hm(17, 0), "Focus time"),
+            (s.Room402, jordan, Hm(9, 0), Hm(10, 30), "Roadmap walkthrough"),
         };
 
         var clock = new BuildingClock(building.Timezone);
@@ -236,7 +235,7 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
 
             for (var i = 0; i < day.Length; i++)
             {
-                var (space, user, start, end, attendees, title) = day[i];
+                var (space, user, start, end, title) = day[i];
                 if (space is null)
                 {
                     continue;
@@ -246,17 +245,17 @@ public class RiversideDemoDataSeedContributor : IDataSeedContributor, ITransient
                     user.Id, space.Id,
                     date.ToDateTime(TimeOnly.MinValue).AddMinutes(start + shift),
                     date.ToDateTime(TimeOnly.MinValue).AddMinutes(end + shift),
-                    attendees, title,
+                    title,
                     $"demo:{date:yyyyMMdd}:{i:00}");
             }
         }
     }
 
-    private async Task TryBookAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, string title, string key)
+    private async Task TryBookAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, string title, string key)
     {
         try
         {
-            await _bookingManager.CreateAsync(userId, spaceId, localStart, localEnd, attendees, Array.Empty<Invitee>(), title, key);
+            await _bookingManager.CreateAsync(userId, spaceId, localStart, localEnd, Array.Empty<Invitee>(), title, key);
         }
         catch (BusinessException)
         {

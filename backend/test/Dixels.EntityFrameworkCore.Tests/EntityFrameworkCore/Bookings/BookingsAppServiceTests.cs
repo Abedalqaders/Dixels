@@ -55,9 +55,10 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private sealed record Scenario(Guid UserId, Building Building, Floor Floor, Space Space);
 
     /// <summary>A UTC, 24/7 building (max 2h, 30-day horizon, no lead time) with one 8-seat
-    /// room needing at least 2 people, and an employee assigned to it.</summary>
+    /// room (needing at least <paramref name="minAttendees"/> people, when given), and an employee
+    /// assigned to it.</summary>
     // One unit of work around the whole setup: IdentityUserManager needs an ambient one.
-    private Task<Scenario> CreateScenarioAsync(bool assign = true) => WithUnitOfWorkAsync(async () =>
+    private Task<Scenario> CreateScenarioAsync(bool assign = true, int? minAttendees = null) => WithUnitOfWorkAsync(async () =>
     {
         var building = await _buildingRepository.InsertAsync(new Building(
             Guid.NewGuid(), "en", "Test HQ " + Guid.NewGuid().ToString("N")[..6], null, "UTC",
@@ -68,7 +69,11 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
 
         var spaceType = await _spaceTypeRepository.FirstAsync();
         var space = new Space(Guid.NewGuid(), floor.Id, "en", "Room 1", spaceType.Id, capacity: 8);
-        space.SetMinAttendees(2);
+        if (minAttendees is { } min)
+        {
+            space.SetMinAttendees(min);
+        }
+
         await _spaceRepository.InsertAsync(space);
 
         var user = new IdentityUser(Guid.NewGuid(), "emp" + Guid.NewGuid().ToString("N")[..8], $"{Guid.NewGuid():N}@test.io");
@@ -92,16 +97,20 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         })));
     }
 
-    private static CreateBookingDto Request(Guid spaceId, int startHour, int endHour, int attendees = 2, string? key = null)
+    private static CreateBookingDto Request(Guid spaceId, int startHour, int endHour, string? key = null, int outsiders = 0)
         => new()
         {
             SpaceId = spaceId,
             LocalStart = Tomorrow.AddHours(startHour),
             LocalEnd = Tomorrow.AddHours(endHour),
-            Attendees = attendees,
             Title = "Planning",
             IdempotencyKey = key ?? Guid.NewGuid().ToString(),
+            Invitees = Outsiders(outsiders),
         };
+
+    /// <summary>Guests from outside (allowed by default): the head count is the booker plus these.</summary>
+    private static List<InviteeDto> Outsiders(int count) =>
+        Enumerable.Range(1, count).Select(i => new InviteeDto { Email = $"guest{i}.{Guid.NewGuid():N}@outside.io" }).ToList();
 
     [Fact]
     public async Task Preview_of_a_valid_request_is_valid()
@@ -120,10 +129,10 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     [Fact]
     public async Task Preview_returns_every_violation_with_localized_messages_naming_the_level()
     {
-        var s = await CreateScenarioAsync();
+        var s = await CreateScenarioAsync(minAttendees: 2);
         using var _ = ActAs(s.UserId);
 
-        var preview = await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 10, 13, attendees: 1));
+        var preview = await _bookingsAppService.PreviewAsync(Request(s.Space.Id, 10, 13));
 
         preview.IsValid.ShouldBeFalse();
         preview.Violations.Select(v => v.Code).ShouldBe(new[]
@@ -133,7 +142,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         });
 
         preview.Violations[0].Level.ShouldBe("Space");
-        preview.Violations[0].Message.ShouldContain("at least 2 attendees (Space rule)");
+        preview.Violations[0].Message.ShouldContain("at least 2 people (Space rule): invite 1 more");
         preview.Violations[1].Message.ShouldContain("at most 2h (Building rule)");
         preview.Violations[1].Message.ShouldContain("you asked for 3h");
     }
@@ -144,7 +153,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.UserId);
 
-        var created = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, attendees: 3));
+        var created = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11, outsiders: 2));
 
         created.Status.ShouldBe(nameof(BookingStatus.Confirmed));
         created.SpaceName.ShouldBe("Room 1");
@@ -306,7 +315,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     [Fact]
     public async Task My_building_lists_its_spaces_with_resolved_limits_and_their_source()
     {
-        var s = await CreateScenarioAsync();
+        var s = await CreateScenarioAsync(minAttendees: 2);
         using var _ = ActAs(s.UserId);
 
         var building = await _availabilityAppService.GetMyBuildingAsync();
@@ -633,12 +642,12 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
     private static DateOnly Day(int offset) => DateOnly.FromDateTime(Tomorrow.AddDays(offset));
 
     /// <summary>Daily 10:00–11:00 from tomorrow for <paramref name="days"/> days.</summary>
-    private static CreateSeriesDto Daily(Guid spaceId, int days, int attendees = 2, params int[] skip) => new()
+    private static CreateSeriesDto Daily(Guid spaceId, int days, int outsiders = 0, params int[] skip) => new()
     {
+        Invitees = Outsiders(outsiders),
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = attendees,
         Title = "Stand-up",
         Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = Day(days - 1) },
         SkipDates = skip.Select(Day).ToList(),
@@ -654,7 +663,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         await _bookingsAppService.CreateAsync(new CreateBookingDto
         {
             SpaceId = s.Space.Id, LocalStart = Tomorrow.AddDays(2).AddHours(10), LocalEnd = Tomorrow.AddDays(2).AddHours(11),
-            Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+            IdempotencyKey = Guid.NewGuid().ToString(),
         });
 
         var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 5));
@@ -680,7 +689,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
             await _bookingsAppService.CreateAsync(new CreateBookingDto
             {
                 SpaceId = desk.Id, LocalStart = Tomorrow.AddDays(day).AddHours(10), LocalEnd = Tomorrow.AddDays(day).AddHours(11),
-                Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+                IdempotencyKey = Guid.NewGuid().ToString(),
             });
         }
 
@@ -726,7 +735,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.UserId);
 
-        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 5, attendees: 9));
+        var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 5, outsiders: 8));
 
         preview.SeriesViolations.ShouldHaveSingleItem().Code.ShouldBe(DixelsDomainErrorCodes.BookingOverCapacity);
         preview.Occurrences.ShouldAllBe(o => !o.IsValid && o.Violations.Count == 0);
@@ -784,7 +793,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         await _bookingsAppService.CreateAsync(new CreateBookingDto
         {
             SpaceId = s.Space.Id, LocalStart = Tomorrow.AddDays(3).AddHours(10), LocalEnd = Tomorrow.AddDays(3).AddHours(11),
-            Attendees = 2, IdempotencyKey = Guid.NewGuid().ToString(),
+            IdempotencyKey = Guid.NewGuid().ToString(),
         });
         var before = await CountBookingsAsync();
 
@@ -830,7 +839,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
         await _bookingsAppService.CreateAsync(new CreateBookingDto
         {
             SpaceId = desk.Id, LocalStart = Tomorrow.AddDays(1).AddHours(10), LocalEnd = Tomorrow.AddDays(1).AddHours(11),
-            Attendees = 1, IdempotencyKey = Guid.NewGuid().ToString(),
+            IdempotencyKey = Guid.NewGuid().ToString(),
         });
 
         var preview = await _bookingsAppService.PreviewSeriesAsync(Daily(s.Space.Id, 3));
@@ -965,7 +974,6 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
             SpaceId = s.Space.Id,
             LocalStart = Tomorrow.AddDays(1).AddHours(9),
             LocalEnd = Tomorrow.AddDays(1).AddHours(10),
-            Attendees = 2,
             IdempotencyKey = Guid.NewGuid().ToString(),
         });
 
@@ -991,7 +999,7 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
             var mine = await _bookingsAppService.GetAsync(id);
             mine.SpaceName.ShouldBe("Room 1");
             mine.FloorName.ShouldBe("Level 1");
-            mine.Attendees.ShouldBe(2);
+            mine.Attendees.ShouldBe(1);
         }
 
         // Not "forbidden": a 403 would confirm the id exists.
