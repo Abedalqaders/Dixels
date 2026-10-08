@@ -72,6 +72,8 @@ public static class DixelsDomainErrorCodes
     public const string BookingOrganiserCannotRespond = BookingsPrefix + "OrganiserCannotRespond";
     // An answer to a meeting that has started, or is cancelled (400).
     public const string BookingResponseClosed = BookingsPrefix + "ResponseClosed";
+    // A guest link that's malformed, forged, or whose guest is no longer invited (404, mapped in DixelsHttpApiModule).
+    public const string GuestLinkNotFound = BookingsPrefix + "GuestLinkNotFound";
     public const string BookingAlreadyStarted = BookingsPrefix + "AlreadyStarted";
     public const string BookingInvalidDateRange = BookingsPrefix + "InvalidDateRange";
 

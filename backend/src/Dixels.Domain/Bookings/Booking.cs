@@ -136,20 +136,25 @@ public class Booking : AuditedAggregateRoot<Guid>
     }
 
     /// <summary>
-    /// A colleague guest's answer to this date. Answers close once the meeting starts, or when
-    /// it's no longer happening (cancelled) — <see cref="DixelsDomainErrorCodes.BookingResponseClosed"/>.
+    /// A guest's answer to this date (<paramref name="guestKey"/>: their <see cref="Invitee.Key"/>,
+    /// a colleague's or an outsider's). Answers close once the meeting starts, or when it's no
+    /// longer happening (cancelled) — <see cref="DixelsDomainErrorCodes.BookingResponseClosed"/>.
+    /// Returns the answer it replaces.
     /// </summary>
-    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    public InviteeResponseStatus Respond(string guestKey, InviteeResponseStatus status, DateTimeOffset now)
     {
-        if (Status != BookingStatus.Confirmed || StartsAt <= now)
+        if (!IsOpenForAnswers(now))
         {
             throw new BusinessException(DixelsDomainErrorCodes.BookingResponseClosed);
         }
 
-        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
-                  ?? throw new InvalidOperationException("Only a colleague guest of this booking can answer it (BookingAccess checks that first).");
-        row.Respond(status, now);
+        var row = _invitees.FirstOrDefault(i => i.ToInvitee().Key == guestKey)
+                  ?? throw new InvalidOperationException("Only a guest of this booking can answer it (BookingAccess or their link checks that first).");
+        return row.Respond(status, now);
     }
+
+    /// <summary>Whether guests can still answer: it's going ahead and hasn't started.</summary>
+    public bool IsOpenForAnswers(DateTimeOffset now) => Status == BookingStatus.Confirmed && StartsAt > now;
 
     /// <summary>
     /// The owner changing the head count and the guest list together (already checked by

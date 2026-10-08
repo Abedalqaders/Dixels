@@ -19,7 +19,7 @@ namespace Dixels.Web.RateLimiting;
 
 /// <summary>
 /// One global limiter (ASP.NET Core's built-in rate limiting) that picks a bucket per request:
-/// Account form posts per IP, API calls per user (or per IP when anonymous), everything else
+/// Account form posts per IP, the public answer page's calls per IP, API calls per user (or per IP when anonymous), everything else
 /// (pages, static files, health checks) unlimited. A rejected request gets 429 with Retry-After
 /// and ABP's error body, so the frontend shows the message like any other API error.
 /// </summary>
@@ -60,6 +60,11 @@ public static class DixelsRateLimitingServiceCollectionExtensions
         if (HttpMethods.IsPost(request.Method) && request.Path.StartsWithSegments("/Account"))
         {
             return FixedWindow($"account:{ClientIp(httpContext)}", options.Account);
+        }
+
+        if (request.Path.StartsWithSegments("/api/app/rsvp"))
+        {
+            return FixedWindow($"rsvp:{ClientIp(httpContext)}", options.GuestLinks);
         }
 
         if (request.Path.StartsWithSegments("/api") || request.Path.StartsWithSegments("/connect"))
@@ -118,7 +123,7 @@ public static class DixelsRateLimitingServiceCollectionExtensions
             return;
         }
 
-        foreach (var (name, window) in new[] { ("Api", options.Api), ("Account", options.Account) })
+        foreach (var (name, window) in new[] { ("Api", options.Api), ("Account", options.Account), ("GuestLinks", options.GuestLinks) })
         {
             if (window.PermitLimit <= 0 || window.WindowSeconds <= 0)
             {

@@ -268,3 +268,25 @@
 }
 .loginlang:hover { background: var(--surface-sunken); }
 .loginlang svg { width: 16px; height: 16px; color: var(--ink-secondary); }
+
+/* ---------- Guest answer page (features/guest-links/RsvpPage): the status card, with the meeting ---------- */
+.rsvpcard { width: 420px; }
+.rsvptop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.rsvptop .rsvplogo { margin: 0; }
+.authicon.warn { background: var(--state-expired-soft); color: var(--state-expired-ink); font-size: 24px; font-weight: 700; }
+.authicon.error { font-size: 24px; font-weight: 700; }
+.authicon.rsvpbig { width: 64px; height: 64px; }
+.authicon.rsvpbig svg { width: 32px; height: 32px; }
+.rsvptitle { margin: 20px 0 0; font-weight: 600; font-size: 16px; text-align: start; }
+.rsvpfacts { margin: 8px 0 0; padding: 12px 0 0; border-top: 1px dashed var(--border-strong); display: grid; gap: 10px; text-align: start; font-size: 14px; line-height: 20px; }
+.rsvpfacts div { display: grid; grid-template-columns: 88px 1fr; gap: 12px; }
+.rsvpfacts dt { color: var(--ink-secondary); }
+.rsvpfacts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.rsvpmuted { color: var(--ink-secondary); }
+.rsvpbuttons { display: flex; gap: 10px; }
+.rsvpbuttons .btn { flex: 1; }
+.rsvpchange {
+  margin-top: 22px; background: none; border: 0; padding: 4px; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px;
+}
+.rsvpchange:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }

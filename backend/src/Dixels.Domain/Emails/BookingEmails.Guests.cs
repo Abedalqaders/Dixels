@@ -122,6 +122,7 @@ public partial class BookingEmails
                     await NamePlaceAsync(model, space, floor, building);
                     Describe(model, clock, startsAt, endsAt, title);
                     model.AlsoInvited = OthersNames(everyone, guest, colleagues);
+                    AddAnswerLinks(model, guest);
                     model.Heading = _localizer[added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
 
                     string subject;

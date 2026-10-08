@@ -530,10 +530,10 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
             (await _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Declined))).MyResponse.ShouldBe(InviteeResponseStatus.Declined);
         }
 
-        answered.Select(e => (e.BookingId, e.SeriesId, e.UserId, e.Status)).ShouldBe(new (Guid?, Guid?, Guid, InviteeResponseStatus)[]
+        answered.Select(e => (e.BookingId, e.SeriesId, e.Guest.UserId, e.Status, e.PreviousStatus)).ShouldBe(new (Guid?, Guid?, Guid?, InviteeResponseStatus, InviteeResponseStatus)[]
         {
-            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Accepted),
-            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Declined),
+            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Accepted, InviteeResponseStatus.Pending),
+            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Declined, InviteeResponseStatus.Accepted),
         });
 
         // The owner and the other guest both see Rana's answer; the owner has none of their own.
