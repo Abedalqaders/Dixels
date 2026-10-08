@@ -86,6 +86,21 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return _invitees.Replace(invitees, invitee => new BookingSeriesAttendee(guidGenerator.Create(), Id, invitee));
     }
 
+    /// <summary>The owner changing the head count and the guest list for the series (its upcoming dates are changed alongside).</summary>
+    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(int attendees, IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        if (attendees < 1 + invitees.Count)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees)
+                .WithData("invitees", invitees.Count)
+                .WithData("attendees", attendees)
+                .WithData("needed", 1 + invitees.Count);
+        }
+
+        Attendees = attendees;
+        return SetInvitees(invitees, guidGenerator);
+    }
+
     /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>
     public bool MatchesInvitees(IReadOnlyCollection<Invitee> invitees) =>
         Booking.SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);

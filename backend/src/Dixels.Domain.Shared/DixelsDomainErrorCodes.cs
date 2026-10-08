@@ -94,4 +94,8 @@ public static class DixelsDomainErrorCodes
     public const string InviteeIsOwner = BookingsPrefix + "InviteeIsOwner";
     public const string InviteeInvalid = BookingsPrefix + "InviteeInvalid";
     public const string ExternalGuestsDisabled = BookingsPrefix + "ExternalGuestsDisabled";
+
+    // Changing the guests after booking.
+    public const string GuestsNotEditable = BookingsPrefix + "GuestsNotEditable";
+    public const string EditSeriesGuests = BookingsPrefix + "EditSeriesGuests";
 }

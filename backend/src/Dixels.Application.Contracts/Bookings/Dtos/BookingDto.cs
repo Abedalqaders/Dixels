@@ -43,4 +43,8 @@ public class BookingDto : EntityDto<Guid>
 
     /// <summary>Who booked it, for "Invited by …".</summary>
     public string OwnerName { get; set; } = string.Empty;
+
+    /// <summary>The room's seats and minimum head count now (null = no limit), for checking an edit of the guests before saving.</summary>
+    public int? Capacity { get; set; }
+    public int? MinAttendees { get; set; }
 }

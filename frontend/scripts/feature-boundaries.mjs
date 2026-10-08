@@ -26,6 +26,7 @@ const PUBLIC = {
     'buildingRules',
     'components/BookingForm',
     'components/BuildingRemovedNotice',
+    'components/EditGuestsDialog',
     'components/FromToFields',
     'components/OwnClashNotice',
     'format',
