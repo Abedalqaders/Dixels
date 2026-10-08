@@ -76,6 +76,9 @@ public static class DixelsDomainErrorCodes
     public const string BookingOwnOverlap = BookingsPrefix + "OwnOverlap";
     public const string BookingOwnOverlapWarning = BookingsPrefix + "OwnOverlapWarning";
 
+    // A meeting the person accepted at that time: only ever a heads-up, even under Block.
+    public const string BookingAcceptedMeetingOverlapWarning = BookingsPrefix + "AcceptedMeetingOverlapWarning";
+
     // Recurring bookings: a rule that can't be expanded, and what can go wrong creating one.
     public const string SeriesInvalidRule = BookingsPrefix + "SeriesInvalidRule";
     public const string SeriesInvalidInterval = BookingsPrefix + "SeriesInvalidInterval";

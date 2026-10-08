@@ -76,6 +76,18 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// <summary>Whether the person is (still) a colleague guest of this booking.</summary>
     Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// When any of these people is taken between <c>start</c> and <c>end</c>: their own
+    /// confirmed bookings and the confirmed meetings they accepted, except the bookings in
+    /// <paramref name="exceptBookingIds"/>. Each a seek on a (UserId, EndsAt) index.
+    /// </summary>
+    Task<List<BusySlot>> GetBusyAsync(
+        IReadOnlyCollection<Guid> userIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        IReadOnlyCollection<Guid> exceptBookingIds,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Whether the person is on this series' own guest list.</summary>
     Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default);
 

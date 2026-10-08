@@ -33,7 +33,8 @@ public sealed record SeriesEvaluation(
     ResolvedConstraints Rules,
     IReadOnlyList<BookingViolation> SeriesViolations,
     IReadOnlyList<OccurrenceEvaluation> Occurrences,
-    IReadOnlyList<Invitee> Invitees)
+    IReadOnlyList<Invitee> Invitees,
+    IReadOnlyDictionary<Guid, int>? BusyDates = null)
 {
     public int BookableCount => SeriesViolations.Count > 0 ? 0 : Occurrences.Count(o => o.IsValid);
 }
@@ -61,7 +62,26 @@ public partial class BookingManager
     {
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
-        return await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, resolved, rule);
+        var evaluation = await EvaluateSeriesAsync(context, userId, localStart, localEnd, attendees, resolved, rule);
+
+        // Heads-ups only a preview shows (a create returns none, so it doesn't pay for them).
+        var dates = evaluation.Occurrences.Select(o => new TimeRange(o.StartUtc, o.EndUtc)).ToList();
+        var accepted = await AcceptedMeetingsAsync(userId, context.Building, dates);
+        var occurrences = evaluation.Occurrences
+            .Select(o =>
+            {
+                var meeting = accepted.FirstOrDefault(m => m.Range.Overlaps(o.StartUtc, o.EndUtc));
+                return meeting == default
+                    ? o
+                    : o with { Warnings = o.Warnings.Append(AcceptedMeetingWarning(meeting.Range, context.LocalClock)).ToList() };
+            })
+            .ToList();
+
+        return evaluation with
+        {
+            Occurrences = occurrences,
+            BusyDates = await _busyFinder.CountBusyDatesAsync(ColleagueIds(resolved), dates),
+        };
     }
 
     /// <summary>

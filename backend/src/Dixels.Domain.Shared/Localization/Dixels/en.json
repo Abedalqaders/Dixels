@@ -71,6 +71,8 @@
     "Dixels:Bookings:OwnOverlap:Short": "You're in {spaceName} then",
     "Dixels:Bookings:OwnOverlapWarning": "Heads-up: you already have {spaceName} booked {from}–{until}.",
     "Dixels:Bookings:OwnOverlapWarning:Short": "You're in {spaceName} then",
+    "Dixels:Bookings:AcceptedMeetingOverlapWarning": "Heads-up: you accepted a meeting at {from}–{until}.",
+    "Dixels:Bookings:AcceptedMeetingOverlapWarning:Short": "You have a meeting then",
     "Dixels:Bookings:CancelReason:RulesChanged": "Rules changed: {0}",
     "Dixels:Bookings:CancelReason:Closure": "Closed: {0}",
     "Dixels:Bookings:CancelReason:SpaceRemoved": "The space was removed",

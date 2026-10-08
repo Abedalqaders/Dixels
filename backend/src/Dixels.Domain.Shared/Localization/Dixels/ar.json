@@ -71,6 +71,8 @@
     "Dixels:Bookings:OwnOverlap:Short": "أنت في {spaceName} في ذلك الوقت",
     "Dixels:Bookings:OwnOverlapWarning": "تنبيه: لديك بالفعل حجز في {spaceName} من {from} إلى {until}.",
     "Dixels:Bookings:OwnOverlapWarning:Short": "أنت في {spaceName} في ذلك الوقت",
+    "Dixels:Bookings:AcceptedMeetingOverlapWarning": "تنبيه: قبلتَ اجتماعًا من {from} إلى {until}.",
+    "Dixels:Bookings:AcceptedMeetingOverlapWarning:Short": "لديك اجتماع في هذا الوقت",
     "Dixels:Bookings:CancelReason:RulesChanged": "تغيّرت القواعد: {0}",
     "Dixels:Bookings:CancelReason:Closure": "إغلاق: {0}",
     "Dixels:Bookings:CancelReason:SpaceRemoved": "أُزيلت المساحة",

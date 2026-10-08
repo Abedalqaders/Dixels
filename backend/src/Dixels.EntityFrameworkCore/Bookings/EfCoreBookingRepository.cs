@@ -194,6 +194,47 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .AnyAsync(a => a.BookingId == bookingId && a.UserId == userId, GetCancellationToken(cancellationToken));
     }
 
+    public async Task<List<BusySlot>> GetBusyAsync(
+        IReadOnlyCollection<Guid> userIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        IReadOnlyCollection<Guid> exceptBookingIds,
+        CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        var bookings = dbContext.Bookings.AsNoTracking();
+        var ids = userIds.Distinct().ToList();
+        var except = exceptBookingIds.ToList();
+
+        // Their own bookings: through (UserId, EndsAt), like the calendar.
+        var own = await bookings
+            .Where(b => ids.Contains(b.UserId)
+                        && b.Status == BookingStatus.Confirmed
+                        && b.EndsAt > start
+                        && b.StartsAt < end
+                        && !except.Contains(b.Id))
+            .Select(b => new { b.UserId, b.StartsAt, b.EndsAt })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        // Meetings they accepted: through the guest rows' own (UserId, EndsAt), then the booking by key.
+        var accepted = await (
+                from a in dbContext.Set<BookingAttendee>().AsNoTracking()
+                join b in bookings on a.BookingId equals b.Id
+                where a.UserId != null
+                      && ids.Contains(a.UserId.Value)
+                      && a.ResponseStatus == InviteeResponseStatus.Accepted
+                      && a.EndsAt > start
+                      && b.StartsAt < end
+                      && b.Status == BookingStatus.Confirmed
+                      && !except.Contains(b.Id)
+                select new { UserId = a.UserId!.Value, b.StartsAt, b.EndsAt })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return own.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: false))
+            .Concat(accepted.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: true)))
+            .ToList();
+    }
+
     public async Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();

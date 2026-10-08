@@ -89,6 +89,33 @@ public partial class BookingManager
         return (series, upcoming, place);
     }
 
+    /// <summary>
+    /// For Edit guests: which of these colleagues are busy at the time of the organiser's
+    /// booking (this booking itself doesn't count), each with 1. Organiser only.
+    /// </summary>
+    public async Task<Dictionary<Guid, int>> FindBusyGuestsAsync(Guid userId, Guid bookingId, IReadOnlyCollection<Guid> userIds)
+    {
+        var booking = await _bookingRepository.GetAsync(bookingId, includeDetails: false);
+        await _bookingAccess.EnsureAsync(booking, userId, BookingRole.Owner);
+
+        return await _busyFinder.CountBusyDatesAsync(
+            userIds, new[] { new TimeRange(booking.StartsAt, booking.EndsAt) }, new[] { booking.Id });
+    }
+
+    /// <summary>The same across a series' upcoming dates — the ones an edit changes — with how many each is busy on.</summary>
+    public async Task<Dictionary<Guid, int>> FindBusySeriesGuestsAsync(Guid userId, Guid seriesId, IReadOnlyCollection<Guid> userIds)
+    {
+        var series = await _seriesRepository.GetAsync(seriesId, includeDetails: false);
+        await _bookingAccess.EnsureSeriesAsync(series, userId, BookingRole.Owner);
+
+        var now = Now();
+        var upcoming = await _bookingRepository.GetListAsync(
+            b => b.SeriesId == seriesId && b.Status == BookingStatus.Confirmed && b.StartsAt > now);
+
+        return await _busyFinder.CountBusyDatesAsync(
+            userIds, upcoming.Select(b => new TimeRange(b.StartsAt, b.EndsAt)).ToList(), upcoming.Select(b => b.Id).ToList());
+    }
+
     /// <summary>The guest list as it will be saved, or a rejection naming what's wrong with it or the head count.</summary>
     private async Task<IReadOnlyList<Invitee>> CheckGuestsAsync(
         Guid userId, BookingPlace place, int storedAttendees, int attendees, IReadOnlyCollection<Invitee> invitees)

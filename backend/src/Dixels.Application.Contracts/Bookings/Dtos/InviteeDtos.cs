@@ -39,6 +39,29 @@ public class BookingInviteeDto
 
     /// <summary>Their answer to the invitation; Pending until accept/decline exists.</summary>
     public InviteeResponseStatus ResponseStatus { get; set; }
+
+    /// <summary>
+    /// Previews only: a colleague who has their own booking or an accepted meeting at that
+    /// time. A heads-up, never a refusal; it never says with what.
+    /// </summary>
+    public bool IsBusy { get; set; }
+
+    /// <summary>Previews only: on how many of the dates they're busy (a series: "busy on 2 of 8 dates"; one booking: 0 or 1).</summary>
+    public int BusyDates { get; set; }
+}
+
+/// <summary>The colleagues an Edit guests dialog lists, to learn which are busy at the booking's time.</summary>
+public class BusyGuestsInput
+{
+    [MaxLength(BookingConsts.MaxInvitees)]
+    public List<Guid> UserIds { get; set; } = new();
+}
+
+/// <summary>A colleague who is busy then, and on how many of the dates (always 1 for one booking).</summary>
+public class BusyGuestDto
+{
+    public Guid UserId { get; set; }
+    public int BusyDates { get; set; }
 }
 
 /// <summary>The owner changing who's invited after booking — and the head count, which must leave room for them.</summary>
