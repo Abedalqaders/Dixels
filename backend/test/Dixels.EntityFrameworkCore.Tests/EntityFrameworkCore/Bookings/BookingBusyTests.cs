@@ -191,6 +191,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         var busy = await _bookings.GetBusyGuestsAsync(mine.Id, new BusyGuestsInput { UserIds = [s.Rana, s.Omar, s.Lina] });
 
         // Rana accepted this very meeting: not "busy" with it. Omar has his own room then.
+        busy.Dates.ShouldBe(1);
         busy.Items.Select(b => (b.UserId, b.BusyDates)).ShouldBe(new[] { (s.Omar, 1) });
     }
 
@@ -218,6 +219,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         using var _ = ActAs(s.Owner);
         var busy = await _bookings.GetSeriesBusyGuestsAsync(series.SeriesId, new BusyGuestsInput { UserIds = [s.Rana, s.Omar] });
 
+        busy.Dates.ShouldBe(3);
         busy.Items.Select(b => (b.UserId, b.BusyDates)).ShouldBe(new[] { (s.Omar, 1) });
     }
 

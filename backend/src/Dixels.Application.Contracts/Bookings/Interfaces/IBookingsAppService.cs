@@ -53,8 +53,8 @@ public interface IBookingsAppService : IApplicationService
     /// accepted meeting; this booking itself doesn't count) — for Edit guests' "Busy then".
     /// Organiser only. Only the busy ones are returned.
     /// </summary>
-    Task<ListResultDto<BusyGuestDto>> GetBusyGuestsAsync(Guid id, BusyGuestsInput input);
+    Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, BusyGuestsInput input);
 
     /// <summary>The same across a series' upcoming dates, with how many dates each is busy on.</summary>
-    Task<ListResultDto<BusyGuestDto>> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input);
+    Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input);
 }

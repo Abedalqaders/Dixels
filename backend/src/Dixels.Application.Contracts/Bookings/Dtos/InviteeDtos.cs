@@ -64,6 +64,15 @@ public class BusyGuestDto
     public int BusyDates { get; set; }
 }
 
+/// <summary>The busy colleagues among those asked about, and how many dates were checked ("busy on 2 of 8 dates").</summary>
+public class BusyGuestsResultDto
+{
+    /// <summary>1 for one booking; for a series, its upcoming dates.</summary>
+    public int Dates { get; set; }
+
+    public List<BusyGuestDto> Items { get; set; } = new();
+}
+
 /// <summary>The owner changing who's invited after booking — and the head count, which must leave room for them.</summary>
 public class UpdateInviteesDto
 {

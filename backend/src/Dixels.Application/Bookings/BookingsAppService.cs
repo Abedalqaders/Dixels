@@ -250,14 +250,17 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         dtos?.Select(d => new Invitee(d.UserId, d.Email, d.Name)).ToList() ?? new List<Invitee>();
 
     /// <summary>A checked invitee as the booker sees them: with their email (only the owner sees guests' emails).</summary>
-    public async Task<ListResultDto<BusyGuestDto>> GetBusyGuestsAsync(Guid id, BusyGuestsInput input) =>
+    public async Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, BusyGuestsInput input) =>
         ToBusyGuests(await _bookingManager.FindBusyGuestsAsync(CurrentUser.GetId(), id, input.UserIds));
 
-    public async Task<ListResultDto<BusyGuestDto>> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input) =>
+    public async Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input) =>
         ToBusyGuests(await _bookingManager.FindBusySeriesGuestsAsync(CurrentUser.GetId(), seriesId, input.UserIds));
 
-    private static ListResultDto<BusyGuestDto> ToBusyGuests(IReadOnlyDictionary<Guid, int> busy) =>
-        new(busy.Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value }).ToList());
+    private static BusyGuestsResultDto ToBusyGuests((int Dates, Dictionary<Guid, int> Busy) result) => new()
+    {
+        Dates = result.Dates,
+        Items = result.Busy.Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value }).ToList(),
+    };
 
     private static BookingInviteeDto ToOwnersView(Invitee invitee, IReadOnlyDictionary<Guid, int>? busyDates)
     {
