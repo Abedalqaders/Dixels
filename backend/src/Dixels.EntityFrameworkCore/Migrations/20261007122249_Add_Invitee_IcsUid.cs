@@ -46,6 +46,9 @@ namespace Dixels.Migrations
             {
                 migrationBuilder.Sql(
                     $"UPDATE \"{table}\" SET \"IcsUid\" = left(replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''), 43) || '@dixels';");
+
+                // The empty default only served the rows above; a row without a UID must fail, not share "".
+                migrationBuilder.Sql($"ALTER TABLE \"{table}\" ALTER COLUMN \"IcsUid\" DROP DEFAULT;");
             }
 
             migrationBuilder.CreateIndex(

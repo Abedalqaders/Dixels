@@ -45,7 +45,9 @@ public interface IBookingRepository : IRepository<Booking, Guid>
 
     /// <summary>
     /// What the person's calendar shows for <c>[start, end)</c>: their confirmed bookings, and
-    /// the ones an admin cancelled that haven't ended yet (so they see why a booking went).
+    /// the ones an admin cancelled that haven't ended yet (so they see why a booking went) —
+    /// both their own and the ones they're a colleague guest of. A booking the owner cancelled,
+    /// or that they were removed from, isn't shown.
     /// With <paramref name="buildingId"/>, only those in that building (deleted rooms
     /// included) — an employee books in one building, so their calendar is that building's.
     /// </summary>
@@ -70,6 +72,9 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// guests are left out.
     /// </summary>
     Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Whether the person is (still) a colleague guest of this booking.</summary>
+    Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>Whether someone is still a guest — of a booking or a series — by their calendar UID.</summary>
     Task<bool> IsGuestAsync(string icsUid, CancellationToken cancellationToken = default);

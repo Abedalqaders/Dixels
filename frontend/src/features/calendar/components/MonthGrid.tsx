@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Plus, Repeat } from 'lucide-react'
+import { Plus, Repeat, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { addDays, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
@@ -131,9 +131,11 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                   className={cn(
                     'flex w-full min-w-0 items-center gap-1 rounded-md border border-brand/30 bg-slot-open px-1.5 py-0.5 text-start text-[11px] text-brand hover:border-brand/70',
                     d < today && 'opacity-60',
+                    // Someone else's booking I'm invited to: an outline on the plain background.
+                    b.invited && !b.cancelled && 'border-dashed border-brand bg-[var(--surface-raised)]',
                     b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through',
                   )}
-                  aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : 'Calendar:Item', {
+                  aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
                     title: b.title,
                     start: timeOf(b.localStart),
                     end: timeOf(b.localEnd),
@@ -144,6 +146,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                     onOpenItem(b)
                   }}
                 >
+                  {b.invited && <Users className="size-3 flex-none" aria-hidden="true" />}
                   {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
                   <span className="min-w-0 flex-1 truncate font-semibold">{b.title}</span>
                   <span className="flex-none whitespace-nowrap opacity-70">{formatClock(timeOf(b.localStart))}</span>

@@ -26,6 +26,7 @@ namespace Dixels.Postgres.Bookings;
 public class UserBookingsQueryPlanTests : DixelsApplicationTestBase<DixelsPostgresTestModule>
 {
     private const string UserIndex = "IX_AppBookings_UserId_EndsAt";
+    private const string GuestIndex = "IX_AppBookingAttendees_UserId_EndsAt";
 
     // Years of history: one booking every two hours, ending yesterday.
     private const int HistoryBookings = 20_000;
@@ -194,5 +195,46 @@ public class UserBookingsQueryPlanTests : DixelsApplicationTestBase<DixelsPostgr
         upcoming.Select(b => b.StartsAt).ShouldBe(new[] { Tomorrow.AddHours(9), Tomorrow.AddHours(13) });
 
         ShouldSeekThroughTheUserIndex(await ExplainLastBookingsQueryAsync());
+    }
+
+    [PostgresFact]
+    public async Task The_calendar_reads_this_weeks_invitations_not_every_one()
+    {
+        // The owner's twenty thousand bookings, and a colleague invited to every one of them:
+        // the colleague's calendar must seek their (UserId, EndsAt) guest rows to this week's.
+        var s = await CreateScenarioAsync();
+        await SeedAsync(s);
+        var guest = await WithUnitOfWorkAsync(async () =>
+        {
+            var user = new IdentityUser(Guid.NewGuid(), "pg" + Guid.NewGuid().ToString("N")[..10], $"{Guid.NewGuid():N}@test.io");
+            (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
+            return user.Id;
+        });
+        await using (var connection = new NpgsqlConnection(PostgresFixture.ConnectionString))
+        {
+            await connection.OpenAsync();
+            await using var invite = new NpgsqlCommand(
+                """
+                INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
+                SELECT gen_random_uuid(), "Id", "EndsAt", @guest, 'Pending', gen_random_uuid()::text || '@dixels' FROM "AppBookings" WHERE "UserId" = @owner;
+                ANALYZE "AppBookingAttendees";
+                """, connection);
+            invite.Parameters.AddWithValue("guest", guest);
+            invite.Parameters.AddWithValue("owner", s.UserId);
+            await invite.ExecuteNonQueryAsync();
+        }
+
+        SqlCapture.Instance.Clear();
+        var shown = await WithUnitOfWorkAsync(() =>
+            _bookingRepository.GetCalendarForUserAsync(guest, Tomorrow, Tomorrow.AddDays(1), DateTimeOffset.UtcNow));
+        // The same as the owner sees: confirmed, and the admin-cancelled one; not the owner-cancelled one.
+        shown.Select(b => b.StartsAt).ShouldBe(new[] { Tomorrow.AddHours(9), Tomorrow.AddHours(13), Tomorrow.AddHours(15) });
+
+        var plan = await ExplainLastBookingsQueryAsync();
+        plan.ShouldContain(GuestIndex);
+        plan.ShouldNotContain("Seq Scan on \"AppBookingAttendees\"");
+        plan.ShouldNotContain("Seq Scan on \"AppBookings\"");
+        var guestLine = plan.Split(Environment.NewLine).First(line => line.Contains(GuestIndex));
+        double.Parse(Regex.Match(guestLine, @"rows=([\d.]+)").Groups[1].Value, CultureInfo.InvariantCulture).ShouldBeLessThanOrEqualTo(MostRowsRead);
     }
 }

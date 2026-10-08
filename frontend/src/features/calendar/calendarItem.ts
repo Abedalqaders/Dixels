@@ -21,6 +21,8 @@ export interface CalendarItem {
   cancelled: boolean
   /** One date of a recurring series. */
   repeats: boolean
+  /** Someone else's booking I'm a guest of: drawn as an outline, opened read-only. */
+  invited: boolean
 }
 
 /** A booking, as the calendar's light list describes it. */
@@ -35,5 +37,6 @@ export function bookingItem(b: BookingSummaryDto): CalendarItem {
     note: b.title || undefined,
     cancelled: b.status === 'Cancelled',
     repeats: Boolean(b.seriesId),
+    invited: b.isInvited,
   }
 }
