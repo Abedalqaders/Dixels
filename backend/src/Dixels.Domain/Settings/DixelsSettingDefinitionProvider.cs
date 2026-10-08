@@ -31,5 +31,8 @@ public class DixelsSettingDefinitionProvider : SettingDefinitionProvider
 
         // App-wide, server-only.
         context.Add(new SettingDefinition(DixelsSettings.RsvpMailboxAddress, defaultValue: "rsvp@dixels.local"));
+
+        // App-wide, server-only: configuration, not an admin screen.
+        context.Add(new SettingDefinition(DixelsSettings.ExternalGuestRetentionDays, defaultValue: "90"));
     }
 }

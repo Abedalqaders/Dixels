@@ -257,6 +257,51 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToDictionaryAsync(a => a.BookingId, a => a.ResponseStatus, GetCancellationToken(cancellationToken));
     }
 
+    public async Task<int> DeleteExpiredExternalGuestsAsync(DateTimeOffset cutoff, int batchSize, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // Through the partial index on outside guests' rows: never more than the retention window
+        // and the booking horizon hold, however long the history. A cancelled booking counts from
+        // when it was cancelled (its end may be months ahead), the rest from their end.
+        var ids = await (
+                from a in dbContext.Set<BookingAttendee>()
+                join b in dbContext.Bookings on a.BookingId equals b.Id
+                where a.UserId == null
+                      && ((b.Status != BookingStatus.Cancelled && a.EndsAt < cutoff)
+                          || (b.Status == BookingStatus.Cancelled && b.CancelledAt < cutoff))
+                select a.Id)
+            .Take(batchSize)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return ids.Count == 0
+            ? 0
+            : await dbContext.Set<BookingAttendee>()
+                .Where(a => ids.Contains(a.Id))
+                .ExecuteDeleteAsync(GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<int> DeleteExpiredSeriesExternalGuestsAsync(DateTimeOffset cutoff, int batchSize, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // Kept while any date is still inside the window: the dates were copied from this list.
+        var ids = await dbContext.Set<BookingSeriesAttendee>()
+            .Where(a => a.UserId == null
+                        && !dbContext.Bookings.Any(b => b.SeriesId == a.SeriesId
+                                                        && ((b.Status != BookingStatus.Cancelled && b.EndsAt >= cutoff)
+                                                            || (b.Status == BookingStatus.Cancelled && b.CancelledAt >= cutoff))))
+            .Select(a => a.Id)
+            .Take(batchSize)
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return ids.Count == 0
+            ? 0
+            : await dbContext.Set<BookingSeriesAttendee>()
+                .Where(a => ids.Contains(a.Id))
+                .ExecuteDeleteAsync(GetCancellationToken(cancellationToken));
+    }
+
     public async Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();

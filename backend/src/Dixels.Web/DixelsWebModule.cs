@@ -402,11 +402,12 @@ public class DixelsWebModule : AbpModule
         });
     }
 
-    // Here rather than in the domain module, so only the API host sends reminders — the
-    // migrator loads the domain too and must not.
+    // Here rather than in the domain module, so only the API host sends reminders and cleans up
+    // guests' details — the migrator loads the domain too and must not.
     public override async Task OnPostApplicationInitializationAsync(ApplicationInitializationContext context)
     {
         await context.AddBackgroundWorkerAsync<BookingReminderWorker>();
+        await context.AddBackgroundWorkerAsync<ExternalGuestCleanupWorker>();
     }
 
     private static class HealthCheckTags
