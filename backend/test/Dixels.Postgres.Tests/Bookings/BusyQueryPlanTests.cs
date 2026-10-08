@@ -103,8 +103,8 @@ public class BusyQueryPlanTests : DixelsApplicationTestBase<DixelsPostgresTestMo
                      2, '', 'Confirmed', '{}', md5(random()::text), false, '{}', '', now()
               FROM generate_series(1, @count) AS n
               RETURNING "Id", "EndsAt")
-            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus")
-            SELECT gen_random_uuid(), "Id", "EndsAt", @user, 'Accepted' FROM b
+            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
+            SELECT gen_random_uuid(), "Id", "EndsAt", @user, 'Accepted', md5(random()::text) || '@dixels' FROM b
             """);
 
         // Tomorrow: their own 09–10, and a meeting they accepted 13–14.
@@ -118,8 +118,8 @@ public class BusyQueryPlanTests : DixelsApplicationTestBase<DixelsPostgresTestMo
               VALUES (gen_random_uuid(), @space, @organiser, @tomorrow + interval '13 hours', @tomorrow + interval '14 hours',
                       2, '', 'Confirmed', '{}', md5(random()::text), false, '{}', '', now())
               RETURNING "Id", "EndsAt")
-            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus")
-            SELECT gen_random_uuid(), "Id", "EndsAt", @user, 'Accepted' FROM b
+            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
+            SELECT gen_random_uuid(), "Id", "EndsAt", @user, 'Accepted', md5(random()::text) || '@dixels' FROM b
             """);
 
         foreach (var table in new[] { "AppBookings", "AppBookingAttendees" })
