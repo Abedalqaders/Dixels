@@ -1,5 +1,4 @@
-﻿using System;
-using Dixels.Bookings;
+﻿using Dixels.Bookings;
 using Dixels.SpaceManagement;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,9 +34,6 @@ public class DixelsEntityFrameworkCoreModule : AbpModule
 {
     public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        // https://www.npgsql.org/efcore/release-notes/6.0.html#opting-out-of-the-new-timestamp-mapping-logic
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
         DixelsEfCoreEntityExtensionMappings.Configure();
     }
 
