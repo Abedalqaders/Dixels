@@ -951,6 +951,10 @@
     "Email:GuestCancelled:ByOwner": "{0} cancelled this meeting. It's been taken off your calendar.",
     "Email:GuestCancelled:ByAdmin": "An administrator cancelled this meeting. It's been taken off your calendar.",
     "Email:GuestsTold": "Your {0} guests were told it's cancelled.",
-    "Email:GuestsTold:One": "Your guest was told it's cancelled."
+    "Email:GuestsTold:One": "Your guest was told it's cancelled.",
+    "Email:Invite:AddedHeading": "{0} added you to {1}",
+    "Email:GuestRemoved:Heading": "{0} removed you from {1}",
+    "Email:GuestRemoved:Subject": "Removed: {0} · {1}",
+    "Email:GuestRemoved:Note": "It's been taken off your calendar."
   }
 }

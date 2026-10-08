@@ -338,9 +338,13 @@ export interface TextKeys {
   "Email:GuestCancelled:Subject": string
   "Email:GuestCancelled:SubjectSeries": string
   "Email:GuestMark": string
+  "Email:GuestRemoved:Heading": string
+  "Email:GuestRemoved:Note": string
+  "Email:GuestRemoved:Subject": string
   "Email:Guests": string
   "Email:GuestsTold": string
   "Email:GuestsTold:One": string
+  "Email:Invite:AddedHeading": string
   "Email:Invite:Footer": string
   "Email:Invite:Heading": string
   "Email:Invite:Subject": string

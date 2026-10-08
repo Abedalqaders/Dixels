@@ -36,12 +36,14 @@ public partial class BookingManager
         var place = await LoadPlaceAsync(booking.SpaceId);
         var resolved = await CheckGuestsAsync(userId, place, booking.Attendees, attendees, invitees);
 
+        var copies = CopiesOf(booking.Invitees);
         var (added, removed) = booking.ChangeGuests(attendees, resolved, GuidGenerator);
         await _bookingRepository.UpdateAsync(booking, autoSave: true);
 
         if (added.Count > 0 || removed.Count > 0)
         {
-            await _localEventBus.PublishAsync(new BookingInviteesChangedEvent(booking.Id, null, new[] { booking }, added, removed));
+            await _localEventBus.PublishAsync(new BookingInviteesChangedEvent(
+                booking.Id, null, new[] { booking }, added, removed, Removed(copies, removed)));
         }
 
         return (booking, place);
@@ -72,6 +74,7 @@ public partial class BookingManager
         var place = await LoadPlaceAsync(series.SpaceId);
         var resolved = await CheckGuestsAsync(userId, place, series.Attendees, attendees, invitees);
 
+        var copies = CopiesOf(series.Invitees);
         var (added, removed) = series.ChangeGuests(attendees, resolved, GuidGenerator);
         foreach (var booking in upcoming)
         {
@@ -83,11 +86,19 @@ public partial class BookingManager
 
         if (added.Count > 0 || removed.Count > 0)
         {
-            await _localEventBus.PublishAsync(new BookingInviteesChangedEvent(null, series.Id, upcoming, added, removed));
+            await _localEventBus.PublishAsync(new BookingInviteesChangedEvent(
+                null, series.Id, upcoming, added, removed, Removed(copies, removed)));
         }
 
         return (series, upcoming, place);
     }
+
+    /// <summary>The guests' calendar copies before a change (the rows of those removed are deleted with it).</summary>
+    private static Dictionary<string, GuestCopy> CopiesOf(IEnumerable<InviteeRow> rows) =>
+        rows.ToDictionary(r => r.ToInvitee().Key, r => new GuestCopy(r.ToInvitee(), r.IcsUid, r.IcsSequence));
+
+    private static List<GuestCopy> Removed(IReadOnlyDictionary<string, GuestCopy> copies, IEnumerable<Invitee> removed) =>
+        removed.Select(i => copies[i.Key]).ToList();
 
     /// <summary>The guest list as it will be saved, or a rejection naming what's wrong with it or the head count.</summary>
     private async Task<IReadOnlyList<Invitee>> CheckGuestsAsync(
