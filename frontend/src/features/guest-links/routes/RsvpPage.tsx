@@ -27,6 +27,12 @@ type View =
 
 const CLOSED_CODE = 'Dixels:Bookings:ResponseClosed'
 
+/**
+ * Links whose invite language was already applied, kept outside the page: a language change
+ * re-mounts every page (LocaleRoot), and the guest's own pick must then stay.
+ */
+const languageApplied = new Set<string>()
+
 /** `?answer=accepted|declined` from the email's buttons; anything else just opens the page. */
 function answerFrom(value: string | null): GuestAnswer | null {
   if (value === 'accepted') return InviteeResponseStatus.Accepted
@@ -49,13 +55,9 @@ function looksLikeAPerson(): boolean {
  * mind. It opens in the booker's language (the invite's), with a switcher.
  */
 export function RsvpPage() {
-  // Re-renders on a language change (the switcher), which reads the invitation again below.
-  useTranslation()
   const { token = '' } = useParams()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
   const [view, setView] = useState<View>({ kind: 'loading' })
-  const pickedLanguage = useRef(false)
-  const language = currentLanguage()
 
   const fail = useCallback((error: unknown, again: GuestAnswer | null) => {
     if (error instanceof ApiError && error.status === 404) setView({ kind: 'notFound' })
@@ -65,14 +67,14 @@ export function RsvpPage() {
 
   const show = useCallback((invitation: GuestInvitationDto) => {
     // The first time only: open in the invite's language, then leave the choice to the guest.
-    if (!pickedLanguage.current) {
-      pickedLanguage.current = true
+    if (!languageApplied.has(token)) {
+      languageApplied.add(token)
       if (invitation.language !== currentLanguage() && availableLanguages().some((l) => l.code === invitation.language)) {
         void setLanguage(invitation.language)
       }
     }
     setView(invitation.isOpen ? { kind: 'shown', invitation } : { kind: 'closed' })
-  }, [])
+  }, [token])
 
   const save = useCallback(
     (value: GuestAnswer) => {
@@ -94,6 +96,7 @@ export function RsvpPage() {
   }, [token, show, fail])
 
   // Opening: save the email's answer when a person is looking, else just show the invitation.
+  // (A language change re-mounts the page: it opens again here and reads the invitation in it.)
   const opened = useRef(false)
   useEffect(() => {
     if (opened.current) return
@@ -103,34 +106,31 @@ export function RsvpPage() {
       lookup()
       return
     }
-    if (looksLikeAPerson()) {
+    const saveOnce = () => {
+      // Saved once: a refresh or a language change only looks, so it can't undo a change of mind.
+      setParams({}, { replace: true })
       save(fromEmail)
+    }
+    if (looksLikeAPerson()) {
+      saveOnce()
       return
     }
     // Opened in a background tab: answer once it's actually looked at.
     const onVisible = () => {
       if (!looksLikeAPerson()) return
       document.removeEventListener('visibilitychange', onVisible)
-      save(fromEmail)
+      saveOnce()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [params, save, lookup])
-
-  // Another language picked: read the invitation again, for the room's names in it.
-  const shownLanguage = useRef(language)
-  useEffect(() => {
-    if (shownLanguage.current === language) return
-    shownLanguage.current = language
-    if (view.kind === 'shown') lookup()
-  }, [language, view.kind, lookup])
+  }, [params, setParams, save, lookup])
 
   return (
     <div className="authscreen">
       <div className="authcard rsvpcard" aria-live="polite">
         <div className="rsvptop">
           <Logo className="authlogo rsvplogo" />
-          <LanguageSwitcher compact align="end" />
+          <LanguageSwitcher className="loginlang" align="end" />
         </div>
         <RsvpBody view={view} onAnswer={answer} onRetry={() => (view.kind === 'failed' && view.again !== null ? answer(view.again) : lookup())} />
       </div>

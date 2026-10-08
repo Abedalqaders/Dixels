@@ -37,15 +37,19 @@ function invitation(over: Partial<GuestInvitationDto> = {}): GuestInvitationDto 
   }
 }
 
+// Each test its own link: which links already opened in the invite's language is kept per page load.
+let links = 0
+
 function openLink(search = '') {
+  const token = `b.row${++links}.mac`
   render(
-    <MemoryRouter initialEntries={[`/rsvp/b.row.mac${search}`]}>
+    <MemoryRouter initialEntries={[`/rsvp/${token}${search}`]}>
       <Routes>
         <Route path="/rsvp/:token" element={<RsvpPage />} />
       </Routes>
     </MemoryRouter>,
   )
-  return userEvent.setup()
+  return { token, user: userEvent.setup() }
 }
 
 describe('RsvpPage', () => {
@@ -62,17 +66,17 @@ describe('RsvpPage', () => {
 
   it("saves the email's Accept as the page opens, then offers a change of mind", async () => {
     answer.mockImplementation((_token, value) => Promise.resolve(invitation({ myResponse: value })))
-    const user = openLink('?answer=accepted')
+    const { token, user } = openLink('?answer=accepted')
 
     expect(await screen.findByRole('heading', { name: 'You accepted' })).toBeInTheDocument()
-    expect(answer).toHaveBeenCalledExactlyOnceWith('b.row.mac', InviteeResponseStatus.Accepted)
+    expect(answer).toHaveBeenCalledExactlyOnceWith(token, InviteeResponseStatus.Accepted)
     expect(lookup).not.toHaveBeenCalled()
     expect(screen.getByText('Dana Test invited you')).toBeInTheDocument()
     expect(screen.getByText('Room 1 · Level 1 · HQ')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Changed your mind? Decline instead' }))
     expect(await screen.findByRole('heading', { name: 'You declined' })).toBeInTheDocument()
-    expect(answer).toHaveBeenLastCalledWith('b.row.mac', InviteeResponseStatus.Declined)
+    expect(answer).toHaveBeenLastCalledWith(token, InviteeResponseStatus.Declined)
   })
 
   it('never answers for a browser driven by automation (a link scanner): it only shows the invitation', async () => {
@@ -89,11 +93,11 @@ describe('RsvpPage', () => {
   it('without an answer in the link, only looks: the guest picks', async () => {
     lookup.mockResolvedValue(invitation())
     answer.mockResolvedValue(invitation({ myResponse: InviteeResponseStatus.Accepted }))
-    const user = openLink()
+    const { token, user } = openLink()
 
     await user.click(await screen.findByRole('button', { name: 'Accept' }))
     expect(await screen.findByRole('heading', { name: 'You accepted' })).toBeInTheDocument()
-    expect(answer).toHaveBeenCalledExactlyOnceWith('b.row.mac', InviteeResponseStatus.Accepted)
+    expect(answer).toHaveBeenCalledExactlyOnceWith(token, InviteeResponseStatus.Accepted)
   })
 
   it('a series says the answer covers every upcoming date', async () => {
@@ -115,6 +119,19 @@ describe('RsvpPage', () => {
     answer.mockRejectedValue(new ApiError(404, { error: { code: 'Dixels:Bookings:GuestLinkNotFound' } }))
     openLink('?answer=accepted')
     expect(await screen.findByRole('heading', { name: "This link doesn't work" })).toBeInTheDocument()
+  })
+
+  it("switching language keeps the guest's pick and never sends the email's answer again", async () => {
+    answer.mockImplementation((_token, value) => Promise.resolve(invitation({ myResponse: value })))
+    lookup.mockImplementation(() => Promise.resolve(invitation({ myResponse: InviteeResponseStatus.Declined })))
+    const { user } = openLink('?answer=accepted')
+    await user.click(await screen.findByRole('button', { name: 'Changed your mind? Decline instead' }))
+    expect(await screen.findByRole('heading', { name: 'You declined' })).toBeInTheDocument()
+
+    // What the switcher does (LocaleRoot then re-mounts the page in the app).
+    await setLanguage('ar')
+    expect(await screen.findByRole('heading', { name: 'رفضت الدعوة' })).toBeInTheDocument()
+    expect(answer).toHaveBeenCalledTimes(2)
   })
 
   it("opens in the booker's language, right to left in Arabic", async () => {
