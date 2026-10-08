@@ -42,6 +42,8 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.Invitees))]
     [MapperIgnoreTarget(nameof(BookingDto.IsOwner))]
     [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
+    [MapperIgnoreTarget(nameof(BookingDto.Capacity))]
+    [MapperIgnoreTarget(nameof(BookingDto.MinAttendees))]
     public partial BookingDto Map(Booking source);
 
     [MapperIgnoreSource(nameof(Booking.UserId))]
@@ -67,6 +69,8 @@ public partial class BookingsObjectMapping :
     [MapperIgnoreTarget(nameof(BookingDto.Invitees))]
     [MapperIgnoreTarget(nameof(BookingDto.IsOwner))]
     [MapperIgnoreTarget(nameof(BookingDto.OwnerName))]
+    [MapperIgnoreTarget(nameof(BookingDto.Capacity))]
+    [MapperIgnoreTarget(nameof(BookingDto.MinAttendees))]
     public partial void Map(Booking source, BookingDto destination);
 
     public void BeforeMap(Booking source)

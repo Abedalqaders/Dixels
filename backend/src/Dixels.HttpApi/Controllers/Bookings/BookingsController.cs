@@ -41,6 +41,14 @@ public class BookingsController : DixelsController, IBookingsAppService
     public virtual Task<SeriesPreviewDto> PreviewSeriesAsync([FromBody] SeriesRequestDto input) =>
         _bookingsAppService.PreviewSeriesAsync(input);
 
+    [HttpPut("{id}/invitees")]
+    public virtual Task<BookingDto> UpdateInviteesAsync(Guid id, [FromBody] UpdateInviteesDto input) =>
+        _bookingsAppService.UpdateInviteesAsync(id, input);
+
+    [HttpPut("series/{seriesId}/invitees")]
+    public virtual Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, [FromBody] UpdateInviteesDto input) =>
+        _bookingsAppService.UpdateSeriesInviteesAsync(seriesId, input);
+
     [HttpPost("series")]
     public virtual Task<SeriesCreatedDto> CreateSeriesAsync([FromBody] CreateSeriesDto input) =>
         _bookingsAppService.CreateSeriesAsync(input);

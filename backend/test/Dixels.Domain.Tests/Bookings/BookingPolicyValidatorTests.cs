@@ -116,6 +116,32 @@ public class BookingPolicyValidatorTests
     }
 
     [Fact]
+    public void A_guest_edit_checks_capacity_only_when_the_head_count_goes_up()
+    {
+        // The room seats 8; a booking kept at 10 when it shrank may stay at 10 or go down.
+        _validator.ValidateHeadCount(Rules(), storedAttendees: 10, attendees: 10, invitees: 2).ShouldBeEmpty();
+        _validator.ValidateHeadCount(Rules(), storedAttendees: 10, attendees: 9, invitees: 2).ShouldBeEmpty();
+        Codes(_validator.ValidateHeadCount(Rules(), storedAttendees: 9, attendees: 10, invitees: 2))
+            .ShouldBe(new[] { DixelsDomainErrorCodes.BookingOverCapacity });
+    }
+
+    [Fact]
+    public void A_guest_edit_checks_the_minimum_only_when_the_head_count_goes_down()
+    {
+        // The room needs 4; a booking kept at 3 when the minimum rose may stay at 3 or go up.
+        _validator.ValidateHeadCount(Rules(), storedAttendees: 3, attendees: 3, invitees: 2).ShouldBeEmpty();
+        Codes(_validator.ValidateHeadCount(Rules(), storedAttendees: 3, attendees: 2, invitees: 1))
+            .ShouldBe(new[] { DixelsDomainErrorCodes.BookingBelowMinAttendees });
+    }
+
+    [Fact]
+    public void A_guest_edit_always_needs_room_for_everyone_invited()
+    {
+        Codes(_validator.ValidateHeadCount(Rules(), storedAttendees: 5, attendees: 5, invitees: 5))
+            .ShouldBe(new[] { DixelsDomainErrorCodes.BookingAttendeesBelowInvitees });
+    }
+
+    [Fact]
     public void No_minimum_means_one_attendee_is_fine()
     {
         Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 1, rules: Rules(minAttendees: null)).ShouldBeEmpty();

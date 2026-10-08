@@ -12,6 +12,7 @@ using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Dixels.Postgres.Bookings;
 
@@ -27,9 +28,14 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
 
     private readonly IBookingsAppService _bookings;
     private readonly ICurrentPrincipalAccessor _principalAccessor;
+    private readonly ITestOutputHelper _output;
 
-    public BookingInviteesPostgresTests()
+    // 16 when written: loads, lock, guest check, the batched save and the reply. Not one per date.
+    private const int BoundForSeriesEdit = 18;
+
+    public BookingInviteesPostgresTests(ITestOutputHelper output)
     {
+        _output = output;
         _bookings = GetRequiredService<IBookingsAppService>();
         _principalAccessor = GetRequiredService<ICurrentPrincipalAccessor>();
     }
@@ -107,6 +113,38 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
                 """SELECT count(*) FROM "AppBookingAttendees" a JOIN "AppBookings" b ON b."Id" = a."BookingId" WHERE b."SeriesId" = @id AND a."EndsAt" = b."EndsAt" """,
                 created.SeriesId))
             .ShouldBe(60);
+    }
+
+    [PostgresFact]
+    public async Task Changing_the_guests_of_a_100_date_series_is_a_few_commands_not_one_per_date()
+    {
+        var s = await CreateScenarioAsync();
+        using var _ = ActAs(s.OwnerId);
+        var created = await _bookings.CreateSeriesAsync(new CreateSeriesDto
+        {
+            SpaceId = s.SpaceId,
+            LocalStart = Tomorrow.AddHours(10),
+            LocalEnd = Tomorrow.AddHours(11),
+            Attendees = 4,
+            Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(99)) },
+            IdempotencyKey = Guid.NewGuid().ToString(),
+            Invitees = s.ColleagueIds.Take(2).Select(id => new InviteeDto { UserId = id }).ToList(),
+        });
+        created.Bookings.Count.ShouldBe(100);
+
+        SqlCapture.Instance.Clear();
+        var updated = await _bookings.UpdateSeriesInviteesAsync(created.SeriesId, new UpdateInviteesDto
+        {
+            Attendees = 4,
+            Invitees = s.ColleagueIds.Skip(1).Select(id => new InviteeDto { UserId = id }).ToList(),
+        });
+        var commands = SqlCapture.Instance.Commands.Count;
+        _output.WriteLine($"series guest edit: {commands} commands");
+
+        updated.Bookings.Count.ShouldBe(100);
+        updated.Bookings.ShouldAllBe(b => b.Invitees.Count == 2);
+        // 100 dates × (one guest out, one in) are batched: the count doesn't grow with the dates.
+        commands.ShouldBeLessThanOrEqualTo(BoundForSeriesEdit);
     }
 
     [PostgresFact]

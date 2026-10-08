@@ -18,10 +18,12 @@ interface BookingDetailDialogProps {
   canCancel: boolean
   onClose: () => void
   onCancel: (booking: BookingDto) => void
+  /** Offers Edit guests on an upcoming booking I own — only to someone who may book. */
+  onEditGuests?: (booking: BookingDto) => void
 }
 
 /** One booking's details as a dialog — for screens too narrow for the calendar's side panel. */
-export function BookingDetailDialog({ item, booking, error, canBook, canCancel, onClose, onCancel }: BookingDetailDialogProps) {
+export function BookingDetailDialog({ item, booking, error, canBook, canCancel, onClose, onCancel, onEditGuests }: BookingDetailDialogProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const link = canBook ? findSpaceLink(item, booking) : null
@@ -53,6 +55,11 @@ export function BookingDetailDialog({ item, booking, error, canBook, canCancel, 
             <Button variant="outline" onClick={onClose}>
               {t('Common:Close')}
             </Button>
+            {onEditGuests && booking?.isOwner && phase === 'upcoming' && (
+              <Button variant="outline" onClick={() => onEditGuests(booking)}>
+                {t('Booking:EditGuests')}
+              </Button>
+            )}
             {canCancel && booking?.isOwner && phase === 'upcoming' && (
               <Button variant="destructive" onClick={() => onCancel(booking)}>
                 {t('Booking:Cancel')}
