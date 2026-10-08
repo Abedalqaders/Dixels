@@ -382,6 +382,21 @@ describe('MyCalendarPage', () => {
     expect(within(detail).queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
   })
 
+  it('opens the booking an email\'s "View booking" points at, on its day', async () => {
+    renderPage(`/my-calendar?view=day&date=${tomorrow}&booking=b1`)
+
+    const detail = await screen.findByRole('dialog')
+    expect(await within(detail).findByText('Upcoming')).toBeInTheDocument()
+    expect(within(detail).getAllByText('Design review').length).toBeGreaterThan(0)
+  })
+
+  it("says so when the booking an email points at isn't on the calendar any more", async () => {
+    renderPage(`/my-calendar?view=day&date=${tomorrow}&booking=gone`)
+
+    expect(await screen.findByText(/That booking isn't on your calendar any more/)).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('says so when the employee has no building', async () => {
     vi.mocked(getMyBookableBuilding).mockResolvedValue(null)
     renderPage()

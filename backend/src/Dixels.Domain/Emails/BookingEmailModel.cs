@@ -92,6 +92,14 @@ public class BookingEmailModel
     public string? AcceptUrl { get; set; }
     public string? DeclineUrl { get; set; }
 
+    /// <summary>
+    /// The invite is a meeting request the guest's mail app answers itself (E6): the email then
+    /// points at its Accept / Decline bar, and the links above shrink to a backup line to
+    /// <see cref="AnswerUrl"/> (the answer page, no answer chosen yet).
+    /// </summary>
+    public bool AnswerInMailApp { get; set; }
+    public string? AnswerUrl { get; set; }
+
     /// <summary>The booker's "can't make it" email: the guest who declined.</summary>
     public string? AnsweredBy { get; set; }
 

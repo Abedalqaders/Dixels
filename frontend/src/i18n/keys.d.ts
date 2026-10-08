@@ -161,6 +161,7 @@ export interface TextKeys {
   "Calendar:BookedSeries_one": string
   "Calendar:BookedSeries_other": string
   "Calendar:BookingLoadFailed": string
+  "Calendar:BookingUnavailable": string
   "Calendar:BookingsLoadFailed": string
   "Calendar:BuildingLoadFailed": string
   "Calendar:Cancelled": string
@@ -378,9 +379,13 @@ export interface TextKeys {
   "Email:GuestsTold:One": string
   "Email:Invite:AddedHeading": string
   "Email:Invite:Answer": string
+  "Email:Invite:AnswerAtTop": string
+  "Email:Invite:AnswerAtTopSeries": string
+  "Email:Invite:AnswerHere": string
   "Email:Invite:AnswerSeries": string
   "Email:Invite:Footer": string
   "Email:Invite:Heading": string
+  "Email:Invite:NoButtons": string
   "Email:Invite:Subject": string
   "Email:Invite:SubjectSeries": string
   "Email:InvitedBy": string
