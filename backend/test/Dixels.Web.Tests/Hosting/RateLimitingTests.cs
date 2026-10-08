@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Dixels.Web.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ public class RateLimitingTests : DixelsWebTestBase
         {
             options.Api = new DixelsRateLimitWindow { PermitLimit = Limit, WindowSeconds = 60 };
             options.Account = new DixelsRateLimitWindow { PermitLimit = Limit, WindowSeconds = 60 };
+            options.GuestLinks = new DixelsRateLimitWindow { PermitLimit = Limit, WindowSeconds = 60 };
         });
     }
 
@@ -52,6 +54,18 @@ public class RateLimitingTests : DixelsWebTestBase
     }
 
     [Fact]
+    public async Task The_public_answer_page_needs_no_sign_in_and_has_its_own_limit()
+    {
+        // A bad link is "not found", not "sign in first": the call is anonymous.
+        for (var i = 0; i < Limit; i++)
+        {
+            (await PostRsvpLookupAsync()).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
+        (await PostRsvpLookupAsync()).StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
     public async Task Health_checks_and_pages_are_never_throttled()
     {
         for (var i = 0; i < Limit + 3; i++)
@@ -59,6 +73,11 @@ public class RateLimitingTests : DixelsWebTestBase
             (await Client.GetAsync("/health/live")).StatusCode.ShouldBe(HttpStatusCode.OK);
             (await Client.GetAsync("/Account/Login")).StatusCode.ShouldNotBe(HttpStatusCode.TooManyRequests);
         }
+    }
+
+    private Task<HttpResponseMessage> PostRsvpLookupAsync()
+    {
+        return Client.PostAsync("/api/app/rsvp/lookup", new StringContent("{\"token\":\"not-a-token\"}", Encoding.UTF8, "application/json"));
     }
 
     private Task<HttpResponseMessage> PostLoginAsync()

@@ -35,6 +35,11 @@ function appRoutes(queryClient: QueryClient) {
       <Route path="/callback" element={<CallbackPage />} />
       <Route path="/signing-out" element={<SignOutPage />} />
       <Route path={HOME_PATH} element={<LandingPage />} />
+      {/* A guest's answer link from an invite email: public (the link is the proof), its own frame. */}
+      <Route
+        path="/rsvp/:token"
+        lazy={() => import('@/features/guest-links/routes/RsvpPage').then(({ RsvpPage }) => ({ element: <RsvpPage /> }))}
+      />
       {/* The pages anyone signed in may have: the sidebar beside the page. */}
       <Route
         element={
