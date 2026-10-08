@@ -38,6 +38,7 @@ public partial class BookingManager : DomainService
     private readonly ILocalEventBus _localEventBus;
     private readonly BookingInviteeResolver _inviteeResolver;
     private readonly BookingAccess _bookingAccess;
+    private readonly BookingBusyFinder _busyFinder;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -55,7 +56,8 @@ public partial class BookingManager : DomainService
         IStringLocalizer<DixelsResource> localizer,
         ILocalEventBus localEventBus,
         BookingInviteeResolver inviteeResolver,
-        BookingAccess bookingAccess)
+        BookingAccess bookingAccess,
+        BookingBusyFinder busyFinder)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -73,6 +75,7 @@ public partial class BookingManager : DomainService
         _localEventBus = localEventBus;
         _inviteeResolver = inviteeResolver;
         _bookingAccess = bookingAccess;
+        _busyFinder = busyFinder;
     }
 
     /// <summary>
@@ -85,8 +88,49 @@ public partial class BookingManager : DomainService
     {
         var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
-        return await ValidateAsync(context, attendees, userId, resolved);
+        var evaluation = await ValidateAsync(context, attendees, userId, resolved);
+
+        // Heads-ups only a preview shows (a create returns none, so it doesn't pay for them).
+        var slot = new[] { new TimeRange(evaluation.StartUtc, evaluation.EndUtc) };
+        var meeting = (await AcceptedMeetingsAsync(userId, context.Building, slot)).FirstOrDefault();
+        return evaluation with
+        {
+            Warnings = meeting == default
+                ? evaluation.Warnings
+                : evaluation.Warnings.Append(AcceptedMeetingWarning(meeting.Range, context.LocalClock)).ToList(),
+            Busy = await _busyFinder.FindBusyAsync(ColleagueIds(resolved), slot),
+        };
     }
+
+    private static List<Guid> ColleagueIds(IEnumerable<Invitee> invitees) =>
+        invitees.Where(i => i.UserId is not null).Select(i => i.UserId!.Value).ToList();
+
+    /// <summary>
+    /// Meetings the person accepted that overlap any of <paramref name="slots"/>, earliest
+    /// first — in a building that cares about double bookings (Warn or Block). Only ever a
+    /// heads-up: Block keeps applying to their own room bookings, not to someone else's meeting.
+    /// </summary>
+    private async Task<List<BusySlot>> AcceptedMeetingsAsync(Guid userId, Building building, IReadOnlyList<TimeRange> slots)
+    {
+        if (building.OwnOverlapPolicy == OwnOverlapPolicy.Allow || slots.Count == 0)
+        {
+            return new List<BusySlot>();
+        }
+
+        return (await _bookingRepository.GetBusyAsync(
+                new[] { userId }, slots.Min(s => s.Start), slots.Max(s => s.End), Array.Empty<Guid>()))
+            .Where(b => b.IsAcceptedInvite && slots.Any(s => b.Range.Overlaps(s.Start, s.End)))
+            .OrderBy(b => b.Range.Start)
+            .ToList();
+    }
+
+    private static BookingViolation AcceptedMeetingWarning(TimeRange meeting, BuildingClock clock) =>
+        new(
+            DixelsDomainErrorCodes.BookingAcceptedMeetingOverlapWarning,
+            ConstraintSource.Building,
+            BookingFormat.Data(
+                ("from", clock.ToLocal(meeting.Start)),
+                ("until", TimeOnly.FromDateTime(clock.ToLocal(meeting.End)))));
 
     /// <summary>
     /// Creates a confirmed booking, or throws <see cref="BookingRejectedException"/>. Must run

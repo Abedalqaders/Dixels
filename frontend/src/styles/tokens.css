@@ -31,6 +31,8 @@
   --state-completed-ink: #4f4636;
   --state-cancelled-soft: #f6ddd8;
   --state-cancelled-ink: #8d2b1e;
+  --presence-free: #2f8a45;
+  --presence-busy: #c23a2a;
   --state-expired-soft: #f4e6c9;
   --state-expired-ink: #74510a;
   --state-blocked-soft: #f7e2d2;
@@ -93,6 +95,8 @@
   --state-completed-ink: #bdb5c6;
   --state-cancelled-soft: #3a1c18;
   --state-cancelled-ink: #f3968a;
+  --presence-free: #4fb565;
+  --presence-busy: #e5604f;
   --state-expired-soft: #33270f;
   --state-expired-ink: #dcae4e;
   --state-blocked-soft: #38230f;
@@ -138,6 +142,8 @@
     --state-completed-ink: #bdb5c6;
     --state-cancelled-soft: #3a1c18;
     --state-cancelled-ink: #f3968a;
+    --presence-free: #4fb565;
+    --presence-busy: #e5604f;
     --state-expired-soft: #33270f;
     --state-expired-ink: #dcae4e;
     --state-blocked-soft: #38230f;

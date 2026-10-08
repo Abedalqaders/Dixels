@@ -227,6 +227,8 @@ export interface TextKeys {
   "Common:Save": string
   "Common:Saving": string
   "Common:TryAgain": string
+  "Dixels:Bookings:AcceptedMeetingOverlapWarning": string
+  "Dixels:Bookings:AcceptedMeetingOverlapWarning:Short": string
   "Dixels:Bookings:AlreadyStarted": string
   "Dixels:Bookings:AnotherRoom": string
   "Dixels:Bookings:AttendeesBelowInvitees": string
@@ -606,7 +608,16 @@ export interface TextKeys {
   "Pagination:RowsPerPage": string
   "People:AddGuest": string
   "People:AlreadyAdded": string
+  "People:BusyAt": string
+  "People:BusyOnDates": string
+  "People:BusyOnTheseDates": string
+  "People:BusyPrivacy": string
+  "People:BusySummarySeries": string
+  "People:BusySummary_one": string
+  "People:BusySummary_other": string
+  "People:BusyTimes": string
   "People:EmailInvalid": string
+  "People:Free": string
   "People:Full": string
   "People:Guest": string
   "People:GuestEmail": string

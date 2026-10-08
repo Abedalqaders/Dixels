@@ -8,5 +8,7 @@ export const bookingsKeys = {
     detail: (id: string | null) => ['bookings', 'detail', id] as const,
     colleagues: (filter: string) => ['bookings', 'colleagues', filter] as const,
     externalGuestsEnabled: () => ['bookings', 'external-guests-enabled'] as const,
+    /** Which of these colleagues are busy at a booking's (or a series' upcoming) times. */
+    busyGuests: (bookingOrSeriesId: string, userIds: string[]) => ['bookings', 'busy-guests', bookingOrSeriesId, ...userIds] as const,
   },
 }

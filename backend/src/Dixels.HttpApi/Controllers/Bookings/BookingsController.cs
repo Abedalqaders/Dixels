@@ -53,6 +53,15 @@ public class BookingsController : DixelsController, IBookingsAppService
     public virtual Task<BookingDto> UpdateInviteesAsync(Guid id, [FromBody] UpdateInviteesDto input) =>
         _bookingsAppService.UpdateInviteesAsync(id, input);
 
+    // POST, not GET: the ids go in the body (up to 50 would make a long URL). Reads only.
+    [HttpPost("{id}/busy-guests")]
+    public virtual Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, [FromBody] BusyGuestsInput input) =>
+        _bookingsAppService.GetBusyGuestsAsync(id, input);
+
+    [HttpPost("series/{seriesId}/busy-guests")]
+    public virtual Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, [FromBody] BusyGuestsInput input) =>
+        _bookingsAppService.GetSeriesBusyGuestsAsync(seriesId, input);
+
     [HttpPut("series/{seriesId}/invitees")]
     public virtual Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, [FromBody] UpdateInviteesDto input) =>
         _bookingsAppService.UpdateSeriesInviteesAsync(seriesId, input);
