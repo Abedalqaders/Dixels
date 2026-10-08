@@ -33,17 +33,27 @@ $env:ASPNETCORE_URLS = "https://localhost:$apiPort"
 $env:ASPNETCORE_Kestrel__Certificates__Default__Path = Join-Path $env:USERPROFILE '.aspnet\https\dixels.pfx'
 $env:BlobStoring__FileSystem__BasePath = Join-Path $root 'App_Data\blobs'
 
+# From here on only external programs run. They write progress (docker) and banners
+# (dotnet watch) to stderr, which Windows PowerShell turns into a terminating error under
+# 'Stop' whenever the output is redirected; their exit codes say whether they worked.
+$ErrorActionPreference = 'Continue'
+
 if ($Migrate) {
+    # The sign-in clients' URLs are rewritten on every run: this worktree's API, and its web
+    # ports (App__CorsOrigins), instead of the defaults in the migrator's appsettings.json.
+    $env:OpenIddict__Applications__Dixels_Swagger__RootUrl = "https://localhost:$apiPort"
+    if ($env:App__CorsOrigins) { $env:OpenIddict__Applications__Dixels_App__RootUrl = $env:App__CorsOrigins }
     # From its own folder, or its appsettings.json (and the OIDC clients in it) isn't loaded.
     Push-Location (Join-Path $root 'src\Dixels.DbMigrator')
     try { dotnet run } finally { Pop-Location }
-    return
+    exit $LASTEXITCODE
 }
 
 # Only the mail catcher in Docker, with its SMTP port open to Windows.
 $env:DIXELS_SMTP_PORT = "$smtpPort"
 Push-Location $root
 try { docker compose up -d smtp4dev } finally { Pop-Location }
+if ($LASTEXITCODE -ne 0) { throw "Couldn't start smtp4dev (is Docker Desktop running?)" }
 Write-Host "API https://localhost:$apiPort  |  inbox http://localhost:$mailPort  |  SMTP localhost:$smtpPort"
 
 $project = Join-Path $root 'src\Dixels.Web'

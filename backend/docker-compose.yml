@@ -34,5 +34,7 @@ services:
     image: rnwood/smtp4dev:v3
     ports:
       - "${DIXELS_MAIL_PORT:-5000}:80"
-      # SMTP, for a backend run on Windows with run-local.ps1 (which sets this port).
-      - "${DIXELS_SMTP_PORT:-25000}:25"
+      # SMTP, for a backend run on Windows with run-local.ps1, which sets this port. Left
+      # unset (the backend in Docker reaches smtp4dev:25 itself), Docker picks a free one,
+      # so worktrees running side by side never clash.
+      - "127.0.0.1:${DIXELS_SMTP_PORT:-}:25"
