@@ -187,11 +187,122 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<List<(Guid BookingId, Guid? SeriesId)>> GetUpcomingInvitationsAsync(
+        Guid userId,
+        DateTimeOffset now,
+        Guid? buildingId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        var dbContext = await GetDbContextAsync();
+        if (buildingId is not null)
+        {
+            // As GetCalendarForUserAsync: a removed building's (soft-deleted) rooms count too.
+            var roomIds =
+                from s in dbContext.Spaces.IgnoreQueryFilters()
+                join f in dbContext.Floors.IgnoreQueryFilters() on s.FloorId equals f.Id
+                where f.BuildingId == buildingId
+                select s.Id;
+            bookings = bookings.Where(b => roomIds.Contains(b.SpaceId));
+        }
+
+        // EndsAt > now is implied by StartsAt > now; it's there so the guest rows' (UserId, EndsAt) index can seek.
+        var invitedTo = dbContext.Set<BookingAttendee>()
+            .Where(a => a.UserId == userId && a.EndsAt > now)
+            .Select(a => a.BookingId);
+        var found = await bookings
+            .Where(b => invitedTo.Contains(b.Id) && b.Status == BookingStatus.Confirmed && b.StartsAt > now)
+            .OrderBy(b => b.StartsAt)
+            .Select(b => new { b.Id, b.SeriesId })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return found.Select(b => (b.Id, b.SeriesId)).ToList();
+    }
+
+    public async Task ForgetAsync(IReadOnlyCollection<Guid> bookingIds, IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // Guest rows by their parent's id, so the ones a failed save was deleting go too.
+        foreach (var entry in dbContext.ChangeTracker.Entries().ToList())
+        {
+            var forget = entry.Entity switch
+            {
+                Booking b => bookingIds.Contains(b.Id),
+                BookingAttendee a => bookingIds.Contains(a.BookingId),
+                BookingSeries s => seriesIds.Contains(s.Id),
+                BookingSeriesAttendee a => seriesIds.Contains(a.SeriesId),
+                _ => false,
+            };
+            if (forget)
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
+
+    public async Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(
+        IReadOnlyCollection<Guid> bookingIds,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (bookingIds.Count == 0)
+        {
+            return new Dictionary<Guid, InviteeResponseStatus>();
+        }
+
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingAttendee>()
+            .Where(a => a.UserId == userId && bookingIds.Contains(a.BookingId))
+            .ToDictionaryAsync(a => a.BookingId, a => a.ResponseStatus, GetCancellationToken(cancellationToken));
+    }
+
     public async Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();
         return await dbContext.Set<BookingAttendee>()
             .AnyAsync(a => a.BookingId == bookingId && a.UserId == userId, GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<List<BusySlot>> GetBusyAsync(
+        IReadOnlyCollection<Guid> userIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        IReadOnlyCollection<Guid> exceptBookingIds,
+        CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        var bookings = dbContext.Bookings.AsNoTracking();
+        var ids = userIds.Distinct().ToList();
+        var except = exceptBookingIds.ToList();
+
+        // Their own bookings: through (UserId, EndsAt), like the calendar.
+        var own = await bookings
+            .Where(b => ids.Contains(b.UserId)
+                        && b.Status == BookingStatus.Confirmed
+                        && b.EndsAt > start
+                        && b.StartsAt < end
+                        && !except.Contains(b.Id))
+            .Select(b => new { b.UserId, b.StartsAt, b.EndsAt })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        // Meetings they accepted: through the guest rows' own (UserId, EndsAt), then the booking by key.
+        var accepted = await (
+                from a in dbContext.Set<BookingAttendee>().AsNoTracking()
+                join b in bookings on a.BookingId equals b.Id
+                where a.UserId != null
+                      && ids.Contains(a.UserId.Value)
+                      && a.ResponseStatus == InviteeResponseStatus.Accepted
+                      && a.EndsAt > start
+                      && b.StartsAt < end
+                      && b.Status == BookingStatus.Confirmed
+                      && !except.Contains(b.Id)
+                select new { UserId = a.UserId!.Value, b.StartsAt, b.EndsAt })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return own.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: false))
+            .Concat(accepted.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: true)))
+            .ToList();
     }
 
     public async Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default)

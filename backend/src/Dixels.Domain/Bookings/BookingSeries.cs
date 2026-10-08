@@ -101,6 +101,20 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return SetInvitees(invitees, guidGenerator);
     }
 
+    /// <summary>The same as <see cref="Booking.RemoveInvitee"/>, for the series' own list.</summary>
+    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+
+    /// <summary>
+    /// A colleague guest's answer for the whole series (its upcoming dates are answered by the
+    /// caller, see BookingResponses). Only the series' own list here: nothing about dates.
+    /// </summary>
+    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    {
+        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
+                  ?? throw new InvalidOperationException("Only a colleague guest of this series can answer it (BookingAccess checks that first).");
+        row.Respond(status, now);
+    }
+
     /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>
     public bool MatchesInvitees(IReadOnlyCollection<Invitee> invitees) =>
         Booking.SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);

@@ -53,12 +53,18 @@ export type InviteeDto = ApiDto<'Dixels.Bookings.InviteeDto'>
 /** A guest as saved (or as a preview would save them). `email` is empty unless I own the booking. */
 export type BookingInviteeDto = ApiResponse<'Dixels.Bookings.BookingInviteeDto'>
 
-/** A guest's answer to the invitation (InviteeResponseStatus on the server); Pending until accept/decline exists. */
+/** A guest's answer to the invitation (InviteeResponseStatus on the server): Pending until they accept or decline. */
 export const InviteeResponseStatus = { Pending: 0, Accepted: 1, Declined: 2 } as const satisfies Record<string, InviteeResponseStatus>
 export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatus'>
 
+/** A colleague guest's answer: Accepted or Declined (Pending is refused). */
+export type RespondToInviteDto = ApiDto<'Dixels.Bookings.RespondToInviteDto'>
+
 /** The owner's new guest list and head count, for a booking or a whole series. */
 export type UpdateInviteesDto = ApiDto<'Dixels.Bookings.UpdateInviteesDto'>
+
+/** The busy ones among the colleagues asked about, and how many dates were checked ("busy on 2 of 8 dates"). */
+export type BusyGuestsResultDto = ApiResponse<'Dixels.Bookings.BusyGuestsResultDto'>
 
 /** Someone in my building the guest picker offers (`GET /api/app/colleagues`). */
 export type ColleagueDto = ApiResponse<'Dixels.Users.ColleagueDto'>
@@ -157,6 +163,22 @@ export function updateInvitees(token: string, id: string, input: UpdateInviteesD
   return request<BookingDto>(`/api/app/bookings/${id}/invitees`, token, { method: 'PUT', body: JSON.stringify(input) })
 }
 
+/**
+ * Which of these colleagues are busy at the time of one of my bookings — their own booking or
+ * a meeting they accepted; this booking itself doesn't count. Never says with what.
+ */
+export function getBusyGuests(token: string, id: string, userIds: string[]): Promise<BusyGuestsResultDto> {
+  return request<BusyGuestsResultDto>(`/api/app/bookings/${id}/busy-guests`, token, { method: 'POST', body: JSON.stringify({ userIds }) })
+}
+
+/** The same across a series' upcoming dates, each with how many of them they're busy on. */
+export function getSeriesBusyGuests(token: string, seriesId: string, userIds: string[]): Promise<BusyGuestsResultDto> {
+  return request<BusyGuestsResultDto>(`/api/app/bookings/series/${seriesId}/busy-guests`, token, {
+    method: 'POST',
+    body: JSON.stringify({ userIds }),
+  })
+}
+
 /** The same for a whole series: its list and every upcoming date. Returns those dates. */
 export function updateSeriesInvitees(token: string, seriesId: string, input: UpdateInviteesDto): Promise<SeriesCreatedDto> {
   return request<SeriesCreatedDto>(`/api/app/bookings/series/${seriesId}/invitees`, token, { method: 'PUT', body: JSON.stringify(input) })
@@ -221,5 +243,23 @@ export function createSeries(token: string, input: CreateSeriesDto): Promise<Ser
   return request<SeriesCreatedDto>('/api/app/bookings/series', token, {
     method: 'POST',
     body: JSON.stringify(input),
+  })
+}
+
+// ---- Answering an invitation ----
+
+/** A colleague guest accepts or declines one date; returns that booking with `myResponse` set. */
+export function respondToBooking(token: string, id: string, status: RespondToInviteDto['status']): Promise<BookingDto> {
+  return request<BookingDto>(`/api/app/bookings/${id}/response`, token, {
+    method: 'POST',
+    body: JSON.stringify({ status } satisfies RespondToInviteDto),
+  })
+}
+
+/** The same for a whole series: the series and every upcoming date (overwriting per-date answers). */
+export async function respondToSeries(token: string, seriesId: string, status: RespondToInviteDto['status']): Promise<void> {
+  await request<void>(`/api/app/bookings/series/${seriesId}/response`, token, {
+    method: 'POST',
+    body: JSON.stringify({ status } satisfies RespondToInviteDto),
   })
 }

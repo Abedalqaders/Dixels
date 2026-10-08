@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ApiError, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
+import { ApiError, getBusyGuests, getSeriesBusyGuests, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { getExternalGuestsEnabled, searchColleagues } from '@/features/bookings/api/inviteesApi'
 import { TestProviders } from '@/test/providers'
@@ -10,7 +10,7 @@ import { EditGuestsDialog } from './EditGuestsDialog'
 
 vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
-  return { ...actual, updateInvitees: vi.fn(), updateSeriesInvitees: vi.fn() }
+  return { ...actual, updateInvitees: vi.fn(), updateSeriesInvitees: vi.fn(), getBusyGuests: vi.fn(), getSeriesBusyGuests: vi.fn() }
 })
 
 vi.mock('@/features/bookings/api/inviteesApi', () => ({
@@ -28,7 +28,7 @@ beforeAll(() => {
   }
 })
 
-const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const }
+const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, busyTimes: [] }
 
 function booking(patch: Partial<BookingDto> = {}): BookingDto {
   return {
@@ -54,6 +54,7 @@ function booking(patch: Partial<BookingDto> = {}): BookingDto {
     ownerName: 'Me',
     capacity: 6,
     minAttendees: null,
+    myResponse: null,
     ...patch,
   }
 }
@@ -76,6 +77,8 @@ describe('EditGuestsDialog', () => {
     vi.mocked(updateInvitees).mockReset().mockResolvedValue(booking())
     vi.mocked(updateSeriesInvitees).mockReset().mockResolvedValue({ seriesId: 'series-1', bookings: [] })
     vi.mocked(getExternalGuestsEnabled).mockReset().mockResolvedValue(false)
+    vi.mocked(getBusyGuests).mockReset().mockResolvedValue({ dates: 1, items: [] })
+    vi.mocked(getSeriesBusyGuests).mockReset().mockResolvedValue({ dates: 1, items: [] })
     vi.mocked(searchColleagues).mockReset().mockResolvedValue([{ id: 'u-omar', name: 'Omar Haddad', email: 'omar@dixels.io' }])
   })
 
@@ -143,6 +146,54 @@ describe('EditGuestsDialog', () => {
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     expect(updateSeriesInvitees).toHaveBeenCalledWith('t', 'series-1', { attendees: 2, invitees: [{ userId: 'u-rana' }] })
+  })
+
+  it('asks who of the listed colleagues is busy, and shows when', async () => {
+    vi.mocked(getBusyGuests).mockResolvedValue({
+      dates: 1,
+      items: [{ userId: 'u-rana', busyDates: 1, times: [{ localStart: '2026-10-08T10:00:00', localEnd: '2026-10-08T11:00:00' }] }],
+    })
+    renderDialog(booking())
+
+    expect(await screen.findByRole('button', { name: /^Busy \W?10:00–11:00\W?$/ })).toBeInTheDocument()
+    expect(screen.getByText('1 person is busy at 10:00')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="busy"]')).not.toBeNull()
+    expect(getBusyGuests).toHaveBeenCalledWith('t', 'b-1', ['u-rana'])
+    expect(save()).toBeEnabled()
+  })
+
+  it('shows a free colleague in green, with no summary line', async () => {
+    renderDialog(booking())
+
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="free"]')).not.toBeNull()
+    expect(screen.queryByText(/is busy at/)).not.toBeInTheDocument()
+  })
+
+  it('on a series, a half ring, "busy on 2 of 8 dates" and the dates with their times', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getSeriesBusyGuests).mockResolvedValue({
+      dates: 8,
+      items: [{
+        userId: 'u-rana',
+        busyDates: 2,
+        times: [
+          { localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' },
+          { localStart: '2026-10-20T10:00:00', localEnd: '2026-10-20T11:00:00' },
+        ],
+      }],
+    })
+    renderDialog(booking({ seriesId: 'series-1' }))
+
+    const pill = await screen.findByRole('button', { name: 'Busy on 2 of 8 dates' })
+    expect(screen.getByText('Someone is busy on 2 of 8 dates')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="part"]')).not.toBeNull()
+    expect(getSeriesBusyGuests).toHaveBeenCalledWith('t', 'series-1', ['u-rana'])
+
+    await user.click(pill)
+    expect(await screen.findByText('Busy on these dates')).toBeInTheDocument()
+    expect(screen.getByText(/^\W?10:00–10:30\W?$/)).toBeInTheDocument()
+    expect(screen.getByText(/^\W?10:00–11:00\W?$/)).toBeInTheDocument()
   })
 
   it("shows the server's answer under Attendees when it's about the head count", async () => {

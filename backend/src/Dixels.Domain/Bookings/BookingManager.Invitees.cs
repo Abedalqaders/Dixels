@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp;
+using Volo.Abp.Data;
 
 namespace Dixels.Bookings;
 
@@ -99,6 +100,50 @@ public partial class BookingManager
 
     private static List<GuestCopy> Removed(IReadOnlyDictionary<string, GuestCopy> copies, IEnumerable<Invitee> removed) =>
         removed.Select(i => copies[i.Key]).ToList();
+
+    /// <summary>
+    /// For Edit guests: which of these colleagues are busy at the time of the organiser's
+    /// booking (this booking itself doesn't count), and when. Organiser only.
+    /// </summary>
+    public async Task<BusyGuests> FindBusyGuestsAsync(Guid userId, Guid bookingId, IReadOnlyCollection<Guid> userIds)
+    {
+        var booking = await _bookingRepository.GetAsync(bookingId, includeDetails: false);
+        await _bookingAccess.EnsureAsync(booking, userId, BookingRole.Owner);
+
+        var busy = await _busyFinder.FindBusyAsync(
+            userIds, new[] { new TimeRange(booking.StartsAt, booking.EndsAt) }, new[] { booking.Id });
+        return new BusyGuests(1, busy, await ClockOfSpaceAsync(booking.SpaceId));
+    }
+
+    /// <summary>The same across a series' upcoming dates — the ones an edit changes — with how many each is busy on.</summary>
+    public async Task<BusyGuests> FindBusySeriesGuestsAsync(Guid userId, Guid seriesId, IReadOnlyCollection<Guid> userIds)
+    {
+        var series = await _seriesRepository.GetAsync(seriesId, includeDetails: false);
+        await _bookingAccess.EnsureSeriesAsync(series, userId, BookingRole.Owner);
+
+        var now = Now();
+        var upcoming = await _bookingRepository.GetListAsync(
+            b => b.SeriesId == seriesId && b.Status == BookingStatus.Confirmed && b.StartsAt > now);
+
+        var busy = await _busyFinder.FindBusyAsync(
+            userIds, upcoming.Select(b => new TimeRange(b.StartsAt, b.EndsAt)).ToList(), upcoming.Select(b => b.Id).ToList());
+        return new BusyGuests(upcoming.Count, busy, await ClockOfSpaceAsync(series.SpaceId));
+    }
+
+    /// <summary>The building clock of a room — its timezone only, in one small query (deleted rooms included).</summary>
+    private async Task<BuildingClock> ClockOfSpaceAsync(Guid spaceId)
+    {
+        using (LazyServiceProvider.LazyGetRequiredService<IDataFilter>().Disable<ISoftDelete>())
+        {
+            var timezone = await AsyncExecuter.FirstAsync(
+                from s in await _spaceRepository.GetQueryableAsync()
+                join f in await _floorRepository.GetQueryableAsync() on s.FloorId equals f.Id
+                join b in await _buildingRepository.GetQueryableAsync() on f.BuildingId equals b.Id
+                where s.Id == spaceId
+                select b.Timezone);
+            return new BuildingClock(timezone);
+        }
+    }
 
     /// <summary>The guest list as it will be saved, or a rejection naming what's wrong with it or the head count.</summary>
     private async Task<IReadOnlyList<Invitee>> CheckGuestsAsync(

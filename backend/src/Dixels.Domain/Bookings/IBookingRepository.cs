@@ -73,8 +73,41 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The upcoming bookings the person is a colleague guest of (confirmed, not started), each
+    /// with its series (null for a single booking), soonest first. Their guest rows are found
+    /// through (UserId, EndsAt), so past invitations aren't read. With
+    /// <paramref name="buildingId"/>, only those in that building (deleted rooms included).
+    /// </summary>
+    Task<List<(Guid BookingId, Guid? SeriesId)>> GetUpcomingInvitationsAsync(
+        Guid userId,
+        DateTimeOffset now,
+        Guid? buildingId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets what this unit of work has read of these bookings and series (with their guests),
+    /// so they're read again fresh: after a save lost a race to someone else's.
+    /// </summary>
+    Task ForgetAsync(IReadOnlyCollection<Guid> bookingIds, IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default);
+
+    /// <summary>The person's answer to each of these bookings they're a colleague guest of, in one query.</summary>
+    Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(IReadOnlyCollection<Guid> bookingIds, Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Whether the person is (still) a colleague guest of this booking.</summary>
     Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// When any of these people is taken between <c>start</c> and <c>end</c>: their own
+    /// confirmed bookings and the confirmed meetings they accepted, except the bookings in
+    /// <paramref name="exceptBookingIds"/>. Each a seek on a (UserId, EndsAt) index.
+    /// </summary>
+    Task<List<BusySlot>> GetBusyAsync(
+        IReadOnlyCollection<Guid> userIds,
+        DateTimeOffset start,
+        DateTimeOffset end,
+        IReadOnlyCollection<Guid> exceptBookingIds,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Whether the person is on this series' own guest list.</summary>
     Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default);

@@ -33,6 +33,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IIdentityUserRepository _userRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly BookingAccess _bookingAccess;
+    private readonly BookingResponses _bookingResponses;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -47,7 +48,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         LocalizedNameReader nameReader,
         IIdentityUserRepository userRepository,
         ConstraintResolver constraintResolver,
-        BookingAccess bookingAccess)
+        BookingAccess bookingAccess,
+        BookingResponses bookingResponses)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -62,6 +64,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _userRepository = userRepository;
         _constraintResolver = constraintResolver;
         _bookingAccess = bookingAccess;
+        _bookingResponses = bookingResponses;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -77,7 +80,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             StartsAt = evaluation.StartUtc,
             EndsAt = evaluation.EndUtc,
             Timezone = evaluation.Building.Timezone,
-            Invitees = evaluation.Invitees.Select(ToOwnersView).ToList(),
+            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.Busy, evaluation.LocalClock)).ToList(),
         };
     }
 
@@ -164,6 +167,15 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));
     }
 
+    public async Task<BookingDto> RespondAsync(Guid id, RespondToInviteDto input)
+    {
+        var booking = await _bookingResponses.RespondAsync(id, CurrentUser.GetId(), input.Status);
+        return (await MapToDtosAsync(new[] { booking })).Single();
+    }
+
+    public Task RespondToSeriesAsync(Guid seriesId, RespondToInviteDto input) =>
+        _bookingResponses.RespondToSeriesAsync(seriesId, CurrentUser.GetId(), input.Status);
+
     public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
     {
         var evaluation = await _bookingManager.EvaluateSeriesAsync(
@@ -184,7 +196,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             }).ToList(),
             BookableCount = evaluation.BookableCount,
             Timezone = evaluation.Building.Timezone,
-            Invitees = evaluation.Invitees.Select(ToOwnersView).ToList(),
+            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.Busy, evaluation.LocalClock)).ToList(),
         };
     }
 
@@ -250,6 +262,36 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         dtos?.Select(d => new Invitee(d.UserId, d.Email, d.Name)).ToList() ?? new List<Invitee>();
 
     /// <summary>A checked invitee as the booker sees them: with their email (only the owner sees guests' emails).</summary>
+    public async Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, BusyGuestsInput input) =>
+        ToBusyGuests(await _bookingManager.FindBusyGuestsAsync(CurrentUser.GetId(), id, input.UserIds));
+
+    public async Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input) =>
+        ToBusyGuests(await _bookingManager.FindBusySeriesGuestsAsync(CurrentUser.GetId(), seriesId, input.UserIds));
+
+    private static BusyGuestsResultDto ToBusyGuests(BusyGuests result) => new()
+    {
+        Dates = result.Dates,
+        Items = result.Busy
+            .Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value.Dates, Times = ToTimes(b.Value, result.Clock) })
+            .ToList(),
+    };
+
+    private static List<BusyTimeDto> ToTimes(PersonBusy busy, BuildingClock clock) =>
+        busy.Times.Select(t => new BusyTimeDto { LocalStart = clock.ToLocal(t.Start), LocalEnd = clock.ToLocal(t.End) }).ToList();
+
+    private static BookingInviteeDto ToOwnersView(Invitee invitee, IReadOnlyDictionary<Guid, PersonBusy>? busy, BuildingClock clock)
+    {
+        var dto = ToOwnersView(invitee);
+        if (invitee.UserId is { } id && busy is not null && busy.TryGetValue(id, out var theirs))
+        {
+            dto.IsBusy = true;
+            dto.BusyDates = theirs.Dates;
+            dto.BusyTimes = ToTimes(theirs, clock);
+        }
+
+        return dto;
+    }
+
     private static BookingInviteeDto ToOwnersView(Invitee invitee) => new()
     {
         UserId = invitee.UserId,
@@ -350,6 +392,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true)).ToDictionary(s => s.Id);
         var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces.Values);
 
+        // My answers to the invites among them — one small query, and only when there are invites.
+        var responses = await _bookingRepository.GetResponsesAsync(bookings.Where(b => b.UserId != me).Select(b => b.Id).ToList(), me);
+
         var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
         var floors = await _floorRepository.GetQueryableAsync();
         var buildings = await _buildingRepository.GetQueryableAsync();
@@ -374,6 +419,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 Status = booking.Status.ToString(),
                 SeriesId = booking.SeriesId,
                 IsInvited = booking.UserId != me,
+                MyResponse = booking.UserId == me ? null : responses.GetValueOrDefault(booking.Id),
             };
         }).ToList();
     }
@@ -438,6 +484,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             dto.IsOwner = booking.UserId == me;
             dto.OwnerName = users.TryGetValue(booking.UserId, out var owner) ? owner.DisplayName() : string.Empty;
             dto.Invitees = booking.Invitees.Select(i => ToInviteeDto(i, users, dto.IsOwner)).ToList();
+            dto.MyResponse = dto.IsOwner ? null : booking.Invitees.FirstOrDefault(i => i.UserId == me)?.ResponseStatus;
             return dto;
         }).ToList();
     }

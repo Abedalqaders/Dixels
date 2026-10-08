@@ -17,6 +17,7 @@ const item: CalendarItem = {
   cancelled: false,
   repeats: false,
   invited: false,
+  declined: false,
 }
 
 const booking = {
@@ -36,6 +37,7 @@ const booking = {
   isOwner: true,
   ownerName: 'Sara Ali',
   invitees: [],
+  myResponse: null,
 } as unknown as BookingDto
 
 function renderPanel(full: BookingDto | null, onCancel = vi.fn(), onClose = vi.fn(), canBook = true, canCancel = true) {
@@ -94,8 +96,8 @@ describe('BookingDetailPanel', () => {
       ...booking,
       isOwner: true,
       invitees: [
-        { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 },
-        { userId: null, name: 'Omar Farouk', email: 'omar@acme.com', isExternal: true, responseStatus: 0 },
+        { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
+        { userId: null, name: 'Omar Farouk', email: 'omar@acme.com', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
       ],
     }
     renderPanel(withGuests)
@@ -142,8 +144,8 @@ describe('BookingDetailPanel', () => {
       ...booking,
       isOwner: false,
       invitees: [
-        { userId: 'u-me', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 0 },
-        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0 },
+        { userId: 'u-me', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
+        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
       ],
     } as BookingDto
     renderPanel(invite)
@@ -172,5 +174,41 @@ describe('BookingDetailPanel', () => {
   it("the owner still reads that the room is no longer held for them", () => {
     renderPanel({ ...booking, status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'Closed' } as BookingDto)
     expect(screen.getByRole('region', { name: 'Booking details' })).toHaveTextContent('held for you')
+  })
+
+  it("everyone invited sees each guest's answer and the tally", () => {
+    const invite = {
+      ...booking,
+      isOwner: false,
+      myResponse: 1,
+      invitees: [
+        { userId: 'u-1', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 1 },
+        { userId: 'u-2', name: 'Leo Tran', email: '', isExternal: false, responseStatus: 2 },
+        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0 },
+      ],
+    } as BookingDto
+    render(
+      <MemoryRouter>
+        <BookingDetailPanel item={item} booking={invite} error={null} canBook canCancel onClose={vi.fn()} onCancel={vi.fn()} onRespond={vi.fn()} />
+      </MemoryRouter>,
+    )
+
+    const panel = screen.getByRole('region', { name: 'Booking details' })
+    expect(panel).toHaveTextContent('Accepted 1 · Declined 1 · Waiting 1')
+    const [jordan, leo, omar] = within(within(panel).getByRole('list', { name: 'Invited' })).getAllByRole('listitem')
+    expect(within(jordan).getByRole('img', { name: 'Accepted' })).toBeInTheDocument()
+    expect(within(leo).getByRole('img', { name: 'Declined' })).toBeInTheDocument()
+    expect(within(omar).getByRole('img', { name: 'No answer yet' })).toBeInTheDocument()
+    // A guest gets the answer buttons, their own answer already marked.
+    expect(within(panel).getByRole('button', { name: 'Accepted' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('the owner gets no answer buttons', () => {
+    render(
+      <MemoryRouter>
+        <BookingDetailPanel item={item} booking={booking} error={null} canBook canCancel onClose={vi.fn()} onCancel={vi.fn()} onRespond={vi.fn()} />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument()
   })
 })

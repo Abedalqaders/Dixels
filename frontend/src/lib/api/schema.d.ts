@@ -1065,6 +1065,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/bookings/{id}/busy-guests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/*+json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                    "application/json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                    "text/json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                        "text/json": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                        "text/plain": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/app/bookings/{id}/cancel": {
         parameters: {
             query?: never;
@@ -1281,6 +1392,117 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/bookings/{id}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/*+json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                    "application/json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                    "text/json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Dixels.Bookings.BookingDto"];
+                        "text/json": components["schemas"]["Dixels.Bookings.BookingDto"];
+                        "text/plain": components["schemas"]["Dixels.Bookings.BookingDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1611,6 +1833,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/bookings/series/{seriesId}/busy-guests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    seriesId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/*+json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                    "application/json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                    "text/json": components["schemas"]["Dixels.Bookings.BusyGuestsInput"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                        "text/json": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                        "text/plain": components["schemas"]["Dixels.Bookings.BusyGuestsResultDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/app/bookings/series/{seriesId}/invitees": {
         parameters: {
             query?: never;
@@ -1716,6 +2049,120 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/bookings/series/{seriesId}/response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    seriesId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/*+json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                    "application/json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                    "text/json": components["schemas"]["Dixels.Bookings.RespondToInviteDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+                /** @description Not Implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/json": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                        "text/plain": components["schemas"]["Volo.Abp.Http.RemoteServiceErrorResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -6378,6 +6825,7 @@ export interface components {
             localStart: string;
             /** Format: int32 */
             minAttendees?: number | null;
+            myResponse?: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"] | null;
             ownerName: string;
             recurrence?: components["schemas"]["Dixels.Bookings.RecurrenceDto"] | null;
             /** Format: uuid */
@@ -6392,7 +6840,11 @@ export interface components {
             title: string;
         };
         "Dixels.Bookings.BookingInviteeDto": {
+            /** Format: int32 */
+            busyDates: number;
+            busyTimes: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
             email: string;
+            isBusy: boolean;
             isExternal: boolean;
             name: string;
             responseStatus: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"];
@@ -6430,6 +6882,7 @@ export interface components {
             localEnd: string;
             /** Format: date-time */
             localStart: string;
+            myResponse?: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"] | null;
             /** Format: uuid */
             seriesId?: string | null;
             spaceName: string;
@@ -6441,6 +6894,27 @@ export interface components {
             level?: string | null;
             message: string;
             shortMessage: string;
+        };
+        "Dixels.Bookings.BusyGuestDto": {
+            /** Format: int32 */
+            busyDates: number;
+            times: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
+            /** Format: uuid */
+            userId: string;
+        };
+        "Dixels.Bookings.BusyGuestsInput": {
+            userIds: string[];
+        };
+        "Dixels.Bookings.BusyGuestsResultDto": {
+            /** Format: int32 */
+            dates: number;
+            items: components["schemas"]["Dixels.Bookings.BusyGuestDto"][];
+        };
+        "Dixels.Bookings.BusyTimeDto": {
+            /** Format: date-time */
+            localEnd: string;
+            /** Format: date-time */
+            localStart: string;
         };
         "Dixels.Bookings.CancelBookingDto": {
             reason?: string | null;
@@ -6528,6 +7002,9 @@ export interface components {
          * @enum {integer}
          */
         "Dixels.Bookings.RecurrenceFrequency": 0 | 1 | 2;
+        "Dixels.Bookings.RespondToInviteDto": {
+            status: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"];
+        };
         "Dixels.Bookings.SeriesCreatedDto": {
             bookings: components["schemas"]["Dixels.Bookings.BookingDto"][];
             /** Format: uuid */
@@ -6960,6 +7437,10 @@ export type SchemaDixelsBookingsBookingPreviewDto = components['schemas']['Dixel
 export type SchemaDixelsBookingsBookingRequestDto = components['schemas']['Dixels.Bookings.BookingRequestDto'];
 export type SchemaDixelsBookingsBookingSummaryDto = components['schemas']['Dixels.Bookings.BookingSummaryDto'];
 export type SchemaDixelsBookingsBookingViolationDto = components['schemas']['Dixels.Bookings.BookingViolationDto'];
+export type SchemaDixelsBookingsBusyGuestDto = components['schemas']['Dixels.Bookings.BusyGuestDto'];
+export type SchemaDixelsBookingsBusyGuestsInput = components['schemas']['Dixels.Bookings.BusyGuestsInput'];
+export type SchemaDixelsBookingsBusyGuestsResultDto = components['schemas']['Dixels.Bookings.BusyGuestsResultDto'];
+export type SchemaDixelsBookingsBusyTimeDto = components['schemas']['Dixels.Bookings.BusyTimeDto'];
 export type SchemaDixelsBookingsCancelBookingDto = components['schemas']['Dixels.Bookings.CancelBookingDto'];
 export type SchemaDixelsBookingsCancelScope = components['schemas']['Dixels.Bookings.CancelScope'];
 export type SchemaDixelsBookingsCreateBookingDto = components['schemas']['Dixels.Bookings.CreateBookingDto'];
@@ -6971,6 +7452,7 @@ export type SchemaDixelsBookingsMonthlyRepeat = components['schemas']['Dixels.Bo
 export type SchemaDixelsBookingsOccurrencePreviewDto = components['schemas']['Dixels.Bookings.OccurrencePreviewDto'];
 export type SchemaDixelsBookingsRecurrenceDto = components['schemas']['Dixels.Bookings.RecurrenceDto'];
 export type SchemaDixelsBookingsRecurrenceFrequency = components['schemas']['Dixels.Bookings.RecurrenceFrequency'];
+export type SchemaDixelsBookingsRespondToInviteDto = components['schemas']['Dixels.Bookings.RespondToInviteDto'];
 export type SchemaDixelsBookingsSeriesCreatedDto = components['schemas']['Dixels.Bookings.SeriesCreatedDto'];
 export type SchemaDixelsBookingsSeriesPreviewDto = components['schemas']['Dixels.Bookings.SeriesPreviewDto'];
 export type SchemaDixelsBookingsSeriesRequestDto = components['schemas']['Dixels.Bookings.SeriesRequestDto'];

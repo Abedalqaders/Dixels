@@ -68,6 +68,10 @@ public static class DixelsDomainErrorCodes
     // already knows the booking exists, so "not found" would be a lie.
     public const string BookingOrganiserOnly = BookingsPrefix + "OrganiserOnly";
     public const string BookingOnlyOrganiserCancels = BookingsPrefix + "OnlyOrganiserCancels";
+    // The organiser answering their own booking's invitation: there's nothing to answer (403).
+    public const string BookingOrganiserCannotRespond = BookingsPrefix + "OrganiserCannotRespond";
+    // An answer to a meeting that has started, or is cancelled (400).
+    public const string BookingResponseClosed = BookingsPrefix + "ResponseClosed";
     public const string BookingAlreadyStarted = BookingsPrefix + "AlreadyStarted";
     public const string BookingInvalidDateRange = BookingsPrefix + "InvalidDateRange";
 
@@ -75,6 +79,9 @@ public static class DixelsDomainErrorCodes
     // rule under Block, a heads-up under Warn.
     public const string BookingOwnOverlap = BookingsPrefix + "OwnOverlap";
     public const string BookingOwnOverlapWarning = BookingsPrefix + "OwnOverlapWarning";
+
+    // A meeting the person accepted at that time: only ever a heads-up, even under Block.
+    public const string BookingAcceptedMeetingOverlapWarning = BookingsPrefix + "AcceptedMeetingOverlapWarning";
 
     // Recurring bookings: a rule that can't be expanded, and what can go wrong creating one.
     public const string SeriesInvalidRule = BookingsPrefix + "SeriesInvalidRule";

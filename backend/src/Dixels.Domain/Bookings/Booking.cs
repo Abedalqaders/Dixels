@@ -136,6 +136,22 @@ public class Booking : AuditedAggregateRoot<Guid>
     }
 
     /// <summary>
+    /// A colleague guest's answer to this date. Answers close once the meeting starts, or when
+    /// it's no longer happening (cancelled) — <see cref="DixelsDomainErrorCodes.BookingResponseClosed"/>.
+    /// </summary>
+    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    {
+        if (Status != BookingStatus.Confirmed || StartsAt <= now)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingResponseClosed);
+        }
+
+        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
+                  ?? throw new InvalidOperationException("Only a colleague guest of this booking can answer it (BookingAccess checks that first).");
+        row.Respond(status, now);
+    }
+
+    /// <summary>
     /// The owner changing the head count and the guest list together (already checked by
     /// <see cref="BookingInviteeResolver"/> and the head-count rules). Guests who stay keep
     /// their row, and with it their answer; returns who was added and who was removed.
@@ -150,6 +166,13 @@ public class Booking : AuditedAggregateRoot<Guid>
         Attendees = attendees;
         return SetInvitees(invitees, guidGenerator);
     }
+
+    /// <summary>
+    /// A colleague who left (deactivated, removed, or moved to another building) coming off
+    /// the guest list. The head count stays: it may count people who aren't named. Returns
+    /// whether they were on it.
+    /// </summary>
+    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
 
     /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
     internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)

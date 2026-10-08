@@ -24,7 +24,8 @@ public sealed record BookingEvaluation(
     DateTimeOffset EndUtc,
     IReadOnlyList<BookingViolation> Violations,
     IReadOnlyList<BookingViolation> Warnings,
-    IReadOnlyList<Invitee> Invitees)
+    IReadOnlyList<Invitee> Invitees,
+    IReadOnlyDictionary<Guid, PersonBusy>? Busy = null)
 {
     public bool IsValid => Violations.Count == 0;
 }

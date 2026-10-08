@@ -64,6 +64,7 @@ cd backend
 - **`-Migrate`** also sets the sign-in redirect URLs to this worktree's web ports (`App__CorsOrigins`) and API port.
 - **Needs:** Docker Desktop running (for smtp4dev), the HTTPS dev cert from the `docker-compose.yml` notes, and `src/Dixels.Web/wwwroot/libs` (see above).
 - Stop the Docker `web` container first (`docker compose stop web`): both use the same API port.
+- Times read from the database are UTC however the machine's clock is set (a converter in `DixelsDbContext`), so a backend on Windows answers the same as one in Docker.
 
 ### Solution structure
 

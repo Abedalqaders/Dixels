@@ -14,6 +14,7 @@ import { initialsOf } from '@/components/UserAvatar'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { cn } from '@/lib/utils'
+import type { Presence } from '@/components/BusyStatus'
 
 /** Someone picked: a colleague (with `userId`), or a guest known only by email. */
 export interface PickedPerson {
@@ -43,6 +44,8 @@ interface PeoplePickerProps {
   max?: number
   /** Something extra at the end of a person's row, before Remove — e.g. their answer to the invite. */
   rowExtra?: (person: PickedPerson) => ReactNode
+  /** A Teams-style ring and dot on a person's avatar: free, busy, or busy on part of a series. */
+  presence?: (person: PickedPerson) => Presence | undefined
 }
 
 const MIN_CHARS = 2
@@ -67,7 +70,7 @@ export function isPicked(people: PickedPerson[], person: { userId?: string | nul
  * Keyboard: in the search, arrows move through the matches and Enter adds; Backspace in an
  * empty search removes the last person; Enter in the guest fields adds the guest.
  */
-export function PeoplePicker({ id, value, onChange, searchKey, search, allowGuests = false, max, rowExtra }: PeoplePickerProps) {
+export function PeoplePicker({ id, value, onChange, searchKey, search, allowGuests = false, max, rowExtra, presence }: PeoplePickerProps) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<'colleague' | 'guest'>('colleague')
   const full = max !== undefined && value.length >= max
@@ -118,7 +121,9 @@ export function PeoplePicker({ id, value, onChange, searchKey, search, allowGues
         <ul className="m-0 grid list-none rounded-md border border-border p-0" aria-label={t('People:Picked')}>
           {value.map((p, i) => (
             <li key={p.userId ?? `guest:${p.email.toLowerCase()}`} className="flex min-w-0 items-center gap-3 px-3 py-2 not-first:border-t not-first:border-border">
-              <Initials name={p.name || p.email} guest={p.isExternal} />
+              <PresenceRing presence={presence?.(p)}>
+                <Initials name={p.name || p.email} guest={p.isExternal} />
+              </PresenceRing>
               <span className="grid min-w-0 flex-1">
                 <span className="truncate text-sm font-medium">{p.name || p.email}</span>
                 {p.email && (p.name || !p.isExternal) && (
@@ -331,6 +336,38 @@ export function Initials({ name, guest = false }: { name: string; guest?: boolea
 }
 
 /** The small amber "Guest" tag beside someone invited by email. */
+const RING: Record<Presence, string> = {
+  free: 'var(--presence-free)',
+  busy: 'var(--presence-busy)',
+  // Half red, half green — busy on some of a series' dates.
+  part: 'var(--presence-busy) var(--presence-free) var(--presence-free) var(--presence-busy)',
+}
+
+/** The avatar with a presence ring and a dot at its corner; just the avatar when there's none to show. */
+export function PresenceRing({ presence, children }: { presence: Presence | undefined; children: ReactNode }) {
+  if (!presence) return <>{children}</>
+  return (
+    <span className="relative flex flex-none" data-presence={presence}>
+      {children}
+      <span
+        className={cn('pointer-events-none absolute -inset-[3px] rounded-full border-2', presence === 'part' && '-rotate-[20deg]')}
+        style={{ borderColor: RING[presence] }}
+        aria-hidden="true"
+      />
+      <span
+        className="absolute -end-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-background"
+        style={{
+          background:
+            presence === 'part'
+              ? 'conic-gradient(var(--presence-busy) 0 50%, var(--presence-free) 50% 100%)'
+              : RING[presence],
+        }}
+        aria-hidden="true"
+      />
+    </span>
+  )
+}
+
 export function GuestTag() {
   const { t } = useTranslation()
   return (
