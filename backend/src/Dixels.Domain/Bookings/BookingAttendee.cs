@@ -63,12 +63,12 @@ public abstract class InviteeRow : Entity<Guid>
 
     public Invitee ToInvitee() => new(UserId, Email, Name);
 
-    /// <summary>Records their answer and returns the one it replaces. Only Accepted or Declined: nobody answers "pending".</summary>
+    /// <summary>Records their answer and returns the one it replaces. Accepted, Maybe or Declined: nobody answers "pending".</summary>
     internal InviteeResponseStatus Respond(InviteeResponseStatus status, DateTimeOffset now)
     {
-        if (status == InviteeResponseStatus.Pending)
+        if (status == InviteeResponseStatus.Pending || !Enum.IsDefined(status))
         {
-            throw new ArgumentOutOfRangeException(nameof(status), status, "An answer is Accepted or Declined.");
+            throw new ArgumentOutOfRangeException(nameof(status), status, "An answer is Accepted, Maybe or Declined.");
         }
 
         var previous = ResponseStatus;

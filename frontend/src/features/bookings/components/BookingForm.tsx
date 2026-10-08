@@ -211,7 +211,7 @@ export function BookingForm({
   // Who of the colleagues is free or busy then (on a series: on how many of its dates), once
   // the preview has said — Teams-style, on each guest and in one line above them.
   const busyById = new Map<string, PersonBusy>(
-    (resolved ?? []).filter((i) => i.userId).map((i) => [i.userId!, { busyDates: i.busyDates, busyTimes: i.busyTimes }]),
+    (resolved ?? []).filter((i) => i.userId).map((i) => [i.userId!, { busyDates: i.busyDates, busyTimes: i.busyTimes, maybeBusyDates: i.maybeBusyDates }]),
   )
   const dateCount = rule && seriesPreview.status === 'done' ? seriesPreview.preview.occurrences.length : 1
   const knowsBusy = (p: Invitee) => resolved !== undefined && !p.isExternal && Boolean(p.userId)

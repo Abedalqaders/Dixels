@@ -7,20 +7,30 @@ using Volo.Abp.Domain.Services;
 namespace Dixels.Bookings;
 
 /// <summary>
-/// A time someone is taken: their own confirmed booking, or a meeting they accepted (an
-/// invite still pending or declined doesn't count, like a tentative one in Outlook).
+/// A time someone is taken: their own confirmed booking or a meeting they accepted (busy), or
+/// a meeting they said Maybe to (<see cref="IsTentative"/>: maybe busy, like Outlook's
+/// tentative). An invite still pending or declined doesn't count.
 /// </summary>
-public readonly record struct BusySlot(Guid UserId, TimeRange Range, bool IsAcceptedInvite);
+public readonly record struct BusySlot(Guid UserId, TimeRange Range, bool IsAcceptedInvite, bool IsTentative = false);
+
+/// <summary>A stretch of busy time; <see cref="Tentative"/>: only maybe busy then (a Maybe answer).</summary>
+public readonly record struct BusyTime(TimeRange Range, bool Tentative);
 
 /// <summary>
 /// One person's busy times within a booking's time (or a series' dates): each cut to the
-/// slot it overlaps and merged, earliest first — times only, never with what — and on how many
-/// of the slots that is.
+/// slot it overlaps and merged, earliest first — times only, never with what. Firm busy wins:
+/// a maybe-busy stretch only shows where they aren't busy anyway. <see cref="Dates"/>: on how
+/// many of the slots they're busy; <see cref="MaybeDates"/>: on how many more only maybe.
 /// </summary>
-public sealed record PersonBusy(int Dates, IReadOnlyList<TimeRange> Times);
+public sealed record PersonBusy(int Dates, IReadOnlyList<BusyTime> Times, int MaybeDates = 0)
+{
+    /// <summary>Only maybe busy: on no date firmly (the amber ring rather than the red one).</summary>
+    public bool OnlyMaybe => Dates == 0 && MaybeDates > 0;
+}
 
 /// <summary>
-/// Who among some colleagues is busy at some times — for the guest picker's "Busy then" tag.
+/// Who among some colleagues is busy (or maybe busy) at some times — for the guest picker's
+/// presence ring and pill.
 /// Only ever a warning: nobody is kept from being invited. It says that someone is busy,
 /// never with what.
 /// </summary>
@@ -54,25 +64,58 @@ public class BookingBusyFinder : DomainService
         var result = new Dictionary<Guid, PersonBusy>();
         foreach (var person in busy.GroupBy(b => b.UserId))
         {
-            var dates = 0;
-            var times = new List<TimeRange>();
+            var (dates, maybeDates) = (0, 0);
+            var times = new List<BusyTime>();
             foreach (var slot in slots.OrderBy(s => s.Start))
             {
-                var within = Merge(person.Select(b => b.Range.ClipTo(slot)).OfType<TimeRange>());
-                if (within.Count > 0)
+                var firm = Merge(person.Where(b => !b.IsTentative).Select(b => b.Range.ClipTo(slot)).OfType<TimeRange>());
+                var maybe = Merge(person.Where(b => b.IsTentative).Select(b => b.Range.ClipTo(slot)).OfType<TimeRange>())
+                    .SelectMany(r => Subtract(r, firm))
+                    .ToList();
+                if (firm.Count > 0)
                 {
                     dates++;
-                    times.AddRange(within);
                 }
+                else if (maybe.Count > 0)
+                {
+                    maybeDates++;
+                }
+
+                times.AddRange(firm.Select(r => new BusyTime(r, false))
+                    .Concat(maybe.Select(r => new BusyTime(r, true)))
+                    .OrderBy(t => t.Range.Start));
             }
 
-            if (dates > 0)
+            if (dates + maybeDates > 0)
             {
-                result[person.Key] = new PersonBusy(dates, times);
+                result[person.Key] = new PersonBusy(dates, times, maybeDates);
             }
         }
 
         return result;
+    }
+
+    /// <summary>What's left of <paramref name="range"/> outside the (sorted, merged) <paramref name="taken"/> ranges.</summary>
+    private static IEnumerable<TimeRange> Subtract(TimeRange range, IReadOnlyList<TimeRange> taken)
+    {
+        var start = range.Start;
+        foreach (var t in taken.Where(t => t.End > range.Start && t.Start < range.End))
+        {
+            if (t.Start > start)
+            {
+                yield return new TimeRange(start, t.Start);
+            }
+
+            if (t.End > start)
+            {
+                start = t.End;
+            }
+        }
+
+        if (start < range.End)
+        {
+            yield return new TimeRange(start, range.End);
+        }
     }
 
     /// <summary>Overlapping or touching ranges joined into one (an own booking and an accepted meeting back to back read as one busy time).</summary>

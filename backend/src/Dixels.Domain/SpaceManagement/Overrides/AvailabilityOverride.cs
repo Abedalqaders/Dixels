@@ -58,8 +58,9 @@ public class AvailabilityOverride : AuditedAggregateRoot<Guid>
             throw new BusinessException(DixelsDomainErrorCodes.OverrideEndsAtMustBeAfterStartsAt);
         }
 
-        StartsAt = startsAt;
-        EndsAt = endsAt;
+        // Stored as UTC: a client may send its own offset (+03:00), and Postgres keeps only the instant.
+        StartsAt = startsAt.ToUniversalTime();
+        EndsAt = endsAt.ToUniversalTime();
     }
 
     public void SetReasonDetail(string? reasonDetail)

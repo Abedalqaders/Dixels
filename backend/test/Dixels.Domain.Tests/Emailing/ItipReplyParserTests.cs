@@ -94,6 +94,13 @@ public class ItipReplyParserTests
     }
 
     [Fact]
+    public void A_tentative_is_a_maybe()
+    {
+        ItipReplyParser.Parse(With(Outlook, "PARTSTAT=ACCEPTED", "PARTSTAT=TENTATIVE")).ShouldHaveSingleItem()
+            .Status.ShouldBe(InviteeResponseStatus.Maybe);
+    }
+
+    [Fact]
     public void A_gmail_decline_is_read_whatever_address_it_names()
     {
         var answer = ItipReplyParser.Parse(Gmail).ShouldHaveSingleItem();
@@ -119,7 +126,6 @@ public class ItipReplyParserTests
     }
 
     [Theory]
-    [InlineData("PARTSTAT=TENTATIVE")]      // "Maybe" is no answer
     [InlineData("PARTSTAT=NEEDS-ACTION")]
     [InlineData("PARTSTAT=DELEGATED")]
     public void Anything_but_accept_or_decline_is_no_answer(string partstat)

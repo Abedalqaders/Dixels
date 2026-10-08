@@ -18,6 +18,7 @@ const item: CalendarItem = {
   repeats: false,
   invited: false,
   declined: false,
+  maybe: false,
 }
 
 const booking = {
@@ -96,8 +97,8 @@ describe('BookingDetailPanel', () => {
       ...booking,
       isOwner: true,
       invitees: [
-        { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
-        { userId: null, name: 'Omar Farouk', email: 'omar@acme.com', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
+        { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] },
+        { userId: null, name: 'Omar Farouk', email: 'omar@acme.com', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] },
       ],
     }
     renderPanel(withGuests)
@@ -144,8 +145,8 @@ describe('BookingDetailPanel', () => {
       ...booking,
       isOwner: false,
       invitees: [
-        { userId: 'u-me', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
-        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, busyTimes: [] },
+        { userId: 'u-me', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] },
+        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] },
       ],
     } as BookingDto
     renderPanel(invite)

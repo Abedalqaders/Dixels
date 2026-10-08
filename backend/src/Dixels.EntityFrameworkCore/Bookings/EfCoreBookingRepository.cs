@@ -98,7 +98,8 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         }
 
         // Distinct: unnest returns a room once per time it's named, which would repeat its bookings.
-        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start, end);
+        // Raw SQL skips the UTC value converter, and Npgsql only accepts offset 0 for timestamptz.
+        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start.ToUniversalTime(), end.ToUniversalTime());
     }
 
     public async Task<List<Booking>> GetDueForReminderAsync(
@@ -333,22 +334,25 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .Select(b => new { b.UserId, b.StartsAt, b.EndsAt })
             .ToListAsync(GetCancellationToken(cancellationToken));
 
-        // Meetings they accepted: through the guest rows' own (UserId, EndsAt), then the booking by key.
-        var accepted = await (
+        // Meetings they accepted, or said Maybe to (tentatively busy): through the guest rows'
+        // own (UserId, EndsAt), then the booking by key.
+        var answered = await (
                 from a in dbContext.Set<BookingAttendee>().AsNoTracking()
                 join b in bookings on a.BookingId equals b.Id
                 where a.UserId != null
                       && ids.Contains(a.UserId.Value)
-                      && a.ResponseStatus == InviteeResponseStatus.Accepted
+                      && (a.ResponseStatus == InviteeResponseStatus.Accepted || a.ResponseStatus == InviteeResponseStatus.Maybe)
                       && a.EndsAt > start
                       && b.StartsAt < end
                       && b.Status == BookingStatus.Confirmed
                       && !except.Contains(b.Id)
-                select new { UserId = a.UserId!.Value, b.StartsAt, b.EndsAt })
+                select new { UserId = a.UserId!.Value, b.StartsAt, b.EndsAt, a.ResponseStatus })
             .ToListAsync(GetCancellationToken(cancellationToken));
 
         return own.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: false))
-            .Concat(accepted.Select(x => new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: true)))
+            .Concat(answered.Select(x => x.ResponseStatus == InviteeResponseStatus.Maybe
+                ? new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: false, IsTentative: true)
+                : new BusySlot(x.UserId, new TimeRange(x.StartsAt, x.EndsAt), IsAcceptedInvite: true)))
             .ToList();
     }
 

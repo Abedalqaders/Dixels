@@ -290,20 +290,32 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     {
         Dates = result.Dates,
         Items = result.Busy
-            .Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value.Dates, Times = ToTimes(b.Value, result.Clock) })
+            .Select(b => new BusyGuestDto
+            {
+                UserId = b.Key,
+                BusyDates = b.Value.Dates,
+                MaybeBusyDates = b.Value.MaybeDates,
+                Times = ToTimes(b.Value, result.Clock),
+            })
             .ToList(),
     };
 
     private static List<BusyTimeDto> ToTimes(PersonBusy busy, BuildingClock clock) =>
-        busy.Times.Select(t => new BusyTimeDto { LocalStart = clock.ToLocal(t.Start), LocalEnd = clock.ToLocal(t.End) }).ToList();
+        busy.Times.Select(t => new BusyTimeDto
+        {
+            LocalStart = clock.ToLocal(t.Range.Start),
+            LocalEnd = clock.ToLocal(t.Range.End),
+            IsTentative = t.Tentative,
+        }).ToList();
 
     private static BookingInviteeDto ToOwnersView(Invitee invitee, IReadOnlyDictionary<Guid, PersonBusy>? busy, BuildingClock clock)
     {
         var dto = ToOwnersView(invitee);
         if (invitee.UserId is { } id && busy is not null && busy.TryGetValue(id, out var theirs))
         {
-            dto.IsBusy = true;
+            dto.IsBusy = theirs.Dates > 0;
             dto.BusyDates = theirs.Dates;
+            dto.MaybeBusyDates = theirs.MaybeDates;
             dto.BusyTimes = ToTimes(theirs, clock);
         }
 

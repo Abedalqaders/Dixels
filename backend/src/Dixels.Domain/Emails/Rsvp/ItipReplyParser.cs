@@ -25,9 +25,9 @@ public sealed record ItipAnswer(
 
 /// <summary>
 /// Reads the answers out of an iTIP REPLY (RFC 5546): what Outlook, Gmail and Apple Mail send
-/// back when a guest clicks Accept or Decline on a meeting request. Only ACCEPTED and DECLINED
-/// count; "Tentative"/"Maybe" is no answer, so it never undoes an earlier one. Anything that
-/// isn't a REPLY (our own invites, a "propose new time" COUNTER) gives nothing. Who sent the
+/// back when a guest clicks Accept, Tentative or Decline on a meeting request: ACCEPTED,
+/// TENTATIVE (our Maybe) and DECLINED count, anything else (NEEDS-ACTION, DELEGATED) is no
+/// answer. Anything that isn't a REPLY (our own invites, a "propose new time" COUNTER) gives nothing. Who sent the
 /// mail, and the attendee's address in it, are never read: the UID alone says who answered.
 /// </summary>
 public static class ItipReplyParser
@@ -88,6 +88,9 @@ public static class ItipReplyParser
                     break;
                 case "DECLINED":
                     status = InviteeResponseStatus.Declined;
+                    break;
+                case "TENTATIVE":
+                    status = InviteeResponseStatus.Maybe;
                     break;
                 default:
                     continue;

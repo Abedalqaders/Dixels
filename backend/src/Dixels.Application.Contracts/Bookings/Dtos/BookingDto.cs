@@ -50,7 +50,8 @@ public class BookingDto : EntityDto<Guid>
     /// <summary>
     /// For a colleague guest reading an upcoming invite: when I'm already taken at its time (my
     /// own bookings and other meetings I accepted, cut to it) — the "you have another booking
-    /// then" next to Accept. Accepting is still allowed. Empty otherwise.
+    /// then" next to Accept — and, marked tentative, when I said Maybe to another meeting then.
+    /// Accepting is still allowed. Empty otherwise.
     /// </summary>
     public List<BusyTimeDto> MyBusy { get; set; } = new();
 

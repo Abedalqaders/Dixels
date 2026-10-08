@@ -85,9 +85,13 @@ public class BookingEmailModel
     /// <summary>The booker's cancel email: how many guests were told it's off (0: no line).</summary>
     public int GuestsTold { get; set; }
 
+    /// <summary>A guest's reminder, when they haven't answered: "Sara Ali hasn't heard from you yet…", above the Yes / No buttons.</summary>
+    public string? AnswerNudge { get; set; }
+
     /// <summary>A guest's invite: their own Accept / Decline links (the public answer page).</summary>
     public string? AcceptUrl { get; set; }
     public string? DeclineUrl { get; set; }
+    public string? MaybeUrl { get; set; }
 
     /// <summary>
     /// The invite is a meeting request the guest's mail app answers itself (E6): the email then

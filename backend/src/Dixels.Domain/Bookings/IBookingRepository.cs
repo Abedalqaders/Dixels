@@ -112,7 +112,8 @@ public interface IBookingRepository : IRepository<Booking, Guid>
 
     /// <summary>
     /// When any of these people is taken between <c>start</c> and <c>end</c>: their own
-    /// confirmed bookings and the confirmed meetings they accepted, except the bookings in
+    /// confirmed bookings and the confirmed meetings they accepted (busy) or said Maybe to
+    /// (tentatively busy, <see cref="BusySlot.IsTentative"/>), except the bookings in
     /// <paramref name="exceptBookingIds"/>. Each a seek on a (UserId, EndsAt) index.
     /// </summary>
     Task<List<BusySlot>> GetBusyAsync(

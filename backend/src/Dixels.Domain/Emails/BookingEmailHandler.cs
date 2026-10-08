@@ -58,6 +58,9 @@ public class BookingEmailHandler :
     public Task HandleEventAsync(BookingInviteesChangedEvent eventData) =>
         _bookingEmails.SendGuestChangesAsync(eventData);
 
-    public Task HandleEventAsync(BookingReminderDueEvent eventData) =>
-        _bookingEmails.SendReminderAsync(eventData.Booking);
+    public async Task HandleEventAsync(BookingReminderDueEvent eventData)
+    {
+        await _bookingEmails.SendReminderAsync(eventData.Booking);
+        await _bookingEmails.SendGuestRemindersAsync(eventData.Booking);
+    }
 }

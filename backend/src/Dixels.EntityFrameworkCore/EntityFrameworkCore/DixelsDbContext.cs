@@ -87,12 +87,10 @@ public class DixelsDbContext :
         }
         else
         {
-            // Postgres stores the instant, but Npgsql's legacy timestamp mode (switched on in
-            // DixelsEntityFrameworkCoreModule) reads timestamptz back in the MACHINE's offset:
-            // +00:00 in a container, +03:00 on a Windows laptop. Every DateTimeOffset here is a
-            // UTC instant, so it's handed over as UTC both ways — the same value wherever the
-            // backend runs. (Dropping the legacy switch would fix it at the source; it touches
-            // every DateTime column, so it's its own change.)
+            // Npgsql only accepts offset 0 for timestamptz (and always reads it back at offset 0).
+            // A safety net: a DateTimeOffset that arrives with another offset (a client's +03:00)
+            // is turned into the same instant in UTC instead of failing the save or the query.
+            // Lossless — only the offset changes, never the moment.
             configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcConverter>();
             configurationBuilder.Properties<DateTimeOffset?>().HaveConversion<UtcConverter>();
         }

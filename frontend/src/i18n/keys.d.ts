@@ -52,9 +52,11 @@ export interface TextKeys {
   "Booking:AnswerDeclined": string
   "Booking:AnswerFailed": string
   "Booking:AnswerFor": string
+  "Booking:AnswerMaybe": string
   "Booking:AnswerNone": string
   "Booking:AnswerSeriesNote": string
   "Booking:AnswerSummary": string
+  "Booking:AnswerSummaryMaybe": string
   "Booking:AnswerThisDate": string
   "Booking:AnswersClosed": string
   "Booking:BuildingRemovedDetail": string
@@ -99,6 +101,8 @@ export interface TextKeys {
   "Booking:Keep": string
   "Booking:ListAnd": string
   "Booking:ListSeparator": string
+  "Booking:Maybe": string
+  "Booking:MaybeWhenAnswering": string
   "Booking:MinPeople_one": string
   "Booking:MinPeople_other": string
   "Booking:MorePeople": string
@@ -183,6 +187,7 @@ export interface TextKeys {
   "Calendar:Item": string
   "Calendar:Lead": string
   "Calendar:MaxLength": string
+  "Calendar:MaybeItem": string
   "Calendar:MonthHeading": string
   "Calendar:MonthView": string
   "Calendar:MoreItems_one": string
@@ -367,6 +372,12 @@ export interface TextKeys {
   "Email:GuestDeclined:Subject": string
   "Email:GuestDeclined:SubjectSeries": string
   "Email:GuestMark": string
+  "Email:GuestReminder:Maybe": string
+  "Email:GuestReminder:No": string
+  "Email:GuestReminder:Nudge": string
+  "Email:GuestReminder:NudgeMaybe": string
+  "Email:GuestReminder:Subject": string
+  "Email:GuestReminder:Yes": string
   "Email:GuestRemoved:Heading": string
   "Email:GuestRemoved:Note": string
   "Email:GuestRemoved:Subject": string
@@ -386,6 +397,7 @@ export interface TextKeys {
   "Email:Invite:SubjectSeries": string
   "Email:InvitedBy": string
   "Email:ListSeparator": string
+  "Email:Maybe": string
   "Email:NotOn": string
   "Email:OpenInDixels": string
   "Email:Ordinal:1": string
@@ -630,6 +642,8 @@ export interface TextKeys {
   "Pagination:RowsPerPage": string
   "People:AddGuest": string
   "People:AlreadyAdded": string
+  "People:BusyAndMaybeSummary_one": string
+  "People:BusyAndMaybeSummary_other": string
   "People:BusyAt": string
   "People:BusyOnDates": string
   "People:BusyOnTheseDates": string
@@ -645,6 +659,13 @@ export interface TextKeys {
   "People:GuestEmail": string
   "People:GuestName": string
   "People:HowToAdd": string
+  "People:MaybeBusyAt": string
+  "People:MaybeBusyOnDates": string
+  "People:MaybeOnMore": string
+  "People:MaybeSummarySeries": string
+  "People:MaybeSummary_one": string
+  "People:MaybeSummary_other": string
+  "People:MaybeTag": string
   "People:NoMatch": string
   "People:Optional": string
   "People:Picked": string
@@ -790,13 +811,14 @@ export interface TextKeys {
   "Rsvp:Accept": string
   "Rsvp:Accepted": string
   "Rsvp:AllDates": string
-  "Rsvp:ChangeToAccept": string
-  "Rsvp:ChangeToDecline": string
+  "Rsvp:ChangeMind": string
   "Rsvp:ClosedDetail": string
   "Rsvp:ClosedTitle": string
   "Rsvp:Decline": string
   "Rsvp:Declined": string
   "Rsvp:InvitedBy": string
+  "Rsvp:Maybe": string
+  "Rsvp:MaybeButton": string
   "Rsvp:NotFoundDetail": string
   "Rsvp:NotFoundTitle": string
   "Rsvp:Pending": string
