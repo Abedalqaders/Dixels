@@ -982,6 +982,7 @@
     "Email:Invite:AddedHeading": "{0} added you to {1}",
     "Email:GuestRemoved:Heading": "{0} removed you from {1}",
     "Email:GuestRemoved:Subject": "Removed: {0} · {1}",
-    "Email:GuestRemoved:Note": "It's been taken off your calendar."
+    "Email:GuestRemoved:Note": "It's been taken off your calendar.",
+    "Email:GuestReminder:Subject": "Reminder: {0} at {1}"
   }
 }
