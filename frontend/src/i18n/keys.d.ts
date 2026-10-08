@@ -297,33 +297,55 @@ export interface TextKeys {
   "Duration:MinutesShort_other": string
   "Duration:Minutes_one": string
   "Duration:Minutes_other": string
-  "Email:AdminCancelled:Intro": string
-  "Email:AdminCancelled:IntroMany": string
+  "Email:Address": string
+  "Email:AdminCancelled:Heading": string
+  "Email:AdminCancelled:HeadingMany": string
   "Email:AdminCancelled:More": string
   "Email:AdminCancelled:Subject": string
   "Email:AdminCancelled:SubjectMany": string
+  "Email:AndMore": string
   "Email:Attendees": string
-  "Email:BookingCancelled:Intro": string
+  "Email:BookingCancelled:Heading": string
   "Email:BookingCancelled:Subject": string
-  "Email:BookingConfirmed:Intro": string
+  "Email:BookingConfirmed:Heading": string
   "Email:BookingConfirmed:Subject": string
-  "Email:BookingReminder:Intro": string
+  "Email:BookingReminder:Heading": string
   "Email:BookingReminder:Subject": string
-  "Email:Bookings": string
+  "Email:CancelBooking": string
+  "Email:ChangeOfPlans": string
   "Email:Dates": string
+  "Email:FindAnotherRoom": string
   "Email:Footer": string
   "Email:Greeting": string
-  "Email:OpenDixels": string
+  "Email:ListSeparator": string
+  "Email:NotOn": string
+  "Email:Ordinal:1": string
+  "Email:Ordinal:2": string
+  "Email:Ordinal:3": string
+  "Email:Ordinal:4": string
+  "Email:Ordinal:5": string
   "Email:Reason": string
-  "Email:SeriesCancelled:Intro": string
+  "Email:Repeat:Daily": string
+  "Email:Repeat:DailyN": string
+  "Email:Repeat:MonthlyDay": string
+  "Email:Repeat:MonthlyDayN": string
+  "Email:Repeat:MonthlyWeekday": string
+  "Email:Repeat:MonthlyWeekdayN": string
+  "Email:Repeat:Weekly": string
+  "Email:Repeat:WeeklyN": string
+  "Email:Repeats": string
+  "Email:RepeatsFrom": string
   "Email:SeriesCancelled:Subject": string
-  "Email:SeriesConfirmed:Intro": string
   "Email:SeriesConfirmed:Subject": string
-  "Email:Space": string
-  "Email:Time": string
-  "Email:Title": string
+  "Email:Status:Cancelled": string
+  "Email:Status:Confirmed": string
+  "Email:Status:Invitation": string
+  "Email:Status:Reminder": string
+  "Email:Status:Updated": string
+  "Email:ViewBooking": string
   "Email:When": string
   "Email:Where": string
+  "Email:ZoneTime": string
   "Enum:ConstraintSource.Building": string
   "Enum:ConstraintSource.Floor": string
   "Enum:ConstraintSource.Space": string

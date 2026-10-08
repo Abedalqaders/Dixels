@@ -102,13 +102,17 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Booking confirmed: Room 1, ");
+        email.Body.ShouldContain("DIXELS");
+        email.Body.ShouldContain("✓ Confirmed");
         email.Body.ShouldContain("Hi Dana Haddad,");
+        email.Body.ShouldContain("You&#39;re booked: Planning");
         email.Body.ShouldContain("Room 1");
         email.Body.ShouldContain("Level 1");
-        email.Body.ShouldContain("10:00–11:00");
-        email.Body.ShouldContain("Planning");
+        email.Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">UTC</span>");
         email.Body.ShouldContain("dir=\"ltr\"");
-        email.Body.ShouldContain("http://localhost:5173/my-calendar");
+        email.Body.ShouldContain($"http://localhost:5173/my-calendar?view=day&amp;date={Tomorrow:yyyy-MM-dd}");
+        email.Body.ShouldContain("http://localhost:5173/find-space");
+        email.Body.ShouldNotContain(">Address<"); // the building has none
     }
 
     [Fact]
@@ -197,8 +201,77 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldBe("Recurring booking confirmed: Room 1");
+        email.Body.ShouldContain("You&#39;re booked: Stand-up");
+        email.Body.ShouldContain($"Every day until {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(2)))}");
+        email.Body.ShouldContain($"From {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow))}");
         email.Body.ShouldContain(">3<");
-        email.Body.ShouldContain("Stand-up");
+        email.Body.ShouldNotContain(">Not on<"); // every date was booked
+    }
+
+    [Fact]
+    public async Task A_series_says_how_it_repeats_and_which_dates_it_skips()
+    {
+        var s = await CreateScenarioAsync();
+        var request = ThreeDays(s.Space.Id);
+        request.Recurrence = new RecurrenceDto
+        {
+            Frequency = RecurrenceFrequency.Weekly,
+            Interval = 1,
+            Weekdays = new[] { (int)Tomorrow.DayOfWeek },
+            EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(14)),
+        };
+        request.SkipDates = new List<DateOnly> { DateOnly.FromDateTime(Tomorrow.AddDays(7)) };
+        using (ActAs(s.UserId))
+        {
+            await _bookingsAppService.CreateSeriesAsync(request);
+        }
+
+        var body = EmailsTo(s).ShouldHaveSingleItem().Body;
+        body.ShouldContain($"Every {Tomorrow.DayOfWeek} until {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(14)))}");
+        body.ShouldContain(">Not on<");
+        body.ShouldContain(BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(7))));
+        body.ShouldContain(">2<"); // dates booked
+    }
+
+    /// <summary>Moves the scenario's building to Amman and gives it an English address.</summary>
+    private Task MoveToAmmanAsync(Scenario s) => WithUnitOfWorkAsync(async () =>
+    {
+        var floor = await _floorRepository.GetAsync(s.Space.FloorId);
+        var building = await _buildingRepository.GetAsync(floor.BuildingId, includeDetails: true);
+        building.SetTimezone("Asia/Amman");
+        building.SetAddresses(new Dictionary<string, string?> { ["en"] = "12 King Hussein St, Amman" });
+        await _buildingRepository.UpdateAsync(building);
+    });
+
+    [Fact]
+    public async Task Times_carry_the_buildings_zone_and_the_address_shows_when_set()
+    {
+        var s = await CreateScenarioAsync();
+        await MoveToAmmanAsync(s);
+        using (ActAs(s.UserId))
+        {
+            await _bookingsAppService.CreateAsync(Request(s.Space.Id));
+        }
+
+        var body = EmailsTo(s).ShouldHaveSingleItem().Body;
+        body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">Amman time</span>");
+        body.ShouldContain(">Address<");
+        body.ShouldContain("12 King Hussein St, Amman");
+    }
+
+    [Fact]
+    public async Task In_arabic_the_zone_is_its_gmt_offset_at_that_time()
+    {
+        var s = await CreateScenarioAsync();
+        await MoveToAmmanAsync(s);
+        await WithUnitOfWorkAsync(() => _userLanguage.SetAsync(s.UserId, "ar"));
+        using (ActAs(s.UserId))
+        {
+            await _bookingsAppService.CreateAsync(Request(s.Space.Id));
+        }
+
+        // Jordan keeps UTC+3 all year.
+        EmailsTo(s).ShouldHaveSingleItem().Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">GMT+3</span>");
     }
 
     // ---- Cancelling their own booking ----
@@ -217,7 +290,9 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Booking cancelled: Room 1, ");
-        email.Body.ShouldContain("Your booking is cancelled.");
+        email.Body.ShouldContain("✕ Cancelled");
+        email.Body.ShouldContain("You cancelled Planning");
+        email.Body.ShouldContain("text-decoration:line-through");
         email.Body.ShouldContain("10:00–11:00");
         email.Body.ShouldContain("Meeting moved &lt;online&gt;");
     }
@@ -294,13 +369,14 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
-        email.Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+        email.Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
         email.Body.ShouldContain("Hi Dana Haddad,");
-        email.Body.ShouldContain("An admin cancelled your booking.");
+        email.Body.ShouldContain("✕ Cancelled");
+        email.Body.ShouldContain("Your booking was cancelled");
         email.Body.ShouldContain("Level 1");
         email.Body.ShouldContain("10:00–11:00");
         email.Body.ShouldContain("Closed: Floor works &lt;now&gt;");
-        email.Body.ShouldContain("http://localhost:5173/my-calendar");
+        email.Body.ShouldContain("http://localhost:5173/find-space");
     }
 
     [Fact]
@@ -324,12 +400,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldBe("2 of your bookings were cancelled by an admin");
-        email.Body.ShouldContain("An admin cancelled 2 of your bookings.");
+        email.Body.ShouldContain("2 of your bookings were cancelled");
         // Soonest first, each with its own reason.
         email.Body.IndexOf("09:00–10:00", StringComparison.Ordinal).ShouldBeLessThan(email.Body.IndexOf("15:00–16:00", StringComparison.Ordinal));
         email.Body.ShouldContain("Rules changed: Open 10:00–14:00 only");
         email.Body.ShouldContain("Rules changed: Up to 30 minutes");
-        EmailsTo(other).ShouldHaveSingleItem().Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+        EmailsTo(other).ShouldHaveSingleItem().Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
     }
 
     [Fact]
@@ -372,9 +448,10 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         email.Subject.ShouldBe("ألغى أحد المسؤولين 2 من حجوزاتك");
         email.Body.ShouldContain("dir=\"rtl\"");
         email.Body.ShouldContain("مرحبًا Dana Haddad،");
-        email.Body.ShouldContain("ألغى أحد المسؤولين 2 من حجوزاتك.");
-        // The times stay left-to-right inside the Arabic text.
-        email.Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span>");
+        email.Body.ShouldContain("أُلغي 2 من حجوزاتك");
+        email.Body.ShouldContain("✕ ملغى");
+        // The times and the zone (as its GMT offset in Arabic) stay left-to-right inside the Arabic text.
+        email.Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">GMT</span>");
     }
 
     [Fact]
@@ -394,7 +471,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldBe("23 of your bookings were cancelled by an admin");
-        email.Body.Split("text-decoration:line-through").Length.ShouldBe(AdminCancelEmailQueue.ShownBookings + 1);
+        email.Body.Split(">When<").Length.ShouldBe(AdminCancelEmailQueue.ShownBookings + 1); // one block each
         email.Body.ShouldContain("…and 3 more. Open Dixels to see them all.");
         email.Body.ShouldContain("00:00–00:30");
         email.Body.ShouldNotContain("11:00–11:30"); // the 23rd
@@ -416,7 +493,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await QueuedJobs.RunAllAsync(ServiceProvider); // emails
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
-        email.Subject.ShouldStartWith("Booking cancelled by an admin: Room 1, ");
+        email.Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
         email.Body.ShouldContain("The space was removed");
     }
 
@@ -479,7 +556,8 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         var email = EmailsTo(s).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Reminder: Room 1 at ");
-        email.Body.ShouldContain("Your booking starts soon.");
+        email.Body.ShouldContain("⏰ Reminder");
+        email.Body.ShouldContain("Planning starts at ");
     }
 
     [Fact]
