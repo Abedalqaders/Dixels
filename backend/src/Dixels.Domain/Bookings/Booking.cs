@@ -151,6 +151,22 @@ public class Booking : AuditedAggregateRoot<Guid>
         row.Respond(status, now);
     }
 
+    /// <summary>
+    /// The owner changing the head count and the guest list together (already checked by
+    /// <see cref="BookingInviteeResolver"/> and the head-count rules). Guests who stay keep
+    /// their row, and with it their answer; returns who was added and who was removed.
+    /// </summary>
+    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(int attendees, IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        if (attendees < 1)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesMustBePositive);
+        }
+
+        Attendees = attendees;
+        return SetInvitees(invitees, guidGenerator);
+    }
+
     /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
     internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)
     {

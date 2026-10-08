@@ -37,6 +37,7 @@ public partial class BookingManager : DomainService
     private readonly IStringLocalizer<DixelsResource> _localizer;
     private readonly ILocalEventBus _localEventBus;
     private readonly BookingInviteeResolver _inviteeResolver;
+    private readonly BookingAccess _bookingAccess;
 
     public BookingManager(
         IRepository<Space, Guid> spaceRepository,
@@ -53,7 +54,8 @@ public partial class BookingManager : DomainService
         LocalizedNameReader nameReader,
         IStringLocalizer<DixelsResource> localizer,
         ILocalEventBus localEventBus,
-        BookingInviteeResolver inviteeResolver)
+        BookingInviteeResolver inviteeResolver,
+        BookingAccess bookingAccess)
     {
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -70,6 +72,7 @@ public partial class BookingManager : DomainService
         _localizer = localizer;
         _localEventBus = localEventBus;
         _inviteeResolver = inviteeResolver;
+        _bookingAccess = bookingAccess;
     }
 
     /// <summary>

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Search, X } from 'lucide-react'
+import { Search, Users, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
@@ -20,13 +20,15 @@ interface BookingDetailPanelProps {
   onCancel: (booking: BookingDto) => void
   /** A guest answering the invitation — see BookingDetails. */
   onRespond?: BookingDetailsProps['onRespond']
+  /** Offers Edit guests on an upcoming booking I own — only to someone who may book. */
+  onEditGuests?: (booking: BookingDto) => void
 }
 
 /**
  * One booking's details in the calendar's side panel, under the mini calendar — the
  * calendar stays in view while you read, and the next click just swaps the booking.
  */
-export function BookingDetailPanel({ item, booking, error, canBook, canCancel, onClose, onCancel, onRespond }: BookingDetailPanelProps) {
+export function BookingDetailPanel({ item, booking, error, canBook, canCancel, onClose, onCancel, onRespond, onEditGuests }: BookingDetailPanelProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const link = canBook ? findSpaceLink(item, booking) : null
@@ -44,6 +46,11 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
       <BookingDetails item={item} booking={booking} error={error} onRespond={onRespond} />
 
       <div className="flex flex-wrap gap-2">
+        {onEditGuests && booking?.isOwner && phase === 'upcoming' && (
+          <Button variant="outline" size="sm" onClick={() => onEditGuests(booking)}>
+            <Users /> {t('Booking:EditGuests')}
+          </Button>
+        )}
         {canCancel && booking?.isOwner && phase === 'upcoming' && (
           <Button variant="destructive" size="sm" onClick={() => onCancel(booking)}>
             {t('Booking:Cancel')}

@@ -593,6 +593,65 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         await Should.ThrowAsync<AbpValidationException>(() => _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Pending)));
     }
 
+    [Fact]
+    public async Task A_whole_series_answer_sets_every_upcoming_date_and_overwrites_single_date_answers()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(Daily(s.SpaceId, 3, 2, Colleague(s.Rana)));
+        }
+        var dates = created.Bookings.OrderBy(b => b.StartsAt).Select(b => b.Id).ToList();
+
+        var answered = new List<BookingInviteeRespondedEvent>();
+        using (GetRequiredService<ILocalEventBus>().Subscribe<BookingInviteeRespondedEvent>(e => { answered.Add(e); return Task.CompletedTask; }))
+        using (ActAs(s.Rana.Id))
+        {
+            // One date first, then the whole series: the series answer wins everywhere.
+            await _bookings.RespondAsync(dates[1], Answer(InviteeResponseStatus.Declined));
+            await _bookings.RespondToSeriesAsync(created.SeriesId, Answer(InviteeResponseStatus.Accepted));
+            (await _bookings.GetAsync(dates[1])).MyResponse.ShouldBe(InviteeResponseStatus.Accepted);
+
+            // A single date can still differ afterwards.
+            await _bookings.RespondAsync(dates[2], Answer(InviteeResponseStatus.Declined));
+        }
+
+        answered.Last().ShouldSatisfyAllConditions(
+            e => e.BookingId.ShouldBe(dates[2]),
+            e => e.SeriesId.ShouldBeNull());
+        answered[1].ShouldSatisfyAllConditions(
+            e => e.BookingId.ShouldBeNull(),
+            e => e.SeriesId.ShouldBe(created.SeriesId),
+            e => e.Status.ShouldBe(InviteeResponseStatus.Accepted));
+
+        var stored = await WithUnitOfWorkAsync(() => _bookingRepository.GetListAsync(b => b.SeriesId == created.SeriesId, includeDetails: true));
+        stored.OrderBy(b => b.StartsAt).Select(b => b.Invitees.Single().ResponseStatus).ShouldBe(new[]
+        {
+            InviteeResponseStatus.Accepted, InviteeResponseStatus.Accepted, InviteeResponseStatus.Declined,
+        });
+        var series = await WithUnitOfWorkAsync(() => GetRequiredService<IRepository<BookingSeries, Guid>>().GetAsync(created.SeriesId));
+        series.Invitees.Single().ResponseStatus.ShouldBe(InviteeResponseStatus.Accepted);
+    }
+
+    [Fact]
+    public async Task Only_a_series_guest_answers_for_the_series()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(Daily(s.SpaceId, 2, 2, Colleague(s.Rana)));
+            (await RejectionCodeAsync(() => _bookings.RespondToSeriesAsync(created.SeriesId, Answer(InviteeResponseStatus.Accepted))))
+                .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserCannotRespond);
+        }
+
+        using (ActAs(s.Omar.Id))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.RespondToSeriesAsync(created.SeriesId, Answer(InviteeResponseStatus.Accepted)));
+        }
+    }
+
     // ---- Colleague search ----
 
     [Fact]

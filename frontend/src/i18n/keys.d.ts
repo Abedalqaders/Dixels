@@ -80,6 +80,11 @@ export interface TextKeys {
   "Booking:Decline": string
   "Booking:Details": string
   "Booking:Done": string
+  "Booking:EditGuests": string
+  "Booking:EditGuestsFailed": string
+  "Booking:EditGuestsSeriesNote": string
+  "Booking:EditGuestsSummary": string
+  "Booking:EditGuestsTitle": string
   "Booking:EveryDay": string
   "Booking:FewerPeople": string
   "Booking:From": string
@@ -171,6 +176,7 @@ export interface TextKeys {
   "Calendar:DayPassed": string
   "Calendar:DayView": string
   "Calendar:DeclinedItem": string
+  "Calendar:GuestsSaved": string
   "Calendar:InvitedItem": string
   "Calendar:Item": string
   "Calendar:Lead": string
@@ -240,7 +246,9 @@ export interface TextKeys {
   "Dixels:Bookings:CancelReason:SpaceRemoved": string
   "Dixels:Bookings:ClosedDay": string
   "Dixels:Bookings:ClosedDay:Short": string
+  "Dixels:Bookings:EditSeriesGuests": string
   "Dixels:Bookings:ExternalGuestsDisabled": string
+  "Dixels:Bookings:GuestsNotEditable": string
   "Dixels:Bookings:IdempotencyKeyReused": string
   "Dixels:Bookings:InvalidDateRange": string
   "Dixels:Bookings:InvalidTimeRange": string

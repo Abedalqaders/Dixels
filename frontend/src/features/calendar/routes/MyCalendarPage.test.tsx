@@ -82,6 +82,8 @@ function booking(id: string, title: string, from: string, to: string, day = tomo
     isOwner: true,
     ownerName: 'Me',
     myResponse: null,
+    capacity: 8,
+    minAttendees: null,
   }
 }
 

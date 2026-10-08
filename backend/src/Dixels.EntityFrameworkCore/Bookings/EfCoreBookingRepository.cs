@@ -210,6 +210,13 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .AnyAsync(a => a.BookingId == bookingId && a.UserId == userId, GetCancellationToken(cancellationToken));
     }
 
+    public async Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingSeriesAttendee>()
+            .AnyAsync(a => a.SeriesId == seriesId && a.UserId == userId, GetCancellationToken(cancellationToken));
+    }
+
     public async Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(
         IReadOnlyCollection<Guid> bookingIds,
         CancellationToken cancellationToken = default)

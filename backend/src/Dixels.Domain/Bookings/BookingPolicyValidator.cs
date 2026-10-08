@@ -61,6 +61,32 @@ public class BookingPolicyValidator : IDomainService
         return violations;
     }
 
+    /// <summary>
+    /// The rules a change of guests or head count is held to, on a booking that already holds
+    /// its slot (so no time rule runs). Grandfathered like the rest: a room that has since
+    /// shrunk only refuses a <i>higher</i> head count, and a raised minimum only a <i>lower</i>
+    /// one, so the owner of a kept booking can still take guests off. The head count must
+    /// always fit everyone invited plus the owner.
+    /// </summary>
+    public IReadOnlyList<BookingViolation> ValidateHeadCount(ResolvedConstraints rules, int storedAttendees, int attendees, int invitees)
+    {
+        var request = new BookingRequest(default, default, attendees, invitees);
+        var violations = new List<BookingViolation>();
+
+        if (attendees > storedAttendees)
+        {
+            CheckCapacity(rules, request, violations);
+        }
+
+        if (attendees < storedAttendees)
+        {
+            CheckMinAttendees(rules, request, violations);
+        }
+
+        CheckInvitees(request, violations);
+        return violations;
+    }
+
     // Alignment is checked on the local wall clock, not UTC — in a zone offset by a
     // non-whole hour (e.g. UTC+05:45) 09:00 local isn't on a 15-minute UTC boundary.
     private static void CheckAlignment(BuildingClock clock, BookingRequest request, int slotMinutes, List<BookingViolation> violations)

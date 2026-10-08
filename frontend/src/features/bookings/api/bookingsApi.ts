@@ -60,6 +60,9 @@ export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatu
 /** A colleague guest's answer: Accepted or Declined (Pending is refused). */
 export type RespondToInviteDto = ApiDto<'Dixels.Bookings.RespondToInviteDto'>
 
+/** The owner's new guest list and head count, for a booking or a whole series. */
+export type UpdateInviteesDto = ApiDto<'Dixels.Bookings.UpdateInviteesDto'>
+
 /** Someone in my building the guest picker offers (`GET /api/app/colleagues`). */
 export type ColleagueDto = ApiResponse<'Dixels.Users.ColleagueDto'>
 
@@ -147,6 +150,19 @@ export async function getMyBookings(token: string, from: IsoDate, to: IsoDate): 
 /** One of my bookings in full — everything the calendar's light list leaves out. */
 export function getBooking(token: string, id: string): Promise<BookingDto> {
   return request<BookingDto>(`/api/app/bookings/${id}`, token)
+}
+
+/**
+ * Changes who's invited to one of my bookings that hasn't started (not a date of a series —
+ * see updateSeriesInvitees). Guests who stay keep their answer.
+ */
+export function updateInvitees(token: string, id: string, input: UpdateInviteesDto): Promise<BookingDto> {
+  return request<BookingDto>(`/api/app/bookings/${id}/invitees`, token, { method: 'PUT', body: JSON.stringify(input) })
+}
+
+/** The same for a whole series: its list and every upcoming date. Returns those dates. */
+export function updateSeriesInvitees(token: string, seriesId: string, input: UpdateInviteesDto): Promise<SeriesCreatedDto> {
+  return request<SeriesCreatedDto>(`/api/app/bookings/series/${seriesId}/invitees`, token, { method: 'PUT', body: JSON.stringify(input) })
 }
 
 /** Which bookings of a series a cancel covers (CancelScope on the server). */

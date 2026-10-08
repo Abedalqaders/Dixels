@@ -66,7 +66,36 @@ public class BookingAccess : DomainService
     /// <summary>The same, with the error code a refused (known) role gets — e.g. one that names the action.</summary>
     public async Task EnsureAsync(Booking booking, Guid userId, string refusedCode, params BookingRole[] allowed)
     {
-        var role = await GetRoleAsync(booking, userId);
+        Ensure(await GetRoleAsync(booking, userId), allowed, refusedCode, typeof(Booking), booking.Id);
+    }
+
+    /// <summary>
+    /// The person's role in a whole series, the way <see cref="GetRoleAsync"/> works for one
+    /// booking: Owner from the series itself, at no cost; Guest when they're on the series' own
+    /// guest list, with one small query on its unique index.
+    /// </summary>
+    public async Task<BookingRole> GetSeriesRoleAsync(BookingSeries series, Guid userId)
+    {
+        if (series.UserId == userId)
+        {
+            return BookingRole.Owner;
+        }
+
+        return await _bookingRepository.IsSeriesInviteeAsync(series.Id, userId) ? BookingRole.Guest : BookingRole.None;
+    }
+
+    /// <summary>The rule of <see cref="EnsureAsync(Booking, Guid, BookingRole[])"/> for a whole series: 404 for no role, 403 for a known role that isn't allowed.</summary>
+    public Task EnsureSeriesAsync(BookingSeries series, Guid userId, params BookingRole[] allowed) =>
+        EnsureSeriesAsync(series, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
+
+    /// <summary>The same, with the error code a refused (known) role gets.</summary>
+    public async Task EnsureSeriesAsync(BookingSeries series, Guid userId, string refusedCode, params BookingRole[] allowed)
+    {
+        Ensure(await GetSeriesRoleAsync(series, userId), allowed, refusedCode, typeof(BookingSeries), series.Id);
+    }
+
+    private static void Ensure(BookingRole role, BookingRole[] allowed, string refusedCode, Type entityType, Guid id)
+    {
         if (allowed.Contains(role))
         {
             return;
@@ -74,7 +103,7 @@ public class BookingAccess : DomainService
 
         if (role == BookingRole.None)
         {
-            throw new EntityNotFoundException(typeof(Booking), booking.Id);
+            throw new EntityNotFoundException(entityType, id);
         }
 
         throw new BusinessException(refusedCode);

@@ -119,6 +119,26 @@ describe('BookingDetailPanel', () => {
     expect(screen.queryByRole('list', { name: 'Invited' })).not.toBeInTheDocument()
   })
 
+  it('offers Edit guests on an upcoming booking I own, and only then', async () => {
+    const onEditGuests = vi.fn()
+    const mine = { ...booking, isOwner: true } as BookingDto
+    const { rerender } = render(
+      <MemoryRouter>
+        <BookingDetailPanel item={item} booking={mine} error={null} canBook canCancel onClose={vi.fn()} onCancel={vi.fn()} onEditGuests={onEditGuests} />
+      </MemoryRouter>,
+    )
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Edit guests' }))
+    expect(onEditGuests).toHaveBeenCalledWith(mine)
+
+    rerender(
+      <MemoryRouter>
+        <BookingDetailPanel item={item} booking={{ ...mine, isOwner: false }} error={null} canBook canCancel onClose={vi.fn()} onCancel={vi.fn()} onEditGuests={onEditGuests} />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('button', { name: 'Edit guests' })).not.toBeInTheDocument()
+  })
+
   it("shows a guest who invited them, the other guests by name only, and no Cancel", () => {
     const invite = {
       ...booking,

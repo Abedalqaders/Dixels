@@ -86,6 +86,32 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return _invitees.Replace(invitees, invitee => new BookingSeriesAttendee(guidGenerator.Create(), Id, invitee));
     }
 
+    /// <summary>The owner changing the head count and the guest list for the series (its upcoming dates are changed alongside).</summary>
+    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(int attendees, IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        if (attendees < 1 + invitees.Count)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees)
+                .WithData("invitees", invitees.Count)
+                .WithData("attendees", attendees)
+                .WithData("needed", 1 + invitees.Count);
+        }
+
+        Attendees = attendees;
+        return SetInvitees(invitees, guidGenerator);
+    }
+
+    /// <summary>
+    /// A colleague guest's answer for the whole series (its upcoming dates are answered by the
+    /// caller, see BookingResponses). Only the series' own list here: nothing about dates.
+    /// </summary>
+    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    {
+        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
+                  ?? throw new InvalidOperationException("Only a colleague guest of this series can answer it (BookingAccess checks that first).");
+        row.Respond(status, now);
+    }
+
     /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>
     public bool MatchesInvitees(IReadOnlyCollection<Invitee> invitees) =>
         Booking.SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);
