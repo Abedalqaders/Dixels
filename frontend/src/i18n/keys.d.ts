@@ -128,8 +128,6 @@ export interface TextKeys {
   "BookingForm:AllDatesFree": string
   "BookingForm:AppliesToEveryDate": string
   "BookingForm:AtLeast": string
-  "BookingForm:Attendees": string
-  "BookingForm:AttendeesRequired": string
   "BookingForm:AvailabilityCheckFailed": string
   "BookingForm:Available": string
   "BookingForm:Book": string
@@ -147,8 +145,6 @@ export interface TextKeys {
   "BookingForm:NoFreeDays": string
   "BookingForm:NoTimesLeft": string
   "BookingForm:Now": string
-  "BookingForm:OfSeats_one": string
-  "BookingForm:OfSeats_other": string
   "BookingForm:RoomSeats_one": string
   "BookingForm:RoomSeats_other": string
   "BookingForm:Rules": string
@@ -476,6 +472,14 @@ export interface TextKeys {
   "FindSpace:TryTime": string
   "FindSpace:TryTimeFor": string
   "FindSpace:Type": string
+  "HeadCount:InviteMore_one": string
+  "HeadCount:InviteMore_other": string
+  "HeadCount:JustYou": string
+  "HeadCount:Label": string
+  "HeadCount:People_one": string
+  "HeadCount:People_other": string
+  "HeadCount:YouAndGuests_one": string
+  "HeadCount:YouAndGuests_other": string
   "Hierarchy:Add": string
   "Hierarchy:AddBuilding": string
   "Hierarchy:AddFloor": string

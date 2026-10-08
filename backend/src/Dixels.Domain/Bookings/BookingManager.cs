@@ -84,11 +84,11 @@ public partial class BookingManager : DomainService
     /// as it would be saved (a typed colleague's email already turned into the colleague).
     /// </summary>
     public async Task<BookingEvaluation> EvaluateAsync(
-        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees, IReadOnlyCollection<Invitee> invitees)
+        Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, IReadOnlyCollection<Invitee> invitees)
     {
-        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
+        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd);
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
-        var evaluation = await ValidateAsync(context, attendees, userId, resolved);
+        var evaluation = await ValidateAsync(context, Booking.HeadCount(resolved), userId, resolved);
 
         // Heads-ups only a preview shows (a create returns none, so it doesn't pay for them).
         var slot = new[] { new TimeRange(evaluation.StartUtc, evaluation.EndUtc) };
@@ -148,14 +148,13 @@ public partial class BookingManager : DomainService
         Guid spaceId,
         DateTime localStart,
         DateTime localEnd,
-        int attendees,
         IReadOnlyCollection<Invitee> invitees,
         string? title,
         string idempotencyKey)
     {
         await _bookingRepository.LockSpaceAsync(spaceId);
 
-        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd, attendees);
+        var context = await LoadContextAsync(userId, spaceId, localStart, localEnd);
 
         // One booking at a time per person: hold the person too, so two of their own
         // requests for different rooms can't both pass the clash check at once.
@@ -165,6 +164,7 @@ public partial class BookingManager : DomainService
         }
 
         var resolved = await _inviteeResolver.ResolveAsync(userId, context.Building.Id, invitees);
+        var attendees = Booking.HeadCount(resolved);
 
         var existing = await _bookingRepository.FindByIdempotencyKeyAsync(userId, idempotencyKey);
         if (existing is not null)
@@ -388,13 +388,8 @@ public partial class BookingManager : DomainService
         return (open, closed);
     }
 
-    private async Task<BookingContext> LoadContextAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd, int attendees)
+    private async Task<BookingContext> LoadContextAsync(Guid userId, Guid spaceId, DateTime localStart, DateTime localEnd)
     {
-        if (attendees < 1)
-        {
-            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesMustBePositive);
-        }
-
         // GetAsync respects the soft-delete filter, so a deleted space (or one under a
         // deleted floor/building) is a plain 404 rather than something bookable.
         var space = await _spaceRepository.GetAsync(spaceId);

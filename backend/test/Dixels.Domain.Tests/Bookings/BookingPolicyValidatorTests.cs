@@ -98,15 +98,14 @@ public class BookingPolicyValidatorTests
     }
 
     [Fact]
-    public void The_head_count_must_leave_room_for_everyone_invited_and_the_owner()
+    public void A_room_minimum_says_how_many_more_people_to_invite()
     {
-        var violation = Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 4, invitees: 4).ShouldHaveSingleItem();
+        // The owner and one guest, in a room for at least 4: two more to invite.
+        var violation = Validate(Local(2026, 9, 29, 10), Local(2026, 9, 29, 11), attendees: 2, invitees: 1).ShouldHaveSingleItem();
 
-        violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
-        violation.Level.ShouldBeNull();
-        violation.Data["invitees"].ShouldBe(4);
-        violation.Data["attendees"].ShouldBe(4);
-        violation.Data["needed"].ShouldBe(5);
+        violation.Code.ShouldBe(DixelsDomainErrorCodes.BookingBelowMinAttendees);
+        violation.Data["minAttendees"].ShouldBe(4);
+        violation.Data["toInvite"].ShouldBe(2);
     }
 
     [Fact]
@@ -132,13 +131,6 @@ public class BookingPolicyValidatorTests
         _validator.ValidateHeadCount(Rules(), storedAttendees: 3, attendees: 3, invitees: 2).ShouldBeEmpty();
         Codes(_validator.ValidateHeadCount(Rules(), storedAttendees: 3, attendees: 2, invitees: 1))
             .ShouldBe(new[] { DixelsDomainErrorCodes.BookingBelowMinAttendees });
-    }
-
-    [Fact]
-    public void A_guest_edit_always_needs_room_for_everyone_invited()
-    {
-        Codes(_validator.ValidateHeadCount(Rules(), storedAttendees: 5, attendees: 5, invitees: 5))
-            .ShouldBe(new[] { DixelsDomainErrorCodes.BookingAttendeesBelowInvitees });
     }
 
     [Fact]

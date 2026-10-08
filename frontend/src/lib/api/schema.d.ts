@@ -7084,8 +7084,6 @@ export interface components {
             warnings: components["schemas"]["Dixels.Bookings.BookingViolationDto"][];
         };
         "Dixels.Bookings.BookingRequestDto": {
-            /** Format: int32 */
-            attendees: number;
             invitees?: components["schemas"]["Dixels.Bookings.InviteeDto"][] | null;
             /** Format: date-time */
             localEnd: string;
@@ -7150,8 +7148,6 @@ export interface components {
          */
         "Dixels.Bookings.CancelScope": 0 | 1 | 2;
         "Dixels.Bookings.CreateBookingDto": {
-            /** Format: int32 */
-            attendees: number;
             idempotencyKey: string;
             invitees?: components["schemas"]["Dixels.Bookings.InviteeDto"][] | null;
             /** Format: date-time */
@@ -7163,8 +7159,6 @@ export interface components {
             title?: string | null;
         };
         "Dixels.Bookings.CreateSeriesDto": {
-            /** Format: int32 */
-            attendees: number;
             idempotencyKey: string;
             invitees?: components["schemas"]["Dixels.Bookings.InviteeDto"][] | null;
             /** Format: date-time */
@@ -7267,8 +7261,6 @@ export interface components {
             timezone: string;
         };
         "Dixels.Bookings.SeriesRequestDto": {
-            /** Format: int32 */
-            attendees: number;
             invitees?: components["schemas"]["Dixels.Bookings.InviteeDto"][] | null;
             /** Format: date-time */
             localEnd: string;
@@ -7303,8 +7295,6 @@ export interface components {
             days: components["schemas"]["Dixels.Bookings.SpaceDayDto"][];
         };
         "Dixels.Bookings.UpdateInviteesDto": {
-            /** Format: int32 */
-            attendees: number;
             invitees: components["schemas"]["Dixels.Bookings.InviteeDto"][];
         };
         "Dixels.Localization.LocalizedNameDto": {

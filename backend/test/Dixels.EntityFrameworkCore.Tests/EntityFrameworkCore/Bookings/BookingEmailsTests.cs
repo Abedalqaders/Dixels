@@ -84,7 +84,6 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = 2,
         Title = title,
         IdempotencyKey = key ?? Guid.NewGuid().ToString(),
     };
@@ -193,7 +192,6 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = 2,
         Title = "Stand-up",
         Recurrence = new RecurrenceDto
         {

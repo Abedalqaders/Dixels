@@ -80,6 +80,7 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
     private IDisposable ActAs(Guid userId) =>
         _principalAccessor.Change(new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(AbpClaimTypes.UserId, userId.ToString()) })));
 
+    /// <summary>A booking for <paramref name="attendees"/> people: the booker and that many less one outside guests.</summary>
     private async Task<BookingDto> BookAsync(Scenario s, int startHour, int endHour, int attendees = 2, Guid? spaceId = null)
     {
         using var _ = ActAs(s.UserId);
@@ -88,9 +89,9 @@ public class BookingImpactTests : DixelsApplicationTestBase<DixelsEntityFramewor
             SpaceId = spaceId ?? s.Space.Id,
             LocalStart = Tomorrow.AddHours(startHour),
             LocalEnd = Tomorrow.AddHours(endHour),
-            Attendees = attendees,
             Title = "Planning",
             IdempotencyKey = Guid.NewGuid().ToString(),
+            Invitees = Enumerable.Range(1, attendees - 1).Select(i => new InviteeDto { Email = $"guest{i}.{Guid.NewGuid():N}@outside.io" }).ToList(),
         });
     }
 

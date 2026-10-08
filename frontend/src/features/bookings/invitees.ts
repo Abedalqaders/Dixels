@@ -19,14 +19,9 @@ export function fromInviteeDtos(invitees: BookingInviteeDto[] | null | undefined
   return (invitees ?? []).map((i) => ({ userId: i.userId ?? null, name: i.name, email: i.email, isExternal: i.isExternal }))
 }
 
-/**
- * The head count once `inviteeCount` people are invited: at least you plus each of them.
- * Never lowered — a higher number may count people who aren't named. An empty or broken
- * number becomes the least that fits.
- */
-export function headCountFor(attendees: number, inviteeCount: number): number {
-  const least = 1 + inviteeCount
-  return Number.isFinite(attendees) ? Math.max(attendees, least) : least
+/** How many people a booking is for: you plus each guest. Nobody types it; the server counts the same way. */
+export function headCount(inviteeCount: number): number {
+  return 1 + inviteeCount
 }
 
 /**

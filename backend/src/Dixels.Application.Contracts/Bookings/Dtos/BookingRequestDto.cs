@@ -25,13 +25,13 @@ public class BookingRequestDto
     [DisableDateTimeNormalization]
     public DateTime LocalEnd { get; set; }
 
-    [Range(1, int.MaxValue)]
-    public int Attendees { get; set; } = 1;
-
     [StringLength(BookingConsts.MaxTitleLength)]
     public string? Title { get; set; }
 
-    /// <summary>Who else is invited; left out means nobody. <see cref="Attendees"/> must be at least one more (the owner).</summary>
+    /// <summary>
+    /// Who else is invited; left out means nobody. The head count is the owner plus these
+    /// (as the server resolves them): it isn't sent.
+    /// </summary>
     [MaxLength(BookingConsts.MaxInvitees)]
     public List<InviteeDto>? Invitees { get; set; }
 }

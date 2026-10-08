@@ -44,9 +44,6 @@ public class BookingPolicyValidator : IDomainService
         CheckCapacity(rules, request, violations);
         CheckMinAttendees(rules, request, violations);
 
-        // The head count leaves no room for everyone invited (plus the owner).
-        CheckInvitees(request, violations);
-
         // Someone has it. (The database's exclusion constraint is the real enforcement — a
         // double-booking can be a race — this is the friendly early answer.)
         if (overlapsExistingBooking)
@@ -65,8 +62,8 @@ public class BookingPolicyValidator : IDomainService
     /// The rules a change of guests or head count is held to, on a booking that already holds
     /// its slot (so no time rule runs). Grandfathered like the rest: a room that has since
     /// shrunk only refuses a <i>higher</i> head count, and a raised minimum only a <i>lower</i>
-    /// one, so the owner of a kept booking can still take guests off. The head count must
-    /// always fit everyone invited plus the owner.
+    /// one, so the owner of a kept booking can still take guests off. The head count is always
+    /// the owner plus the guests (<see cref="Booking.HeadCount"/>), so it fits everyone invited.
     /// </summary>
     public IReadOnlyList<BookingViolation> ValidateHeadCount(ResolvedConstraints rules, int storedAttendees, int attendees, int invitees)
     {
@@ -83,7 +80,6 @@ public class BookingPolicyValidator : IDomainService
             CheckMinAttendees(rules, request, violations);
         }
 
-        CheckInvitees(request, violations);
         return violations;
     }
 
@@ -144,20 +140,8 @@ public class BookingPolicyValidator : IDomainService
             violations.Add(new BookingViolation(
                 DixelsDomainErrorCodes.BookingBelowMinAttendees,
                 ConstraintSource.Space,
-                BookingFormat.Data(("minAttendees", minAttendees), ("attendees", request.Attendees))));
-        }
-    }
-
-    // Not a level's rule (no source): the booker's own numbers disagree.
-    private static void CheckInvitees(BookingRequest request, List<BookingViolation> violations)
-    {
-        var needed = 1 + request.Invitees;
-        if (request.Attendees < needed)
-        {
-            violations.Add(new BookingViolation(
-                DixelsDomainErrorCodes.BookingAttendeesBelowInvitees,
-                null,
-                BookingFormat.Data(("invitees", request.Invitees), ("attendees", request.Attendees), ("needed", needed))));
+                // toInvite: how many more people to invite (the head count is the owner plus the guests).
+                BookingFormat.Data(("minAttendees", minAttendees), ("attendees", request.Attendees), ("toInvite", minAttendees - request.Attendees))));
         }
     }
 

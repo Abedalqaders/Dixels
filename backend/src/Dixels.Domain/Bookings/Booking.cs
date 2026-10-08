@@ -157,27 +157,38 @@ public class Booking : AuditedAggregateRoot<Guid>
     public bool IsOpenForAnswers(DateTimeOffset now) => Status == BookingStatus.Confirmed && StartsAt > now;
 
     /// <summary>
-    /// The owner changing the head count and the guest list together (already checked by
-    /// <see cref="BookingInviteeResolver"/> and the head-count rules). Guests who stay keep
-    /// their row, and with it their answer; returns who was added and who was removed.
+    /// How many people a booking is for: the owner and each guest. Nobody types it; it follows
+    /// the guest list (a room's minimum is met by inviting people).
     /// </summary>
-    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(int attendees, IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
-    {
-        if (attendees < 1)
-        {
-            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesMustBePositive);
-        }
+    public static int HeadCount(IReadOnlyCollection<Invitee> invitees) => 1 + invitees.Count;
 
-        Attendees = attendees;
+    /// <summary>
+    /// The owner changing the guest list (already checked by <see cref="BookingInviteeResolver"/>
+    /// and the head-count rules); the head count follows it. Guests who stay keep their row, and
+    /// with it their answer; returns who was added and who was removed.
+    /// </summary>
+    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    {
+        Attendees = HeadCount(invitees);
         return SetInvitees(invitees, guidGenerator);
     }
 
     /// <summary>
     /// A colleague who left (deactivated, removed, or moved to another building) coming off
-    /// the guest list. The head count stays: it may count people who aren't named. Returns
-    /// whether they were on it.
+    /// the guest list, and so off the head count. Returns whether they were on it.
     /// </summary>
-    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+    public bool RemoveInvitee(Guid userId)
+    {
+        if (!_invitees.RemoveColleague(userId))
+        {
+            return false;
+        }
+
+        // Never below the owner alone: a booking from before the head count followed the guests
+        // may count more people than it names.
+        Attendees = Math.Max(1, Attendees - 1);
+        return true;
+    }
 
     /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
     internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)

@@ -75,25 +75,23 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
 
     private static InviteeDto Colleague(Guid id) => new() { UserId = id };
 
-    private static UpdateInviteesDto Guests(int attendees, params Guid[] colleagues) =>
-        new() { Attendees = attendees, Invitees = colleagues.Select(Colleague).ToList() };
+    private static UpdateInviteesDto Guests(params Guid[] colleagues) =>
+        new() { Invitees = colleagues.Select(Colleague).ToList() };
 
-    private Task<BookingDto> BookAsync(Scenario s, int attendees, params Guid[] colleagues) => _bookings.CreateAsync(new CreateBookingDto
+    private Task<BookingDto> BookAsync(Scenario s, params Guid[] colleagues) => _bookings.CreateAsync(new CreateBookingDto
     {
         SpaceId = s.SpaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = attendees,
         IdempotencyKey = Guid.NewGuid().ToString(),
         Invitees = colleagues.Select(Colleague).ToList(),
     });
 
-    private Task<SeriesCreatedDto> BookSeriesAsync(Scenario s, int days, int attendees, params Guid[] colleagues) => _bookings.CreateSeriesAsync(new CreateSeriesDto
+    private Task<SeriesCreatedDto> BookSeriesAsync(Scenario s, int days, params Guid[] colleagues) => _bookings.CreateSeriesAsync(new CreateSeriesDto
     {
         SpaceId = s.SpaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = attendees,
         Recurrence = new RecurrenceDto { Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(days - 1)) },
         IdempotencyKey = Guid.NewGuid().ToString(),
         Invitees = colleagues.Select(Colleague).ToList(),
@@ -124,16 +122,16 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 3, s.Rana, s.Omar);
+        var booking = await BookAsync(s, s.Rana, s.Omar);
         BookingInviteesChangedEvent? heard = null;
 
         BookingDto updated;
         using (GetRequiredService<ILocalEventBus>().Subscribe<BookingInviteesChangedEvent>(e => { heard = e; return Task.CompletedTask; }))
         {
-            updated = await _bookings.UpdateInviteesAsync(booking.Id, Guests(4, s.Rana, s.Lina));
+            updated = await _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Lina));
         }
 
-        updated.Attendees.ShouldBe(4);
+        updated.Attendees.ShouldBe(3);
         updated.Invitees.Select(i => i.UserId).ShouldBe(new Guid?[] { s.Rana, s.Lina }, ignoreOrder: true);
         (await _bookings.GetAsync(booking.Id)).Invitees.Select(i => i.UserId).ShouldBe(new Guid?[] { s.Rana, s.Lina }, ignoreOrder: true);
 
@@ -149,26 +147,26 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 2, s.Rana);
+        var booking = await BookAsync(s, s.Rana);
         await AnswerAsync(booking.Id, s.Rana, InviteeResponseStatus.Accepted);
 
-        var updated = await _bookings.UpdateInviteesAsync(booking.Id, Guests(3, s.Rana, s.Omar));
+        var updated = await _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Omar));
 
         updated.Invitees.Single(i => i.UserId == s.Rana).ResponseStatus.ShouldBe(InviteeResponseStatus.Accepted);
         updated.Invitees.Single(i => i.UserId == s.Omar).ResponseStatus.ShouldBe(InviteeResponseStatus.Pending);
     }
 
     [Fact]
-    public async Task Changing_only_the_head_count_raises_no_event()
+    public async Task Saving_the_same_guests_raises_no_event()
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 2, s.Rana);
+        var booking = await BookAsync(s, s.Rana);
         var heard = false;
 
         using (GetRequiredService<ILocalEventBus>().Subscribe<BookingInviteesChangedEvent>(_ => { heard = true; return Task.CompletedTask; }))
         {
-            (await _bookings.UpdateInviteesAsync(booking.Id, Guests(5, s.Rana))).Attendees.ShouldBe(5);
+            (await _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana))).Attendees.ShouldBe(2);
         }
 
         heard.ShouldBeFalse();
@@ -179,17 +177,20 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 2);
+        var booking = await BookAsync(s);
 
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(3, s.Rana, s.Rana))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Rana))))
             .ShouldBe(DixelsDomainErrorCodes.InviteeDuplicate);
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2, s.Owner))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Owner))))
             .ShouldBe(DixelsDomainErrorCodes.InviteeIsOwner);
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2, Guid.NewGuid()))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(Guid.NewGuid()))))
             .ShouldBe(DixelsDomainErrorCodes.InviteeNotInBuilding);
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2, s.Rana, s.Omar))))
-            .ShouldBe(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees);
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(7, s.Rana))))
+        // Six guests and the owner in the 6-seat room.
+        var crowd = new UpdateInviteesDto
+        {
+            Invitees = Enumerable.Range(1, 6).Select(i => new InviteeDto { Email = $"guest{i}.{Guid.NewGuid():N}@outside.io" }).ToList(),
+        };
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, crowd)))
             .ShouldBe(DixelsDomainErrorCodes.BookingOverCapacity);
     }
 
@@ -198,15 +199,13 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 6, s.Rana, s.Omar);
-        await ChangeRoomAsync(s.SpaceId, space => space.SetCapacity(4));
+        var booking = await BookAsync(s, s.Rana, s.Omar, s.Lina);
+        await ChangeRoomAsync(s.SpaceId, space => space.SetCapacity(2));
 
-        // Same head count, one guest fewer: allowed although 6 > the room's 4 now.
-        (await _bookings.UpdateInviteesAsync(booking.Id, Guests(6, s.Rana))).Invitees.Count.ShouldBe(1);
-        // Lower but still over: allowed too.
-        (await _bookings.UpdateInviteesAsync(booking.Id, Guests(5, s.Rana))).Attendees.ShouldBe(5);
-        // Higher: the room's current size applies.
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(6, s.Rana))))
+        // One guest fewer: allowed although 3 is still over the room's 2 now.
+        (await _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Omar))).Attendees.ShouldBe(3);
+        // Back up: the room's current size applies.
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Omar, s.Lina))))
             .ShouldBe(DixelsDomainErrorCodes.BookingOverCapacity);
     }
 
@@ -215,13 +214,13 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var booking = await BookAsync(s, 3, s.Rana);
+        var booking = await BookAsync(s, s.Rana);
         await ChangeRoomAsync(s.SpaceId, space => space.SetMinAttendees(5));
 
-        // Same head count, another guest: allowed although 3 < the room's new minimum of 5.
-        (await _bookings.UpdateInviteesAsync(booking.Id, Guests(3, s.Rana, s.Omar))).Invitees.Count.ShouldBe(2);
-        // Lower: the room's current minimum applies.
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2, s.Rana))))
+        // Another guest: allowed although 3 is still under the room's new minimum of 5.
+        (await _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana, s.Omar))).Attendees.ShouldBe(3);
+        // Back down: the room's current minimum applies.
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(s.Rana))))
             .ShouldBe(DixelsDomainErrorCodes.BookingBelowMinAttendees);
     }
 
@@ -232,18 +231,18 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
         BookingDto booking;
         using (ActAs(s.Owner))
         {
-            booking = await BookAsync(s, 2, s.Rana);
+            booking = await BookAsync(s, s.Rana);
         }
 
         using (ActAs(s.Rana))
         {
-            (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2))))
+            (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests())))
                 .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserOnly);
         }
 
         using (ActAs(s.Stranger))
         {
-            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2)));
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateInviteesAsync(booking.Id, Guests()));
         }
     }
 
@@ -252,17 +251,17 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var cancelled = await BookAsync(s, 2, s.Rana);
+        var cancelled = await BookAsync(s, s.Rana);
         await _bookings.CancelAsync(cancelled.Id, new CancelBookingDto());
 
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(cancelled.Id, Guests(2))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(cancelled.Id, Guests())))
             .ShouldBe(DixelsDomainErrorCodes.GuestsNotEditable);
 
         // One that already started: written straight in, since a booking can't be made in the past.
         var started = await WithUnitOfWorkAsync(() => _bookingRepository.InsertAsync(new Booking(
             Guid.NewGuid(), s.SpaceId, s.Owner, DateTimeOffset.UtcNow.AddMinutes(-30), DateTimeOffset.UtcNow.AddMinutes(30),
             attendees: 1, "Now", "{}", Guid.NewGuid().ToString())));
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(started.Id, Guests(2, s.Rana))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(started.Id, Guests(s.Rana))))
             .ShouldBe(DixelsDomainErrorCodes.GuestsNotEditable);
     }
 
@@ -273,9 +272,9 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var series = await BookSeriesAsync(s, 2, 2, s.Rana);
+        var series = await BookSeriesAsync(s, 2, s.Rana);
 
-        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(series.Bookings[0].Id, Guests(2, s.Omar))))
+        (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(series.Bookings[0].Id, Guests(s.Omar))))
             .ShouldBe(DixelsDomainErrorCodes.EditSeriesGuests);
     }
 
@@ -284,14 +283,14 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     {
         var s = await CreateScenarioAsync();
         using var _ = ActAs(s.Owner);
-        var series = await BookSeriesAsync(s, 3, 2, s.Rana);
+        var series = await BookSeriesAsync(s, 3, s.Rana);
         await _bookings.CancelAsync(series.Bookings[2].Id, new CancelBookingDto());
         BookingInviteesChangedEvent? heard = null;
 
         SeriesCreatedDto updated;
         using (GetRequiredService<ILocalEventBus>().Subscribe<BookingInviteesChangedEvent>(e => { heard = e; return Task.CompletedTask; }))
         {
-            updated = await _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(3, s.Omar, s.Lina));
+            updated = await _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(s.Omar, s.Lina));
         }
 
         updated.Bookings.Select(b => b.Id).ShouldBe(new[] { series.Bookings[0].Id, series.Bookings[1].Id });
@@ -319,24 +318,24 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
         SeriesCreatedDto series;
         using (ActAs(s.Owner))
         {
-            series = await BookSeriesAsync(s, 2, 2, s.Rana);
+            series = await BookSeriesAsync(s, 2, s.Rana);
         }
 
         using (ActAs(s.Stranger))
         {
-            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(2)));
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests()));
         }
 
         using (ActAs(s.Rana))
         {
-            (await RejectionCodeAsync(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(2))))
+            (await RejectionCodeAsync(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests())))
                 .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserOnly);
         }
 
         using (ActAs(s.Owner))
         {
             await _bookings.CancelAsync(series.Bookings[0].Id, new CancelBookingDto { Scope = CancelScope.Series });
-            (await RejectionCodeAsync(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(2, s.Omar))))
+            (await RejectionCodeAsync(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(s.Omar))))
                 .ShouldBe(DixelsDomainErrorCodes.GuestsNotEditable);
         }
     }
@@ -348,7 +347,7 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
         using var _ = ActAs(s.Owner);
         await ChangeRoomAsync(s.SpaceId, space => space.SetMinAttendees(2));
 
-        var booking = await BookAsync(s, 2, s.Rana);
+        var booking = await BookAsync(s, s.Rana);
 
         booking.Capacity.ShouldBe(6);
         booking.MinAttendees.ShouldBe(2);

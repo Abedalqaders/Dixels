@@ -90,7 +90,6 @@ public class ColleagueLeavesPostgresTests : DixelsApplicationTestBase<DixelsPost
                 SpaceId = s.SpaceId,
                 LocalStart = Tomorrow.AddHours(10),
                 LocalEnd = Tomorrow.AddHours(11),
-                Attendees = 3,
                 IdempotencyKey = Guid.NewGuid().ToString(),
                 Invitees = new() { new InviteeDto { UserId = s.Rana }, new InviteeDto { UserId = s.Omar } },
             });
@@ -104,7 +103,6 @@ public class ColleagueLeavesPostgresTests : DixelsApplicationTestBase<DixelsPost
             {
                 await _bookings.UpdateInviteesAsync(booking.Id, new UpdateInviteesDto
                 {
-                    Attendees = 4,
                     Invitees = new() { new InviteeDto { UserId = s.Rana }, new InviteeDto { UserId = s.Omar }, new InviteeDto { UserId = s.Lina } },
                 });
             }
@@ -125,6 +123,7 @@ public class ColleagueLeavesPostgresTests : DixelsApplicationTestBase<DixelsPost
         await leaving;
         var stored = await WithUnitOfWorkAsync(() => GetRequiredService<IBookingRepository>().GetAsync(booking.Id));
         stored.Invitees.Select(i => i.UserId).ShouldBe(new Guid?[] { s.Omar, s.Lina }, ignoreOrder: true);
-        stored.Attendees.ShouldBe(4);
+        // The owner made it Rana, Omar and Lina (4 with the owner); Rana's leaving makes it 3.
+        stored.Attendees.ShouldBe(3);
     }
 }

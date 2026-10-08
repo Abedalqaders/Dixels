@@ -10,14 +10,14 @@ namespace Dixels.Bookings;
 public partial class BookingManager
 {
     /// <summary>
-    /// The owner changing the guests (and head count) of one booking that hasn't started. The
+    /// The owner changing the guests (and with them the head count) of one booking that hasn't started. The
     /// guest list is checked like a new booking's; of the room's rules only the head count
     /// ones run, grandfathered (see <see cref="BookingPolicyValidator.ValidateHeadCount"/>) —
     /// the booking already holds its slot. A date of a series is changed with the series
     /// (<see cref="ChangeSeriesInviteesAsync"/>), so every date keeps the series' list.
     /// </summary>
     public async Task<(Booking Booking, BookingPlace Place)> ChangeInviteesAsync(
-        Guid userId, Guid bookingId, int attendees, IReadOnlyCollection<Invitee> invitees)
+        Guid userId, Guid bookingId, IReadOnlyCollection<Invitee> invitees)
     {
         var booking = await _bookingRepository.GetAsync(bookingId);
         // Organiser only: a guest is told so (403), anyone else finds nothing (404).
@@ -35,10 +35,10 @@ public partial class BookingManager
 
         await _bookingRepository.LockSpaceAsync(booking.SpaceId);
         var place = await LoadPlaceAsync(booking.SpaceId);
-        var resolved = await CheckGuestsAsync(userId, place, booking.Attendees, attendees, invitees);
+        var resolved = await CheckGuestsAsync(userId, place, booking.Attendees, invitees);
 
         var copies = CopiesOf(booking.Invitees);
-        var (added, removed) = booking.ChangeGuests(attendees, resolved, GuidGenerator);
+        var (added, removed) = booking.ChangeGuests(resolved, GuidGenerator);
         await _bookingRepository.UpdateAsync(booking, autoSave: true);
 
         if (added.Count > 0 || removed.Count > 0)
@@ -55,7 +55,7 @@ public partial class BookingManager
     /// save. Dates under way, over or cancelled keep the guests they had.
     /// </summary>
     public async Task<(BookingSeries Series, IReadOnlyList<Booking> Bookings, BookingPlace Place)> ChangeSeriesInviteesAsync(
-        Guid userId, Guid seriesId, int attendees, IReadOnlyCollection<Invitee> invitees)
+        Guid userId, Guid seriesId, IReadOnlyCollection<Invitee> invitees)
     {
         var series = await _seriesRepository.GetAsync(seriesId);
         await _bookingAccess.EnsureSeriesAsync(series, userId, BookingRole.Owner);
@@ -73,13 +73,13 @@ public partial class BookingManager
 
         await _bookingRepository.LockSpaceAsync(series.SpaceId);
         var place = await LoadPlaceAsync(series.SpaceId);
-        var resolved = await CheckGuestsAsync(userId, place, series.Attendees, attendees, invitees);
+        var resolved = await CheckGuestsAsync(userId, place, series.Attendees, invitees);
 
         var copies = CopiesOf(series.Invitees);
-        var (added, removed) = series.ChangeGuests(attendees, resolved, GuidGenerator);
+        var (added, removed) = series.ChangeGuests(resolved, GuidGenerator);
         foreach (var booking in upcoming)
         {
-            booking.ChangeGuests(attendees, resolved, GuidGenerator);
+            booking.ChangeGuests(resolved, GuidGenerator);
         }
 
         await _seriesRepository.UpdateAsync(series);
@@ -147,12 +147,12 @@ public partial class BookingManager
 
     /// <summary>The guest list as it will be saved, or a rejection naming what's wrong with it or the head count.</summary>
     private async Task<IReadOnlyList<Invitee>> CheckGuestsAsync(
-        Guid userId, BookingPlace place, int storedAttendees, int attendees, IReadOnlyCollection<Invitee> invitees)
+        Guid userId, BookingPlace place, int storedAttendees, IReadOnlyCollection<Invitee> invitees)
     {
         var resolved = await _inviteeResolver.ResolveAsync(userId, place.Building.Id, invitees);
 
         var rules = _constraintResolver.Resolve(place.Building, place.Floor, place.Space);
-        var violations = _validator.ValidateHeadCount(rules, storedAttendees, attendees, resolved.Count);
+        var violations = _validator.ValidateHeadCount(rules, storedAttendees, Booking.HeadCount(resolved), resolved.Count);
         if (violations.Count > 0)
         {
             throw new BookingRejectedException(violations);

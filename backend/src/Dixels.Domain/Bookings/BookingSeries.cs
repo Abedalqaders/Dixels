@@ -86,23 +86,24 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return _invitees.Replace(invitees, invitee => new BookingSeriesAttendee(guidGenerator.Create(), Id, invitee));
     }
 
-    /// <summary>The owner changing the head count and the guest list for the series (its upcoming dates are changed alongside).</summary>
-    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(int attendees, IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
+    /// <summary>The owner changing the guest list for the series; the head count follows it (its upcoming dates are changed alongside).</summary>
+    public (List<Invitee> Added, List<Invitee> Removed) ChangeGuests(IReadOnlyCollection<Invitee> invitees, IGuidGenerator guidGenerator)
     {
-        if (attendees < 1 + invitees.Count)
-        {
-            throw new BusinessException(DixelsDomainErrorCodes.BookingAttendeesBelowInvitees)
-                .WithData("invitees", invitees.Count)
-                .WithData("attendees", attendees)
-                .WithData("needed", 1 + invitees.Count);
-        }
-
-        Attendees = attendees;
+        Attendees = Booking.HeadCount(invitees);
         return SetInvitees(invitees, guidGenerator);
     }
 
     /// <summary>The same as <see cref="Booking.RemoveInvitee"/>, for the series' own list.</summary>
-    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+    public bool RemoveInvitee(Guid userId)
+    {
+        if (!_invitees.RemoveColleague(userId))
+        {
+            return false;
+        }
+
+        Attendees = Math.Max(1, Attendees - 1);
+        return true;
+    }
 
     /// <summary>
     /// A guest's answer for the whole series, by their <see cref="Invitee.Key"/> (its upcoming

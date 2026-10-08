@@ -1,22 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { headCountFor, resolvedInvitees, toInviteeDtos } from './invitees'
+import { headCount, resolvedInvitees, toInviteeDtos } from './invitees'
 import type { Invitee } from './invitees'
 
 const sara: Invitee = { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false }
 const guest: Invitee = { userId: null, name: 'Omar', email: 'omar@acme.com', isExternal: true }
 
-describe('headCountFor', () => {
-  it('raises the head count to you plus everyone invited', () => {
-    expect(headCountFor(1, 2)).toBe(3)
-  })
-
-  it('keeps a higher number the booker typed, and never lowers it when someone is removed', () => {
-    expect(headCountFor(6, 2)).toBe(6)
-    expect(headCountFor(3, 1)).toBe(3)
-  })
-
-  it('turns an empty number into the least that fits', () => {
-    expect(headCountFor(Number.NaN, 2)).toBe(3)
+describe('headCount', () => {
+  it('is you plus everyone invited', () => {
+    expect(headCount(0)).toBe(1)
+    expect(headCount(3)).toBe(4)
   })
 })
 

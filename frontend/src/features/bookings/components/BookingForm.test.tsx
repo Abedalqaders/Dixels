@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ApiError, createBooking, getSpaceDays, previewBooking } from '@/features/bookings/api/bookingsApi'
 import type { BookableBuildingDto, BookableSpaceDto, BookingDto, BookingPreviewDto } from '@/features/bookings/api/bookingsApi'
@@ -45,9 +45,9 @@ const building: BookableBuildingDto = {
 
 const valid: BookingPreviewDto = { isValid: true, violations: [], warnings: [], startsAt: '', endsAt: '', timezone: 'UTC', invitees: [] }
 
-function renderForm(onBooked = vi.fn(), initialSlot?: Slot) {
+function renderForm(onBooked = vi.fn(), initialSlot?: Slot, room: BookableSpaceDto = space) {
   render(
-    <BookingForm token="t" building={building} space={space} floorName="Level 1" onClose={vi.fn()} onBooked={onBooked} initialSlot={initialSlot} />,
+    <BookingForm token="t" building={building} space={room} floorName="Level 1" onClose={vi.fn()} onBooked={onBooked} initialSlot={initialSlot} />,
     { wrapper: TestProviders },
   )
   return onBooked
@@ -128,11 +128,13 @@ describe('BookingForm', () => {
 
     renderForm()
 
-    // Each rule sits under the field it's about, not in one panel at the bottom.
-    const attendees = screen.getByLabelText('Attendees')
-    await waitFor(() => expect(attendees).toHaveAccessibleDescription(/at least 2 attendees/))
-    expect(attendees).toHaveAttribute('aria-invalid', 'true')
+    // Each rule sits under the field it's about, not in one panel at the bottom. The room's
+    // minimum is said as what to do: invite one more (the booker counts as one).
+    const people = screen.getByRole('group', { name: 'People' })
+    expect(people).toHaveTextContent('1 person · just you')
+    expect(people).toHaveTextContent('This room needs at least 2 people: invite 1 more.')
     const from = screen.getByLabelText('From')
+    await waitFor(() => expect(from).toHaveAttribute('aria-invalid', 'true'))
     expect(from).toHaveAccessibleDescription(/at most 2h/)
     expect(from).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByRole('button', { name: 'Book' })).toBeDisabled()
@@ -151,26 +153,31 @@ describe('BookingForm', () => {
 
     await waitFor(() => expect(onBooked).toHaveBeenCalledWith(booking))
     const sent = vi.mocked(createBooking).mock.calls[0][1]
-    expect(sent).toMatchObject({ spaceId: 'space-1', attendees: 2, title: 'Planning' })
+    expect(sent).toMatchObject({ spaceId: 'space-1', title: 'Planning' })
+    // The head count isn't sent: the server counts the booker and the guests.
+    expect(sent).not.toHaveProperty('attendees')
     expect(sent.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/)
   })
 
-  it('says under Attendees when there are more people than seats, without asking the server', async () => {
-    vi.mocked(previewBooking).mockResolvedValue(valid)
-    const user = userEvent.setup()
-    renderForm()
-    await screen.findByText('Available')
+  it('shows the head count read-only, with nothing to type, and too many people under it', async () => {
+    vi.mocked(previewBooking).mockResolvedValue({
+      ...valid,
+      isValid: false,
+      violations: [
+        {
+          code: 'Dixels:Bookings:OverCapacity',
+          level: 'Space',
+          message: "This space seats 8, but with your guests you're 9 people. Invite fewer people or pick a larger space.",
+          shortMessage: 'Seats 8 — you need 9',
+        },
+      ],
+    })
+    renderForm(vi.fn(), undefined, { ...space, minAttendees: null })
 
-    const attendees = screen.getByLabelText('Attendees')
-    await user.clear(attendees)
-    await user.type(attendees, '9')
-
-    expect(screen.getByText('This room seats 8.')).toBeInTheDocument()
-    expect(attendees).toHaveAttribute('aria-invalid', 'true')
-    expect(attendees).toHaveAccessibleDescription('This room seats 8.')
+    const people = screen.getByRole('group', { name: 'People' })
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+    expect(await within(people).findByText(/you're 9 people/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Book' })).toBeDisabled()
-    // Only the opening check ran — an impossible number never goes to the server.
-    expect(previewBooking).toHaveBeenCalledTimes(1)
   })
 
   it('does not re-check availability while only the title changes', async () => {

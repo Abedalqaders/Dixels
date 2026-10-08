@@ -76,7 +76,6 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
             SpaceId = spaceId,
             LocalStart = Tomorrow.AddHours(startHour),
             LocalEnd = Tomorrow.AddHours(endHour),
-            Attendees = 1,
             IdempotencyKey = Guid.NewGuid().ToString(),
         }));
 
@@ -159,7 +158,6 @@ public class BookingConcurrencyTests : DixelsApplicationTestBase<DixelsPostgresT
                 SpaceId = s.SpaceId,
                 LocalStart = Tomorrow.AddHours(10),
                 LocalEnd = Tomorrow.AddHours(11),
-                Attendees = 1,
                 Recurrence = new RecurrenceDto
                 {
                     Frequency = RecurrenceFrequency.Daily, Interval = 1, EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(4)),

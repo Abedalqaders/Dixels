@@ -78,7 +78,6 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         SpaceId = spaceId,
         LocalStart = Tomorrow.AddHours(10),
         LocalEnd = Tomorrow.AddHours(11),
-        Attendees = 1 + invitees.Length,
         Title = "Planning",
         IdempotencyKey = Guid.NewGuid().ToString(),
         Invitees = invitees.ToList(),
@@ -276,7 +275,6 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         SpaceId = s.SpaceId,
         LocalStart = Tomorrow.AddHours(9),
         LocalEnd = Tomorrow.AddHours(9).AddMinutes(30),
-        Attendees = 1 + invitees.Length,
         Title = "Stand-up",
         Recurrence = new RecurrenceDto
         {
@@ -522,10 +520,10 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
     // ---- E4: the guest list edited ----
 
     private Task EditGuestsAsync(Scenario s, Guid bookingId, params InviteeDto[] invitees) =>
-        AsDanaAsync(() => _bookings.UpdateInviteesAsync(bookingId, new UpdateInviteesDto { Invitees = invitees.ToList(), Attendees = 1 + invitees.Length }), s);
+        AsDanaAsync(() => _bookings.UpdateInviteesAsync(bookingId, new UpdateInviteesDto { Invitees = invitees.ToList() }), s);
 
     private Task EditSeriesGuestsAsync(Scenario s, Guid seriesId, params InviteeDto[] invitees) =>
-        AsDanaAsync(() => _bookings.UpdateSeriesInviteesAsync(seriesId, new UpdateInviteesDto { Invitees = invitees.ToList(), Attendees = 1 + invitees.Length }), s);
+        AsDanaAsync(() => _bookings.UpdateSeriesInviteesAsync(seriesId, new UpdateInviteesDto { Invitees = invitees.ToList() }), s);
 
     private async Task AsDanaAsync(Func<Task> act, Scenario s)
     {
@@ -623,9 +621,9 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
 
         using (ActAs(s.Dana.Id))
         {
-            // Too few attendees for the guests: refused, nothing changes.
+            // Omar added, but Dana herself too: refused, nothing changes.
             await Should.ThrowAsync<Exception>(() => _bookings.UpdateInviteesAsync(booking.Id,
-                new UpdateInviteesDto { Invitees = new List<InviteeDto> { Colleague(s.Omar), Colleague(s.Rana) }, Attendees = 1 }));
+                new UpdateInviteesDto { Invitees = new List<InviteeDto> { Colleague(s.Omar), Colleague(s.Rana), Colleague(s.Dana) } }));
         }
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
