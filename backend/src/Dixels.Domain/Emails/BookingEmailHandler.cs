@@ -27,11 +27,17 @@ public class BookingEmailHandler :
         _adminCancels = adminCancels;
     }
 
-    public Task HandleEventAsync(BookingConfirmedEvent eventData) =>
-        _bookingEmails.SendConfirmedAsync(eventData.Booking);
+    public async Task HandleEventAsync(BookingConfirmedEvent eventData)
+    {
+        await _bookingEmails.SendConfirmedAsync(eventData.Booking);
+        await _bookingEmails.SendInvitesAsync(eventData.Booking);
+    }
 
-    public Task HandleEventAsync(BookingSeriesConfirmedEvent eventData) =>
-        _bookingEmails.SendSeriesConfirmedAsync(eventData.Series, eventData.Bookings);
+    public async Task HandleEventAsync(BookingSeriesConfirmedEvent eventData)
+    {
+        await _bookingEmails.SendSeriesConfirmedAsync(eventData.Series, eventData.Bookings);
+        await _bookingEmails.SendSeriesInvitesAsync(eventData.Series, eventData.Bookings);
+    }
 
     public Task HandleEventAsync(BookingsCancelledEvent eventData) =>
         eventData.ByAdmin ? _adminCancels.AddAsync(eventData.Bookings) : _bookingEmails.SendCancelledAsync(eventData.Bookings);

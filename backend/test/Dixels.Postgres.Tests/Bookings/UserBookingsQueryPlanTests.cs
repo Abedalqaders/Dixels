@@ -215,8 +215,8 @@ public class UserBookingsQueryPlanTests : DixelsApplicationTestBase<DixelsPostgr
             await connection.OpenAsync();
             await using var invite = new NpgsqlCommand(
                 """
-                INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus")
-                SELECT gen_random_uuid(), "Id", "EndsAt", @guest, 'Pending' FROM "AppBookings" WHERE "UserId" = @owner;
+                INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
+                SELECT gen_random_uuid(), "Id", "EndsAt", @guest, 'Pending', gen_random_uuid()::text || '@dixels' FROM "AppBookings" WHERE "UserId" = @owner;
                 ANALYZE "AppBookingAttendees";
                 """, connection);
             invite.Parameters.AddWithValue("guest", guest);

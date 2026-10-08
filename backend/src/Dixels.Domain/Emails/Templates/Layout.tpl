@@ -34,6 +34,6 @@
 {{~ end ~}}
 {{ content }}
   </div>
-  <p style="max-width:560px;margin:14px auto 0;font-size:12px;color:#71717a;text-align:center;">{{ L "Email:Footer" }}</p>
+  <p style="max-width:560px;margin:14px auto 0;font-size:12px;color:#71717a;text-align:center;">{{ if model.footer }}{{ model.footer | html.escape }}{{ else }}{{ L "Email:Footer" }}{{ end }}</p>
 </body>
 </html>

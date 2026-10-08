@@ -89,7 +89,19 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         IdempotencyKey = key ?? Guid.NewGuid().ToString(),
     };
 
-    private SentEmail[] EmailsTo(Scenario s) => _emails.Sent.Where(e => e.To == s.Email).ToArray();
+    /// <summary>Sends what's queued (a confirmation goes through a job), then forgets everything sent so far.</summary>
+    private async Task ClearSentAsync()
+    {
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+    }
+
+    /// <summary>What was sent to them, once the queued email jobs have run.</summary>
+    private async Task<SentEmail[]> EmailsToAsync(Scenario s)
+    {
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        return _emails.Sent.Where(e => e.To == s.Email).ToArray();
+    }
 
     [Fact]
     public async Task A_new_booking_emails_its_details_to_the_employee()
@@ -100,7 +112,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateAsync(Request(s.Space.Id));
         }
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Booking confirmed: Room 1, ");
         email.Body.ShouldContain("DIXELS");
         email.Body.ShouldContain("✓ Confirmed");
@@ -126,7 +138,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateAsync(request);
         }
 
-        EmailsTo(s).ShouldHaveSingleItem();
+        (await EmailsToAsync(s)).ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -140,7 +152,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await Should.ThrowAsync<Exception>(() => _bookingsAppService.CreateAsync(tooLong));
         }
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -153,7 +165,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateAsync(Request(s.Space.Id));
         }
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("تم تأكيد الحجز: Room 1، ");
         email.Body.ShouldContain("dir=\"rtl\"");
         email.Body.ShouldContain("مرحبًا Dana Haddad،");
@@ -168,7 +180,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateAsync(Request(s.Space.Id, title: "<b>Board</b> & co"));
         }
 
-        var body = EmailsTo(s).ShouldHaveSingleItem().Body;
+        var body = (await EmailsToAsync(s)).ShouldHaveSingleItem().Body;
         body.ShouldContain("&lt;b&gt;Board&lt;/b&gt; &amp; co");
         body.ShouldNotContain("<b>Board</b>");
     }
@@ -199,7 +211,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateSeriesAsync(ThreeDays(s.Space.Id));
         }
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldBe("Recurring booking confirmed: Room 1");
         email.Body.ShouldContain("You&#39;re booked: Stand-up");
         email.Body.ShouldContain($"Every day until {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(2)))}");
@@ -226,7 +238,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateSeriesAsync(request);
         }
 
-        var body = EmailsTo(s).ShouldHaveSingleItem().Body;
+        var body = (await EmailsToAsync(s)).ShouldHaveSingleItem().Body;
         body.ShouldContain($"Every {Tomorrow.DayOfWeek} until {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(14)))}");
         body.ShouldContain(">Not on<");
         body.ShouldContain(BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(7))));
@@ -253,7 +265,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             await _bookingsAppService.CreateAsync(Request(s.Space.Id));
         }
 
-        var body = EmailsTo(s).ShouldHaveSingleItem().Body;
+        var body = (await EmailsToAsync(s)).ShouldHaveSingleItem().Body;
         body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">Amman time</span>");
         body.ShouldContain(">Address<");
         body.ShouldContain("12 King Hussein St, Amman");
@@ -271,7 +283,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         }
 
         // Jordan keeps UTC+3 all year.
-        EmailsTo(s).ShouldHaveSingleItem().Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">GMT+3</span>");
+        (await EmailsToAsync(s)).ShouldHaveSingleItem().Body.ShouldContain("<span dir=\"ltr\">10:00–11:00</span> · <span dir=\"ltr\">GMT+3</span>");
     }
 
     // ---- Cancelling their own booking ----
@@ -283,12 +295,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         using (ActAs(s.UserId))
         {
             var booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id));
-            _emails.Clear();
+            await ClearSentAsync();
 
             await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto { Reason = "Meeting moved <online>" });
         }
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Booking cancelled: Room 1, ");
         email.Body.ShouldContain("✕ Cancelled");
         email.Body.ShouldContain("You cancelled Planning");
@@ -304,12 +316,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         using (ActAs(s.UserId))
         {
             var created = await _bookingsAppService.CreateSeriesAsync(ThreeDays(s.Space.Id));
-            _emails.Clear();
+            await ClearSentAsync();
 
             await _bookingsAppService.CancelAsync(created.Bookings[0].Id, new CancelBookingDto { Scope = CancelScope.Series });
         }
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldBe("Recurring booking cancelled: Room 1");
         email.Body.ShouldContain(">3<");
     }
@@ -322,13 +334,13 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         {
             var booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id));
             await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto());
-            _emails.Clear();
+            await ClearSentAsync();
 
             // Already cancelled: nothing changes, so nothing to tell them.
             await Should.ThrowAsync<Exception>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
         }
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     // ---- Cancelled by an admin: one email per person per admin action ----
@@ -359,16 +371,16 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
     {
         var s = await CreateScenarioAsync();
         var booking = await BookDirectAsync(s, 10);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await WithUnitOfWorkAsync(() => CancelAsAdminAsync(booking.Id, "Closed: Floor works <now>"));
 
         // Queued with the cancel, sent by the job.
-        EmailsTo(s).ShouldBeEmpty();
+        _emails.Sent.ShouldNotContain(e => e.To == s.Email);
         (await AdminCancelJobsFor(s)).ShouldHaveSingleItem();
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
         email.Body.ShouldContain("Hi Dana Haddad,");
         email.Body.ShouldContain("✕ Cancelled");
@@ -387,7 +399,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var early = await BookDirectAsync(s, 9);
         var late = await BookDirectAsync(s, 15);
         var theirs = await BookDirectAsync(other, 11);
-        _emails.Clear();
+        await ClearSentAsync();
 
         // Three rounds, two reasons, two people — as a rule change that breaks two rules does.
         await WithUnitOfWorkAsync(async () =>
@@ -398,14 +410,14 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         });
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldBe("2 of your bookings were cancelled by an admin");
         email.Body.ShouldContain("2 of your bookings were cancelled");
         // Soonest first, each with its own reason.
         email.Body.IndexOf("09:00–10:00", StringComparison.Ordinal).ShouldBeLessThan(email.Body.IndexOf("15:00–16:00", StringComparison.Ordinal));
         email.Body.ShouldContain("Rules changed: Open 10:00–14:00 only");
         email.Body.ShouldContain("Rules changed: Up to 30 minutes");
-        EmailsTo(other).ShouldHaveSingleItem().Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
+        (await EmailsToAsync(other)).ShouldHaveSingleItem().Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
     }
 
     [Fact]
@@ -413,7 +425,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
     {
         var s = await CreateScenarioAsync();
         var booking = await BookDirectAsync(s, 10);
-        _emails.Clear();
+        await ClearSentAsync();
 
         // The emails are queued as the cancel saves, in its unit of work: one that fails
         // before then queues nothing.
@@ -425,7 +437,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
 
         (await AdminCancelJobsFor(s)).ShouldBeEmpty();
         await QueuedJobs.RunAllAsync(ServiceProvider);
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -435,7 +447,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await WithUnitOfWorkAsync(() => _userLanguage.SetAsync(s.UserId, "ar"));
         var first = await BookDirectAsync(s, 10);
         var second = await BookDirectAsync(s, 12);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -444,7 +456,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         });
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldBe("ألغى أحد المسؤولين 2 من حجوزاتك");
         email.Body.ShouldContain("dir=\"rtl\"");
         email.Body.ShouldContain("مرحبًا Dana Haddad،");
@@ -464,12 +476,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             // Half-hour slots from midnight on.
             ids.Add((await BookDirectAsync(s, TimeSpan.FromMinutes(30 * i), 30)).Id);
         }
-        _emails.Clear();
+        await ClearSentAsync();
 
         await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactChecker>().CancelUpcomingAsAdminAsync(ids, Admin, "Closed"));
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldBe("23 of your bookings were cancelled by an admin");
         email.Body.Split(">When<").Length.ShouldBe(AdminCancelEmailQueue.ShownBookings + 1); // one block each
         email.Body.ShouldContain("…and 3 more. Open Dixels to see them all.");
@@ -482,7 +494,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
     {
         var s = await CreateScenarioAsync();
         await BookDirectAsync(s, 10);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await WithUnitOfWorkAsync(async () =>
         {
@@ -492,7 +504,7 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         await QueuedJobs.RunAllAsync(ServiceProvider); // cancels
         await QueuedJobs.RunAllAsync(ServiceProvider); // emails
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Your booking was cancelled: Planning, ");
         email.Body.ShouldContain("The space was removed");
     }
@@ -508,12 +520,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             user.SetIsActive(false);
             (await _userManager.UpdateAsync(user)).Succeeded.ShouldBeTrue();
         });
-        _emails.Clear();
+        await ClearSentAsync();
 
         await WithUnitOfWorkAsync(() => CancelAsAdminAsync(booking.Id, "Account deactivated"));
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     // ---- Reminder before the start (default: 30 minutes) ----
@@ -549,12 +561,12 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         var s = await CreateScenarioAsync();
         var booking = await BookSoonAsync(s);
         await MadeYesterdayAsync(booking.Id);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await SendDueRemindersAsync();
         await SendDueRemindersAsync();
 
-        var email = EmailsTo(s).ShouldHaveSingleItem();
+        var email = (await EmailsToAsync(s)).ShouldHaveSingleItem();
         email.Subject.ShouldStartWith("Reminder: Room 1 at ");
         email.Body.ShouldContain("⏰ Reminder");
         email.Body.ShouldContain("Planning starts at ");
@@ -565,11 +577,11 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
     {
         var s = await CreateScenarioAsync();
         await BookSoonAsync(s);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await SendDueRemindersAsync();
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -582,11 +594,11 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
         {
             await _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto());
         }
-        _emails.Clear();
+        await ClearSentAsync();
 
         await SendDueRemindersAsync();
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 
     [Fact]
@@ -599,10 +611,10 @@ public class BookingEmailsTests : DixelsApplicationTestBase<DixelsEntityFramewor
             booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id)); // tomorrow
         }
         await MadeYesterdayAsync(booking.Id);
-        _emails.Clear();
+        await ClearSentAsync();
 
         await SendDueRemindersAsync();
 
-        EmailsTo(s).ShouldBeEmpty();
+        (await EmailsToAsync(s)).ShouldBeEmpty();
     }
 }

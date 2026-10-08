@@ -1,6 +1,8 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 
@@ -21,6 +23,16 @@ public abstract class InviteeRow : Entity<Guid>
     public InviteeResponseStatus ResponseStatus { get; private set; }
     public DateTimeOffset? RespondedAt { get; private set; }
 
+    /// <summary>
+    /// This guest's own calendar-event UID: random, so it can't be guessed, and never changed,
+    /// so every update and cancel sent to them replaces the same event. A reply to an invite
+    /// (E6) names its UID — that alone says which guest answered.
+    /// </summary>
+    public string IcsUid { get; private set; } = null!;
+
+    /// <summary>The calendar SEQUENCE last sent to this guest: 0 for the invite, one more for each update or cancel.</summary>
+    public int IcsSequence { get; private set; }
+
     protected InviteeRow()
     {
         // EF Core
@@ -29,6 +41,7 @@ public abstract class InviteeRow : Entity<Guid>
     protected InviteeRow(Guid id, Invitee invitee)
         : base(id)
     {
+        IcsUid = NewIcsUid();
         if (invitee.UserId is { } userId)
         {
             UserId = userId;
@@ -49,6 +62,10 @@ public abstract class InviteeRow : Entity<Guid>
     }
 
     public Invitee ToInvitee() => new(UserId, Email, Name);
+
+    /// <summary>32 random bytes, URL-safe: "Xp3…Q@dixels".</summary>
+    private static string NewIcsUid() =>
+        Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32)) + "@dixels";
 }
 
 /// <summary>

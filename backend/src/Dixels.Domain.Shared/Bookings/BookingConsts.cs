@@ -27,4 +27,7 @@ public static class BookingConsts
 
     public const int MaxInviteeEmailLength = 256;
     public const int MaxInviteeNameLength = 128;
+
+    /// <summary>A guest's calendar-event UID ("{43 random characters}@dixels").</summary>
+    public const int MaxIcsUidLength = 64;
 }
