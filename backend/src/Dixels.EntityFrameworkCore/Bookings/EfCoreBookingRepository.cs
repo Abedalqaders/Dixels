@@ -237,6 +237,13 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToDictionary(g => g.Key, g => (IReadOnlyList<Invitee>)g.Select(a => a.ToInvitee()).ToList());
     }
 
+    public async Task<bool> IsGuestAsync(string icsUid, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingAttendee>().AnyAsync(a => a.IcsUid == icsUid, GetCancellationToken(cancellationToken))
+               || await dbContext.Set<BookingSeriesAttendee>().AnyAsync(a => a.IcsUid == icsUid, GetCancellationToken(cancellationToken));
+    }
+
     public async Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)
     {
         // With its guests: a retry must ask for the same ones.

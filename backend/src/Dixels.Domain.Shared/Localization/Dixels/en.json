@@ -950,6 +950,16 @@
     "Email:Ordinal:2": "second",
     "Email:Ordinal:3": "third",
     "Email:Ordinal:4": "fourth",
-    "Email:Ordinal:5": "last"
+    "Email:Ordinal:5": "last",
+    "Email:Guests": "Guests",
+    "Email:GuestMark": "{0} (guest)",
+    "Email:InvitedBy": "Invited by",
+    "Email:AlsoInvited": "Also invited",
+    "Email:UnnamedGuest": "A guest",
+    "Email:OpenInDixels": "Open in Dixels",
+    "Email:Invite:Heading": "{0} invited you to {1}",
+    "Email:Invite:Subject": "Invitation: {0} · {1}, {2}",
+    "Email:Invite:SubjectSeries": "Invitation: {0} · from {1}",
+    "Email:Invite:Footer": "Dixels sent you this email because {0} invited you to a meeting."
   }
 }
