@@ -1058,10 +1058,10 @@ public class BookingsAppServiceTests : DixelsApplicationTestBase<DixelsEntityFra
             booking = await _bookingsAppService.CreateAsync(Request(s.Space.Id, 10, 11));
         }
 
+        // "Not found", as GetAsync answers a stranger: a cancel mustn't confirm the id exists.
         using var _ = ActAs(other.UserId);
-        var ex = await Should.ThrowAsync<BusinessException>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
+        await Should.ThrowAsync<EntityNotFoundException>(() => _bookingsAppService.CancelAsync(booking.Id, new CancelBookingDto()));
 
-        ex.Code.ShouldBe(DixelsDomainErrorCodes.BookingNotYours);
         (await _bookingRepository.GetAsync(booking.Id)).Status.ShouldBe(BookingStatus.Confirmed);
     }
 

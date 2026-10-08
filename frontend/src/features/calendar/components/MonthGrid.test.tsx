@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { MonthGrid } from './MonthGrid'
 
-const item = (id: string, hour: string, cancelled = false): CalendarItem => ({
+const item = (id: string, hour: string, cancelled = false, invited = false): CalendarItem => ({
   id,
   kind: 'booking',
   title: id,
@@ -14,6 +14,7 @@ const item = (id: string, hour: string, cancelled = false): CalendarItem => ({
   location: 'Room',
   cancelled,
   repeats: false,
+  invited,
 })
 const four = [item('One', '09'), item('Two', '10'), item('Three', '11'), item('Four', '12')]
 
@@ -37,6 +38,24 @@ describe('MonthGrid', () => {
 
     await user.click(day)
     expect(onOpenDay).toHaveBeenCalledWith('2026-10-06')
+  })
+})
+
+describe('MonthGrid invites', () => {
+  it("draws a booking I'm invited to as a dashed outline and says so", () => {
+    render(<MonthGrid date="2026-10-01" items={[item('Mine', '09'), item('Sync', '10', false, true)]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} />)
+
+    const invite = screen.getByRole('button', { name: 'Invite: Sync, 10:00–10:30, Room' })
+    expect(invite).toHaveClass('border-dashed', 'border-brand', 'bg-[var(--surface-raised)]')
+    expect(screen.getByRole('button', { name: 'Mine, 09:00–09:30, Room' })).not.toHaveClass('border-dashed')
+  })
+
+  it('an invite an admin cancelled is struck through like my own cancelled bookings', () => {
+    render(<MonthGrid date="2026-10-01" items={[item('Sync', '10', true, true)]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} />)
+
+    const cancelled = screen.getByRole('button', { name: 'Cancelled: Sync, 10:00–10:30, Room' })
+    expect(cancelled).toHaveClass('line-through', 'bg-muted')
+    expect(cancelled).not.toHaveClass('bg-[var(--surface-raised)]')
   })
 })
 

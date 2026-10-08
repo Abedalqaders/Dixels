@@ -63,6 +63,11 @@ public static class DixelsDomainErrorCodes
     public const string BookingIdempotencyKeyReused = BookingsPrefix + "IdempotencyKeyReused";
     public const string BookingNotCancellable = BookingsPrefix + "NotCancellable";
     public const string BookingNotYours = BookingsPrefix + "NotYours";
+    // A colleague guest asked for something only the booking's organiser may do (BookingAccess):
+    // in general, and for cancelling. Answered 403 (mapped in DixelsHttpApiModule) — a guest
+    // already knows the booking exists, so "not found" would be a lie.
+    public const string BookingOrganiserOnly = BookingsPrefix + "OrganiserOnly";
+    public const string BookingOnlyOrganiserCancels = BookingsPrefix + "OnlyOrganiserCancels";
     public const string BookingAlreadyStarted = BookingsPrefix + "AlreadyStarted";
     public const string BookingInvalidDateRange = BookingsPrefix + "InvalidDateRange";
 

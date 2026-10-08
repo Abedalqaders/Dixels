@@ -71,7 +71,10 @@ export interface TextKeys {
   "Booking:EveryDay": string
   "Booking:FewerPeople": string
   "Booking:From": string
+  "Booking:GuestCancelledByAdminDetail": string
+  "Booking:GuestCancelledByAdminWithReason": string
   "Booking:InProgress": string
+  "Booking:InvitedBy": string
   "Booking:Invitees": string
   "Booking:InviteesCount_one": string
   "Booking:InviteesCount_other": string
@@ -154,6 +157,7 @@ export interface TextKeys {
   "Calendar:DayHeading": string
   "Calendar:DayPassed": string
   "Calendar:DayView": string
+  "Calendar:InvitedItem": string
   "Calendar:Item": string
   "Calendar:Lead": string
   "Calendar:MaxLength": string
@@ -235,6 +239,8 @@ export interface TextKeys {
   "Dixels:Bookings:NotAssignedToBuilding": string
   "Dixels:Bookings:NotCancellable": string
   "Dixels:Bookings:NotYours": string
+  "Dixels:Bookings:OnlyOrganiserCancels": string
+  "Dixels:Bookings:OrganiserOnly": string
   "Dixels:Bookings:OutsideHours": string
   "Dixels:Bookings:OutsideHours:Short": string
   "Dixels:Bookings:OverCapacity": string
