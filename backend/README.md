@@ -49,6 +49,22 @@ abp install-libs
 
 Run `Dixels.DbMigrator` to create the initial database. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
 
+### Run locally (no Docker build)
+
+`run-local.ps1` runs the API with `dotnet watch` on Windows against the Postgres on Windows; only smtp4dev (the fake mail server) stays in Docker. It reads the same `backend/.env` as `docker-compose.yml`, so each worktree keeps its own database and ports.
+
+```powershell
+cd backend
+.\run-local.ps1 -Migrate   # first time, or after a new migration: migrate + seed this worktree's database
+.\run-local.ps1            # smtp4dev in Docker + the API, rebuilt on every save
+.\run-local.ps1 -NoWatch   # the same with a plain `dotnet run`
+```
+
+- **Ports** come from `.env`: the API on `DIXELS_API_PORT`, the inbox on `DIXELS_MAIL_PORT`, and smtp4dev's SMTP on the inbox port + 20000 (5014 → 25014).
+- **`-Migrate`** also sets the sign-in redirect URLs to this worktree's web ports (`App__CorsOrigins`) and API port.
+- **Needs:** Docker Desktop running (for smtp4dev), the HTTPS dev cert from the `docker-compose.yml` notes, and `src/Dixels.Web/wwwroot/libs` (see above).
+- Stop the Docker `web` container first (`docker compose stop web`): both use the same API port.
+
 ### Solution structure
 
 This is a layered monolith application that consists of the following applications:
