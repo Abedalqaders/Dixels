@@ -187,6 +187,60 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<List<(Guid BookingId, Guid? SeriesId)>> GetUpcomingInvitationsAsync(
+        Guid userId,
+        DateTimeOffset now,
+        Guid? buildingId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var bookings = await GetQueryableAsync();
+        var dbContext = await GetDbContextAsync();
+        if (buildingId is not null)
+        {
+            // As GetCalendarForUserAsync: a removed building's (soft-deleted) rooms count too.
+            var roomIds =
+                from s in dbContext.Spaces.IgnoreQueryFilters()
+                join f in dbContext.Floors.IgnoreQueryFilters() on s.FloorId equals f.Id
+                where f.BuildingId == buildingId
+                select s.Id;
+            bookings = bookings.Where(b => roomIds.Contains(b.SpaceId));
+        }
+
+        // EndsAt > now is implied by StartsAt > now; it's there so the guest rows' (UserId, EndsAt) index can seek.
+        var invitedTo = dbContext.Set<BookingAttendee>()
+            .Where(a => a.UserId == userId && a.EndsAt > now)
+            .Select(a => a.BookingId);
+        var found = await bookings
+            .Where(b => invitedTo.Contains(b.Id) && b.Status == BookingStatus.Confirmed && b.StartsAt > now)
+            .OrderBy(b => b.StartsAt)
+            .Select(b => new { b.Id, b.SeriesId })
+            .ToListAsync(GetCancellationToken(cancellationToken));
+
+        return found.Select(b => (b.Id, b.SeriesId)).ToList();
+    }
+
+    public async Task ForgetAsync(IReadOnlyCollection<Guid> bookingIds, IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+
+        // Guest rows by their parent's id, so the ones a failed save was deleting go too.
+        foreach (var entry in dbContext.ChangeTracker.Entries().ToList())
+        {
+            var forget = entry.Entity switch
+            {
+                Booking b => bookingIds.Contains(b.Id),
+                BookingAttendee a => bookingIds.Contains(a.BookingId),
+                BookingSeries s => seriesIds.Contains(s.Id),
+                BookingSeriesAttendee a => seriesIds.Contains(a.SeriesId),
+                _ => false,
+            };
+            if (forget)
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
+
     public async Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(
         IReadOnlyCollection<Guid> bookingIds,
         Guid userId,

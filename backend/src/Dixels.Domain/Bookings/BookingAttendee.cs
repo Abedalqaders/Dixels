@@ -158,4 +158,11 @@ internal static class InviteeRowListExtensions
 
         return (added, removed.Select(r => r.ToInvitee()).ToList());
     }
+
+    /// <summary>Takes a colleague's row off the list, if they're on it; the other rows are untouched.</summary>
+    public static bool RemoveColleague<T>(this List<T> rows, Guid userId)
+        where T : InviteeRow
+    {
+        return rows.RemoveAll(r => r.UserId == userId) > 0;
+    }
 }
