@@ -79,8 +79,11 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// <summary>Whether the person is on this series' own guest list.</summary>
     Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default);
 
-    /// <summary>Whether someone is still a guest — of a booking or a series — by their calendar UID.</summary>
-    Task<bool> IsGuestAsync(string icsUid, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Whether someone, by their calendar UID, is still a guest of something still ahead: a
+    /// confirmed booking that hasn't started, or a series with such a date left.
+    /// </summary>
+    Task<bool> IsUpcomingGuestAsync(string icsUid, DateTimeOffset now, CancellationToken cancellationToken = default);
 
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 

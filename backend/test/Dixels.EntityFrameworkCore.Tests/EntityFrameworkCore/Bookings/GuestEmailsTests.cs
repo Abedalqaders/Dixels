@@ -236,6 +236,59 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
     }
 
     [Fact]
+    public async Task A_booking_cancelled_before_the_email_goes_invites_nobody()
+    {
+        var s = await CreateScenarioAsync();
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            var booking = await _bookings.CreateAsync(Request(s.SpaceId, Colleague(s.Rana), Outsider("guest@outside.io")));
+            // Called off before the queued invites are sent: there's nothing to come to.
+            await _bookings.CancelAsync(booking.Id, new CancelBookingDto());
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email || e.To == "guest@outside.io");
+    }
+
+    [Fact]
+    public async Task A_series_cancelled_before_the_email_goes_invites_nobody()
+    {
+        var s = await CreateScenarioAsync();
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            var created = await _bookings.CreateSeriesAsync(Series(s, Colleague(s.Rana)));
+            await _bookings.CancelAsync(created.Bookings[0].Id, new CancelBookingDto { Scope = CancelScope.Series });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
+    }
+
+    /// <summary>Weekly at 09:00 for three weeks from tomorrow, the middle week skipped.</summary>
+    private static CreateSeriesDto Series(Scenario s, params InviteeDto[] invitees) => new()
+    {
+        SpaceId = s.SpaceId,
+        LocalStart = Tomorrow.AddHours(9),
+        LocalEnd = Tomorrow.AddHours(9).AddMinutes(30),
+        Attendees = 1 + invitees.Length,
+        Title = "Stand-up",
+        Recurrence = new RecurrenceDto
+        {
+            Frequency = RecurrenceFrequency.Weekly,
+            Interval = 1,
+            Weekdays = new[] { (int)Tomorrow.DayOfWeek },
+            EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(14)),
+        },
+        SkipDates = new List<DateOnly> { DateOnly.FromDateTime(Tomorrow.AddDays(7)) },
+        IdempotencyKey = Guid.NewGuid().ToString(),
+        Invitees = invitees.ToList(),
+    };
+
+    [Fact]
     public async Task A_series_is_one_invite_with_its_repeat_rule_and_skipped_dates()
     {
         var s = await CreateScenarioAsync();
@@ -243,24 +296,7 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
 
         using (ActAs(s.Dana.Id))
         {
-            await _bookings.CreateSeriesAsync(new CreateSeriesDto
-            {
-                SpaceId = s.SpaceId,
-                LocalStart = Tomorrow.AddHours(9),
-                LocalEnd = Tomorrow.AddHours(9).AddMinutes(30),
-                Attendees = 2,
-                Title = "Stand-up",
-                Recurrence = new RecurrenceDto
-                {
-                    Frequency = RecurrenceFrequency.Weekly,
-                    Interval = 1,
-                    Weekdays = new[] { (int)Tomorrow.DayOfWeek },
-                    EndDate = DateOnly.FromDateTime(Tomorrow.AddDays(14)),
-                },
-                SkipDates = new List<DateOnly> { DateOnly.FromDateTime(Tomorrow.AddDays(7)) },
-                IdempotencyKey = Guid.NewGuid().ToString(),
-                Invitees = new List<InviteeDto> { Colleague(s.Rana) },
-            });
+            await _bookings.CreateSeriesAsync(Series(s, Colleague(s.Rana)));
         }
         await QueuedJobs.RunAllAsync(ServiceProvider);
 

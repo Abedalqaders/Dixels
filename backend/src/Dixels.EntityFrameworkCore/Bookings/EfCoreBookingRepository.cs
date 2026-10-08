@@ -221,11 +221,16 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToDictionary(g => g.Key, g => (IReadOnlyList<Invitee>)g.Select(a => a.ToInvitee()).ToList());
     }
 
-    public async Task<bool> IsGuestAsync(string icsUid, CancellationToken cancellationToken = default)
+    public async Task<bool> IsUpcomingGuestAsync(string icsUid, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();
-        return await dbContext.Set<BookingAttendee>().AnyAsync(a => a.IcsUid == icsUid, GetCancellationToken(cancellationToken))
-               || await dbContext.Set<BookingSeriesAttendee>().AnyAsync(a => a.IcsUid == icsUid, GetCancellationToken(cancellationToken));
+        var upcoming = dbContext.Bookings.Where(b => b.Status == BookingStatus.Confirmed && b.StartsAt > now);
+        return await dbContext.Set<BookingAttendee>()
+                   .Where(a => a.IcsUid == icsUid)
+                   .AnyAsync(a => upcoming.Any(b => b.Id == a.BookingId), GetCancellationToken(cancellationToken))
+               || await dbContext.Set<BookingSeriesAttendee>()
+                   .Where(a => a.IcsUid == icsUid)
+                   .AnyAsync(a => upcoming.Any(b => b.SeriesId == a.SeriesId), GetCancellationToken(cancellationToken));
     }
 
     public async Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default)

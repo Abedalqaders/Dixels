@@ -8,6 +8,7 @@ using Volo.Abp.BackgroundJobs;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Emailing;
 using Volo.Abp.Settings;
+using Volo.Abp.Timing;
 using Volo.Abp.Uow;
 
 namespace Dixels.Emails;
@@ -31,8 +32,9 @@ public class SendEmailArgs
     public string? IcsMethod { get; set; }
 
     /// <summary>
-    /// A guest's email: their calendar UID. The email is dropped if they're no longer a guest
-    /// by the time it's sent — the booker can take someone off the list seconds after adding them.
+    /// A guest's email: their calendar UID. The email is dropped if, by the time it's sent,
+    /// they're no longer a guest or there's nothing left to come to — the booker can take
+    /// someone off the list, or cancel, seconds after booking.
     /// </summary>
     public string? GuestIcsUid { get; set; }
 }
@@ -50,23 +52,27 @@ public class SendEmailJob : AsyncBackgroundJob<SendEmailArgs>, ITransientDepende
     private readonly ISettingProvider _settingProvider;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
+    private readonly IClock _clock;
 
     public SendEmailJob(
         IEmailSender emailSender,
         ISettingProvider settingProvider,
         IBookingRepository bookingRepository,
-        IUnitOfWorkManager unitOfWorkManager)
+        IUnitOfWorkManager unitOfWorkManager,
+        IClock clock)
     {
         _emailSender = emailSender;
         _settingProvider = settingProvider;
         _bookingRepository = bookingRepository;
         _unitOfWorkManager = unitOfWorkManager;
+        _clock = clock;
     }
 
     public override async Task ExecuteAsync(SendEmailArgs args)
     {
         using var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false);
-        if (args.GuestIcsUid is { } uid && !await _bookingRepository.IsGuestAsync(uid))
+        if (args.GuestIcsUid is { } uid
+            && !await _bookingRepository.IsUpcomingGuestAsync(uid, new DateTimeOffset(_clock.Now.ToUniversalTime(), TimeSpan.Zero)))
         {
             return;
         }
