@@ -26,9 +26,6 @@ public sealed class PostgresFixture : IAsyncLifetime
             return;
         }
 
-        // Same switch as DixelsEntityFrameworkCoreModule — must be set before Npgsql is used.
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
         _container = new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build();
         await _container.StartAsync();
         ConnectionString = _container.GetConnectionString();

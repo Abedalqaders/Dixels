@@ -98,7 +98,8 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         }
 
         // Distinct: unnest returns a room once per time it's named, which would repeat its bookings.
-        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start, end);
+        // Raw SQL skips the UTC value converter, and Npgsql only accepts offset 0 for timestamptz.
+        return dbContext.Bookings.FromSqlRaw(ConfirmedOverlapSql, spaceIds.Distinct().ToArray(), start.ToUniversalTime(), end.ToUniversalTime());
     }
 
     public async Task<List<Booking>> GetDueForReminderAsync(
