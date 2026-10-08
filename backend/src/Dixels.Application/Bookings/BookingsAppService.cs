@@ -32,6 +32,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly LocalizedNameReader _nameReader;
     private readonly IIdentityUserRepository _userRepository;
     private readonly ConstraintResolver _constraintResolver;
+    private readonly BookingAccess _bookingAccess;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -45,7 +46,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         IRepository<BookingSeries, Guid> seriesRepository,
         LocalizedNameReader nameReader,
         IIdentityUserRepository userRepository,
-        ConstraintResolver constraintResolver)
+        ConstraintResolver constraintResolver,
+        BookingAccess bookingAccess)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -59,6 +61,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _nameReader = nameReader;
         _userRepository = userRepository;
         _constraintResolver = constraintResolver;
+        _bookingAccess = bookingAccess;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -137,18 +140,15 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var now = new DateTimeOffset(Clock.Now.ToUniversalTime(), TimeSpan.Zero);
         var bookings = await _bookingRepository.GetCalendarForUserAsync(
             userId, clock.ToUtc(from), clock.ToUtc(to), now, timezone is null ? null : buildingId);
-        return new ListResultDto<BookingSummaryDto>(await MapToSummariesAsync(bookings));
+        return new ListResultDto<BookingSummaryDto>(await MapToSummariesAsync(bookings, userId));
     }
 
     public async Task<BookingDto> GetAsync(Guid id)
     {
         var booking = await _bookingRepository.GetAsync(id);
-        // Someone else's booking reads as "not found", not "forbidden": a 403 would confirm
-        // the id exists, which is more than a guessed URL should learn.
-        if (booking.UserId != CurrentUser.GetId())
-        {
-            throw new EntityNotFoundException(typeof(Booking), id);
-        }
+        // The organiser and a colleague guest may read it (MapToDtosAsync hides the other
+        // guests' emails from a guest); to anyone else it doesn't exist.
+        await _bookingAccess.EnsureAsync(booking, CurrentUser.GetId(), BookingRole.Owner, BookingRole.Guest);
 
         return (await MapToDtosAsync(new[] { booking })).Single();
     }
@@ -156,6 +156,10 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     [Authorize(DixelsPermissions.Bookings.Cancel)]
     public async Task<ListResultDto<BookingDto>> CancelAsync(Guid id, CancelBookingDto input)
     {
+        // Only the organiser cancels: a guest is told so (403), anyone else that it doesn't exist.
+        var booking = await _bookingRepository.GetAsync(id);
+        await _bookingAccess.EnsureAsync(booking, CurrentUser.GetId(), DixelsDomainErrorCodes.BookingOnlyOrganiserCancels, BookingRole.Owner);
+
         var cancelled = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason, input.Scope);
         return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));
     }
@@ -331,7 +335,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     /// So only the rooms are loaded (for their names); each floor gives just its building's
     /// timezone, in one small query, instead of whole floors and buildings with their names.
     /// </summary>
-    private async Task<List<BookingSummaryDto>> MapToSummariesAsync(IReadOnlyCollection<Booking> bookings)
+    private async Task<List<BookingSummaryDto>> MapToSummariesAsync(IReadOnlyCollection<Booking> bookings, Guid me)
     {
         if (bookings.Count == 0)
         {
@@ -369,6 +373,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 SpaceName = names[space.Id],
                 Status = booking.Status.ToString(),
                 SeriesId = booking.SeriesId,
+                IsInvited = booking.UserId != me,
             };
         }).ToList();
     }

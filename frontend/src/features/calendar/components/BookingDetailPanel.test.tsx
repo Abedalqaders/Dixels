@@ -16,6 +16,7 @@ const item: CalendarItem = {
   location: 'Meeting Room 302',
   cancelled: false,
   repeats: false,
+  invited: false,
 }
 
 const booking = {
@@ -32,7 +33,10 @@ const booking = {
   attendees: 4,
   title: 'Product demo',
   status: 'Confirmed',
-} as BookingDto
+  isOwner: true,
+  ownerName: 'Sara Ali',
+  invitees: [],
+} as unknown as BookingDto
 
 function renderPanel(full: BookingDto | null, onCancel = vi.fn(), onClose = vi.fn(), canBook = true, canCancel = true) {
   render(
@@ -131,5 +135,42 @@ describe('BookingDetailPanel', () => {
       </MemoryRouter>,
     )
     expect(screen.queryByRole('button', { name: 'Edit guests' })).not.toBeInTheDocument()
+  })
+
+  it("shows a guest who invited them, the other guests by name only, and no Cancel", () => {
+    const invite = {
+      ...booking,
+      isOwner: false,
+      invitees: [
+        { userId: 'u-me', name: 'Jordan Reed', email: '', isExternal: false, responseStatus: 0 },
+        { userId: null, name: 'Omar Farouk', email: '', isExternal: true, responseStatus: 0 },
+      ],
+    } as BookingDto
+    renderPanel(invite)
+
+    const panel = screen.getByRole('region', { name: 'Booking details' })
+    expect(panel).toHaveTextContent('Invited by Sara Ali')
+    const list = within(panel).getByRole('list', { name: 'Invited' })
+    expect(list).toHaveTextContent('Jordan Reed')
+    expect(list).not.toHaveTextContent('@')
+    expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
+  it('a guest sees an admin-cancelled invite struck through, with the reason', () => {
+    renderPanel({ ...booking, isOwner: false, status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'The room is closed for maintenance.' } as BookingDto)
+
+    const panel = screen.getByRole('region', { name: 'Booking details' })
+    expect(panel).toHaveTextContent('Invited by Sara Ali')
+    expect(panel).toHaveTextContent(
+      "The organiser's booking was cancelled by an administrator — The room is closed for maintenance.. This meeting won't take place here.",
+    )
+    // Not the owner's wording: the room was never held for a guest.
+    expect(panel).not.toHaveTextContent('held for you')
+    expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
+  it("the owner still reads that the room is no longer held for them", () => {
+    renderPanel({ ...booking, status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'Closed' } as BookingDto)
+    expect(screen.getByRole('region', { name: 'Booking details' })).toHaveTextContent('held for you')
   })
 })

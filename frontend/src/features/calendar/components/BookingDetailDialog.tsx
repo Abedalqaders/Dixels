@@ -60,7 +60,7 @@ export function BookingDetailDialog({ item, booking, error, canBook, canCancel, 
                 {t('Booking:EditGuests')}
               </Button>
             )}
-            {canCancel && booking && phase === 'upcoming' && (
+            {canCancel && booking?.isOwner && phase === 'upcoming' && (
               <Button variant="destructive" onClick={() => onCancel(booking)}>
                 {t('Booking:Cancel')}
               </Button>

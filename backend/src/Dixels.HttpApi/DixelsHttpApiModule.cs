@@ -30,13 +30,17 @@ public class DixelsHttpApiModule : AbpModule
 
     // ABP answers every BusinessException with 403 unless told otherwise. A slot someone
     // else just took, or an idempotency key reused for a different request, is a conflict
-    // with the current state of the server — 409, which the BRS asks for explicitly.
+    // with the current state of the server — 409, which the BRS asks for explicitly. A guest
+    // asking for an organiser-only action on a booking they're invited to is a real
+    // "you may not": 403.
     private void ConfigureHttpStatusCodes()
     {
         Configure<AbpExceptionHttpStatusCodeOptions>(options =>
         {
             options.Map(DixelsDomainErrorCodes.BookingOverlap, HttpStatusCode.Conflict);
             options.Map(DixelsDomainErrorCodes.BookingIdempotencyKeyReused, HttpStatusCode.Conflict);
+            options.Map(DixelsDomainErrorCodes.BookingOrganiserOnly, HttpStatusCode.Forbidden);
+            options.Map(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels, HttpStatusCode.Forbidden);
         });
     }
 

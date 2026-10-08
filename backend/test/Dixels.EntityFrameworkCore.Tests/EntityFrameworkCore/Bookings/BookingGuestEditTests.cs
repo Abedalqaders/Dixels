@@ -226,7 +226,7 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     }
 
     [Fact]
-    public async Task Only_the_owner_may_edit_and_anyone_else_finds_nothing()
+    public async Task Only_the_organiser_may_edit_a_guest_is_told_so_and_anyone_else_finds_nothing()
     {
         var s = await CreateScenarioAsync();
         BookingDto booking;
@@ -237,7 +237,8 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
 
         using (ActAs(s.Rana))
         {
-            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2)));
+            (await RejectionCodeAsync(() => _bookings.UpdateInviteesAsync(booking.Id, Guests(2))))
+                .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserOnly);
         }
 
         using (ActAs(s.Stranger))
@@ -312,7 +313,7 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
     }
 
     [Fact]
-    public async Task A_series_with_nothing_upcoming_cannot_be_edited_and_strangers_find_nothing()
+    public async Task A_series_with_nothing_upcoming_cannot_be_edited_its_guests_are_refused_and_strangers_find_nothing()
     {
         var s = await CreateScenarioAsync();
         SeriesCreatedDto series;
@@ -324,6 +325,12 @@ public class BookingGuestEditTests : DixelsApplicationTestBase<DixelsEntityFrame
         using (ActAs(s.Stranger))
         {
             await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(2)));
+        }
+
+        using (ActAs(s.Rana))
+        {
+            (await RejectionCodeAsync(() => _bookings.UpdateSeriesInviteesAsync(series.SeriesId, Guests(2))))
+                .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserOnly);
         }
 
         using (ActAs(s.Owner))

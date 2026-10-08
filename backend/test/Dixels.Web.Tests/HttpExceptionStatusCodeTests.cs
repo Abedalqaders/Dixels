@@ -25,6 +25,8 @@ public class HttpExceptionStatusCodeTests
         {
             [DixelsDomainErrorCodes.BookingOverlap] = HttpStatusCode.Conflict,
             [DixelsDomainErrorCodes.BookingIdempotencyKeyReused] = HttpStatusCode.Conflict,
+            [DixelsDomainErrorCodes.BookingOrganiserOnly] = HttpStatusCode.Forbidden,
+            [DixelsDomainErrorCodes.BookingOnlyOrganiserCancels] = HttpStatusCode.Forbidden,
         },
     }));
 
@@ -43,6 +45,14 @@ public class HttpExceptionStatusCodeTests
     {
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOverlap)).ShouldBe(HttpStatusCode.Conflict);
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused)).ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public void An_explicitly_mapped_forbidden_stays_forbidden()
+    {
+        // A guest asking for an organiser-only action: a deliberate 403, not turned into a 400.
+        StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOrganiserOnly)).ShouldBe(HttpStatusCode.Forbidden);
+        StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels)).ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]

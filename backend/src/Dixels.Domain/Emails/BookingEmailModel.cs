@@ -4,20 +4,35 @@ namespace Dixels.Emails;
 
 /// <summary>
 /// What a booking email shows, already worded in the recipient's language. Templates read it
-/// as <c>model.space_name</c> etc. (Scriban's snake_case names for these properties).
+/// as <c>model.space_name</c> etc. (Scriban's snake_case names for these properties); the
+/// layout reads the same model, for the band, greeting, heading and When / Where blocks.
 /// </summary>
 public class BookingEmailModel
 {
+    /// <summary>The band's status: one of <see cref="EmailStatus"/>.</summary>
+    public string Status { get; set; } = EmailStatus.Confirmed;
+
     public string RecipientName { get; set; } = string.Empty;
+
+    /// <summary>The big line under the greeting: "You're booked: Q4 planning".</summary>
+    public string Heading { get; set; } = string.Empty;
+
+    /// <summary>Strikes the When of every block through (a cancellation).</summary>
+    public bool Cancelled { get; set; }
+
+    /// <summary>The When / Where blocks, soonest first: one for most emails, one per booking for an admin cancel.</summary>
+    public List<BookingEmailRow> Rows { get; set; } = new();
+
+    // The first (or only) booking's parts, for subjects and detail rows.
     public string SpaceName { get; set; } = string.Empty;
     public string FloorName { get; set; } = string.Empty;
     public string BuildingName { get; set; } = string.Empty;
 
-    /// <summary>"Fri 2 Oct 2026", or for a series "Fri 2 Oct 2026 – Fri 30 Oct 2026". Building-local.</summary>
-    public string Date { get; set; } = string.Empty;
+    /// <summary>The building's address in the shown language; its detail row only when set.</summary>
+    public string? Address { get; set; }
 
-    /// <summary>"10:00–11:00", building-local.</summary>
-    public string Time { get; set; } = string.Empty;
+    /// <summary>"Fri 2 Oct 2026", or for several "Fri 2 Oct 2026 – Fri 30 Oct 2026". Building-local.</summary>
+    public string Date { get; set; } = string.Empty;
 
     public int Attendees { get; set; }
     public string? Title { get; set; }
@@ -25,27 +40,51 @@ public class BookingEmailModel
     /// <summary>How many bookings the email is about: 1, or a series' dates.</summary>
     public int Count { get; set; }
 
-    /// <summary>A cancellation: why, if the employee said.</summary>
+    /// <summary>A cancellation: why (the employee's own words, or the admin action's).</summary>
     public string? Reason { get; set; }
 
-    /// <summary>Where "Open Dixels" goes.</summary>
-    public string AppUrl { get; set; } = string.Empty;
+    /// <summary>A series: "From Mon 12 Oct 2026".</summary>
+    public string? RepeatsFrom { get; set; }
 
-    /// <summary>An admin cancel: the bookings shown, one block each, soonest first.</summary>
-    public List<BookingEmailRow> Rows { get; set; } = new();
+    /// <summary>A series: the dates its rule lands on that weren't booked ("Mon 2 Nov 2026, …").</summary>
+    public string? NotOn { get; set; }
 
     /// <summary>An admin cancel: how many more were cancelled than <see cref="Rows"/> shows.</summary>
     public int More { get; set; }
+
+    /// <summary>"View booking": My calendar on the (first) booking's day.</summary>
+    public string ViewUrl { get; set; } = string.Empty;
+
+    /// <summary>"Find another room".</summary>
+    public string FindUrl { get; set; } = string.Empty;
 }
 
-/// <summary>One booking in an email about several, worded like the model (<c>row.space_name</c>…).</summary>
+/// <summary>One When / Where block, worded like the model (<c>row.space_name</c>…).</summary>
 public class BookingEmailRow
 {
     public string SpaceName { get; set; } = string.Empty;
     public string FloorName { get; set; } = string.Empty;
     public string BuildingName { get; set; } = string.Empty;
+
+    /// <summary>"Thu 8 Oct 2026", or a series' "Every Monday until Mon 30 Nov 2026".</summary>
     public string Date { get; set; } = string.Empty;
+
+    /// <summary>"10:00–11:00", building-local.</summary>
     public string Time { get; set; } = string.Empty;
+
+    /// <summary>The building's zone at that time: "Amman time", or in Arabic "GMT+3".</summary>
+    public string Zone { get; set; } = string.Empty;
+
     public string? Title { get; set; }
     public string? Reason { get; set; }
+}
+
+/// <summary>The band's status words (their texts are <c>Email:Status:{status}</c>).</summary>
+public static class EmailStatus
+{
+    public const string Confirmed = "Confirmed";
+    public const string Reminder = "Reminder";
+    public const string Invitation = "Invitation";
+    public const string Cancelled = "Cancelled";
+    public const string Updated = "Updated";
 }

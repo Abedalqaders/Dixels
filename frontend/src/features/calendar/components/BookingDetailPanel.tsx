@@ -48,7 +48,7 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
             <Users /> {t('Booking:EditGuests')}
           </Button>
         )}
-        {canCancel && booking && phase === 'upcoming' && (
+        {canCancel && booking?.isOwner && phase === 'upcoming' && (
           <Button variant="destructive" size="sm" onClick={() => onCancel(booking)}>
             {t('Booking:Cancel')}
           </Button>

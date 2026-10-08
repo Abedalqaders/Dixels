@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Volo.Abp;
-using Volo.Abp.Domain.Entities;
 
 namespace Dixels.Bookings;
 
@@ -19,12 +18,9 @@ public partial class BookingManager
     public async Task<(Booking Booking, BookingPlace Place)> ChangeInviteesAsync(
         Guid userId, Guid bookingId, int attendees, IReadOnlyCollection<Invitee> invitees)
     {
-        var booking = await _bookingRepository.FindAsync(bookingId);
-        // Someone else's booking reads as "not found", as when reading it.
-        if (booking is null || booking.UserId != userId)
-        {
-            throw new EntityNotFoundException(typeof(Booking), bookingId);
-        }
+        var booking = await _bookingRepository.GetAsync(bookingId);
+        // Organiser only: a guest is told so (403), anyone else finds nothing (404).
+        await _bookingAccess.EnsureAsync(booking, userId, BookingRole.Owner);
 
         if (booking.SeriesId is not null)
         {
@@ -58,11 +54,8 @@ public partial class BookingManager
     public async Task<(BookingSeries Series, IReadOnlyList<Booking> Bookings, BookingPlace Place)> ChangeSeriesInviteesAsync(
         Guid userId, Guid seriesId, int attendees, IReadOnlyCollection<Invitee> invitees)
     {
-        var series = await _seriesRepository.FindAsync(seriesId);
-        if (series is null || series.UserId != userId)
-        {
-            throw new EntityNotFoundException(typeof(BookingSeries), seriesId);
-        }
+        var series = await _seriesRepository.GetAsync(seriesId);
+        await _bookingAccess.EnsureSeriesAsync(series, userId, BookingRole.Owner);
 
         var now = Now();
         var upcoming = (await _bookingRepository.GetListAsync(

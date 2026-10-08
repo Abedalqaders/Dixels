@@ -156,11 +156,11 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
         CancellationToken cancellationToken = default)
     {
         var bookings = await GetQueryableAsync();
+        var dbContext = await GetDbContextAsync();
         if (buildingId is not null)
         {
             // IgnoreQueryFilters: a removed building's (soft-deleted) rooms still hold the
             // cancelled bookings its employees should see.
-            var dbContext = await GetDbContextAsync();
             var roomIds =
                 from s in dbContext.Spaces.IgnoreQueryFilters()
                 join f in dbContext.Floors.IgnoreQueryFilters() on s.FloorId equals f.Id
@@ -169,14 +169,36 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             bookings = bookings.Where(b => roomIds.Contains(b.SpaceId));
         }
 
-        return await bookings
-            .Where(b => b.UserId == userId
-                        && b.StartsAt < end
-                        && b.EndsAt > start
-                        && (b.Status == BookingStatus.Confirmed
-                            || (b.Status == BookingStatus.Cancelled && b.CancelledByAdmin && b.EndsAt > now)))
+        var shown = bookings.Where(b => b.StartsAt < end
+                                        && b.EndsAt > start
+                                        && (b.Status == BookingStatus.Confirmed
+                                            || (b.Status == BookingStatus.Cancelled && b.CancelledByAdmin && b.EndsAt > now)));
+
+        // Two halves, each on its own index, joined with UNION ALL: mine through
+        // (UserId, StartsAt…), and the ones I'm invited to through the guest rows'
+        // (UserId, EndsAt) — never every invitation I ever had. A booking can't be in both:
+        // nobody can invite themselves.
+        var invitedTo = dbContext.Set<BookingAttendee>()
+            .Where(a => a.UserId == userId && a.EndsAt > start)
+            .Select(a => a.BookingId);
+        return await shown.Where(b => b.UserId == userId)
+            .Concat(shown.Where(b => invitedTo.Contains(b.Id)))
             .OrderBy(b => b.StartsAt)
             .ToListAsync(GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingAttendee>()
+            .AnyAsync(a => a.BookingId == bookingId && a.UserId == userId, GetCancellationToken(cancellationToken));
+    }
+
+    public async Task<bool> IsSeriesInviteeAsync(Guid seriesId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingSeriesAttendee>()
+            .AnyAsync(a => a.SeriesId == seriesId && a.UserId == userId, GetCancellationToken(cancellationToken));
     }
 
     public async Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(
