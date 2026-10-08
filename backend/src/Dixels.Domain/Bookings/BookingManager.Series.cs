@@ -34,7 +34,7 @@ public sealed record SeriesEvaluation(
     IReadOnlyList<BookingViolation> SeriesViolations,
     IReadOnlyList<OccurrenceEvaluation> Occurrences,
     IReadOnlyList<Invitee> Invitees,
-    IReadOnlyDictionary<Guid, int>? BusyDates = null)
+    IReadOnlyDictionary<Guid, PersonBusy>? Busy = null)
 {
     public int BookableCount => SeriesViolations.Count > 0 ? 0 : Occurrences.Count(o => o.IsValid);
 }
@@ -80,7 +80,7 @@ public partial class BookingManager
         return evaluation with
         {
             Occurrences = occurrences,
-            BusyDates = await _busyFinder.CountBusyDatesAsync(ColleagueIds(resolved), dates),
+            Busy = await _busyFinder.FindBusyAsync(ColleagueIds(resolved), dates),
         };
     }
 

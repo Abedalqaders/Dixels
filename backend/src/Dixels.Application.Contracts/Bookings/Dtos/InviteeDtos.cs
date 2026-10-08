@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Volo.Abp.Timing;
 
 namespace Dixels.Bookings;
 
@@ -48,6 +49,19 @@ public class BookingInviteeDto
 
     /// <summary>Previews only: on how many of the dates they're busy (a series: "busy on 2 of 8 dates"; one booking: 0 or 1).</summary>
     public int BusyDates { get; set; }
+
+    /// <summary>Previews only: when they're busy, cut to the booking's time on each date — times only, never with what.</summary>
+    public List<BusyTimeDto> BusyTimes { get; set; } = new();
+}
+
+/// <summary>A stretch of someone's busy time, on the building's wall clock (not normalized to UTC).</summary>
+public class BusyTimeDto
+{
+    [DisableDateTimeNormalization]
+    public DateTime LocalStart { get; set; }
+
+    [DisableDateTimeNormalization]
+    public DateTime LocalEnd { get; set; }
 }
 
 /// <summary>The colleagues an Edit guests dialog lists, to learn which are busy at the booking's time.</summary>
@@ -62,6 +76,9 @@ public class BusyGuestDto
 {
     public Guid UserId { get; set; }
     public int BusyDates { get; set; }
+
+    /// <summary>When, cut to the booking's time on each date (see <see cref="BookingInviteeDto.BusyTimes"/>).</summary>
+    public List<BusyTimeDto> Times { get; set; } = new();
 }
 
 /// <summary>The busy colleagues among those asked about, and how many dates were checked ("busy on 2 of 8 dates").</summary>

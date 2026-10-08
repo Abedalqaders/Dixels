@@ -80,7 +80,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             StartsAt = evaluation.StartUtc,
             EndsAt = evaluation.EndUtc,
             Timezone = evaluation.Building.Timezone,
-            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.BusyDates)).ToList(),
+            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.Busy, evaluation.LocalClock)).ToList(),
         };
     }
 
@@ -196,7 +196,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             }).ToList(),
             BookableCount = evaluation.BookableCount,
             Timezone = evaluation.Building.Timezone,
-            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.BusyDates)).ToList(),
+            Invitees = evaluation.Invitees.Select(i => ToOwnersView(i, evaluation.Busy, evaluation.LocalClock)).ToList(),
         };
     }
 
@@ -268,18 +268,27 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, BusyGuestsInput input) =>
         ToBusyGuests(await _bookingManager.FindBusySeriesGuestsAsync(CurrentUser.GetId(), seriesId, input.UserIds));
 
-    private static BusyGuestsResultDto ToBusyGuests((int Dates, Dictionary<Guid, int> Busy) result) => new()
+    private static BusyGuestsResultDto ToBusyGuests(BusyGuests result) => new()
     {
         Dates = result.Dates,
-        Items = result.Busy.Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value }).ToList(),
+        Items = result.Busy
+            .Select(b => new BusyGuestDto { UserId = b.Key, BusyDates = b.Value.Dates, Times = ToTimes(b.Value, result.Clock) })
+            .ToList(),
     };
 
-    private static BookingInviteeDto ToOwnersView(Invitee invitee, IReadOnlyDictionary<Guid, int>? busyDates)
+    private static List<BusyTimeDto> ToTimes(PersonBusy busy, BuildingClock clock) =>
+        busy.Times.Select(t => new BusyTimeDto { LocalStart = clock.ToLocal(t.Start), LocalEnd = clock.ToLocal(t.End) }).ToList();
+
+    private static BookingInviteeDto ToOwnersView(Invitee invitee, IReadOnlyDictionary<Guid, PersonBusy>? busy, BuildingClock clock)
     {
-        var busy = invitee.UserId is { } id && busyDates is not null ? busyDates.GetValueOrDefault(id) : 0;
         var dto = ToOwnersView(invitee);
-        dto.IsBusy = busy > 0;
-        dto.BusyDates = busy;
+        if (invitee.UserId is { } id && busy is not null && busy.TryGetValue(id, out var theirs))
+        {
+            dto.IsBusy = true;
+            dto.BusyDates = theirs.Dates;
+            dto.BusyTimes = ToTimes(theirs, clock);
+        }
+
         return dto;
     }
 

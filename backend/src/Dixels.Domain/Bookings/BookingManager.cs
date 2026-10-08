@@ -98,7 +98,7 @@ public partial class BookingManager : DomainService
             Warnings = meeting == default
                 ? evaluation.Warnings
                 : evaluation.Warnings.Append(AcceptedMeetingWarning(meeting.Range, context.LocalClock)).ToList(),
-            BusyDates = await _busyFinder.CountBusyDatesAsync(ColleagueIds(resolved), slot),
+            Busy = await _busyFinder.FindBusyAsync(ColleagueIds(resolved), slot),
         };
     }
 

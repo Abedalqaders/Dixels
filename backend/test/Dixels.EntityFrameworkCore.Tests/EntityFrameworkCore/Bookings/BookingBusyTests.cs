@@ -123,6 +123,42 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         // Lina is the organiser of the 11–12 meeting: her own booking, so she's busy too.
         BusyIn(preview, s.Lina).ShouldBeTrue();
         preview.Invitees.Single(i => i.UserId == s.Rana).BusyDates.ShouldBe(1);
+
+        // When, on the building's clock, cut to the booking's 10–12 — never with what.
+        Times(preview, s.Rana).ShouldBe(new[] { (Tomorrow.AddHours(10), Tomorrow.AddHours(11)) });
+        Times(preview, s.Omar).ShouldBe(new[] { (Tomorrow.AddHours(11), Tomorrow.AddHours(12)) });
+        Times(preview, s.Lina).ShouldBe(new[] { (Tomorrow.AddHours(11), Tomorrow.AddHours(12)) });
+    }
+
+    private static (DateTime, DateTime)[] Times(BookingPreviewDto preview, Guid userId) =>
+        preview.Invitees.Single(i => i.UserId == userId).BusyTimes.Select(t => (t.LocalStart, t.LocalEnd)).ToArray();
+
+    [Fact]
+    public async Task Busy_times_are_cut_to_the_slot_and_overlapping_ones_merged()
+    {
+        var s = await CreateScenarioAsync();
+        // Rana: her own room 08–10:30, and a meeting she accepted 10–11:30 (back to back with it).
+        await BookAsAsync(s.Rana, new CreateBookingDto
+        {
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(8), LocalEnd = Tomorrow.AddHours(10.5), Attendees = 1,
+            IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+        var meeting = await BookAsAsync(s.Lina, new CreateBookingDto
+        {
+            SpaceId = s.Room, LocalStart = Tomorrow.AddHours(10), LocalEnd = Tomorrow.AddHours(11.5), Attendees = 2,
+            IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
+        });
+        await AnswerAsync(meeting.Id, s.Rana, InviteeResponseStatus.Accepted);
+
+        using var _ = ActAs(s.Owner);
+        var preview = await _bookings.PreviewAsync(new CreateBookingDto
+        {
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(12), Attendees = 2,
+            IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
+        });
+
+        // 08–10:30 only touches the slot (10:30–12), so it's not there; the meeting is cut to 10:30–11:30.
+        Times(preview, s.Rana).ShouldBe(new[] { (Tomorrow.AddHours(10.5), Tomorrow.AddHours(11.5)) });
     }
 
     [Fact]
@@ -173,6 +209,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         var rana = preview.Invitees.Single(i => i.UserId == s.Rana);
         rana.IsBusy.ShouldBeTrue();
         rana.BusyDates.ShouldBe(2);
+        rana.BusyTimes.Select(t => t.LocalStart).ShouldBe(new[] { Tomorrow.AddHours(10), Tomorrow.AddDays(2).AddHours(10) });
         preview.Invitees.Single(i => i.UserId == s.Omar).BusyDates.ShouldBe(0);
         preview.Occurrences.Count.ShouldBe(4);
     }
@@ -193,6 +230,7 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         // Rana accepted this very meeting: not "busy" with it. Omar has his own room then.
         busy.Dates.ShouldBe(1);
         busy.Items.Select(b => (b.UserId, b.BusyDates)).ShouldBe(new[] { (s.Omar, 1) });
+        busy.Items[0].Times.Select(t => (t.LocalStart, t.LocalEnd)).ShouldBe(new[] { (Tomorrow.AddHours(10), Tomorrow.AddHours(11)) });
     }
 
     [Fact]
