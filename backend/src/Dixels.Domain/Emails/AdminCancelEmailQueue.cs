@@ -30,15 +30,18 @@ public class AdminCancelEmailQueue : ITransientDependency
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly ILocalEventBus _localEventBus;
     private readonly IBackgroundJobManager _backgroundJobManager;
+    private readonly BookingEmails _bookingEmails;
 
     public AdminCancelEmailQueue(
         IUnitOfWorkManager unitOfWorkManager,
         ILocalEventBus localEventBus,
-        IBackgroundJobManager backgroundJobManager)
+        IBackgroundJobManager backgroundJobManager,
+        BookingEmails bookingEmails)
     {
         _unitOfWorkManager = unitOfWorkManager;
         _localEventBus = localEventBus;
         _backgroundJobManager = backgroundJobManager;
+        _bookingEmails = bookingEmails;
     }
 
     /// <summary>Adds what an admin cancelled to this unit of work's emails.</summary>
@@ -81,7 +84,18 @@ public class AdminCancelEmailQueue : ITransientDependency
 
     private async Task EnqueueAsync(IEnumerable<Booking> cancelled)
     {
-        foreach (var owners in cancelled.DistinctBy(b => b.Id).GroupBy(b => b.UserId))
+        var bookings = cancelled.DistinctBy(b => b.Id).ToList();
+
+        // The guests: one email per guest per meeting (a mail app acts on one CANCEL per
+        // message), each written later by its own job.
+        var notices = await _bookingEmails.GuestCancelNoticesAsync(bookings);
+        foreach (var notice in notices)
+        {
+            await _backgroundJobManager.EnqueueAsync(new AdminCancelledGuestEmailArgs { Notice = notice });
+        }
+
+        var guestsTold = notices.GroupBy(n => n.OwnerId).ToDictionary(g => g.Key, g => g.Select(n => n.GuestKey).Distinct().Count());
+        foreach (var owners in bookings.GroupBy(b => b.UserId))
         {
             var soonest = owners.OrderBy(b => b.StartsAt).ThenBy(b => b.Id).ToList();
             await _backgroundJobManager.EnqueueAsync(new AdminCancelledEmailArgs
@@ -89,6 +103,7 @@ public class AdminCancelEmailQueue : ITransientDependency
                 UserId = owners.Key,
                 BookingIds = soonest.Take(ShownBookings).Select(b => b.Id).ToList(),
                 Count = soonest.Count,
+                GuestsTold = guestsTold.GetValueOrDefault(owners.Key),
             });
         }
     }

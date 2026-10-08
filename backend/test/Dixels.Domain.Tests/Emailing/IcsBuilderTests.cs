@@ -139,9 +139,26 @@ public class IcsBuilderTests
     [Fact]
     public void One_date_of_a_series_is_named_by_its_recurrence_id()
     {
-        var ics = Build(Single(IcsMethods.Cancel) with { LocalRecurrenceId = new DateTime(2026, 10, 19, 9, 0, 0) });
+        var ics = Build(Single(IcsMethods.Cancel) with { LocalRecurrenceIds = new[] { new DateTime(2026, 10, 19, 9, 0, 0) } });
 
         ics.ShouldContain("RECURRENCE-ID;TZID=Asia/Amman:20261019T090000");
+        ics.ShouldContain("DTSTART;TZID=Asia/Amman:20261019T090000");
+        ics.ShouldContain("DTEND;TZID=Asia/Amman:20261019T100000"); // the series' length
+    }
+
+    [Fact]
+    public void Several_dates_of_a_series_are_one_event_each_with_the_same_uid()
+    {
+        var ics = Build(Single(IcsMethods.Cancel) with
+        {
+            LocalRecurrenceIds = new[] { new DateTime(2026, 10, 19, 9, 0, 0), new DateTime(2026, 10, 26, 9, 0, 0) },
+        });
+
+        var events = Calendar.Load(ics)!.Events;
+        events.Count.ShouldBe(2);
+        events.ShouldAllBe(evt => evt.Uid == "abc123@dixels" && evt.Status == "CANCELLED");
+        ics.ShouldContain("RECURRENCE-ID;TZID=Asia/Amman:20261026T090000");
+        ics.ShouldNotContain("RRULE:FREQ=WEEKLY");
     }
 
     /// <summary>The file with its long lines unfolded (RFC 5545 wraps them at 75 characters).</summary>

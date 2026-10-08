@@ -76,6 +76,12 @@ public class BookingEmailModel
     /// <summary>The footer line, when not the usual "about your bookings".</summary>
     public string? Footer { get; set; }
 
+    /// <summary>A guest's cancel email: an admin's action, not the booker's (the reason goes in the red box).</summary>
+    public bool CancelledByAdmin { get; set; }
+
+    /// <summary>The booker's cancel email: how many guests were told it's off (0: no line).</summary>
+    public int GuestsTold { get; set; }
+
     /// <summary>The calendar file the email carries, if any (not shown; attached by <see cref="SendEmailJob"/>).</summary>
     public IcsEvent? Calendar { get; set; }
 }
