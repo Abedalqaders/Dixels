@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { MonthGrid } from './MonthGrid'
 
-const item = (id: string, hour: string, cancelled = false, invited = false): CalendarItem => ({
+const item = (id: string, hour: string, cancelled = false, invited = false, declined = false): CalendarItem => ({
   id,
   kind: 'booking',
   title: id,
@@ -15,6 +15,7 @@ const item = (id: string, hour: string, cancelled = false, invited = false): Cal
   cancelled,
   repeats: false,
   invited,
+  declined,
 })
 const four = [item('One', '09'), item('Two', '10'), item('Three', '11'), item('Four', '12')]
 
@@ -56,6 +57,15 @@ describe('MonthGrid invites', () => {
     const cancelled = screen.getByRole('button', { name: 'Cancelled: Sync, 10:00–10:30, Room' })
     expect(cancelled).toHaveClass('line-through', 'bg-muted')
     expect(cancelled).not.toHaveClass('bg-[var(--surface-raised)]')
+  })
+})
+
+describe('MonthGrid declined invites', () => {
+  it('draws an invite I declined faded and struck through, still as an outline', () => {
+    render(<MonthGrid date="2026-10-01" items={[item('Sync', '10', false, true, true)]} today="2026-10-01" onOpenItem={vi.fn()} onOpenDay={vi.fn()} />)
+
+    const declined = screen.getByRole('button', { name: 'Declined: Sync, 10:00–10:30, Room' })
+    expect(declined).toHaveClass('border-dashed', 'line-through', 'opacity-60')
   })
 })
 

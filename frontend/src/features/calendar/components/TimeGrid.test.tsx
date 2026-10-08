@@ -143,6 +143,7 @@ describe('TimeGrid invites', () => {
       cancelled: false,
       repeats: false,
       invited: true,
+      declined: false,
     }
     renderGrid('2026-10-02', vi.fn(), WEEK, [invite])
 

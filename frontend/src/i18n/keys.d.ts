@@ -45,7 +45,18 @@ export interface TextKeys {
   "Auth:SigningOutDetail": string
   "Auth:TakingYouBack": string
   "Auth:TakingYouHome": string
+  "Booking:Accept": string
   "Booking:AlreadyStarted": string
+  "Booking:AnswerAccepted": string
+  "Booking:AnswerAllUpcoming": string
+  "Booking:AnswerDeclined": string
+  "Booking:AnswerFailed": string
+  "Booking:AnswerFor": string
+  "Booking:AnswerNone": string
+  "Booking:AnswerSeriesNote": string
+  "Booking:AnswerSummary": string
+  "Booking:AnswerThisDate": string
+  "Booking:AnswersClosed": string
   "Booking:BuildingRemovedDetail": string
   "Booking:BuildingRemovedDetailCalendar": string
   "Booking:BuildingRemovedTitle": string
@@ -66,6 +77,7 @@ export interface TextKeys {
   "Booking:CloseDetails": string
   "Booking:Date": string
   "Booking:DayRange": string
+  "Booking:Decline": string
   "Booking:Details": string
   "Booking:Done": string
   "Booking:EveryDay": string
@@ -102,6 +114,7 @@ export interface TextKeys {
   "Booking:Untitled": string
   "Booking:Upcoming": string
   "Booking:Where": string
+  "Booking:YourAnswer": string
   "BookingForm:AllDatesFree": string
   "BookingForm:AppliesToEveryDate": string
   "BookingForm:AtLeast": string
@@ -157,6 +170,7 @@ export interface TextKeys {
   "Calendar:DayHeading": string
   "Calendar:DayPassed": string
   "Calendar:DayView": string
+  "Calendar:DeclinedItem": string
   "Calendar:InvitedItem": string
   "Calendar:Item": string
   "Calendar:Lead": string

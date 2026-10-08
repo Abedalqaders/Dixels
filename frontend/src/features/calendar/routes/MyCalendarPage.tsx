@@ -19,7 +19,9 @@ import { addDays, dateOf, formatDate, fromMinutes, nextSlot, nowInZone, timeOf, 
 import { formatDaySpan, formatMonth } from '@/lib/time/format'
 import { languageInfo } from '@/i18n'
 import type { IsoDate } from '@/lib/time/buildingTime'
-import { ApiError, getBooking, getMyBookableBuilding } from '@/features/bookings/api/bookingsApi'
+import { ApiError, getBooking, getMyBookableBuilding, respondToBooking, respondToSeries } from '@/features/bookings/api/bookingsApi'
+import type { InviteeResponseStatus } from '@/features/bookings/api/bookingsApi'
+import type { AnswerScope } from '@/features/calendar/components/InviteResponse'
 import type { BookableBuildingDto, BookingDto, SpaceAvailabilityDto } from '@/features/bookings/api/bookingsApi'
 import { emitBookingsChanged, useBookingsChanged } from '@/features/bookings/bookingEvents'
 import { BookingForm } from '@/features/bookings/components/BookingForm'
@@ -272,6 +274,14 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
     if (day < range.from || day >= range.to) go({ date: day })
   }
 
+  // A guest's answer: one date, or a series and all its upcoming dates. Every bookings query
+  // is refreshed after, so the details and the calendar (a declined invite fades) follow.
+  async function handleRespond(booking: BookingDto, status: InviteeResponseStatus, scope: AnswerScope) {
+    if (scope === 'series' && booking.seriesId) await respondToSeries(token, booking.seriesId, status)
+    else await respondToBooking(token, booking.id, status)
+    emitBookingsChanged()
+  }
+
   function handleCancelled(all: BookingDto[]) {
     const cancelled = all[0]
     setCancelling(null)
@@ -423,6 +433,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
                 canCancel={canCancel}
                 onClose={() => setDetail(null)}
                 onCancel={setCancelling}
+                onRespond={handleRespond}
               />
             )}
           </aside>
@@ -438,6 +449,7 @@ function Calendar({ token, building }: { token: string; building: BookableBuildi
           canCancel={canCancel}
           onClose={() => setDetail(null)}
           onCancel={setCancelling}
+          onRespond={handleRespond}
         />
       )}
 

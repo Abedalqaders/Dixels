@@ -6,6 +6,7 @@ import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { bookingPhase } from '@/features/calendar/bookingPhase'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { BookingDetails, findSpaceLink, PhaseBadge } from './BookingDetails'
+import type { BookingDetailsProps } from './BookingDetails'
 
 interface BookingDetailPanelProps {
   item: CalendarItem
@@ -17,13 +18,15 @@ interface BookingDetailPanelProps {
   canCancel: boolean
   onClose: () => void
   onCancel: (booking: BookingDto) => void
+  /** A guest answering the invitation — see BookingDetails. */
+  onRespond?: BookingDetailsProps['onRespond']
 }
 
 /**
  * One booking's details in the calendar's side panel, under the mini calendar — the
  * calendar stays in view while you read, and the next click just swaps the booking.
  */
-export function BookingDetailPanel({ item, booking, error, canBook, canCancel, onClose, onCancel }: BookingDetailPanelProps) {
+export function BookingDetailPanel({ item, booking, error, canBook, canCancel, onClose, onCancel, onRespond }: BookingDetailPanelProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const link = canBook ? findSpaceLink(item, booking) : null
@@ -38,7 +41,7 @@ export function BookingDetailPanel({ item, booking, error, canBook, canCancel, o
         </Button>
       </div>
 
-      <BookingDetails item={item} booking={booking} error={error} />
+      <BookingDetails item={item} booking={booking} error={error} onRespond={onRespond} />
 
       <div className="flex flex-wrap gap-2">
         {canCancel && booking?.isOwner && phase === 'upcoming' && (
