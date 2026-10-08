@@ -28,7 +28,7 @@ public partial class BookingEmails
 
     /// <summary>"Sara Ali invited you" — one email to each guest of a new booking.</summary>
     public Task SendInvitesAsync(Booking booking) =>
-        InviteAsync(booking.UserId, booking.SpaceId, booking.Invitees.ToList(), booking.Title, booking.StartsAt, booking.EndsAt, null, null);
+        InviteAsync(booking.UserId, booking.SpaceId, booking.Invitees.ToList(), booking.Title, booking.StartsAt, booking.EndsAt, null, null, openId: booking.Id);
 
     /// <summary>One invite to each guest for a whole new series — not one per date.</summary>
     public Task SendSeriesInvitesAsync(BookingSeries series, IReadOnlyCollection<Booking> bookings)
@@ -39,13 +39,14 @@ public partial class BookingEmails
         }
 
         var first = bookings.MinBy(b => b.StartsAt)!;
-        return InviteAsync(series.UserId, series.SpaceId, series.Invitees.ToList(), series.Title, first.StartsAt, first.EndsAt, series, bookings);
+        return InviteAsync(series.UserId, series.SpaceId, series.Invitees.ToList(), series.Title, first.StartsAt, first.EndsAt, series, bookings, openId: first.Id);
     }
 
     /// <summary>
     /// Invites <paramref name="guests"/> — all of a new booking's, or only those just added
     /// (<paramref name="added"/>: "added you"); <paramref name="everyone"/> is the whole list,
-    /// for the names of the others.
+    /// for the names of the others. <paramref name="openId"/> is the date a colleague's "Open in
+    /// Dixels" opens (outsiders have no account, so theirs has no button).
     /// </summary>
     private async Task InviteAsync(
         Guid ownerId,
@@ -57,7 +58,8 @@ public partial class BookingEmails
         BookingSeries? series,
         IReadOnlyCollection<Booking>? dates,
         IReadOnlyList<InviteeRow>? everyone = null,
-        bool added = false)
+        bool added = false,
+        Guid? openId = null)
     {
         everyone ??= guests;
         if (guests.Count == 0)
@@ -120,7 +122,7 @@ public partial class BookingEmails
                         Footer = _localizer["Email:Invite:Footer", ownerName],
                     };
                     await NamePlaceAsync(model, space, floor, building);
-                    Describe(model, clock, startsAt, endsAt, title);
+                    Describe(model, clock, startsAt, endsAt, title, colleague ? openId : null);
                     model.AlsoInvited = OthersNames(everyone, guest, colleagues);
                     AddAnswerLinks(model, guest);
                     model.Heading = _localizer[added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
@@ -186,13 +188,13 @@ public partial class BookingEmails
                     var series = await _seriesRepository.GetAsync(seriesId);
                     var everyone = await _bookingRepository.GetSeriesGuestRowsAsync(new[] { seriesId });
                     await InviteAsync(series.UserId, series.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
-                        series.Title, first.StartsAt, first.EndsAt, series, change.Bookings, everyone, added: true);
+                        series.Title, first.StartsAt, first.EndsAt, series, change.Bookings, everyone, added: true, openId: first.Id);
                 }
                 else
                 {
                     var everyone = first.Invitees.ToList();
                     await InviteAsync(first.UserId, first.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
-                        first.Title, first.StartsAt, first.EndsAt, null, null, everyone, added: true);
+                        first.Title, first.StartsAt, first.EndsAt, null, null, everyone, added: true, openId: first.Id);
                 }
             }
 

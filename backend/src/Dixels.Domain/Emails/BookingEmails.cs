@@ -162,7 +162,7 @@ public partial class BookingEmails : DomainService
         var last = cancelled.MaxBy(b => b.StartsAt)!;
         return SendAsync(first.UserId, first.SpaceId, DixelsEmailTemplates.BookingCancelled, (model, clock) =>
         {
-            Describe(model, clock, first);
+            Describe(model, clock, first, open: false);
             model.Status = EmailStatus.Cancelled;
             model.Cancelled = true;
             model.Count = cancelled.Count;
@@ -368,18 +368,20 @@ public partial class BookingEmails : DomainService
 
     /// <summary>
     /// The booking's When / Where block and the parts the subject and details use: its date,
-    /// time and zone on the building's clock, its title, and "View booking" on its day.
+    /// time and zone on the building's clock, its title, and "View booking" — My calendar on
+    /// its day with the booking opened, unless <paramref name="open"/> is off (a cancelled one
+    /// is no longer on the calendar, so that link only goes to the day).
     /// </summary>
-    private void Describe(BookingEmailModel model, BuildingClock clock, Booking booking) =>
-        Describe(model, clock, booking.StartsAt, booking.EndsAt, booking.Title);
+    private void Describe(BookingEmailModel model, BuildingClock clock, Booking booking, bool open = true) =>
+        Describe(model, clock, booking.StartsAt, booking.EndsAt, booking.Title, open ? booking.Id : null);
 
-    private void Describe(BookingEmailModel model, BuildingClock clock, DateTimeOffset startsAt, DateTimeOffset endsAt, string? title)
+    private void Describe(BookingEmailModel model, BuildingClock clock, DateTimeOffset startsAt, DateTimeOffset endsAt, string? title, Guid? openId = null)
     {
         var date = clock.LocalDate(startsAt);
         model.Date = BookingFormat.Date(date);
         model.Title = title;
         model.Count = 1;
-        model.ViewUrl = AppLink($"/my-calendar?view=day&date={date:yyyy-MM-dd}");
+        model.ViewUrl = AppLink($"/my-calendar?view=day&date={date:yyyy-MM-dd}" + (openId is { } id ? $"&booking={id}" : string.Empty));
         model.Rows.Add(Row(model, clock, startsAt, endsAt));
     }
 

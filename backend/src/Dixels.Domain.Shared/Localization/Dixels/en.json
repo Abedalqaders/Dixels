@@ -338,6 +338,7 @@
     "Calendar:NewBooking": "New booking",
     "Calendar:BookingsLoadFailed": "Couldn't load your bookings — please try again.",
     "Calendar:BookingLoadFailed": "Couldn't load this booking — please try again.",
+    "Calendar:BookingUnavailable": "That booking isn't on your calendar any more — it may have been cancelled.",
     "Calendar:NothingThisDay": "Nothing booked this day.",
     "Calendar:NothingThisWeek": "Nothing booked this week.",
     "Calendar:NothingThisMonth": "Nothing booked this month.",
