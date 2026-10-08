@@ -50,7 +50,7 @@ describe('InviteResponse', () => {
       busyTimes: [{ localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' }],
     })
 
-    expect(screen.getByRole('note')).toHaveTextContent(/You have another booking at this time \(\W?10:00–10:30\W?\)\. You can still accept\./)
+    expect(screen.getByRole('note')).toHaveTextContent(/You have another booking at this time \(\W?10:00\W?–\W?10:30\W?\)\. You can still accept\./)
     await user.click(screen.getByRole('button', { name: 'Accept' }))
     expect(onRespond).toHaveBeenCalledWith(InviteeResponseStatus.Accepted, 'date')
   })

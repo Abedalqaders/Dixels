@@ -24,8 +24,9 @@ export function presenceOf(busy: PersonBusy | undefined, dates: number): Presenc
   return dates > 1 && busy.busyDates < dates ? 'part' : 'busy'
 }
 
-// Isolated left-to-right (LRI … PDI): in Arabic, "10:00–10:30" would otherwise read as 10:30–10:00.
-const range = (t: BusyTime) => `⁦${timeOf(t.localStart)}–${timeOf(t.localEnd)}⁩`
+// Isolated left-to-right (LRI … PDI): in Arabic, "10:00–10:30" would otherwise read as
+// 10:30–10:00. Word joiners round the dash keep a range from breaking across two lines.
+const range = (t: BusyTime) => `⁦${timeOf(t.localStart)}⁠–⁠${timeOf(t.localEnd)}⁩`
 
 /** Busy times grouped by date, earliest first: [["2026-10-13", ["10:00–10:30"]], …]. */
 function byDate(times: BusyTime[]): [string, string[]][] {

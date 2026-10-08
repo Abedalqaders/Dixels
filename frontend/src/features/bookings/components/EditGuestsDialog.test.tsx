@@ -156,7 +156,7 @@ describe('EditGuestsDialog', () => {
     })
     renderDialog(booking())
 
-    expect(await screen.findByRole('button', { name: /^Busy \W?10:00–11:00\W?$/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Busy \W?10:00\W?–\W?11:00\W?$/ })).toBeInTheDocument()
     expect(screen.getByText('1 person is busy at 10:00')).toBeInTheDocument()
     expect(document.querySelector('[data-presence="busy"]')).not.toBeNull()
     expect(getBusyGuests).toHaveBeenCalledWith('t', 'b-1', ['u-rana'])
@@ -193,8 +193,8 @@ describe('EditGuestsDialog', () => {
 
     await user.click(pill)
     expect(await screen.findByText('Busy on these dates')).toBeInTheDocument()
-    expect(screen.getByText(/^\W?10:00–10:30\W?$/)).toBeInTheDocument()
-    expect(screen.getByText(/^\W?10:00–11:00\W?$/)).toBeInTheDocument()
+    expect(screen.getByText(/^\W?10:00\W?–\W?10:30\W?$/)).toBeInTheDocument()
+    expect(screen.getByText(/^\W?10:00\W?–\W?11:00\W?$/)).toBeInTheDocument()
   })
 
   it("shows the server's answer under Attendees when it's about the head count", async () => {
