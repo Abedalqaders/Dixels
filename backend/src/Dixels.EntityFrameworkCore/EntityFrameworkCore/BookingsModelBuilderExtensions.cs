@@ -94,6 +94,12 @@ public static class BookingsModelBuilderExtensions
             b.HasIndex(x => new { x.UserId, x.EndsAt })
                 .HasFilter("\"UserId\" IS NOT NULL")
                 .IncludeProperties(x => x.BookingId);
+
+            // Outside guests only, for the cleanup (ExternalGuestCleanup): their rows are deleted
+            // once the retention window has passed, so this stays small whatever the history.
+            b.HasIndex(x => x.EndsAt, "IX_AppBookingAttendees_External")
+                .HasFilter("\"UserId\" IS NULL")
+                .IncludeProperties(x => x.BookingId);
         });
 
         builder.Entity<BookingSeries>(b =>
@@ -131,6 +137,10 @@ public static class BookingsModelBuilderExtensions
 
             b.HasIndex(x => x.SeriesId);
             b.HasIndex(x => new { x.SeriesId, x.UserId }).IsUnique().HasFilter("\"UserId\" IS NOT NULL");
+
+            // As on a booking's guests: outside guests only, for the cleanup.
+            b.HasIndex(x => x.SeriesId, "IX_AppBookingSeriesAttendees_External")
+                .HasFilter("\"UserId\" IS NULL");
         });
     }
 
