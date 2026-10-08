@@ -28,7 +28,7 @@ beforeAll(() => {
   }
 })
 
-const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, busyTimes: [] }
+const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] }
 
 function booking(patch: Partial<BookingDto> = {}): BookingDto {
   return {
@@ -152,7 +152,7 @@ describe('EditGuestsDialog', () => {
   it('asks who of the listed colleagues is busy, and shows when', async () => {
     vi.mocked(getBusyGuests).mockResolvedValue({
       dates: 1,
-      items: [{ userId: 'u-rana', busyDates: 1, times: [{ localStart: '2026-10-08T10:00:00', localEnd: '2026-10-08T11:00:00' }] }],
+      items: [{ userId: 'u-rana', busyDates: 1, maybeBusyDates: 0, times: [{ localStart: '2026-10-08T10:00:00', localEnd: '2026-10-08T11:00:00', isTentative: false }] }],
     })
     renderDialog(booking())
 
@@ -178,9 +178,10 @@ describe('EditGuestsDialog', () => {
       items: [{
         userId: 'u-rana',
         busyDates: 2,
+        maybeBusyDates: 0,
         times: [
-          { localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' },
-          { localStart: '2026-10-20T10:00:00', localEnd: '2026-10-20T11:00:00' },
+          { localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00', isTentative: false },
+          { localStart: '2026-10-20T10:00:00', localEnd: '2026-10-20T11:00:00', isTentative: false },
         ],
       }],
     })

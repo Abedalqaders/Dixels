@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Plus, Repeat, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MaybeBadge } from './MaybeBadge'
 import { addDays, formatDate, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { dayOfMonth, monthGrid, startOfMonth } from '@/features/calendar/calendarDates'
@@ -136,7 +137,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                     b.declined && !b.cancelled && 'line-through opacity-60',
                     b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through',
                   )}
-                  aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.declined ? 'Calendar:DeclinedItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
+                  aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.declined ? 'Calendar:DeclinedItem' : b.maybe ? 'Calendar:MaybeItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
                     title: b.title,
                     start: timeOf(b.localStart),
                     end: timeOf(b.localEnd),
@@ -148,6 +149,7 @@ export function MonthGrid({ date, items, today, compact = false, onOpenItem, onO
                   }}
                 >
                   {b.invited && <Users className="size-3 flex-none" aria-hidden="true" />}
+                  {b.maybe && !b.cancelled && <MaybeBadge />}
                   {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
                   <span className="min-w-0 flex-1 truncate font-semibold">{b.title}</span>
                   <span className="flex-none whitespace-nowrap opacity-70">{formatClock(timeOf(b.localStart))}</span>

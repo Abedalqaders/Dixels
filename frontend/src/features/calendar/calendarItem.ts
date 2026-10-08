@@ -26,6 +26,8 @@ export interface CalendarItem {
   invited: boolean
   /** An invite I declined: the same outline, faded and struck through (still opens, to change my mind). */
   declined: boolean
+  /** An invite I said Maybe to: the same outline, with a small "?" badge. */
+  maybe: boolean
 }
 
 /** A booking, as the calendar's light list describes it. */
@@ -42,5 +44,6 @@ export function bookingItem(b: BookingSummaryDto): CalendarItem {
     repeats: Boolean(b.seriesId),
     invited: b.isInvited,
     declined: b.isInvited && b.myResponse === InviteeResponseStatus.Declined,
+    maybe: b.isInvited && b.myResponse === InviteeResponseStatus.Maybe,
   }
 }

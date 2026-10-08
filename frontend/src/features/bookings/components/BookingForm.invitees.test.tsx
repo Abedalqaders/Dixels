@@ -131,7 +131,7 @@ describe('BookingForm invitees', () => {
       const invitees = input.invitees ?? []
       return {
         ...valid,
-        invitees: invitees.map(() => ({ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, busyTimes: [] })),
+        invitees: invitees.map(() => ({ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, maybeBusyDates: 0, busyTimes: [] })),
       }
     })
     const user = userEvent.setup()
@@ -171,7 +171,7 @@ describe('BookingForm invitees', () => {
       ...valid,
       invitees: (input.invitees ?? []).map(() => ({
         userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const,
-        isBusy: true, busyDates: 1, busyTimes: [{ localStart: '2027-01-10T10:00:00', localEnd: '2027-01-10T10:30:00' }],
+        isBusy: true, busyDates: 1, maybeBusyDates: 0, busyTimes: [{ localStart: '2027-01-10T10:00:00', localEnd: '2027-01-10T10:30:00', isTentative: false }],
       })),
     }))
     const user = userEvent.setup()

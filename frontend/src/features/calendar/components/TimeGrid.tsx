@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Repeat, Users } from 'lucide-react'
 import type { PointerEvent } from 'react'
 import { cn } from '@/lib/utils'
+import { MaybeBadge } from './MaybeBadge'
 import { formatDate, fromMinutes, timeOf } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import type { OperatingWindowDto } from '@/features/space-management/api/spaceManagementApi'
@@ -514,7 +515,7 @@ const DayColumn = memo(function DayColumn({
               width: `calc(${100 / lanes}% - 4px)`,
               ...(started && !b.cancelled ? { backgroundImage: STARTED_HATCH } : {}),
             }}
-            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.declined ? 'Calendar:DeclinedItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
+            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.declined ? 'Calendar:DeclinedItem' : b.maybe ? 'Calendar:MaybeItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
               title: b.title,
               start: timeOf(b.localStart),
               end: timeOf(b.localEnd),
@@ -525,6 +526,7 @@ const DayColumn = memo(function DayColumn({
           >
             <span className={cn('flex min-w-0 items-center gap-1 font-semibold', !b.cancelled && 'text-brand')}>
               {b.invited && <Users className="size-3 flex-none" aria-hidden="true" />}
+              {b.maybe && !b.cancelled && <MaybeBadge />}
               {b.repeats && <Repeat className="size-3 flex-none" aria-label={t('Calendar:Repeats')} />}
               <span className="truncate">
                 {lines < 2 ? `${formatClock(timeOf(b.localStart))} · ${b.location}` : b.location}

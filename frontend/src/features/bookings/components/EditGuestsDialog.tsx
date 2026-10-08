@@ -53,7 +53,7 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
         : getBusyGuests(token, booking.id, colleagueIds),
   )
   const busyById = new Map<string, PersonBusy>(
-    (busyGuests.data?.items ?? []).map((b) => [b.userId, { busyDates: b.busyDates, busyTimes: b.times }]),
+    (busyGuests.data?.items ?? []).map((b) => [b.userId, { busyDates: b.busyDates, busyTimes: b.times, maybeBusyDates: b.maybeBusyDates }]),
   )
   const dateCount = busyGuests.data?.dates ?? 1
   const knowsBusy = (p: Invitee) => busyGuests.data !== undefined && !p.isExternal && Boolean(p.userId)

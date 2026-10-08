@@ -290,3 +290,7 @@
   font: inherit; font-size: 14px; font-weight: 600; color: var(--accent-ink); text-decoration: underline; text-underline-offset: 3px;
 }
 .rsvpchange:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+/* Answered: "Changed your mind? Accept · Decline", the other answers as quiet links. */
+.rsvpmind { margin-top: 18px; }
+.rsvpmind .rsvpchange { margin-top: 0; }
+.authicon.warn.rsvpbig { font-size: 32px; }
