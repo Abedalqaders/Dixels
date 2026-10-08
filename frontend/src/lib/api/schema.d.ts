@@ -7065,6 +7065,8 @@ export interface components {
             email: string;
             isBusy: boolean;
             isExternal: boolean;
+            /** Format: int32 */
+            maybeBusyDates: number;
             name: string;
             responseStatus: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"];
             /** Format: uuid */
@@ -7115,6 +7117,8 @@ export interface components {
         "Dixels.Bookings.BusyGuestDto": {
             /** Format: int32 */
             busyDates: number;
+            /** Format: int32 */
+            maybeBusyDates: number;
             times: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
             /** Format: uuid */
             userId: string;
@@ -7128,6 +7132,7 @@ export interface components {
             items: components["schemas"]["Dixels.Bookings.BusyGuestDto"][];
         };
         "Dixels.Bookings.BusyTimeDto": {
+            isTentative: boolean;
             /** Format: date-time */
             localEnd: string;
             /** Format: date-time */
@@ -7208,7 +7213,7 @@ export interface components {
          * Format: int32
          * @enum {integer}
          */
-        "Dixels.Bookings.InviteeResponseStatus": 0 | 1 | 2;
+        "Dixels.Bookings.InviteeResponseStatus": 0 | 1 | 2 | 3;
         /**
          * Format: int32
          * @enum {integer}

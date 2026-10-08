@@ -626,6 +626,34 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         }
     }
 
+
+    [Fact]
+    public async Task A_guest_says_maybe_to_one_date_or_a_whole_series()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(Daily(s.SpaceId, 3, 2, Colleague(s.Rana)));
+        }
+        var dates = created.Bookings.OrderBy(b => b.StartsAt).Select(b => b.Id).ToList();
+
+        using (ActAs(s.Rana.Id))
+        {
+            (await _bookings.RespondAsync(dates[0], Answer(InviteeResponseStatus.Maybe))).MyResponse.ShouldBe(InviteeResponseStatus.Maybe);
+            await _bookings.RespondToSeriesAsync(created.SeriesId, Answer(InviteeResponseStatus.Maybe));
+            (await _bookings.GetAsync(dates[2])).MyResponse.ShouldBe(InviteeResponseStatus.Maybe);
+        }
+
+        var series = await WithUnitOfWorkAsync(() => GetRequiredService<IRepository<BookingSeries, Guid>>().GetAsync(created.SeriesId));
+        series.Invitees.Single().ResponseStatus.ShouldBe(InviteeResponseStatus.Maybe);
+
+        // Still only a real answer: not Pending, not a number nobody knows.
+        using (ActAs(s.Rana.Id))
+        {
+            await Should.ThrowAsync<AbpValidationException>(() => _bookings.RespondAsync(dates[1], Answer((InviteeResponseStatus)9)));
+        }
+    }
     // ---- Colleague search ----
 
     [Fact]

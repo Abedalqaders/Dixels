@@ -155,11 +155,13 @@ public partial class BookingEmails
                     var startTime = BookingFormat.Clock(TimeOnly.FromDateTime(clock.ToLocal(startsAt)));
                     if (kind == GuestEmail.Reminder)
                     {
-                        // Yes / No buttons only for those who haven't answered yet.
-                        if (guest.ResponseStatus == InviteeResponseStatus.Pending)
+                        // Yes / Maybe / No buttons only for those who haven't really answered yet.
+                        if (guest.ResponseStatus is InviteeResponseStatus.Pending or InviteeResponseStatus.Maybe)
                         {
                             AddAnswerLinks(model, guest);
-                            model.AnswerNudge = _localizer["Email:GuestReminder:Nudge", ownerName];
+                            model.AnswerNudge = guest.ResponseStatus == InviteeResponseStatus.Maybe
+                                ? _localizer["Email:GuestReminder:NudgeMaybe", ownerName]
+                                : _localizer["Email:GuestReminder:Nudge", ownerName];
                         }
 
                         model.Heading = _localizer["Email:BookingReminder:Heading", TitleOrRoom(model), startTime];

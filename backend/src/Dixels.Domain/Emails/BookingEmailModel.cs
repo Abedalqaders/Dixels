@@ -91,6 +91,7 @@ public class BookingEmailModel
     /// <summary>A guest's invite: their own Accept / Decline links (the public answer page).</summary>
     public string? AcceptUrl { get; set; }
     public string? DeclineUrl { get; set; }
+    public string? MaybeUrl { get; set; }
 
     /// <summary>
     /// The invite is a meeting request the guest's mail app answers itself (E6): the email then

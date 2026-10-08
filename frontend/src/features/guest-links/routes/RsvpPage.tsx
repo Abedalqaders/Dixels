@@ -33,12 +33,20 @@ const CLOSED_CODE = 'Dixels:Bookings:ResponseClosed'
  */
 const languageApplied = new Set<string>()
 
-/** `?answer=accepted|declined` from the email's buttons; anything else just opens the page. */
+/** `?answer=accepted|maybe|declined` from the email's buttons; anything else just opens the page. */
 function answerFrom(value: string | null): GuestAnswer | null {
   if (value === 'accepted') return InviteeResponseStatus.Accepted
+  if (value === 'maybe') return InviteeResponseStatus.Maybe
   if (value === 'declined') return InviteeResponseStatus.Declined
   return null
 }
+
+/** The three answers, in the order mail apps use: Accept, Maybe, Decline. */
+const ANSWERS = [
+  { value: InviteeResponseStatus.Accepted, label: 'Rsvp:Accept' },
+  { value: InviteeResponseStatus.Maybe, label: 'Rsvp:MaybeButton' },
+  { value: InviteeResponseStatus.Declined, label: 'Rsvp:Decline' },
+] as const
 
 /**
  * Link scanners (Outlook Safe Links and the like) open every link in an email, some in a browser
@@ -183,8 +191,13 @@ function Invitation({ invitation, onAnswer }: { invitation: GuestInvitationDto; 
   const { t } = useTranslation()
   const answer = invitation.myResponse
   const heading =
-    answer === InviteeResponseStatus.Accepted ? 'Rsvp:Accepted' : answer === InviteeResponseStatus.Declined ? 'Rsvp:Declined' : 'Rsvp:Pending'
-  const change = answer === InviteeResponseStatus.Accepted ? 'Rsvp:ChangeToDecline' : 'Rsvp:ChangeToAccept'
+    answer === InviteeResponseStatus.Accepted
+      ? 'Rsvp:Accepted'
+      : answer === InviteeResponseStatus.Declined
+        ? 'Rsvp:Declined'
+        : answer === InviteeResponseStatus.Maybe
+          ? 'Rsvp:Maybe'
+          : 'Rsvp:Pending'
   const date = dateOf(invitation.localStart)
   const where = [invitation.spaceName, invitation.floorName, invitation.buildingName].filter(Boolean).join(' · ')
 
@@ -202,6 +215,11 @@ function Invitation({ invitation, onAnswer }: { invitation: GuestInvitationDto; 
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
             <path d="M7 7l10 10M17 7 7 17" />
           </svg>
+        </div>
+      )}
+      {answer === InviteeResponseStatus.Maybe && (
+        <div className="authicon warn rsvpbig" aria-hidden="true">
+          ?
         </div>
       )}
       <h1 className="authtitle">{t(heading)}</h1>
@@ -240,21 +258,30 @@ function Invitation({ invitation, onAnswer }: { invitation: GuestInvitationDto; 
 
       {answer === InviteeResponseStatus.Pending ? (
         <div className="rsvpbuttons">
-          <button type="button" className="btn" onClick={() => onAnswer(InviteeResponseStatus.Accepted)}>
-            {t('Rsvp:Accept')}
-          </button>
-          <button type="button" className="btn sec" onClick={() => onAnswer(InviteeResponseStatus.Declined)}>
-            {t('Rsvp:Decline')}
-          </button>
+          {ANSWERS.map((a) => (
+            <button
+              key={a.value}
+              type="button"
+              className={a.value === InviteeResponseStatus.Accepted ? 'btn' : 'btn sec'}
+              onClick={() => onAnswer(a.value)}
+            >
+              {t(a.label)}
+            </button>
+          ))}
         </div>
       ) : (
-        <button
-          type="button"
-          className="rsvpchange"
-          onClick={() => onAnswer(answer === InviteeResponseStatus.Accepted ? InviteeResponseStatus.Declined : InviteeResponseStatus.Accepted)}
-        >
-          {t(change)}
-        </button>
+        // Changed your mind? The other two answers, as quiet links.
+        <p className="authdetail rsvpmind">
+          {t('Rsvp:ChangeMind')}{' '}
+          {ANSWERS.filter((a) => a.value !== answer).map((a, i) => (
+            <span key={a.value}>
+              {i > 0 && ' · '}
+              <button type="button" className="rsvpchange" onClick={() => onAnswer(a.value)}>
+                {t(a.label)}
+              </button>
+            </span>
+          ))}
+        </p>
       )}
     </>
   )

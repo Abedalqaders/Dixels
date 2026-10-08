@@ -400,4 +400,69 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         preview.Occurrences.Select(o => o.Warnings.Count).ShouldBe(new[] { 0, 1, 0 });
         preview.Occurrences[1].Warnings[0].Code.ShouldBe(DixelsDomainErrorCodes.BookingAcceptedMeetingOverlapWarning);
     }
+
+    // ---- Maybe: tentatively busy ----
+
+    private static (DateTime, DateTime, bool)[] TimesWithKind(BookingPreviewDto preview, Guid userId) =>
+        preview.Invitees.Single(i => i.UserId == userId).BusyTimes.Select(t => (t.LocalStart, t.LocalEnd, t.IsTentative)).ToArray();
+
+    [Fact]
+    public async Task A_maybe_is_only_maybe_busy_and_a_firm_busy_wins_where_they_overlap()
+    {
+        var s = await CreateScenarioAsync();
+        // Lina's meeting 10–11: Omar and Rana said Maybe. Rana also has her own room 10–10:30.
+        var meeting = await BookAsAsync(s.Lina, Booking(s.OtherRoom, 10, 11, 3, s.Omar, s.Rana));
+        await AnswerAsync(meeting.Id, s.Omar, InviteeResponseStatus.Maybe);
+        await AnswerAsync(meeting.Id, s.Rana, InviteeResponseStatus.Maybe);
+        await BookAsAsync(s.Rana, new CreateBookingDto
+        {
+            SpaceId = s.Room, LocalStart = Tomorrow.AddHours(8), LocalEnd = Tomorrow.AddHours(10.5),
+            IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+
+        using var _ = ActAs(s.Owner);
+        var preview = await _bookings.PreviewAsync(new CreateBookingDto
+        {
+            SpaceId = s.Room, LocalStart = Tomorrow.AddHours(10), LocalEnd = Tomorrow.AddHours(12),
+            IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Omar }, new InviteeDto { UserId = s.Rana }],
+        });
+
+        var omar = preview.Invitees.Single(i => i.UserId == s.Omar);
+        omar.IsBusy.ShouldBeFalse();
+        omar.BusyDates.ShouldBe(0);
+        omar.MaybeBusyDates.ShouldBe(1);
+        TimesWithKind(preview, s.Omar).ShouldBe(new[] { (Tomorrow.AddHours(10), Tomorrow.AddHours(11), true) });
+
+        var rana = preview.Invitees.Single(i => i.UserId == s.Rana);
+        rana.IsBusy.ShouldBeTrue();
+        rana.MaybeBusyDates.ShouldBe(0);
+        TimesWithKind(preview, s.Rana).ShouldBe(new[]
+        {
+            (Tomorrow.AddHours(10), Tomorrow.AddHours(10.5), false),
+            (Tomorrow.AddHours(10.5), Tomorrow.AddHours(11), true),
+        });
+    }
+
+    [Fact]
+    public async Task A_guest_reading_an_invite_sees_a_maybe_elsewhere_as_tentative_and_it_never_warns_my_own_booking()
+    {
+        var s = await CreateScenarioAsync(OwnOverlapPolicy.Block);
+        var invite = await BookAsAsync(s.Owner, Booking(s.Room, 10, 11, 2, s.Rana));
+        var other = await BookAsAsync(s.Lina, Booking(s.OtherRoom, 10, 11, 2, s.Rana));
+        await AnswerAsync(other.Id, s.Rana, InviteeResponseStatus.Maybe);
+
+        using (ActAs(s.Rana))
+        {
+            (await _bookings.GetAsync(invite.Id)).MyBusy.Select(t => (t.LocalStart, t.LocalEnd, t.IsTentative))
+                .ShouldBe(new[] { (Tomorrow.AddHours(10), Tomorrow.AddHours(11), true) });
+
+            // Booking a room over a meeting I only said Maybe to: no "you accepted a meeting" heads-up.
+            var mine = await _bookings.PreviewAsync(new CreateBookingDto
+            {
+                SpaceId = s.Room, LocalStart = Tomorrow.AddHours(10), LocalEnd = Tomorrow.AddHours(11),
+                IdempotencyKey = Guid.NewGuid().ToString(),
+            });
+            mine.Warnings.ShouldNotContain(w => w.Code == DixelsDomainErrorCodes.BookingAcceptedMeetingOverlapWarning);
+        }
+    }
 }

@@ -303,7 +303,7 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         var mailbox = new FakeMailbox();
         mailbox.Receive(null);                                              // a mail with no calendar
         mailbox.Receive("not a calendar");
-        mailbox.Receive(Reply(row.IcsUid, "TENTATIVE"));                    // "Maybe" is no answer
+        mailbox.Receive(Reply(row.IcsUid, "NEEDS-ACTION"));                 // no answer
         mailbox.Receive(Reply("nobody-has-this@dixels", "ACCEPTED"));       // taken off the list, or made up
         (await ReadAsync(mailbox)).ShouldBe(0);
 
@@ -382,5 +382,24 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         mailbox.Receive(Reply(seriesRow.IcsUid, "DECLINED", recurrenceId: $"{Tomorrow.AddDays(3).AddHours(9):yyyyMMdd'T'HHmmss}"));
         (await ReadAsync(mailbox)).ShouldBe(0);
         mailbox.Unhandled.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_tentative_from_the_mail_app_is_a_maybe_and_the_latest_answer_wins()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s);
+        var row = (await GuestRowsAsync(booking.Id)).Single();
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+
+        var mailbox = new FakeMailbox();
+        mailbox.Receive(Reply(row.IcsUid, "ACCEPTED", DateTime.UtcNow.AddMinutes(-2)));
+        mailbox.Receive(Reply(row.IcsUid, "TENTATIVE", DateTime.UtcNow.AddMinutes(-1)));
+        (await ReadAsync(mailbox)).ShouldBe(1);
+
+        (await GuestRowsAsync(booking.Id)).Single().ResponseStatus.ShouldBe(InviteeResponseStatus.Maybe);
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Sent.ShouldBeEmpty(); // a Maybe tells the booker nothing
     }
 }

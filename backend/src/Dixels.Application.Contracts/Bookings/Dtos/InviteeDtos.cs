@@ -50,7 +50,10 @@ public class BookingInviteeDto
     /// <summary>Previews only: on how many of the dates they're busy (a series: "busy on 2 of 8 dates"; one booking: 0 or 1).</summary>
     public int BusyDates { get; set; }
 
-    /// <summary>Previews only: when they're busy, cut to the booking's time on each date — times only, never with what.</summary>
+    /// <summary>Previews only: on how many more dates they're only maybe busy (a meeting they said Maybe to).</summary>
+    public int MaybeBusyDates { get; set; }
+
+    /// <summary>Previews only: when they're busy or maybe busy, cut to the booking's time on each date — times only, never with what.</summary>
     public List<BusyTimeDto> BusyTimes { get; set; } = new();
 }
 
@@ -62,6 +65,9 @@ public class BusyTimeDto
 
     [DisableDateTimeNormalization]
     public DateTime LocalEnd { get; set; }
+
+    /// <summary>Only maybe busy then: a meeting they said Maybe to (where they aren't busy anyway).</summary>
+    public bool IsTentative { get; set; }
 }
 
 /// <summary>The colleagues an Edit guests dialog lists, to learn which are busy at the booking's time.</summary>
@@ -71,11 +77,14 @@ public class BusyGuestsInput
     public List<Guid> UserIds { get; set; } = new();
 }
 
-/// <summary>A colleague who is busy then, and on how many of the dates (always 1 for one booking).</summary>
+/// <summary>A colleague who is busy (or only maybe busy) then, and on how many of the dates (always 1 for one booking).</summary>
 public class BusyGuestDto
 {
     public Guid UserId { get; set; }
     public int BusyDates { get; set; }
+
+    /// <summary>On how many more dates only maybe busy (see <see cref="BookingInviteeDto.MaybeBusyDates"/>).</summary>
+    public int MaybeBusyDates { get; set; }
 
     /// <summary>When, cut to the booking's time on each date (see <see cref="BookingInviteeDto.BusyTimes"/>).</summary>
     public List<BusyTimeDto> Times { get; set; } = new();
@@ -90,16 +99,16 @@ public class BusyGuestsResultDto
     public List<BusyGuestDto> Items { get; set; } = new();
 }
 
-/// <summary>A colleague guest's answer to an invitation: Accepted or Declined.</summary>
+/// <summary>A colleague guest's answer to an invitation: Accepted, Maybe or Declined.</summary>
 public class RespondToInviteDto : IValidatableObject
 {
     public InviteeResponseStatus Status { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Status is not (InviteeResponseStatus.Accepted or InviteeResponseStatus.Declined))
+        if (Status == InviteeResponseStatus.Pending || !Enum.IsDefined(Status))
         {
-            yield return new ValidationResult("An answer is Accepted or Declined.", new[] { nameof(Status) });
+            yield return new ValidationResult("An answer is Accepted, Maybe or Declined.", new[] { nameof(Status) });
         }
     }
 }

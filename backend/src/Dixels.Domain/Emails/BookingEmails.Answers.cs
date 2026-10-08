@@ -20,6 +20,7 @@ public partial class BookingEmails
         var token = LazyServiceProvider.LazyGetRequiredService<GuestLinks>().TokenFor(guest);
         model.AcceptUrl = AppLink($"/rsvp/{token}?answer=accepted");
         model.DeclineUrl = AppLink($"/rsvp/{token}?answer=declined");
+        model.MaybeUrl = AppLink($"/rsvp/{token}?answer=maybe");
         model.AnswerUrl = AppLink($"/rsvp/{token}");
     }
 

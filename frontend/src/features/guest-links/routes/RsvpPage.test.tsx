@@ -74,9 +74,22 @@ describe('RsvpPage', () => {
     expect(screen.getByText('Dana Test invited you')).toBeInTheDocument()
     expect(screen.getByText('Room 1 · Level 1 · HQ')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Changed your mind? Decline instead' }))
+    await user.click(screen.getByRole('button', { name: 'Decline' }))
     expect(await screen.findByRole('heading', { name: 'You declined' })).toBeInTheDocument()
     expect(answer).toHaveBeenLastCalledWith(token, InviteeResponseStatus.Declined)
+  })
+
+  it("saves the email's Maybe, then offers the other two answers", async () => {
+    answer.mockImplementation((_token, value) => Promise.resolve(invitation({ myResponse: value })))
+    const { token, user } = openLink('?answer=maybe')
+
+    expect(await screen.findByRole('heading', { name: 'You answered Maybe' })).toBeInTheDocument()
+    expect(answer).toHaveBeenCalledExactlyOnceWith(token, InviteeResponseStatus.Maybe)
+    expect(screen.getByText(/Changed your mind\?/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Maybe' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Accept' }))
+    expect(await screen.findByRole('heading', { name: 'You accepted' })).toBeInTheDocument()
   })
 
   it('never answers for a browser driven by automation (a link scanner): it only shows the invitation', async () => {
@@ -87,6 +100,7 @@ describe('RsvpPage', () => {
     expect(await screen.findByRole('heading', { name: 'Will you come?' })).toBeInTheDocument()
     expect(answer).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Accept' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Maybe' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
   })
 
@@ -125,7 +139,7 @@ describe('RsvpPage', () => {
     answer.mockImplementation((_token, value) => Promise.resolve(invitation({ myResponse: value })))
     lookup.mockImplementation(() => Promise.resolve(invitation({ myResponse: InviteeResponseStatus.Declined })))
     const { user } = openLink('?answer=accepted')
-    await user.click(await screen.findByRole('button', { name: 'Changed your mind? Decline instead' }))
+    await user.click(await screen.findByRole('button', { name: 'Decline' }))
     expect(await screen.findByRole('heading', { name: 'You declined' })).toBeInTheDocument()
 
     // What the switcher does (LocaleRoot then re-mounts the page in the app).

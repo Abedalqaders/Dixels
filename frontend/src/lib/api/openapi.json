@@ -11904,6 +11904,7 @@
           "email",
           "isBusy",
           "isExternal",
+          "maybeBusyDates",
           "name",
           "responseStatus"
         ],
@@ -11934,6 +11935,10 @@
             "type": "boolean"
           },
           "busyDates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maybeBusyDates": {
             "type": "integer",
             "format": "int32"
           },
@@ -12109,6 +12114,7 @@
       "Dixels.Bookings.BusyGuestDto": {
         "required": [
           "busyDates",
+          "maybeBusyDates",
           "times",
           "userId"
         ],
@@ -12119,6 +12125,10 @@
             "format": "uuid"
           },
           "busyDates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maybeBusyDates": {
             "type": "integer",
             "format": "int32"
           },
@@ -12170,6 +12180,7 @@
       },
       "Dixels.Bookings.BusyTimeDto": {
         "required": [
+          "isTentative",
           "localEnd",
           "localStart"
         ],
@@ -12182,6 +12193,9 @@
           "localEnd": {
             "type": "string",
             "format": "date-time"
+          },
+          "isTentative": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -12475,7 +12489,8 @@
         "enum": [
           0,
           1,
-          2
+          2,
+          3
         ],
         "type": "integer",
         "format": "int32"

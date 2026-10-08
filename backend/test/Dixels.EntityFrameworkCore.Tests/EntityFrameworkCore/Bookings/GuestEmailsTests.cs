@@ -740,4 +740,39 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
         To(s.Omar.Email);
     }
+
+    [Fact]
+    public async Task The_invite_offers_accept_maybe_and_decline()
+    {
+        var s = await CreateScenarioAsync();
+        _emails.Clear();
+        await BookAsync(s, Colleague(s.Rana));
+
+        var rana = To(s.Rana.Email);
+        rana.Body.ShouldContain("answer=accepted");
+        rana.Body.ShouldContain("answer=maybe");
+        rana.Body.ShouldContain("answer=declined");
+        rana.Body.ShouldContain(">Maybe<");
+    }
+
+    [Fact]
+    public async Task A_guest_who_said_maybe_is_reminded_with_the_answer_buttons_and_the_booker_hears_nothing()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookSoonAsync(s, Colleague(s.Rana));
+        using (ActAs(s.Rana.Id))
+        {
+            await _bookings.RespondAsync(booking.Id, new RespondToInviteDto { Status = InviteeResponseStatus.Maybe });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Sent.ShouldBeEmpty(); // no "can't make it" for a Maybe
+
+        await SendDueRemindersAsync();
+
+        var rana = To(s.Rana.Email);
+        rana.Body.ShouldContain("You told Dana Test maybe.");
+        rana.Body.ShouldContain("Yes, I'm coming");
+        rana.Body.ShouldContain("answer=maybe");
+        rana.Body.ShouldContain("No, I can't make it");
+    }
 }

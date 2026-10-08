@@ -15,14 +15,14 @@ public class GuestLinkInput
 /// <summary>Their answer, given on the public answer page.</summary>
 public class GuestAnswerInput : GuestLinkInput, IValidatableObject
 {
-    /// <summary>Accepted or Declined (Pending isn't an answer), as in <see cref="RespondToInviteDto"/>.</summary>
+    /// <summary>Accepted, Maybe or Declined (Pending isn't an answer), as in <see cref="RespondToInviteDto"/>.</summary>
     public InviteeResponseStatus Answer { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Answer is not (InviteeResponseStatus.Accepted or InviteeResponseStatus.Declined))
+        if (Answer == InviteeResponseStatus.Pending || !Enum.IsDefined(Answer))
         {
-            yield return new ValidationResult("An answer is Accepted or Declined.", new[] { nameof(Answer) });
+            yield return new ValidationResult("An answer is Accepted, Maybe or Declined.", new[] { nameof(Answer) });
         }
     }
 }
