@@ -197,32 +197,46 @@ public class UserBookingsQueryPlanTests : DixelsApplicationTestBase<DixelsPostgr
         ShouldSeekThroughTheUserIndex(await ExplainLastBookingsQueryAsync());
     }
 
-    [PostgresFact]
-    public async Task The_calendar_reads_this_weeks_invitations_not_every_one()
+    /// <summary>A colleague invited to every one of the owner's twenty thousand bookings.</summary>
+    private async Task<Guid> InviteToEveryBookingAsync(Scenario s)
     {
-        // The owner's twenty thousand bookings, and a colleague invited to every one of them:
-        // the colleague's calendar must seek their (UserId, EndsAt) guest rows to this week's.
-        var s = await CreateScenarioAsync();
-        await SeedAsync(s);
         var guest = await WithUnitOfWorkAsync(async () =>
         {
             var user = new IdentityUser(Guid.NewGuid(), "pg" + Guid.NewGuid().ToString("N")[..10], $"{Guid.NewGuid():N}@test.io");
             (await GetRequiredService<IdentityUserManager>().CreateAsync(user, "1q2w3E*")).Succeeded.ShouldBeTrue();
             return user.Id;
         });
-        await using (var connection = new NpgsqlConnection(PostgresFixture.ConnectionString))
-        {
-            await connection.OpenAsync();
-            await using var invite = new NpgsqlCommand(
-                """
-                INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
-                SELECT gen_random_uuid(), "Id", "EndsAt", @guest, 'Pending', gen_random_uuid()::text || '@dixels' FROM "AppBookings" WHERE "UserId" = @owner;
-                ANALYZE "AppBookingAttendees";
-                """, connection);
-            invite.Parameters.AddWithValue("guest", guest);
-            invite.Parameters.AddWithValue("owner", s.UserId);
-            await invite.ExecuteNonQueryAsync();
-        }
+        await using var connection = new NpgsqlConnection(PostgresFixture.ConnectionString);
+        await connection.OpenAsync();
+        await using var invite = new NpgsqlCommand(
+            """
+            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "ResponseStatus", "IcsUid")
+            SELECT gen_random_uuid(), "Id", "EndsAt", @guest, 'Pending', gen_random_uuid()::text || '@dixels' FROM "AppBookings" WHERE "UserId" = @owner;
+            ANALYZE "AppBookingAttendees";
+            """, connection);
+        invite.Parameters.AddWithValue("guest", guest);
+        invite.Parameters.AddWithValue("owner", s.UserId);
+        await invite.ExecuteNonQueryAsync();
+        return guest;
+    }
+
+    /// <summary>Through the guest rows' (UserId, EndsAt), with no table scan, handing over only a handful of rows.</summary>
+    private static void ShouldSeekTheGuestRows(string plan)
+    {
+        plan.ShouldContain(GuestIndex);
+        plan.ShouldNotContain("Seq Scan on \"AppBookingAttendees\"");
+        plan.ShouldNotContain("Seq Scan on \"AppBookings\"");
+        var guestLine = plan.Split(Environment.NewLine).First(line => line.Contains(GuestIndex));
+        double.Parse(Regex.Match(guestLine, @"rows=([\d.]+)").Groups[1].Value, CultureInfo.InvariantCulture).ShouldBeLessThanOrEqualTo(MostRowsRead);
+    }
+
+    [PostgresFact]
+    public async Task The_calendar_reads_this_weeks_invitations_not_every_one()
+    {
+        // The colleague's calendar must seek their (UserId, EndsAt) guest rows to this week's.
+        var s = await CreateScenarioAsync();
+        await SeedAsync(s);
+        var guest = await InviteToEveryBookingAsync(s);
 
         SqlCapture.Instance.Clear();
         var shown = await WithUnitOfWorkAsync(() =>
@@ -230,11 +244,22 @@ public class UserBookingsQueryPlanTests : DixelsApplicationTestBase<DixelsPostgr
         // The same as the owner sees: confirmed, and the admin-cancelled one; not the owner-cancelled one.
         shown.Select(b => b.StartsAt).ShouldBe(new[] { Tomorrow.AddHours(9), Tomorrow.AddHours(13), Tomorrow.AddHours(15) });
 
-        var plan = await ExplainLastBookingsQueryAsync();
-        plan.ShouldContain(GuestIndex);
-        plan.ShouldNotContain("Seq Scan on \"AppBookingAttendees\"");
-        plan.ShouldNotContain("Seq Scan on \"AppBookings\"");
-        var guestLine = plan.Split(Environment.NewLine).First(line => line.Contains(GuestIndex));
-        double.Parse(Regex.Match(guestLine, @"rows=([\d.]+)").Groups[1].Value, CultureInfo.InvariantCulture).ShouldBeLessThanOrEqualTo(MostRowsRead);
+        ShouldSeekTheGuestRows(await ExplainLastBookingsQueryAsync());
+    }
+
+    [PostgresFact]
+    public async Task A_leavers_upcoming_invitations_are_read_without_the_history()
+    {
+        // Deactivating someone looks up the meetings they're invited to: only the upcoming
+        // confirmed ones, sought through the guest rows, however many past invitations they had.
+        var s = await CreateScenarioAsync();
+        await SeedAsync(s);
+        var guest = await InviteToEveryBookingAsync(s);
+
+        SqlCapture.Instance.Clear();
+        var upcoming = await WithUnitOfWorkAsync(() => _bookingRepository.GetUpcomingInvitationsAsync(guest, DateTimeOffset.UtcNow));
+        upcoming.Count.ShouldBe(2);
+
+        ShouldSeekTheGuestRows(await ExplainLastBookingsQueryAsync());
     }
 }

@@ -73,6 +73,24 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The upcoming bookings the person is a colleague guest of (confirmed, not started), each
+    /// with its series (null for a single booking), soonest first. Their guest rows are found
+    /// through (UserId, EndsAt), so past invitations aren't read. With
+    /// <paramref name="buildingId"/>, only those in that building (deleted rooms included).
+    /// </summary>
+    Task<List<(Guid BookingId, Guid? SeriesId)>> GetUpcomingInvitationsAsync(
+        Guid userId,
+        DateTimeOffset now,
+        Guid? buildingId = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets what this unit of work has read of these bookings and series (with their guests),
+    /// so they're read again fresh: after a save lost a race to someone else's.
+    /// </summary>
+    Task ForgetAsync(IReadOnlyCollection<Guid> bookingIds, IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default);
+
     /// <summary>The person's answer to each of these bookings they're a colleague guest of, in one query.</summary>
     Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(IReadOnlyCollection<Guid> bookingIds, Guid userId, CancellationToken cancellationToken = default);
 
@@ -99,6 +117,21 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// confirmed booking that hasn't started, or a series with such a date left.
     /// </summary>
     Task<bool> IsUpcomingGuestAsync(string icsUid, DateTimeOffset now, CancellationToken cancellationToken = default);
+
+    /// <summary>These bookings' guest rows (with their calendar UID and SEQUENCE), not tracked.</summary>
+    Task<List<BookingAttendee>> GetGuestRowsAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
+
+    /// <summary>These series' own guest rows (with their calendar UID and SEQUENCE), not tracked.</summary>
+    Task<List<BookingSeriesAttendee>> GetSeriesGuestRowsAsync(IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Which of these series still have a confirmed date that hasn't started.</summary>
+    Task<HashSet<Guid>> GetSeriesWithUpcomingAsync(IReadOnlyCollection<Guid> seriesIds, DateTimeOffset now, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// One more on the calendar SEQUENCE of these guests' copies (booking or series guests, by
+    /// UID): an update or cancel just sent to them must replace what they have.
+    /// </summary>
+    Task BumpIcsSequenceAsync(IReadOnlyCollection<string> icsUids, CancellationToken cancellationToken = default);
 
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 

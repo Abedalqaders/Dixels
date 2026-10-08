@@ -42,27 +42,22 @@ public class SendEmailArgs
 /// <summary>
 /// Sends an email written when the booking saved: queued in the booking's own transaction
 /// (no booking, no email), sent here, and retried by the job queue if the mail server is
-/// down. ABP's own queue can't carry an attachment, hence this one. The calendar file goes
-/// both as the text/calendar part (what Outlook and Gmail read for "Add to calendar") and as
-/// an invite.ics attachment (for everything else).
+/// down. ABP's own queue can't carry an attachment, hence this one.
 /// </summary>
 public class SendEmailJob : AsyncBackgroundJob<SendEmailArgs>, ITransientDependency
 {
-    private readonly IEmailSender _emailSender;
-    private readonly ISettingProvider _settingProvider;
+    private readonly CalendarEmailSender _sender;
     private readonly IBookingRepository _bookingRepository;
     private readonly IUnitOfWorkManager _unitOfWorkManager;
     private readonly IClock _clock;
 
     public SendEmailJob(
-        IEmailSender emailSender,
-        ISettingProvider settingProvider,
+        CalendarEmailSender sender,
         IBookingRepository bookingRepository,
         IUnitOfWorkManager unitOfWorkManager,
         IClock clock)
     {
-        _emailSender = emailSender;
-        _settingProvider = settingProvider;
+        _sender = sender;
         _bookingRepository = bookingRepository;
         _unitOfWorkManager = unitOfWorkManager;
         _clock = clock;
@@ -77,9 +72,29 @@ public class SendEmailJob : AsyncBackgroundJob<SendEmailArgs>, ITransientDepende
             return;
         }
 
-        await _emailSender.SendAsync(await ToMailAsync(args));
+        await _sender.SendAsync(args);
         await uow.CompleteAsync();
     }
+}
+
+/// <summary>
+/// Sends one written email with its calendar file: the file goes both as the text/calendar
+/// part beside the HTML (what Outlook and Gmail act on: "Add to calendar", "Remove from
+/// calendar") and as an invite.ics attachment (for everything else). Sent right away; the
+/// job that calls it is what retries.
+/// </summary>
+public class CalendarEmailSender : ITransientDependency
+{
+    private readonly IEmailSender _emailSender;
+    private readonly ISettingProvider _settingProvider;
+
+    public CalendarEmailSender(IEmailSender emailSender, ISettingProvider settingProvider)
+    {
+        _emailSender = emailSender;
+        _settingProvider = settingProvider;
+    }
+
+    public async Task SendAsync(SendEmailArgs args) => await _emailSender.SendAsync(await ToMailAsync(args));
 
     private async Task<MailMessage> ToMailAsync(SendEmailArgs args)
     {

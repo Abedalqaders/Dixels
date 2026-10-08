@@ -236,7 +236,7 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
     }
 
     [Fact]
-    public async Task A_booking_cancelled_before_the_email_goes_invites_nobody()
+    public async Task A_booking_cancelled_before_the_invite_goes_sends_only_the_cancel()
     {
         var s = await CreateScenarioAsync();
         _emails.Clear();
@@ -249,11 +249,13 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         }
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email || e.To == "guest@outside.io");
+        // No invite to something already off; just the cancel.
+        To(s.Rana.Email).Subject.ShouldStartWith("Cancelled: Planning · ");
+        To("guest@outside.io").Subject.ShouldStartWith("Cancelled: Planning · ");
     }
 
     [Fact]
-    public async Task A_series_cancelled_before_the_email_goes_invites_nobody()
+    public async Task A_series_cancelled_before_the_invite_goes_sends_only_the_cancel()
     {
         var s = await CreateScenarioAsync();
         _emails.Clear();
@@ -265,7 +267,7 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         }
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
+        To(s.Rana.Email).Subject.ShouldBe("Cancelled: Stand-up");
     }
 
     /// <summary>Weekly at 09:00 for three weeks from tomorrow, the middle week skipped.</summary>
@@ -308,5 +310,212 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         ics.ShouldContain("RRULE:FREQ=WEEKLY");
         ics.ShouldContain("EXDATE");
         ics.ShouldContain($"{Tomorrow.AddDays(7):yyyyMMdd}T090000");
+    }
+
+    // ---- E3: cancels ----
+
+    /// <summary>The dates a CANCEL names, as their local start ("20261016T090000"), however the zone is written.</summary>
+    private static string[] RecurrenceIds(string ics) =>
+        ics.Split("\r\n").Where(l => l.StartsWith("RECURRENCE-ID", StringComparison.Ordinal))
+            .Select(l => l[(l.IndexOf(':') + 1)..].TrimEnd('Z')).ToArray();
+
+    /// <summary>The UID the guest's invite carried (their calendar file's).</summary>
+    private static string UidOf(string ics) =>
+        ics.Split("\r\n").Single(l => l.StartsWith("UID:", StringComparison.Ordinal))["UID:".Length..];
+
+    /// <summary>Weekly at 09:00 for three weeks from tomorrow, every date booked.</summary>
+    private static CreateSeriesDto ThreeWeeks(Scenario s, params InviteeDto[] invitees)
+    {
+        var series = Series(s, invitees);
+        series.SkipDates = new List<DateOnly>();
+        return series;
+    }
+
+    [Fact]
+    public async Task An_owner_cancel_tells_every_guest_and_takes_the_invite_off_their_calendar()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, Colleague(s.Rana), Outsider("guest@outside.io", "Sara Guest"));
+        var inviteUid = UidOf(Ics(To(s.Rana.Email)));
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            await _bookings.CancelAsync(booking.Id, new CancelBookingDto { Reason = "Moved online" });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var rana = To(s.Rana.Email);
+        rana.Subject.ShouldBe($"Cancelled: Planning · {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow))}");
+        rana.Body.ShouldContain("✕ Cancelled");
+        rana.Body.ShouldContain("Planning is cancelled");
+        rana.Body.ShouldContain("Dana Test cancelled this meeting. It's been taken off your calendar.");
+        rana.Body.ShouldContain("text-decoration:line-through");
+        rana.Mail!.ReplyToList.ShouldHaveSingleItem().Address.ShouldBe(s.Dana.Email);
+        var ics = Ics(rana);
+        ics.ShouldContain("METHOD:CANCEL");
+        ics.ShouldContain("STATUS:CANCELLED");
+        ics.ShouldContain("SEQUENCE:1");
+        UidOf(ics).ShouldBe(inviteUid); // the same event, so it comes off
+        rana.Mail.AlternateViews.ShouldHaveSingleItem().ContentType.Parameters["method"].ShouldBe("CANCEL");
+
+        To("guest@outside.io").Body.ShouldContain("Hi Sara Guest,");
+        To(s.Dana.Email).Body.ShouldContain("Your 2 guests were told it's cancelled.");
+    }
+
+    [Fact]
+    public async Task One_date_of_a_series_is_cancelled_by_itself()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Dana.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(ThreeWeeks(s, Colleague(s.Rana)));
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        var seriesUid = UidOf(Ics(To(s.Rana.Email)));
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            await _bookings.CancelAsync(created.Bookings[1].Id, new CancelBookingDto { Scope = CancelScope.This });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var rana = To(s.Rana.Email);
+        rana.Subject.ShouldBe($"Cancelled: Stand-up · {BookingFormat.Date(DateOnly.FromDateTime(Tomorrow.AddDays(7)))}");
+        var ics = Ics(rana);
+        UidOf(ics).ShouldBe(seriesUid);
+        RecurrenceIds(ics).ShouldBe(new[] { $"{Tomorrow.AddDays(7):yyyyMMdd}T090000" });
+        ics.ShouldNotContain("RRULE:FREQ=WEEKLY"); // the rest of the series stays
+    }
+
+    [Fact]
+    public async Task This_and_following_is_one_email_naming_each_date()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Dana.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(ThreeWeeks(s, Colleague(s.Rana)));
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            await _bookings.CancelAsync(created.Bookings[1].Id, new CancelBookingDto { Scope = CancelScope.ThisAndFollowing });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var rana = To(s.Rana.Email);
+        rana.Body.Split(">When<").Length.ShouldBe(3); // two dates, a block each
+        var ics = Ics(rana);
+        RecurrenceIds(ics).ShouldBe(new[] { $"{Tomorrow.AddDays(7):yyyyMMdd}T090000", $"{Tomorrow.AddDays(14):yyyyMMdd}T090000" });
+    }
+
+    [Fact]
+    public async Task A_whole_series_cancel_takes_the_whole_event_off()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Dana.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(ThreeWeeks(s, Colleague(s.Rana)));
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        var seriesUid = UidOf(Ics(To(s.Rana.Email)));
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            await _bookings.CancelAsync(created.Bookings[0].Id, new CancelBookingDto { Scope = CancelScope.Series });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        var rana = To(s.Rana.Email);
+        rana.Subject.ShouldBe("Cancelled: Stand-up");
+        rana.Body.ShouldContain($"Every {Tomorrow.DayOfWeek} until");
+        var ics = Ics(rana);
+        UidOf(ics).ShouldBe(seriesUid);
+        ics.ShouldNotContain("RECURRENCE-ID");
+    }
+
+    [Fact]
+    public async Task An_admin_cancel_is_one_email_per_guest_per_meeting_with_the_reason()
+    {
+        var s = await CreateScenarioAsync();
+        var morning = await BookAsync(s, Colleague(s.Rana));
+        BookingDto afternoon;
+        using (ActAs(s.Dana.Id))
+        {
+            var request = Request(s.SpaceId, Colleague(s.Rana));
+            request.LocalStart = Tomorrow.AddHours(14);
+            request.LocalEnd = Tomorrow.AddHours(15);
+            afternoon = await _bookings.CreateAsync(request);
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+
+        // One admin action in two rounds, as a closure across many bookings is.
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var checker = GetRequiredService<BookingImpactChecker>();
+            await checker.CancelUpcomingAsAdminAsync(new[] { morning.Id }, Guid.NewGuid(), "Closed: Floor works");
+            await checker.CancelUpcomingAsAdminAsync(new[] { afternoon.Id }, Guid.NewGuid(), "Closed: Floor works");
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        // A mail app acts on one CANCEL per message: a meeting each.
+        var rana = _emails.Sent.Where(e => e.To == s.Rana.Email).ToList();
+        rana.Count.ShouldBe(2);
+        rana.ShouldAllBe(e => e.Body.Contains("An administrator cancelled this meeting."));
+        rana.ShouldAllBe(e => e.Body.Contains("Closed: Floor works"));
+        rana.Select(e => UidOf(Ics(e))).Distinct().Count().ShouldBe(2);
+        // The booker's one email says their guest was told.
+        To(s.Dana.Email).Body.ShouldContain("Your guest was told it's cancelled.");
+    }
+
+    [Fact]
+    public async Task An_admin_cancel_that_rolls_back_tells_no_guest()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, Colleague(s.Rana));
+        _emails.Clear();
+
+        await Should.ThrowAsync<InvalidOperationException>(() => WithUnitOfWorkAsync(async () =>
+        {
+            await GetRequiredService<BookingImpactChecker>().CancelUpcomingAsAdminAsync(new[] { booking.Id }, Guid.NewGuid(), "Closed");
+            throw new InvalidOperationException("Something after the cancel failed");
+        }));
+        (await QueuedJobs.WaitingAsync(ServiceProvider)).ShouldNotContain(j => j.JobName == "Dixels.Emails.AdminCancelledGuest");
+    }
+
+    [Fact]
+    public async Task A_switched_off_colleague_is_not_told_and_the_rest_are_in_their_language()
+    {
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(() => _userLanguage.SetAsync(s.Omar.Id, "ar"));
+        var booking = await BookAsync(s, Colleague(s.Rana), Colleague(s.Omar));
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var users = GetRequiredService<IdentityUserManager>();
+            var rana = await users.GetByIdAsync(s.Rana.Id);
+            rana.SetIsActive(false);
+            (await users.UpdateAsync(rana)).Succeeded.ShouldBeTrue();
+        });
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            await _bookings.CancelAsync(booking.Id, new CancelBookingDto());
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
+        var omar = To(s.Omar.Email);
+        omar.Subject.ShouldStartWith("أُلغي: Planning · ");
+        omar.Body.ShouldContain("dir=\"rtl\"");
+        omar.Body.ShouldContain("✕ ملغى");
     }
 }

@@ -351,8 +351,15 @@ export interface TextKeys {
   "Email:FindAnotherRoom": string
   "Email:Footer": string
   "Email:Greeting": string
+  "Email:GuestCancelled:ByAdmin": string
+  "Email:GuestCancelled:ByOwner": string
+  "Email:GuestCancelled:Heading": string
+  "Email:GuestCancelled:Subject": string
+  "Email:GuestCancelled:SubjectSeries": string
   "Email:GuestMark": string
   "Email:Guests": string
+  "Email:GuestsTold": string
+  "Email:GuestsTold:One": string
   "Email:Invite:Footer": string
   "Email:Invite:Heading": string
   "Email:Invite:Subject": string

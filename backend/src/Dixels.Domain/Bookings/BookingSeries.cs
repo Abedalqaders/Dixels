@@ -101,6 +101,9 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return SetInvitees(invitees, guidGenerator);
     }
 
+    /// <summary>The same as <see cref="Booking.RemoveInvitee"/>, for the series' own list.</summary>
+    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+
     /// <summary>
     /// A colleague guest's answer for the whole series (its upcoming dates are answered by the
     /// caller, see BookingResponses). Only the series' own list here: nothing about dates.

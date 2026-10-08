@@ -18,6 +18,9 @@ public class AdminCancelledEmailArgs
 
     /// <summary>How many were cancelled, listed or not.</summary>
     public int Count { get; set; }
+
+    /// <summary>How many of their guests were told.</summary>
+    public int GuestsTold { get; set; }
 }
 
 /// <summary>
@@ -39,7 +42,7 @@ public class AdminCancelledEmailJob : AsyncBackgroundJob<AdminCancelledEmailArgs
     public override async Task ExecuteAsync(AdminCancelledEmailArgs args)
     {
         using var uow = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: false);
-        await _bookingEmails.SendAdminCancelledAsync(args.UserId, args.BookingIds, args.Count);
+        await _bookingEmails.SendAdminCancelledAsync(args.UserId, args.BookingIds, args.Count, args.GuestsTold);
         await uow.CompleteAsync();
     }
 }
