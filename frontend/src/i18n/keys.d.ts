@@ -45,7 +45,18 @@ export interface TextKeys {
   "Auth:SigningOutDetail": string
   "Auth:TakingYouBack": string
   "Auth:TakingYouHome": string
+  "Booking:Accept": string
   "Booking:AlreadyStarted": string
+  "Booking:AnswerAccepted": string
+  "Booking:AnswerAllUpcoming": string
+  "Booking:AnswerDeclined": string
+  "Booking:AnswerFailed": string
+  "Booking:AnswerFor": string
+  "Booking:AnswerNone": string
+  "Booking:AnswerSeriesNote": string
+  "Booking:AnswerSummary": string
+  "Booking:AnswerThisDate": string
+  "Booking:AnswersClosed": string
   "Booking:BuildingRemovedDetail": string
   "Booking:BuildingRemovedDetailCalendar": string
   "Booking:BuildingRemovedTitle": string
@@ -66,6 +77,7 @@ export interface TextKeys {
   "Booking:CloseDetails": string
   "Booking:Date": string
   "Booking:DayRange": string
+  "Booking:Decline": string
   "Booking:Details": string
   "Booking:Done": string
   "Booking:EditGuests": string
@@ -107,6 +119,7 @@ export interface TextKeys {
   "Booking:Untitled": string
   "Booking:Upcoming": string
   "Booking:Where": string
+  "Booking:YourAnswer": string
   "BookingForm:AllDatesFree": string
   "BookingForm:AppliesToEveryDate": string
   "BookingForm:AtLeast": string
@@ -162,6 +175,7 @@ export interface TextKeys {
   "Calendar:DayHeading": string
   "Calendar:DayPassed": string
   "Calendar:DayView": string
+  "Calendar:DeclinedItem": string
   "Calendar:GuestsSaved": string
   "Calendar:InvitedItem": string
   "Calendar:Item": string
@@ -248,6 +262,7 @@ export interface TextKeys {
   "Dixels:Bookings:NotCancellable": string
   "Dixels:Bookings:NotYours": string
   "Dixels:Bookings:OnlyOrganiserCancels": string
+  "Dixels:Bookings:OrganiserCannotRespond": string
   "Dixels:Bookings:OrganiserOnly": string
   "Dixels:Bookings:OutsideHours": string
   "Dixels:Bookings:OutsideHours:Short": string
@@ -259,6 +274,7 @@ export interface TextKeys {
   "Dixels:Bookings:OwnOverlap:Short": string
   "Dixels:Bookings:OwnOverlapWarning": string
   "Dixels:Bookings:OwnOverlapWarning:Short": string
+  "Dixels:Bookings:ResponseClosed": string
   "Dixels:Bookings:SeriesBeyondHorizon": string
   "Dixels:Bookings:SeriesDateUnavailable": string
   "Dixels:Bookings:SeriesEndBeforeStart": string

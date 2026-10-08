@@ -7,6 +7,7 @@ import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { bookingPhase } from '@/features/calendar/bookingPhase'
 import type { CalendarItem } from '@/features/calendar/calendarItem'
 import { BookingDetails, findSpaceLink, PhaseBadge } from './BookingDetails'
+import type { BookingDetailsProps } from './BookingDetails'
 
 interface BookingDetailDialogProps {
   item: CalendarItem
@@ -18,12 +19,14 @@ interface BookingDetailDialogProps {
   canCancel: boolean
   onClose: () => void
   onCancel: (booking: BookingDto) => void
+  /** A guest answering the invitation — see BookingDetails. */
+  onRespond?: BookingDetailsProps['onRespond']
   /** Offers Edit guests on an upcoming booking I own — only to someone who may book. */
   onEditGuests?: (booking: BookingDto) => void
 }
 
 /** One booking's details as a dialog — for screens too narrow for the calendar's side panel. */
-export function BookingDetailDialog({ item, booking, error, canBook, canCancel, onClose, onCancel, onEditGuests }: BookingDetailDialogProps) {
+export function BookingDetailDialog({ item, booking, error, canBook, canCancel, onClose, onCancel, onRespond, onEditGuests }: BookingDetailDialogProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const link = canBook ? findSpaceLink(item, booking) : null
@@ -39,7 +42,7 @@ export function BookingDetailDialog({ item, booking, error, canBook, canCancel, 
           <DialogDescription className="sr-only">{t('Booking:Details')}</DialogDescription>
         </DialogHeader>
 
-        <BookingDetails item={item} booking={booking} error={error} />
+        <BookingDetails item={item} booking={booking} error={error} onRespond={onRespond} />
 
         <DialogFooter className="gap-2 sm:justify-between">
           {link ? (

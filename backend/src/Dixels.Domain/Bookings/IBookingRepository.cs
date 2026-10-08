@@ -73,6 +73,9 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task<Dictionary<Guid, IReadOnlyList<Invitee>>> GetInviteesAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
 
+    /// <summary>The person's answer to each of these bookings they're a colleague guest of, in one query.</summary>
+    Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(IReadOnlyCollection<Guid> bookingIds, Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Whether the person is (still) a colleague guest of this booking.</summary>
     Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default);
 

@@ -15,6 +15,9 @@ import type { CalendarItem } from '@/features/calendar/calendarItem'
 import type { TextKeys } from '@/i18n/keys'
 import { Initials } from '@/components/PeoplePicker'
 import { InviteeList } from './InviteeList'
+import { InviteResponse } from './InviteResponse'
+import type { AnswerScope } from './InviteResponse'
+import { InviteeResponseStatus } from '@/features/bookings/api/bookingsApi'
 
 const PHASE_LABEL: Record<BookingPhase, keyof TextKeys> = {
   upcoming: 'Booking:Upcoming',
@@ -56,6 +59,8 @@ export interface BookingDetailsProps {
   booking: BookingDto | null
   /** Why the full booking couldn't be fetched, if it couldn't. */
   error: string | null
+  /** A guest's answer to the invitation (accept / decline); offered only to a guest. */
+  onRespond?: (booking: BookingDto, status: InviteeResponseStatus, scope: AnswerScope) => Promise<void>
 }
 
 function Row({ icon: Icon, label, children }: { icon: ComponentType<{ className?: string }>; label: string; children: ReactNode }) {
@@ -76,7 +81,7 @@ function Row({ icon: Icon, label, children }: { icon: ComponentType<{ className?
  * and the dialog (narrow ones). Shows what the calendar has at once and fills in the rest
  * as the full booking arrives, so the calendar's light list never has to carry it.
  */
-export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
+export function BookingDetails({ item, booking, error, onRespond }: BookingDetailsProps) {
   const { t } = useTranslation()
   const phase = booking ? bookingPhase(booking) : null
   const date = dateOf(item.localStart)
@@ -136,6 +141,16 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
           </Row>
         )}
       </dl>
+
+      {booking && !booking.isOwner && onRespond && (
+        <InviteResponse
+          answer={booking.myResponse ?? InviteeResponseStatus.Pending}
+          open={phase === 'upcoming'}
+          date={date}
+          isSeries={Boolean(booking.seriesId)}
+          onRespond={(status, scope) => onRespond(booking, status, scope)}
+        />
+      )}
 
       {error && (
         <p role="alert" className="rounded-md bg-slot-closed px-3 py-2 text-sm text-slot-closed-ink">
