@@ -60,6 +60,7 @@ export interface TextKeys {
   "Booking:BuildingRemovedDetail": string
   "Booking:BuildingRemovedDetailCalendar": string
   "Booking:BuildingRemovedTitle": string
+  "Booking:BusyWhenAnswering": string
   "Booking:Cancel": string
   "Booking:CancelFailed": string
   "Booking:CancelOnlyUpcoming": string
@@ -365,9 +366,13 @@ export interface TextKeys {
   "Email:GuestDeclined:Subject": string
   "Email:GuestDeclined:SubjectSeries": string
   "Email:GuestMark": string
+  "Email:GuestRemoved:Heading": string
+  "Email:GuestRemoved:Note": string
+  "Email:GuestRemoved:Subject": string
   "Email:Guests": string
   "Email:GuestsTold": string
   "Email:GuestsTold:One": string
+  "Email:Invite:AddedHeading": string
   "Email:Invite:Answer": string
   "Email:Invite:AnswerSeries": string
   "Email:Invite:Footer": string

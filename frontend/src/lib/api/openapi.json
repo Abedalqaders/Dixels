@@ -11781,6 +11781,7 @@
           "isOwner",
           "localEnd",
           "localStart",
+          "myBusy",
           "ownerName",
           "spaceId",
           "spaceName",
@@ -11876,6 +11877,12 @@
               }
             ],
             "nullable": true
+          },
+          "myBusy": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BusyTimeDto"
+            }
           },
           "capacity": {
             "type": "integer",

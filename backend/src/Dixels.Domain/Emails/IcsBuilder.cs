@@ -53,6 +53,12 @@ public record IcsEvent
     /// <summary>A series: how it repeats. Null for a single booking.</summary>
     public RecurrenceRule? Rule { get; init; }
 
+    /// <summary>
+    /// A series' own first date, when the file starts later (someone joining part-way): the
+    /// rule's day of the month and weekday position come from it, as the series' dates do.
+    /// </summary>
+    public DateOnly? RuleAnchor { get; init; }
+
     /// <summary>A series: the dates the rule lands on that aren't booked (building-local starts).</summary>
     public IReadOnlyList<DateTime> LocalExceptions { get; init; } = Array.Empty<DateTime>();
 
@@ -93,7 +99,7 @@ public static class IcsBuilder
             var evt = Event(e, e.LocalStart, e.LocalEnd);
             if (e.Rule is not null)
             {
-                evt.RecurrenceRules.Add(Pattern(e.Rule, e.LocalStart, e.TimeZoneId));
+                evt.RecurrenceRules.Add(Pattern(e.Rule, e.LocalStart, e.RuleAnchor, e.TimeZoneId));
                 foreach (var date in e.LocalExceptions)
                 {
                     evt.ExceptionDates.Add(Local(date, e.TimeZoneId));
@@ -161,9 +167,9 @@ public static class IcsBuilder
     /// day 31 is simply the last. A date in a month's 5th week repeats as "the last" weekday.
     /// UNTIL is the last date at the booking's start time, in UTC as RFC 5545 requires.
     /// </summary>
-    private static RecurrencePattern Pattern(RecurrenceRule rule, DateTime localStart, string timeZoneId)
+    private static RecurrencePattern Pattern(RecurrenceRule rule, DateTime localStart, DateOnly? anchor, string timeZoneId)
     {
-        var first = DateOnly.FromDateTime(localStart);
+        var first = anchor ?? DateOnly.FromDateTime(localStart);
         var clock = new BuildingClock(timeZoneId);
         var pattern = new RecurrencePattern
         {

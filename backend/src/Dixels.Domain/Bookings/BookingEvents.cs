@@ -107,15 +107,32 @@ public class BookingInviteesChangedEvent
     public IReadOnlyList<Invitee> Added { get; }
     public IReadOnlyList<Invitee> Removed { get; }
 
-    public BookingInviteesChangedEvent(Guid? bookingId, Guid? seriesId, IReadOnlyList<Booking> bookings, IReadOnlyList<Invitee> added, IReadOnlyList<Invitee> removed)
+    /// <summary>
+    /// The removed people's calendar copies as they were (the series guest's for a series):
+    /// their rows are gone by the time a listener runs, and a CANCEL needs the UID their
+    /// invite carried.
+    /// </summary>
+    public IReadOnlyList<GuestCopy> RemovedCopies { get; }
+
+    public BookingInviteesChangedEvent(
+        Guid? bookingId,
+        Guid? seriesId,
+        IReadOnlyList<Booking> bookings,
+        IReadOnlyList<Invitee> added,
+        IReadOnlyList<Invitee> removed,
+        IReadOnlyList<GuestCopy>? removedCopies = null)
     {
         BookingId = bookingId;
         SeriesId = seriesId;
         Bookings = bookings;
         Added = added;
         Removed = removed;
+        RemovedCopies = removedCopies ?? Array.Empty<GuestCopy>();
     }
 }
+
+/// <summary>Who a guest is, and their copy of the meeting in their calendar: its UID and last SEQUENCE.</summary>
+public sealed record GuestCopy(Invitee Who, string IcsUid, int IcsSequence);
 
 /// <summary>A booking starts soon and is due its one reminder (see BookingReminders).</summary>
 public class BookingReminderDueEvent

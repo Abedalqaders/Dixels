@@ -40,6 +40,9 @@ public class GuestCancelNotice
     /// <summary>The cancelled bookings this guest was on: one, or a series' dates.</summary>
     public List<Guid> BookingIds { get; set; } = new();
 
+    /// <summary>The booker took this guest off the list (the booking goes on), rather than cancelling.</summary>
+    public bool Removed { get; set; }
+
     /// <summary>Who this is, to count each guest once (the user id, or the email).</summary>
     public string GuestKey => UserId?.ToString() ?? Invitee.NormalizeEmail(Email!);
 }
@@ -212,6 +215,7 @@ public partial class BookingEmails
                 Status = EmailStatus.Cancelled,
                 Cancelled = true,
                 CancelledByAdmin = byAdmin,
+                RemovedByOwner = notice.Removed,
                 RecipientName = name,
                 InvitedBy = ownerName,
                 Reason = byAdmin ? first.CancelReason : null,
@@ -237,7 +241,13 @@ public partial class BookingEmails
                 subject = _localizer["Email:GuestCancelled:Subject", TitleOrRoom(model), model.Date];
             }
 
-            model.Heading = _localizer["Email:GuestCancelled:Heading", TitleOrRoom(model)];
+            model.Heading = notice.Removed
+                ? _localizer["Email:GuestRemoved:Heading", ownerName, TitleOrRoom(model)]
+                : _localizer["Email:GuestCancelled:Heading", TitleOrRoom(model)];
+            if (notice.Removed)
+            {
+                subject = _localizer["Email:GuestRemoved:Subject", TitleOrRoom(model), notice.WholeSeries ? model.Rows[0].Date : model.Date];
+            }
 
             var calendar = Calendar(model, clock, notice.IcsUid, notice.Sequence, first.StartsAt, first.EndsAt,
                 notice.WholeSeries ? series?.Rule : null, Array.Empty<DateOnly>(),

@@ -47,6 +47,13 @@ public class BookingDto : EntityDto<Guid>
     /// <summary>My answer when I'm a colleague guest; null when it's my own booking.</summary>
     public InviteeResponseStatus? MyResponse { get; set; }
 
+    /// <summary>
+    /// For a colleague guest reading an upcoming invite: when I'm already taken at its time (my
+    /// own bookings and other meetings I accepted, cut to it) — the "you have another booking
+    /// then" next to Accept. Accepting is still allowed. Empty otherwise.
+    /// </summary>
+    public List<BusyTimeDto> MyBusy { get; set; } = new();
+
     /// <summary>The room's seats and minimum head count now (null = no limit), for checking an edit of the guests before saving.</summary>
     public int? Capacity { get; set; }
     public int? MinAttendees { get; set; }

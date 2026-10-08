@@ -81,6 +81,7 @@ function booking(id: string, title: string, from: string, to: string, day = tomo
     invitees: [],
     isOwner: true,
     ownerName: 'Me',
+    myBusy: [],
     myResponse: null,
     capacity: 8,
     minAttendees: null,

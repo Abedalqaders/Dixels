@@ -79,6 +79,9 @@ public class BookingEmailModel
     /// <summary>A guest's cancel email: an admin's action, not the booker's (the reason goes in the red box).</summary>
     public bool CancelledByAdmin { get; set; }
 
+    /// <summary>A guest's email: the booker took them off the list (the meeting goes on).</summary>
+    public bool RemovedByOwner { get; set; }
+
     /// <summary>The booker's cancel email: how many guests were told it's off (0: no line).</summary>
     public int GuestsTold { get; set; }
 
