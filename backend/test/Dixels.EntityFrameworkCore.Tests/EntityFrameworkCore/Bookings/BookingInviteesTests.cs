@@ -472,7 +472,7 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
     }
 
     [Fact]
-    public async Task A_guest_cannot_cancel_and_a_stranger_cannot_even_open_it()
+    public async Task A_guest_is_told_only_the_organiser_cancels_and_a_stranger_cannot_even_open_it()
     {
         var s = await CreateScenarioAsync();
         BookingDto created;
@@ -482,6 +482,11 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         }
 
         using (ActAs(s.Rana.Id))
+        {
+            (await RejectionCodeAsync(() => _bookings.CancelAsync(created.Id, new CancelBookingDto())))
+                .ShouldBe(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels);
+        }
+        using (ActAs(s.Omar.Id))
         {
             await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.CancelAsync(created.Id, new CancelBookingDto()));
         }

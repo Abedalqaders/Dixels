@@ -146,9 +146,14 @@ export function BookingDetails({ item, booking, error }: BookingDetailsProps) {
       {booking &&
         (phase === 'cancelled' ? (
           <p role="status" className="rounded-md bg-slot-closed px-3 py-2 text-sm text-slot-closed-ink">
-            {booking.cancelReason
-              ? t('Booking:CancelledByAdminWithReason', { reason: booking.cancelReason })
-              : t('Booking:CancelledByAdminDetail')}
+            {/* A guest isn't the one losing the room: they're told the organiser's booking went. */}
+            {booking.isOwner
+              ? booking.cancelReason
+                ? t('Booking:CancelledByAdminWithReason', { reason: booking.cancelReason })
+                : t('Booking:CancelledByAdminDetail')
+              : booking.cancelReason
+                ? t('Booking:GuestCancelledByAdminWithReason', { reason: booking.cancelReason })
+                : t('Booking:GuestCancelledByAdminDetail')}
           </p>
         ) : (
           phase !== 'upcoming' && (

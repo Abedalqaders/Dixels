@@ -15,7 +15,8 @@ namespace Dixels.ExceptionHandling;
 /// request (400), not a permission problem — and clients, proxies and monitoring treat 403 as
 /// "this user may not do this". So any Dixels-coded business error that would otherwise be a
 /// 403 becomes a 400. Codes mapped explicitly in <c>AbpExceptionHttpStatusCodeOptions</c>
-/// (the 409 conflicts) keep their mapping, and real authorization failures stay 403.
+/// (the 409 conflicts, and the one deliberate 403) keep their mapping, and real
+/// authorization failures stay 403.
 /// </summary>
 [Dependency(ReplaceServices = true)]
 [ExposeServices(typeof(IHttpExceptionStatusCodeFinder))]
@@ -35,7 +36,8 @@ public class DixelsHttpExceptionStatusCodeFinder : DefaultHttpExceptionStatusCod
         if (status == HttpStatusCode.Forbidden
             && exception is IBusinessException
             && exception is IHasErrorCode { Code: { } code }
-            && code.StartsWith(DixelsErrorCodePrefix, StringComparison.Ordinal))
+            && code.StartsWith(DixelsErrorCodePrefix, StringComparison.Ordinal)
+            && !Options.ErrorCodeToHttpStatusCodeMappings.ContainsKey(code))
         {
             return HttpStatusCode.BadRequest;
         }

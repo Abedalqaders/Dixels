@@ -31,6 +31,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly LocalizedNameReader _nameReader;
     private readonly IIdentityUserRepository _userRepository;
+    private readonly BookingAccess _bookingAccess;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -43,7 +44,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         IDataFilter dataFilter,
         IRepository<BookingSeries, Guid> seriesRepository,
         LocalizedNameReader nameReader,
-        IIdentityUserRepository userRepository)
+        IIdentityUserRepository userRepository,
+        BookingAccess bookingAccess)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -56,6 +58,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _seriesRepository = seriesRepository;
         _nameReader = nameReader;
         _userRepository = userRepository;
+        _bookingAccess = bookingAccess;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -140,14 +143,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     public async Task<BookingDto> GetAsync(Guid id)
     {
         var booking = await _bookingRepository.GetAsync(id);
-        // Someone else's booking reads as "not found", not "forbidden": a 403 would confirm
-        // the id exists, which is more than a guessed URL should learn. A colleague guest may
-        // read it (MapToDtosAsync hides the other guests' emails from them).
-        var me = CurrentUser.GetId();
-        if (booking.UserId != me && !await _bookingRepository.IsInviteeAsync(id, me))
-        {
-            throw new EntityNotFoundException(typeof(Booking), id);
-        }
+        // The organiser and a colleague guest may read it (MapToDtosAsync hides the other
+        // guests' emails from a guest); to anyone else it doesn't exist.
+        await _bookingAccess.EnsureAsync(booking, CurrentUser.GetId(), BookingRole.Owner, BookingRole.Guest);
 
         return (await MapToDtosAsync(new[] { booking })).Single();
     }
@@ -155,13 +153,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     [Authorize(DixelsPermissions.Bookings.Cancel)]
     public async Task<ListResultDto<BookingDto>> CancelAsync(Guid id, CancelBookingDto input)
     {
-        // Only the owner cancels. Anyone else — a guest who can see it included — is told it
-        // doesn't exist, as GetAsync tells a stranger.
-        var booking = await _bookingRepository.FindAsync(id);
-        if (booking is null || booking.UserId != CurrentUser.GetId())
-        {
-            throw new EntityNotFoundException(typeof(Booking), id);
-        }
+        // Only the organiser cancels: a guest is told so (403), anyone else that it doesn't exist.
+        var booking = await _bookingRepository.GetAsync(id);
+        await _bookingAccess.EnsureAsync(booking, CurrentUser.GetId(), DixelsDomainErrorCodes.BookingOnlyOrganiserCancels, BookingRole.Owner);
 
         var cancelled = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason, input.Scope);
         return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));

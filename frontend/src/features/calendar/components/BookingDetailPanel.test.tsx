@@ -141,7 +141,16 @@ describe('BookingDetailPanel', () => {
 
     const panel = screen.getByRole('region', { name: 'Booking details' })
     expect(panel).toHaveTextContent('Invited by Sara Ali')
-    expect(panel).toHaveTextContent('The room is closed for maintenance.')
+    expect(panel).toHaveTextContent(
+      "The organiser's booking was cancelled by an administrator — The room is closed for maintenance.. This meeting won't take place here.",
+    )
+    // Not the owner's wording: the room was never held for a guest.
+    expect(panel).not.toHaveTextContent('held for you')
     expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument()
+  })
+
+  it("the owner still reads that the room is no longer held for them", () => {
+    renderPanel({ ...booking, status: 'Cancelled', cancelledByAdmin: true, cancelReason: 'Closed' } as BookingDto)
+    expect(screen.getByRole('region', { name: 'Booking details' })).toHaveTextContent('held for you')
   })
 })
