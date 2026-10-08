@@ -28,7 +28,7 @@ public partial class BookingEmails
 
     /// <summary>"Sara Ali invited you" — one email to each guest of a new booking.</summary>
     public Task SendInvitesAsync(Booking booking) =>
-        InviteAsync(booking.UserId, booking.SpaceId, booking.Invitees.ToList(), booking.Title, booking.StartsAt, booking.EndsAt, null, null);
+        InviteAsync(booking.UserId, booking.SpaceId, booking.Invitees.ToList(), booking.Title, booking.StartsAt, booking.EndsAt, null, null, openId: booking.Id);
 
     /// <summary>One invite to each guest for a whole new series — not one per date.</summary>
     public Task SendSeriesInvitesAsync(BookingSeries series, IReadOnlyCollection<Booking> bookings)
@@ -39,9 +39,15 @@ public partial class BookingEmails
         }
 
         var first = bookings.MinBy(b => b.StartsAt)!;
-        return InviteAsync(series.UserId, series.SpaceId, series.Invitees.ToList(), series.Title, first.StartsAt, first.EndsAt, series, bookings);
+        return InviteAsync(series.UserId, series.SpaceId, series.Invitees.ToList(), series.Title, first.StartsAt, first.EndsAt, series, bookings, openId: first.Id);
     }
 
+    /// <summary>
+    /// Invites <paramref name="guests"/> — all of a new booking's, or only those just added
+    /// (<paramref name="added"/>: "added you"); <paramref name="everyone"/> is the whole list,
+    /// for the names of the others. <paramref name="openId"/> is the date a colleague's "Open in
+    /// Dixels" opens (outsiders have no account, so theirs has no button).
+    /// </summary>
     private async Task InviteAsync(
         Guid ownerId,
         Guid spaceId,
@@ -50,8 +56,12 @@ public partial class BookingEmails
         DateTimeOffset startsAt,
         DateTimeOffset endsAt,
         BookingSeries? series,
-        IReadOnlyCollection<Booking>? dates)
+        IReadOnlyCollection<Booking>? dates,
+        IReadOnlyList<InviteeRow>? everyone = null,
+        bool added = false,
+        Guid? openId = null)
     {
+        everyone ??= guests;
         if (guests.Count == 0)
         {
             return;
@@ -70,14 +80,16 @@ public partial class BookingEmails
             var ownerLanguage = await _userLanguage.GetAsync(ownerId);
             var rsvpMailbox = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxAddress) ?? "rsvp@dixels.local";
 
-            var colleagueIds = guests.Where(g => g.UserId is not null).Select(g => g.UserId!.Value).ToList();
+            var colleagueIds = everyone.Where(g => g.UserId is not null).Select(g => g.UserId!.Value).ToList();
             var colleagues = (await _userRepository.GetListByIdsAsync(colleagueIds)).ToDictionary(u => u.Id);
 
             var space = await _spaceRepository.GetAsync(spaceId, includeDetails: true);
             var floor = await _floorRepository.GetAsync(space.FloorId, includeDetails: true);
             var building = await _buildingRepository.GetAsync(floor.BuildingId, includeDetails: true);
             var clock = new BuildingClock(building.Timezone);
-            var skipped = series is null ? new List<DateOnly>() : Skipped(series, dates!, clock);
+            // A series joined part-way starts at its next date: no dates before that one.
+            var from = clock.LocalDate(startsAt);
+            var skipped = series is null ? new List<DateOnly>() : Skipped(series, dates!, clock).Where(d => d >= from).ToList();
 
             foreach (var guest in guests)
             {
@@ -110,9 +122,10 @@ public partial class BookingEmails
                         Footer = _localizer["Email:Invite:Footer", ownerName],
                     };
                     await NamePlaceAsync(model, space, floor, building);
-                    Describe(model, clock, startsAt, endsAt, title);
-                    model.AlsoInvited = OthersNames(guests, guest, colleagues);
-                    model.Heading = _localizer["Email:Invite:Heading", ownerName, TitleOrRoom(model)];
+                    Describe(model, clock, startsAt, endsAt, title, colleague ? openId : null);
+                    model.AlsoInvited = OthersNames(everyone, guest, colleagues);
+                    AddAnswerLinks(model, guest);
+                    model.Heading = _localizer[added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
 
                     string subject;
                     if (series is null)
@@ -130,7 +143,7 @@ public partial class BookingEmails
                     }
 
                     var calendar = Calendar(model, clock, guest.IcsUid, guest.IcsSequence, startsAt, endsAt, series?.Rule, skipped,
-                        new IcsPerson(fromName, rsvpMailbox), new IcsPerson(name, to));
+                        new IcsPerson(fromName, rsvpMailbox), new IcsPerson(name, to)) with { RuleAnchor = series?.FirstDate };
 
                     await _backgroundJobManager.EnqueueAsync(new SendEmailArgs
                     {
@@ -149,6 +162,67 @@ public partial class BookingEmails
         catch (Exception ex)
         {
             Logger.LogError(ex, "Could not write the guest invites for a booking by user {UserId}.", ownerId);
+        }
+    }
+
+    /// <summary>
+    /// The guest list was edited: "added you" to each new guest (with their own new calendar
+    /// file), "removed you" to each one taken off (a CANCEL for the copy they had — the whole
+    /// series, for a series). Those who stay, and the booker, hear nothing. Never throws.
+    /// </summary>
+    public async Task SendGuestChangesAsync(BookingInviteesChangedEvent change)
+    {
+        if (change.Bookings.Count == 0)
+        {
+            return;
+        }
+
+        var first = change.Bookings.MinBy(b => b.StartsAt)!;
+        try
+        {
+            if (change.Added.Count > 0)
+            {
+                var addedKeys = change.Added.Select(i => i.Key).ToHashSet();
+                if (change.SeriesId is { } seriesId)
+                {
+                    var series = await _seriesRepository.GetAsync(seriesId);
+                    var everyone = await _bookingRepository.GetSeriesGuestRowsAsync(new[] { seriesId });
+                    await InviteAsync(series.UserId, series.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
+                        series.Title, first.StartsAt, first.EndsAt, series, change.Bookings, everyone, added: true, openId: first.Id);
+                }
+                else
+                {
+                    var everyone = first.Invitees.ToList();
+                    await InviteAsync(first.UserId, first.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
+                        first.Title, first.StartsAt, first.EndsAt, null, null, everyone, added: true, openId: first.Id);
+                }
+            }
+
+            foreach (var copy in change.RemovedCopies)
+            {
+                var notice = new GuestCancelNotice
+                {
+                    IcsUid = copy.IcsUid,
+                    Sequence = copy.IcsSequence + 1,
+                    UserId = copy.Who.UserId,
+                    Email = copy.Who.Email,
+                    Name = copy.Who.Name,
+                    OwnerId = first.UserId,
+                    SeriesId = change.SeriesId,
+                    // Off the meeting: the whole series leaves their calendar, as Outlook does.
+                    WholeSeries = change.SeriesId is not null,
+                    BookingIds = change.Bookings.Select(b => b.Id).ToList(),
+                    Removed = true,
+                };
+                if (await WriteGuestCancelAsync(notice, byAdmin: false) is { } email)
+                {
+                    await _backgroundJobManager.EnqueueAsync(email);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not write the emails for a guest list change by user {UserId}.", first.UserId);
         }
     }
 

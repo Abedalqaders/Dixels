@@ -83,6 +83,7 @@ public class DixelsDomainModule : AbpModule
 
         // "Emails" section: where the links in emails point (see EmailOptions).
         Configure<EmailOptions>(context.Services.GetConfiguration().GetSection("Emails"));
+        Configure<GuestLinkOptions>(context.Services.GetConfiguration().GetSection("GuestLinks"));
 
         // The email templates (Emails/Templates/*.tpl) are embedded in this assembly.
         Configure<AbpVirtualFileSystemOptions>(options =>

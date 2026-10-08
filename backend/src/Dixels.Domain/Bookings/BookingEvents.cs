@@ -63,23 +63,30 @@ public class BookingsCancelledEvent
 }
 
 /// <summary>
-/// A colleague guest answered an invitation: one date (<see cref="BookingId"/>), or a whole
-/// series and its upcoming dates (<see cref="SeriesId"/>). For the owner's "declined" email
-/// later; nothing listens yet.
+/// A guest answered an invitation: one date (<see cref="BookingId"/>), or a whole series and its
+/// upcoming dates (<see cref="SeriesId"/>). However the answer came in (the app, their link,
+/// later their mail app), this is raised once — the owner's "declined" email listens to it.
 /// </summary>
 public class BookingInviteeRespondedEvent
 {
     public Guid? BookingId { get; }
     public Guid? SeriesId { get; }
-    public Guid UserId { get; }
+
+    /// <summary>Who answered: a colleague (UserId only) or an outside guest (Email, Name).</summary>
+    public Invitee Guest { get; }
+
     public InviteeResponseStatus Status { get; }
 
-    public BookingInviteeRespondedEvent(Guid? bookingId, Guid? seriesId, Guid userId, InviteeResponseStatus status)
+    /// <summary>The answer before this one (Pending the first time), so listeners can act on changes only.</summary>
+    public InviteeResponseStatus PreviousStatus { get; }
+
+    public BookingInviteeRespondedEvent(Guid? bookingId, Guid? seriesId, Invitee guest, InviteeResponseStatus status, InviteeResponseStatus previousStatus)
     {
         BookingId = bookingId;
         SeriesId = seriesId;
-        UserId = userId;
+        Guest = guest;
         Status = status;
+        PreviousStatus = previousStatus;
     }
 }
 
@@ -100,15 +107,32 @@ public class BookingInviteesChangedEvent
     public IReadOnlyList<Invitee> Added { get; }
     public IReadOnlyList<Invitee> Removed { get; }
 
-    public BookingInviteesChangedEvent(Guid? bookingId, Guid? seriesId, IReadOnlyList<Booking> bookings, IReadOnlyList<Invitee> added, IReadOnlyList<Invitee> removed)
+    /// <summary>
+    /// The removed people's calendar copies as they were (the series guest's for a series):
+    /// their rows are gone by the time a listener runs, and a CANCEL needs the UID their
+    /// invite carried.
+    /// </summary>
+    public IReadOnlyList<GuestCopy> RemovedCopies { get; }
+
+    public BookingInviteesChangedEvent(
+        Guid? bookingId,
+        Guid? seriesId,
+        IReadOnlyList<Booking> bookings,
+        IReadOnlyList<Invitee> added,
+        IReadOnlyList<Invitee> removed,
+        IReadOnlyList<GuestCopy>? removedCopies = null)
     {
         BookingId = bookingId;
         SeriesId = seriesId;
         Bookings = bookings;
         Added = added;
         Removed = removed;
+        RemovedCopies = removedCopies ?? Array.Empty<GuestCopy>();
     }
 }
+
+/// <summary>Who a guest is, and their copy of the meeting in their calendar: its UID and last SEQUENCE.</summary>
+public sealed record GuestCopy(Invitee Who, string IcsUid, int IcsSequence);
 
 /// <summary>A booking starts soon and is due its one reminder (see BookingReminders).</summary>
 public class BookingReminderDueEvent

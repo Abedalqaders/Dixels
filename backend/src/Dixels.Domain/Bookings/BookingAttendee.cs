@@ -63,16 +63,18 @@ public abstract class InviteeRow : Entity<Guid>
 
     public Invitee ToInvitee() => new(UserId, Email, Name);
 
-    /// <summary>Records their answer. Only Accepted or Declined: nobody answers "pending".</summary>
-    internal void Respond(InviteeResponseStatus status, DateTimeOffset now)
+    /// <summary>Records their answer and returns the one it replaces. Only Accepted or Declined: nobody answers "pending".</summary>
+    internal InviteeResponseStatus Respond(InviteeResponseStatus status, DateTimeOffset now)
     {
         if (status == InviteeResponseStatus.Pending)
         {
             throw new ArgumentOutOfRangeException(nameof(status), status, "An answer is Accepted or Declined.");
         }
 
+        var previous = ResponseStatus;
         ResponseStatus = status;
         RespondedAt = now;
+        return previous;
     }
 
     /// <summary>32 random bytes, URL-safe: "Xp3…Q@dixels".</summary>

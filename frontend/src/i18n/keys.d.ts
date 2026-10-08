@@ -161,6 +161,7 @@ export interface TextKeys {
   "Calendar:BookedSeries_one": string
   "Calendar:BookedSeries_other": string
   "Calendar:BookingLoadFailed": string
+  "Calendar:BookingUnavailable": string
   "Calendar:BookingsLoadFailed": string
   "Calendar:BuildingLoadFailed": string
   "Calendar:Cancelled": string
@@ -251,6 +252,7 @@ export interface TextKeys {
   "Dixels:Bookings:ClosedDay:Short": string
   "Dixels:Bookings:EditSeriesGuests": string
   "Dixels:Bookings:ExternalGuestsDisabled": string
+  "Dixels:Bookings:GuestLinkNotFound": string
   "Dixels:Bookings:GuestsNotEditable": string
   "Dixels:Bookings:IdempotencyKeyReused": string
   "Dixels:Bookings:InvalidDateRange": string
@@ -330,6 +332,7 @@ export interface TextKeys {
   "Duration:MinutesShort_other": string
   "Duration:Minutes_one": string
   "Duration:Minutes_other": string
+  "Email:Accept": string
   "Email:Address": string
   "Email:AdminCancelled:Heading": string
   "Email:AdminCancelled:HeadingMany": string
@@ -348,6 +351,8 @@ export interface TextKeys {
   "Email:CancelBooking": string
   "Email:ChangeOfPlans": string
   "Email:Dates": string
+  "Email:Decline": string
+  "Email:DeclinedBy": string
   "Email:FindAnotherRoom": string
   "Email:Footer": string
   "Email:Greeting": string
@@ -356,10 +361,21 @@ export interface TextKeys {
   "Email:GuestCancelled:Heading": string
   "Email:GuestCancelled:Subject": string
   "Email:GuestCancelled:SubjectSeries": string
+  "Email:GuestDeclined:AllDates": string
+  "Email:GuestDeclined:Heading": string
+  "Email:GuestDeclined:StillOn": string
+  "Email:GuestDeclined:Subject": string
+  "Email:GuestDeclined:SubjectSeries": string
   "Email:GuestMark": string
+  "Email:GuestRemoved:Heading": string
+  "Email:GuestRemoved:Note": string
+  "Email:GuestRemoved:Subject": string
   "Email:Guests": string
   "Email:GuestsTold": string
   "Email:GuestsTold:One": string
+  "Email:Invite:AddedHeading": string
+  "Email:Invite:Answer": string
+  "Email:Invite:AnswerSeries": string
   "Email:Invite:Footer": string
   "Email:Invite:Heading": string
   "Email:Invite:Subject": string
@@ -388,6 +404,7 @@ export interface TextKeys {
   "Email:SeriesConfirmed:Subject": string
   "Email:Status:Cancelled": string
   "Email:Status:Confirmed": string
+  "Email:Status:Declined": string
   "Email:Status:Invitation": string
   "Email:Status:Reminder": string
   "Email:Status:Updated": string
@@ -766,6 +783,25 @@ export interface TextKeys {
   "Repeat:WeeksUpTo_one": string
   "Repeat:WeeksUpTo_other": string
   "Repeat:Workdays": string
+  "Rsvp:Accept": string
+  "Rsvp:Accepted": string
+  "Rsvp:AllDates": string
+  "Rsvp:ChangeToAccept": string
+  "Rsvp:ChangeToDecline": string
+  "Rsvp:ClosedDetail": string
+  "Rsvp:ClosedTitle": string
+  "Rsvp:Decline": string
+  "Rsvp:Declined": string
+  "Rsvp:InvitedBy": string
+  "Rsvp:NotFoundDetail": string
+  "Rsvp:NotFoundTitle": string
+  "Rsvp:Pending": string
+  "Rsvp:Repeats": string
+  "Rsvp:SaveFailed": string
+  "Rsvp:Saving": string
+  "Rsvp:TryAgain": string
+  "Rsvp:When": string
+  "Rsvp:Where": string
   "Rules:AddClosure": string
   "Rules:Adding": string
   "Rules:AllDay": string
