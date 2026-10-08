@@ -6825,6 +6825,7 @@ export interface components {
             localStart: string;
             /** Format: int32 */
             minAttendees?: number | null;
+            myBusy: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
             myResponse?: components["schemas"]["Dixels.Bookings.InviteeResponseStatus"] | null;
             ownerName: string;
             recurrence?: components["schemas"]["Dixels.Bookings.RecurrenceDto"] | null;

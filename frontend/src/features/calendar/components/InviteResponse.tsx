@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/time/buildingTime'
 import type { IsoDate } from '@/lib/time/buildingTime'
 import { ApiError, InviteeResponseStatus } from '@/features/bookings/api/bookingsApi'
+import { BusyNote } from '@/components/BusyStatus'
+import type { BusyTime } from '@/components/BusyStatus'
 import { AnswerMark } from './InviteeList'
 
 /** Which dates an answer covers: this one, or (a series) every upcoming one. */
@@ -20,6 +22,8 @@ export interface InviteResponseProps {
   /** The booking's date, for "This date only (…)" on a series. */
   date: IsoDate
   isSeries: boolean
+  /** When I'm already taken at this time (my own bookings, other meetings I accepted): a heads-up next to Accept. */
+  busyTimes?: BusyTime[]
   onRespond: (status: InviteeResponseStatus, scope: AnswerScope) => Promise<void>
 }
 
@@ -31,7 +35,7 @@ const DECLINED_ON = 'border-[var(--state-cancelled-ink)]/40 bg-[var(--state-canc
  * soft red. On a series a click first asks "this date only, or all upcoming dates?" (all by
  * default). Once the meeting has started, or was cancelled, the answer only shows.
  */
-export function InviteResponse({ answer, open, date, isSeries, onRespond }: InviteResponseProps) {
+export function InviteResponse({ answer, open, date, isSeries, busyTimes = [], onRespond }: InviteResponseProps) {
   const { t } = useTranslation()
   const [asking, setAsking] = useState<InviteeResponseStatus | null>(null)
   const [scope, setScope] = useState<AnswerScope>('series')
@@ -71,6 +75,8 @@ export function InviteResponse({ answer, open, date, isSeries, onRespond }: Invi
       <span id="invite-answer-label" className="text-sm font-medium">
         {t('Booking:YourAnswer')}
       </span>
+
+      {open && <BusyNote times={busyTimes} />}
 
       {open ? (
         <div className="flex flex-wrap gap-2">

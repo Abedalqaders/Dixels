@@ -86,6 +86,24 @@ export function BusyStatus({ busy, dates }: { busy: PersonBusy | undefined; date
 }
 
 /**
+ * "You have another booking at this time (10:00–10:30)" — for a guest about to answer an
+ * invite while already taken. In the busy pill's red; a heads-up only, Accept still works.
+ */
+export function BusyNote({ times }: { times: BusyTime[] }) {
+  const { t } = useTranslation()
+  if (times.length === 0) return null
+  return (
+    <p
+      role="note"
+      className="m-0 flex items-start gap-2 rounded-md bg-[var(--state-cancelled-soft)] px-3 py-2 text-sm text-[var(--state-cancelled-ink)]"
+    >
+      <span className="mt-1.5 size-1.5 flex-none rounded-full bg-[var(--presence-busy)]" aria-hidden="true" />
+      {t('Booking:BusyWhenAnswering', { times: times.map(range).join(', ') })}
+    </p>
+  )
+}
+
+/**
  * One line above the guests: "2 people are busy at 10:00", or "Someone is busy on 4 of 8
  * dates" on a series. Nothing when everyone is free.
  */

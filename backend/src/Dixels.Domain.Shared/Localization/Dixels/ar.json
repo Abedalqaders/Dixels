@@ -428,6 +428,7 @@
     "Booking:InviteesCount_other": "{count} مدعو",
     "Booking:InvitedBy": "دعوة من {name}",
     "Booking:YourAnswer": "ردك",
+    "Booking:BusyWhenAnswering": "لديك حجز آخر في هذا الوقت ({times}). يمكنك القبول مع ذلك.",
     "Booking:Accept": "قبول",
     "Booking:Decline": "رفض",
     "Booking:AnswerAccepted": "مقبولة",

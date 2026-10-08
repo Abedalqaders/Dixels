@@ -52,6 +52,7 @@ function booking(patch: Partial<BookingDto> = {}): BookingDto {
     invitees: [rana],
     isOwner: true,
     ownerName: 'Me',
+    myBusy: [],
     capacity: 6,
     minAttendees: null,
     myResponse: null,

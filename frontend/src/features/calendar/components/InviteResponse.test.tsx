@@ -45,6 +45,21 @@ describe('InviteResponse', () => {
     expect(screen.queryByRole('group', { name: 'Answer for…' })).not.toBeInTheDocument()
   })
 
+  it("says when I'm already taken then, and still lets me accept", async () => {
+    const { onRespond, user } = renderAnswer({
+      busyTimes: [{ localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' }],
+    })
+
+    expect(screen.getByRole('note')).toHaveTextContent(/You have another booking at this time \(\W?10:00–10:30\W?\)\. You can still accept\./)
+    await user.click(screen.getByRole('button', { name: 'Accept' }))
+    expect(onRespond).toHaveBeenCalledWith(InviteeResponseStatus.Accepted, 'date')
+  })
+
+  it("shows no busy note when I'm free, nor once answers are closed", () => {
+    renderAnswer()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
   it('once the meeting has started, only shows the answer and says answers are closed', () => {
     renderAnswer({ open: false, answer: InviteeResponseStatus.Accepted })
 
