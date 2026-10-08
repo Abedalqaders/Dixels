@@ -392,6 +392,7 @@
     "Booking:InviteesCount_other": "{count} invited",
     "Booking:InvitedBy": "Invited by {name}",
     "Booking:YourAnswer": "Your answer",
+    "Booking:BusyWhenAnswering": "You have another booking at this time ({times}). You can still accept.",
     "Booking:Accept": "Accept",
     "Booking:Decline": "Decline",
     "Booking:AnswerAccepted": "Accepted",

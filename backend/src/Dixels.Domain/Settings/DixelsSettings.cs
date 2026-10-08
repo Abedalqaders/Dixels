@@ -21,4 +21,10 @@ public static class DixelsSettings
     /// Dixels)"). Answers to invites will be read from it (E6); the dev default is smtp4dev's.
     /// </summary>
     public const string RsvpMailboxAddress = Prefix + ".Emails.RsvpMailbox.Address";
+
+    /// <summary>
+    /// How many days outside guests' details (email, name) are kept after the booking ends or is
+    /// cancelled; then <see cref="Bookings.ExternalGuestCleanup"/> deletes them. 0 or less keeps them.
+    /// </summary>
+    public const string ExternalGuestRetentionDays = Prefix + ".Bookings.ExternalGuestRetentionDays";
 }

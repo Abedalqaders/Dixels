@@ -60,6 +60,7 @@ export interface TextKeys {
   "Booking:BuildingRemovedDetail": string
   "Booking:BuildingRemovedDetailCalendar": string
   "Booking:BuildingRemovedTitle": string
+  "Booking:BusyWhenAnswering": string
   "Booking:Cancel": string
   "Booking:CancelFailed": string
   "Booking:CancelOnlyUpcoming": string

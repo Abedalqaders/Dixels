@@ -148,6 +148,7 @@ export function BookingDetails({ item, booking, error, onRespond }: BookingDetai
           open={phase === 'upcoming'}
           date={date}
           isSeries={Boolean(booking.seriesId)}
+          busyTimes={booking.myBusy}
           onRespond={(status, scope) => onRespond(booking, status, scope)}
         />
       )}

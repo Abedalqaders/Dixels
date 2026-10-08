@@ -94,6 +94,19 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// <summary>The person's answer to each of these bookings they're a colleague guest of, in one query.</summary>
     Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(IReadOnlyCollection<Guid> bookingIds, Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Deletes up to <paramref name="batchSize"/> outside guests' rows (no UserId) of bookings that
+    /// ended, or were cancelled, before <paramref name="cutoff"/>, in one statement; returns how
+    /// many. Colleagues' rows and the bookings themselves are untouched.
+    /// </summary>
+    Task<int> DeleteExpiredExternalGuestsAsync(DateTimeOffset cutoff, int batchSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The same for series' own lists: only once none of the series' dates is still inside the
+    /// window (each ended, or was cancelled, before <paramref name="cutoff"/>).
+    /// </summary>
+    Task<int> DeleteExpiredSeriesExternalGuestsAsync(DateTimeOffset cutoff, int batchSize, CancellationToken cancellationToken = default);
+
     /// <summary>Whether the person is (still) a colleague guest of this booking.</summary>
     Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default);
 
