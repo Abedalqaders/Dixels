@@ -503,6 +503,7 @@ const DayColumn = memo(function DayColumn({
               // Cancelled by an admin: still shown so the person knows why it went, but clearly not theirs any more.
               // Someone else's booking I'm invited to: an outline on the plain background.
               b.invited && !b.cancelled && 'border-[1.5px] border-dashed border-brand bg-[var(--surface-raised)] shadow-none',
+              b.declined && !b.cancelled && 'line-through opacity-60',
               b.cancelled && 'border-dashed border-muted-foreground/50 bg-muted text-muted-foreground line-through opacity-80 shadow-none hover:bg-muted',
             )}
             style={{
@@ -513,7 +514,7 @@ const DayColumn = memo(function DayColumn({
               width: `calc(${100 / lanes}% - 4px)`,
               ...(started && !b.cancelled ? { backgroundImage: STARTED_HATCH } : {}),
             }}
-            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
+            aria-label={t(b.cancelled ? 'Calendar:CancelledItem' : b.declined ? 'Calendar:DeclinedItem' : b.invited ? 'Calendar:InvitedItem' : 'Calendar:Item', {
               title: b.title,
               start: timeOf(b.localStart),
               end: timeOf(b.localEnd),

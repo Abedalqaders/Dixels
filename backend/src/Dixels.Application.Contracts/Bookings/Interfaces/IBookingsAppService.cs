@@ -32,6 +32,18 @@ public interface IBookingsAppService : IApplicationService
     /// </summary>
     Task<ListResultDto<BookingDto>> CancelAsync(Guid id, CancelBookingDto input);
 
+    /// <summary>
+    /// A colleague guest accepts or declines one date they're invited to. Only a guest may (the
+    /// organiser gets 403, anyone else 404); closed once the meeting starts or is cancelled.
+    /// </summary>
+    Task<BookingDto> RespondAsync(Guid id, RespondToInviteDto input);
+
+    /// <summary>
+    /// The same for a whole series: the series and every upcoming date, overwriting answers
+    /// given to single dates. Nothing to return (204).
+    /// </summary>
+    Task RespondToSeriesAsync(Guid seriesId, RespondToInviteDto input);
+
     /// <summary>Every date of a recurring booking checked against every rule, without reserving anything.</summary>
     Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input);
 

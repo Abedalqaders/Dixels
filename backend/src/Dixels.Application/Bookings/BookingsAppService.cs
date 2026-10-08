@@ -33,6 +33,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly IIdentityUserRepository _userRepository;
     private readonly ConstraintResolver _constraintResolver;
     private readonly BookingAccess _bookingAccess;
+    private readonly BookingResponses _bookingResponses;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -47,7 +48,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         LocalizedNameReader nameReader,
         IIdentityUserRepository userRepository,
         ConstraintResolver constraintResolver,
-        BookingAccess bookingAccess)
+        BookingAccess bookingAccess,
+        BookingResponses bookingResponses)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -62,6 +64,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _userRepository = userRepository;
         _constraintResolver = constraintResolver;
         _bookingAccess = bookingAccess;
+        _bookingResponses = bookingResponses;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -163,6 +166,15 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var cancelled = await _bookingManager.CancelOwnAsync(CurrentUser.GetId(), id, input.Reason, input.Scope);
         return new ListResultDto<BookingDto>(await MapToDtosAsync(cancelled.ToList()));
     }
+
+    public async Task<BookingDto> RespondAsync(Guid id, RespondToInviteDto input)
+    {
+        var booking = await _bookingResponses.RespondAsync(id, CurrentUser.GetId(), input.Status);
+        return (await MapToDtosAsync(new[] { booking })).Single();
+    }
+
+    public Task RespondToSeriesAsync(Guid seriesId, RespondToInviteDto input) =>
+        _bookingResponses.RespondToSeriesAsync(seriesId, CurrentUser.GetId(), input.Status);
 
     public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
     {
@@ -371,6 +383,9 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         var spaces = (await _spaceRepository.GetListAsync(s => spaceIds.Contains(s.Id), includeDetails: true)).ToDictionary(s => s.Id);
         var names = await _nameReader.ShownAsync<Space, SpaceTranslation>(spaces.Values);
 
+        // My answers to the invites among them — one small query, and only when there are invites.
+        var responses = await _bookingRepository.GetResponsesAsync(bookings.Where(b => b.UserId != me).Select(b => b.Id).ToList(), me);
+
         var floorIds = spaces.Values.Select(s => s.FloorId).Distinct().ToList();
         var floors = await _floorRepository.GetQueryableAsync();
         var buildings = await _buildingRepository.GetQueryableAsync();
@@ -395,6 +410,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
                 Status = booking.Status.ToString(),
                 SeriesId = booking.SeriesId,
                 IsInvited = booking.UserId != me,
+                MyResponse = booking.UserId == me ? null : responses.GetValueOrDefault(booking.Id),
             };
         }).ToList();
     }
@@ -459,6 +475,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
             dto.IsOwner = booking.UserId == me;
             dto.OwnerName = users.TryGetValue(booking.UserId, out var owner) ? owner.DisplayName() : string.Empty;
             dto.Invitees = booking.Invitees.Select(i => ToInviteeDto(i, users, dto.IsOwner)).ToList();
+            dto.MyResponse = dto.IsOwner ? null : booking.Invitees.FirstOrDefault(i => i.UserId == me)?.ResponseStatus;
             return dto;
         }).ToList();
     }
