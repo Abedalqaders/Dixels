@@ -28,7 +28,7 @@ export function HeadCount({
         {t('HeadCount:Label')}
       </span>
       <p className="text-sm" aria-describedby={message ? `${id}-error` : undefined}>
-        <span className="font-mono font-medium">{t('HeadCount:People', { count: people })}</span>
+        <span className="font-medium tabular-nums">{t('HeadCount:People', { count: people })}</span>
         <span className="text-muted-foreground"> · {guests === 0 ? t('HeadCount:JustYou') : t('HeadCount:YouAndGuests', { count: guests })}</span>
       </p>
       {short > 0 && <p className="text-sm text-[var(--state-expired-ink)]">{t('HeadCount:InviteMore', { count: short, min: minAttendees })}</p>}
