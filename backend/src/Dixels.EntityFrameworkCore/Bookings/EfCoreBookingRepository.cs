@@ -187,6 +187,22 @@ public class EfCoreBookingRepository : EfCoreRepository<DixelsDbContext, Booking
             .ToListAsync(GetCancellationToken(cancellationToken));
     }
 
+    public async Task<Dictionary<Guid, InviteeResponseStatus>> GetResponsesAsync(
+        IReadOnlyCollection<Guid> bookingIds,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (bookingIds.Count == 0)
+        {
+            return new Dictionary<Guid, InviteeResponseStatus>();
+        }
+
+        var dbContext = await GetDbContextAsync();
+        return await dbContext.Set<BookingAttendee>()
+            .Where(a => a.UserId == userId && bookingIds.Contains(a.BookingId))
+            .ToDictionaryAsync(a => a.BookingId, a => a.ResponseStatus, GetCancellationToken(cancellationToken));
+    }
+
     public async Task<bool> IsInviteeAsync(Guid bookingId, Guid userId, CancellationToken cancellationToken = default)
     {
         var dbContext = await GetDbContextAsync();

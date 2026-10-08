@@ -31,4 +31,7 @@ public class BookingSummaryDto : EntityDto<Guid>
 
     /// <summary>Someone else's booking I'm invited to (read-only), rather than my own.</summary>
     public bool IsInvited { get; set; }
+
+    /// <summary>My answer to an invite (a declined one is drawn faded); null for my own bookings.</summary>
+    public InviteeResponseStatus? MyResponse { get; set; }
 }

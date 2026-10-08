@@ -65,6 +65,8 @@
     "Dixels:Bookings:NotYours": "You can only cancel your own bookings.",
     "Dixels:Bookings:OrganiserOnly": "Only the organiser can do this.",
     "Dixels:Bookings:OnlyOrganiserCancels": "Only the organiser can cancel this booking.",
+    "Dixels:Bookings:OrganiserCannotRespond": "You organised this booking, so there's no invitation to answer.",
+    "Dixels:Bookings:ResponseClosed": "Answers are closed: this meeting has started or was cancelled.",
     "Dixels:Bookings:AlreadyStarted": "This booking has already started, so it can't be cancelled.",
     "Dixels:Bookings:InvalidDateRange": "Pick a date range of 1 to {maxDays} days, with the end after the start.",
     "Dixels:Bookings:OwnOverlap": "You already have {spaceName} booked {from}–{until}, and this building allows one booking at a time. Cancel that booking or pick another time.",

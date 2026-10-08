@@ -240,6 +240,7 @@ export interface TextKeys {
   "Dixels:Bookings:NotCancellable": string
   "Dixels:Bookings:NotYours": string
   "Dixels:Bookings:OnlyOrganiserCancels": string
+  "Dixels:Bookings:OrganiserCannotRespond": string
   "Dixels:Bookings:OrganiserOnly": string
   "Dixels:Bookings:OutsideHours": string
   "Dixels:Bookings:OutsideHours:Short": string
@@ -251,6 +252,7 @@ export interface TextKeys {
   "Dixels:Bookings:OwnOverlap:Short": string
   "Dixels:Bookings:OwnOverlapWarning": string
   "Dixels:Bookings:OwnOverlapWarning:Short": string
+  "Dixels:Bookings:ResponseClosed": string
   "Dixels:Bookings:SeriesBeyondHorizon": string
   "Dixels:Bookings:SeriesDateUnavailable": string
   "Dixels:Bookings:SeriesEndBeforeStart": string

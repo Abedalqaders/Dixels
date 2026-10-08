@@ -43,4 +43,7 @@ public class BookingDto : EntityDto<Guid>
 
     /// <summary>Who booked it, for "Invited by …".</summary>
     public string OwnerName { get; set; } = string.Empty;
+
+    /// <summary>My answer when I'm a colleague guest; null when it's my own booking.</summary>
+    public InviteeResponseStatus? MyResponse { get; set; }
 }

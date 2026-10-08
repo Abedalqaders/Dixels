@@ -62,6 +62,27 @@ public class BookingsCancelledEvent
     }
 }
 
+/// <summary>
+/// A colleague guest answered an invitation: one date (<see cref="BookingId"/>), or a whole
+/// series and its upcoming dates (<see cref="SeriesId"/>). For the owner's "declined" email
+/// later; nothing listens yet.
+/// </summary>
+public class BookingInviteeRespondedEvent
+{
+    public Guid? BookingId { get; }
+    public Guid? SeriesId { get; }
+    public Guid UserId { get; }
+    public InviteeResponseStatus Status { get; }
+
+    public BookingInviteeRespondedEvent(Guid? bookingId, Guid? seriesId, Guid userId, InviteeResponseStatus status)
+    {
+        BookingId = bookingId;
+        SeriesId = seriesId;
+        UserId = userId;
+        Status = status;
+    }
+}
+
 /// <summary>A booking starts soon and is due its one reminder (see BookingReminders).</summary>
 public class BookingReminderDueEvent
 {

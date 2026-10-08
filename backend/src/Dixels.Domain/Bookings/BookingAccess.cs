@@ -55,14 +55,16 @@ public class BookingAccess : DomainService
     /// <summary>
     /// Lets the call through when the person's role is one of <paramref name="allowed"/>.
     /// Otherwise: someone with no role is told the booking doesn't exist (404), so a guessed id
-    /// reveals nothing; a guest asking for an organiser-only action is told so plainly (403,
-    /// <see cref="DixelsDomainErrorCodes.BookingOrganiserOnly"/>) — they already know it exists.
+    /// reveals nothing; someone with a role that isn't allowed — a guest asking for an
+    /// organiser-only action, or the organiser for a guest-only one like answering — is told so
+    /// plainly (403, <see cref="DixelsDomainErrorCodes.BookingOrganiserOnly"/> or the code
+    /// given), since they already know it exists.
     /// </summary>
     public Task EnsureAsync(Booking booking, Guid userId, params BookingRole[] allowed) =>
         EnsureAsync(booking, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
 
-    /// <summary>The same, with the error code a refused guest gets — e.g. one that names the action.</summary>
-    public async Task EnsureAsync(Booking booking, Guid userId, string guestRefusedCode, params BookingRole[] allowed)
+    /// <summary>The same, with the error code a refused (known) role gets — e.g. one that names the action.</summary>
+    public async Task EnsureAsync(Booking booking, Guid userId, string refusedCode, params BookingRole[] allowed)
     {
         var role = await GetRoleAsync(booking, userId);
         if (allowed.Contains(role))
@@ -75,6 +77,6 @@ public class BookingAccess : DomainService
             throw new EntityNotFoundException(typeof(Booking), booking.Id);
         }
 
-        throw new BusinessException(guestRefusedCode);
+        throw new BusinessException(refusedCode);
     }
 }

@@ -65,6 +65,8 @@
     "Dixels:Bookings:NotYours": "يمكنك إلغاء حجوزاتك فقط.",
     "Dixels:Bookings:OrganiserOnly": "المنظّم وحده يستطيع القيام بذلك.",
     "Dixels:Bookings:OnlyOrganiserCancels": "المنظّم وحده يستطيع إلغاء هذا الحجز.",
+    "Dixels:Bookings:OrganiserCannotRespond": "أنت منظّم هذا الحجز، فلا توجد دعوة للرد عليها.",
+    "Dixels:Bookings:ResponseClosed": "أُغلق الرد: بدأ هذا الاجتماع أو أُلغي.",
     "Dixels:Bookings:AlreadyStarted": "بدأ هذا الحجز بالفعل، لذا لا يمكن إلغاؤه.",
     "Dixels:Bookings:InvalidDateRange": "اختر نطاقًا من 1 إلى {maxDays} يومًا، على أن يكون تاريخ الانتهاء بعد تاريخ البدء.",
     "Dixels:Bookings:OwnOverlap": "لديك بالفعل حجز في {spaceName} من {from} إلى {until}، وهذا المبنى يسمح بحجز واحد في كل مرة. ألغِ ذلك الحجز أو اختر وقتًا آخر.",

@@ -27,6 +27,7 @@ public class HttpExceptionStatusCodeTests
             [DixelsDomainErrorCodes.BookingIdempotencyKeyReused] = HttpStatusCode.Conflict,
             [DixelsDomainErrorCodes.BookingOrganiserOnly] = HttpStatusCode.Forbidden,
             [DixelsDomainErrorCodes.BookingOnlyOrganiserCancels] = HttpStatusCode.Forbidden,
+            [DixelsDomainErrorCodes.BookingOrganiserCannotRespond] = HttpStatusCode.Forbidden,
         },
     }));
 
@@ -53,6 +54,9 @@ public class HttpExceptionStatusCodeTests
         // A guest asking for an organiser-only action: a deliberate 403, not turned into a 400.
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOrganiserOnly)).ShouldBe(HttpStatusCode.Forbidden);
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels)).ShouldBe(HttpStatusCode.Forbidden);
+        StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOrganiserCannotRespond)).ShouldBe(HttpStatusCode.Forbidden);
+        // An answer to a meeting that has started is a rejected request, not a permission problem.
+        StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingResponseClosed)).ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]

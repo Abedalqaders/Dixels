@@ -135,6 +135,22 @@ public class Booking : AuditedAggregateRoot<Guid>
         return _invitees.Replace(invitees, invitee => new BookingAttendee(guidGenerator.Create(), Id, EndsAt, invitee));
     }
 
+    /// <summary>
+    /// A colleague guest's answer to this date. Answers close once the meeting starts, or when
+    /// it's no longer happening (cancelled) — <see cref="DixelsDomainErrorCodes.BookingResponseClosed"/>.
+    /// </summary>
+    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    {
+        if (Status != BookingStatus.Confirmed || StartsAt <= now)
+        {
+            throw new BusinessException(DixelsDomainErrorCodes.BookingResponseClosed);
+        }
+
+        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
+                  ?? throw new InvalidOperationException("Only a colleague guest of this booking can answer it (BookingAccess checks that first).");
+        row.Respond(status, now);
+    }
+
     /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
     internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)
     {

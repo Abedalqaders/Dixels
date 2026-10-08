@@ -16,6 +16,7 @@ using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement;
+using Volo.Abp.Validation;
 using Xunit;
 
 namespace Dixels.EntityFrameworkCore.Bookings;
@@ -496,6 +497,100 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
         }
 
         (await _bookingRepository.GetAsync(created.Id)).Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    // ---- Answering an invitation (T5) ----
+
+    private static RespondToInviteDto Answer(InviteeResponseStatus status) => new() { Status = status };
+
+    [Fact]
+    public async Task A_guest_accepts_then_declines_and_everyone_invited_sees_the_answer()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 3, Colleague(s.Rana), Colleague(s.Omar)));
+        }
+
+        var answered = new List<BookingInviteeRespondedEvent>();
+        using (GetRequiredService<ILocalEventBus>().Subscribe<BookingInviteeRespondedEvent>(e => { answered.Add(e); return Task.CompletedTask; }))
+        using (ActAs(s.Rana.Id))
+        {
+            (await _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Accepted))).MyResponse.ShouldBe(InviteeResponseStatus.Accepted);
+            (await _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Declined))).MyResponse.ShouldBe(InviteeResponseStatus.Declined);
+        }
+
+        answered.Select(e => (e.BookingId, e.SeriesId, e.UserId, e.Status)).ShouldBe(new (Guid?, Guid?, Guid, InviteeResponseStatus)[]
+        {
+            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Accepted),
+            (created.Id, null, s.Rana.Id, InviteeResponseStatus.Declined),
+        });
+
+        // The owner and the other guest both see Rana's answer; the owner has none of their own.
+        BookingDto byOwner, byOmar;
+        using (ActAs(s.Owner.Id)) { byOwner = await _bookings.GetAsync(created.Id); }
+        using (ActAs(s.Omar.Id)) { byOmar = await _bookings.GetAsync(created.Id); }
+        byOwner.MyResponse.ShouldBeNull();
+        foreach (var read in new[] { byOwner, byOmar })
+        {
+            read.Invitees.Single(i => i.UserId == s.Rana.Id).ResponseStatus.ShouldBe(InviteeResponseStatus.Declined);
+            read.Invitees.Single(i => i.UserId == s.Omar.Id).ResponseStatus.ShouldBe(InviteeResponseStatus.Pending);
+        }
+        byOmar.MyResponse.ShouldBe(InviteeResponseStatus.Pending);
+
+        // My calendar carries my answer (a declined invite is drawn faded); my own bookings have none.
+        (await CalendarOfAsync(s.Rana)).ShouldHaveSingleItem().MyResponse.ShouldBe(InviteeResponseStatus.Declined);
+        (await CalendarOfAsync(s.Owner)).ShouldHaveSingleItem().MyResponse.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task The_organiser_has_nothing_to_answer_and_a_stranger_is_told_it_does_not_exist()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+            (await RejectionCodeAsync(() => _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Accepted))))
+                .ShouldBe(DixelsDomainErrorCodes.BookingOrganiserCannotRespond);
+        }
+
+        using (ActAs(s.Omar.Id))
+        {
+            await Should.ThrowAsync<EntityNotFoundException>(() => _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Accepted)));
+        }
+    }
+
+    [Fact]
+    public async Task Answers_close_once_the_booking_is_cancelled()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+        }
+        await WithUnitOfWorkAsync(() => GetRequiredService<BookingImpactChecker>()
+            .CancelUpcomingAsAdminAsync(new[] { created.Id }, Guid.NewGuid(), "The room was removed"));
+
+        using var _ = ActAs(s.Rana.Id);
+        (await RejectionCodeAsync(() => _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Declined))))
+            .ShouldBe(DixelsDomainErrorCodes.BookingResponseClosed);
+    }
+
+    [Fact]
+    public async Task Pending_is_not_an_answer()
+    {
+        var s = await CreateScenarioAsync();
+        BookingDto created;
+        using (ActAs(s.Owner.Id))
+        {
+            created = await _bookings.CreateAsync(Request(s.SpaceId, 2, Colleague(s.Rana)));
+        }
+
+        using var _ = ActAs(s.Rana.Id);
+        await Should.ThrowAsync<AbpValidationException>(() => _bookings.RespondAsync(created.Id, Answer(InviteeResponseStatus.Pending)));
     }
 
     // ---- Colleague search ----

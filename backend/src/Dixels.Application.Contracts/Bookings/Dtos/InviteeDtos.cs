@@ -37,8 +37,22 @@ public class BookingInviteeDto
 
     public bool IsExternal { get; set; }
 
-    /// <summary>Their answer to the invitation; Pending until accept/decline exists.</summary>
+    /// <summary>Their answer: Pending until they accept or decline. Everyone invited sees everyone's.</summary>
     public InviteeResponseStatus ResponseStatus { get; set; }
+}
+
+/// <summary>A colleague guest's answer to an invitation: Accepted or Declined.</summary>
+public class RespondToInviteDto : IValidatableObject
+{
+    public InviteeResponseStatus Status { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Status is not (InviteeResponseStatus.Accepted or InviteeResponseStatus.Declined))
+        {
+            yield return new ValidationResult("An answer is Accepted or Declined.", new[] { nameof(Status) });
+        }
+    }
 }
 
 /// <summary>The owner changing who's invited after booking — and the head count, which must leave room for them.</summary>
