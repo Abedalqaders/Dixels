@@ -15,6 +15,7 @@ using Volo.Abp.EventBus.Local;
 using Volo.Abp.Identity;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.SettingManagement;
+using Volo.Abp.Settings;
 using Xunit;
 
 namespace Dixels.EntityFrameworkCore.Bookings;
@@ -148,9 +149,17 @@ public class BookingInviteesTests : DixelsApplicationTestBase<DixelsEntityFramew
     }
 
     [Fact]
+    public async Task External_guests_are_allowed_by_default_now_that_they_get_an_invite()
+    {
+        (await GetRequiredService<ISettingDefinitionManager>().GetAsync(DixelsSettings.ExternalGuestsEnabled)).DefaultValue.ShouldBe("true");
+    }
+
+    [Fact]
     public async Task External_guests_are_refused_while_the_switch_is_off()
     {
         var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(() =>
+            GetRequiredService<ISettingManager>().SetGlobalAsync(DixelsSettings.ExternalGuestsEnabled, "false"));
         using var _ = ActAs(s.Owner.Id);
 
         (await RejectionCodeAsync(() => _bookings.PreviewAsync(Request(s.SpaceId, 2, ByEmail("guest@outside.io")))))

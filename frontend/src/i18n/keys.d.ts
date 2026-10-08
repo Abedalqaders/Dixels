@@ -303,6 +303,7 @@ export interface TextKeys {
   "Email:AdminCancelled:More": string
   "Email:AdminCancelled:Subject": string
   "Email:AdminCancelled:SubjectMany": string
+  "Email:AlsoInvited": string
   "Email:AndMore": string
   "Email:Attendees": string
   "Email:BookingCancelled:Heading": string
@@ -317,8 +318,16 @@ export interface TextKeys {
   "Email:FindAnotherRoom": string
   "Email:Footer": string
   "Email:Greeting": string
+  "Email:GuestMark": string
+  "Email:Guests": string
+  "Email:Invite:Footer": string
+  "Email:Invite:Heading": string
+  "Email:Invite:Subject": string
+  "Email:Invite:SubjectSeries": string
+  "Email:InvitedBy": string
   "Email:ListSeparator": string
   "Email:NotOn": string
+  "Email:OpenInDixels": string
   "Email:Ordinal:1": string
   "Email:Ordinal:2": string
   "Email:Ordinal:3": string
@@ -342,6 +351,7 @@ export interface TextKeys {
   "Email:Status:Invitation": string
   "Email:Status:Reminder": string
   "Email:Status:Updated": string
+  "Email:UnnamedGuest": string
   "Email:ViewBooking": string
   "Email:When": string
   "Email:Where": string

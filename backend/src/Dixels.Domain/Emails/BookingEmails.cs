@@ -11,12 +11,14 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Volo.Abp;
+using Volo.Abp.BackgroundJobs;
 using Volo.Abp.Data;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Domain.Services;
 using Volo.Abp.Emailing;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
+using Volo.Abp.Settings;
 using Volo.Abp.TextTemplating;
 
 namespace Dixels.Emails;
@@ -33,7 +35,7 @@ namespace Dixels.Emails;
 /// cancellations are the one exception: they're gathered into one email per person, written
 /// later by <see cref="AdminCancelledEmailJob"/> (see <see cref="AdminCancelEmailQueue"/>).
 /// </summary>
-public class BookingEmails : DomainService
+public partial class BookingEmails : DomainService
 {
     private readonly IIdentityUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
@@ -46,6 +48,8 @@ public class BookingEmails : DomainService
     private readonly IEmailSender _emailSender;
     private readonly IStringLocalizer<DixelsResource> _localizer;
     private readonly IDataFilter _dataFilter;
+    private readonly IBackgroundJobManager _backgroundJobManager;
+    private readonly ISettingProvider _settingProvider;
     private readonly EmailOptions _options;
 
     public BookingEmails(
@@ -60,6 +64,8 @@ public class BookingEmails : DomainService
         IEmailSender emailSender,
         IStringLocalizer<DixelsResource> localizer,
         IDataFilter dataFilter,
+        IBackgroundJobManager backgroundJobManager,
+        ISettingProvider settingProvider,
         IOptions<EmailOptions> options)
     {
         _userRepository = userRepository;
@@ -73,18 +79,22 @@ public class BookingEmails : DomainService
         _emailSender = emailSender;
         _localizer = localizer;
         _dataFilter = dataFilter;
+        _backgroundJobManager = backgroundJobManager;
+        _settingProvider = settingProvider;
         _options = options.Value;
     }
 
     /// <summary>"You're booked" — for a booking the employee just made.</summary>
     public Task SendConfirmedAsync(Booking booking)
     {
-        return SendAsync(booking.UserId, booking.SpaceId, DixelsEmailTemplates.BookingConfirmed, (model, clock) =>
+        return SendAsync(booking.UserId, booking.SpaceId, DixelsEmailTemplates.BookingConfirmed, async (model, clock) =>
         {
             Describe(model, clock, booking);
             model.Status = EmailStatus.Confirmed;
             model.Attendees = booking.Attendees;
+            model.Guests = await GuestListForOwnerAsync(booking.Invitees.Select(i => i.ToInvitee()));
             model.Heading = _localizer["Email:BookingConfirmed:Heading", TitleOrRoom(model)];
+            model.Calendar = await OwnerCalendarAsync(model, clock, $"{booking.Id}@dixels", booking.StartsAt, booking.EndsAt, null, Array.Empty<DateOnly>());
             return _localizer["Email:BookingConfirmed:Subject", model.SpaceName, model.Date];
         });
     }
@@ -97,7 +107,7 @@ public class BookingEmails : DomainService
             return Task.CompletedTask;
         }
 
-        return SendAsync(series.UserId, series.SpaceId, DixelsEmailTemplates.SeriesConfirmed, (model, clock) =>
+        return SendAsync(series.UserId, series.SpaceId, DixelsEmailTemplates.SeriesConfirmed, async (model, clock) =>
         {
             var first = bookings.MinBy(b => b.StartsAt)!;
             Describe(model, clock, first);
@@ -111,11 +121,10 @@ public class BookingEmails : DomainService
             var rule = series.Rule;
             model.Rows[0].Date = RepeatText(rule, series.FirstDate);
             model.RepeatsFrom = _localizer["Email:RepeatsFrom", model.Date];
-            var booked = bookings.Select(b => clock.LocalDate(b.StartsAt)).ToHashSet();
-            var skipped = RecurrenceExpander.Expand(rule, series.FirstDate, BookingConsts.MaxSeriesOccurrences)
-                .Where(d => !booked.Contains(d))
-                .ToList();
+            var skipped = Skipped(series, bookings, clock);
             model.NotOn = skipped.Count == 0 ? null : Listed(skipped.Select(BookingFormat.Date), ShownSkippedDates);
+            model.Guests = await GuestListForOwnerAsync(series.Invitees.Select(i => i.ToInvitee()));
+            model.Calendar = await OwnerCalendarAsync(model, clock, $"{series.Id}@dixels", first.StartsAt, first.EndsAt, rule, skipped);
 
             return _localizer["Email:SeriesConfirmed:Subject", model.SpaceName];
         });
@@ -178,7 +187,7 @@ public class BookingEmails : DomainService
     /// </summary>
     public async Task SendAdminCancelledAsync(Guid userId, IReadOnlyCollection<Guid> bookingIds, int count)
     {
-        var user = await _userRepository.FindAsync(userId);
+        var user = await _userRepository.FindAsync(userId, includeDetails: false);
         if (user is null || !user.IsActive || string.IsNullOrWhiteSpace(user.Email))
         {
             return;
@@ -274,11 +283,16 @@ public class BookingEmails : DomainService
     /// adds the booking-specific parts (it runs in that language) and returns the subject.
     /// Never throws: an email that can't be written is logged, and the booking goes ahead.
     /// </summary>
-    private async Task SendAsync(Guid userId, Guid spaceId, string template, Func<BookingEmailModel, BuildingClock, string> fill)
+    private Task SendAsync(Guid userId, Guid spaceId, string template, Func<BookingEmailModel, BuildingClock, string> fill) =>
+        SendAsync(userId, spaceId, template, (model, clock) => Task.FromResult(fill(model, clock)));
+
+    /// <inheritdoc cref="SendAsync(Guid, Guid, string, Func{BookingEmailModel, BuildingClock, string})"/>
+    /// <remarks>An email with a calendar file (<see cref="BookingEmailModel.Calendar"/>) goes through <see cref="SendEmailJob"/>.</remarks>
+    private async Task SendAsync(Guid userId, Guid spaceId, string template, Func<BookingEmailModel, BuildingClock, Task<string>> fill)
     {
         try
         {
-            var user = await _userRepository.FindAsync(userId);
+            var user = await _userRepository.FindAsync(userId, includeDetails: false);
             if (user is null || string.IsNullOrWhiteSpace(user.Email))
             {
                 return;
@@ -291,19 +305,30 @@ public class BookingEmails : DomainService
                 var floor = await _floorRepository.GetAsync(space.FloorId, includeDetails: true);
                 var building = await _buildingRepository.GetAsync(floor.BuildingId, includeDetails: true);
 
-                var buildingNames = await _nameReader.ShownTranslationAsync(building);
                 var model = new BookingEmailModel
                 {
                     RecipientName = DisplayName(user),
-                    SpaceName = await _nameReader.ShownAsync(space),
-                    FloorName = await _nameReader.ShownAsync(floor),
-                    BuildingName = buildingNames?.Name ?? string.Empty,
-                    Address = buildingNames?.Address,
                     FindUrl = AppLink("/find-space"),
                 };
-                var subject = fill(model, new BuildingClock(building.Timezone));
+                await NamePlaceAsync(model, space, floor, building);
+                var subject = await fill(model, new BuildingClock(building.Timezone));
+                var body = await RenderAsync(template, model, language);
 
-                await _emailSender.QueueAsync(user.Email, subject, await RenderAsync(template, model, language));
+                if (model.Calendar is null)
+                {
+                    await _emailSender.QueueAsync(user.Email, subject, body);
+                }
+                else
+                {
+                    await _backgroundJobManager.EnqueueAsync(new SendEmailArgs
+                    {
+                        To = user.Email,
+                        Subject = subject,
+                        Body = body,
+                        Ics = IcsBuilder.Build(model.Calendar),
+                        IcsMethod = model.Calendar.Method,
+                    });
+                }
             }
         }
         catch (Exception ex)
@@ -340,11 +365,14 @@ public class BookingEmails : DomainService
     /// The booking's When / Where block and the parts the subject and details use: its date,
     /// time and zone on the building's clock, its title, and "View booking" on its day.
     /// </summary>
-    private void Describe(BookingEmailModel model, BuildingClock clock, Booking booking)
+    private void Describe(BookingEmailModel model, BuildingClock clock, Booking booking) =>
+        Describe(model, clock, booking.StartsAt, booking.EndsAt, booking.Title);
+
+    private void Describe(BookingEmailModel model, BuildingClock clock, DateTimeOffset startsAt, DateTimeOffset endsAt, string? title)
     {
-        var date = clock.LocalDate(booking.StartsAt);
+        var date = clock.LocalDate(startsAt);
         model.Date = BookingFormat.Date(date);
-        model.Title = booking.Title;
+        model.Title = title;
         model.Count = 1;
         model.ViewUrl = AppLink($"/my-calendar?view=day&date={date:yyyy-MM-dd}");
         model.Rows.Add(new BookingEmailRow
@@ -353,8 +381,8 @@ public class BookingEmails : DomainService
             FloorName = model.FloorName,
             BuildingName = model.BuildingName,
             Date = model.Date,
-            Time = TimeRange(clock.ToLocal(booking.StartsAt), clock.ToLocal(booking.EndsAt)),
-            Zone = ZoneLabel(clock, booking.StartsAt),
+            Time = TimeRange(clock.ToLocal(startsAt), clock.ToLocal(endsAt)),
+            Zone = ZoneLabel(clock, startsAt),
         });
     }
 
