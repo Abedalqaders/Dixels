@@ -125,7 +125,7 @@ public sealed class ImapRsvpMailbox : IRsvpMailbox, ITransientDependency
     {
         if (!_client.IsConnected)
         {
-            var host = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxImapHost);
+            var host = await RequiredAsync(DixelsSettings.RsvpMailboxImapHost);
             var port = int.Parse(await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxImapPort) ?? "993");
             var useSsl = bool.Parse(await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxImapUseSsl) ?? "true");
             await _client.ConnectAsync(host, port, useSsl ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTlsWhenAvailable, cancellationToken);
@@ -133,7 +133,7 @@ public sealed class ImapRsvpMailbox : IRsvpMailbox, ITransientDependency
 
         if (!_client.IsAuthenticated)
         {
-            var userName = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxImapUserName);
+            var userName = await RequiredAsync(DixelsSettings.RsvpMailboxImapUserName);
             var password = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxImapPassword);
             await _client.AuthenticateAsync(userName, password ?? string.Empty, cancellationToken);
         }
@@ -144,6 +144,15 @@ public sealed class ImapRsvpMailbox : IRsvpMailbox, ITransientDependency
         }
 
         return _client.Inbox;
+    }
+
+    /// <summary>A setting the mailbox can't be reached without; missing, the worker logs this and tries again later.</summary>
+    private async Task<string> RequiredAsync(string name)
+    {
+        var value = await _settingProvider.GetOrNullAsync(name);
+        return string.IsNullOrWhiteSpace(value)
+            ? throw new InvalidOperationException($"The rsvp mailbox needs the setting {name}.")
+            : value;
     }
 
     /// <summary>
