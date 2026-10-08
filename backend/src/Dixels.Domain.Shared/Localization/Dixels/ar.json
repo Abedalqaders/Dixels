@@ -1126,6 +1126,16 @@
     "Email:Ordinal:2": "الثاني",
     "Email:Ordinal:3": "الثالث",
     "Email:Ordinal:4": "الرابع",
-    "Email:Ordinal:5": "الأخير"
+    "Email:Ordinal:5": "الأخير",
+    "Email:Guests": "الضيوف",
+    "Email:GuestMark": "{0} (ضيف)",
+    "Email:InvitedBy": "الداعي",
+    "Email:AlsoInvited": "مدعوون آخرون",
+    "Email:UnnamedGuest": "ضيف",
+    "Email:OpenInDixels": "افتح في Dixels",
+    "Email:Invite:Heading": "دعوة من {0} إلى {1}",
+    "Email:Invite:Subject": "دعوة: {0} · {1}، {2}",
+    "Email:Invite:SubjectSeries": "دعوة: {0} · من {1}",
+    "Email:Invite:Footer": "أرسل Dixels هذه الرسالة لأنك مدعو إلى اجتماع من {0}."
   }
 }

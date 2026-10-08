@@ -27,7 +27,7 @@ public class FakeEmailSender : IEmailSender
         => Record(to, subject, body);
 
     public Task SendAsync(MailMessage mail, bool normalize = true)
-        => Record(mail.To.ToString(), mail.Subject, mail.Body);
+        => Record(mail.To.ToString(), mail.Subject, mail.Body, mail);
 
     public Task QueueAsync(string to, string subject, string body, bool isBodyHtml = true, AdditionalEmailSendingArgs? additionalEmailSendingArgs = null)
         => Record(to, subject, body);
@@ -35,11 +35,12 @@ public class FakeEmailSender : IEmailSender
     public Task QueueAsync(string from, string to, string subject, string body, bool isBodyHtml = true, AdditionalEmailSendingArgs? additionalEmailSendingArgs = null)
         => Record(to, subject, body);
 
-    private Task Record(string to, string? subject, string? body)
+    private Task Record(string to, string? subject, string? body, MailMessage? mail = null)
     {
-        _sent.Enqueue(new SentEmail(to, subject ?? "", body ?? ""));
+        _sent.Enqueue(new SentEmail(to, subject ?? "", body ?? "", mail));
         return Task.CompletedTask;
     }
 }
 
-public record SentEmail(string To, string Subject, string Body);
+/// <summary>What was sent; <see cref="Mail"/> is the whole message when it was sent as one (with its reply-to, sender name, attachments).</summary>
+public record SentEmail(string To, string Subject, string Body, MailMessage? Mail = null);

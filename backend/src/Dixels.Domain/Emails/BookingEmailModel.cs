@@ -57,6 +57,27 @@ public class BookingEmailModel
 
     /// <summary>"Find another room".</summary>
     public string FindUrl { get; set; } = string.Empty;
+
+    /// <summary>The booker's own email: their guests, by name ("Omar Farouk (guest)"). Null for none.</summary>
+    public string? Guests { get; set; }
+
+    /// <summary>A guest's email: who invited them.</summary>
+    public string? InvitedBy { get; set; }
+
+    /// <summary>A guest's email: the other guests, by name only. Null for none.</summary>
+    public string? AlsoInvited { get; set; }
+
+    /// <summary>A guest's email: whether they have a Dixels account to open it in (colleagues do, outsiders don't).</summary>
+    public bool CanOpen { get; set; }
+
+    /// <summary>A guest's email: about a series (repeats, from, not on).</summary>
+    public bool IsSeries { get; set; }
+
+    /// <summary>The footer line, when not the usual "about your bookings".</summary>
+    public string? Footer { get; set; }
+
+    /// <summary>The calendar file the email carries, if any (not shown; attached by <see cref="SendEmailJob"/>).</summary>
+    public IcsEvent? Calendar { get; set; }
 }
 
 /// <summary>One When / Where block, worded like the model (<c>row.space_name</c>…).</summary>

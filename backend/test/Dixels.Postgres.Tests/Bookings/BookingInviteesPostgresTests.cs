@@ -81,8 +81,8 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
         await connection.OpenAsync();
         await using var insert = new NpgsqlCommand(
             """
-            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "Email", "ResponseStatus")
-            VALUES (gen_random_uuid(), @booking, now(), @user, @email, 'Pending')
+            INSERT INTO "AppBookingAttendees" ("Id", "BookingId", "EndsAt", "UserId", "Email", "ResponseStatus", "IcsUid")
+            VALUES (gen_random_uuid(), @booking, now(), @user, @email, 'Pending', gen_random_uuid()::text || '@dixels')
             """, connection);
         insert.Parameters.AddWithValue("booking", bookingId);
         insert.Parameters.AddWithValue("user", (object?)userId ?? DBNull.Value);
