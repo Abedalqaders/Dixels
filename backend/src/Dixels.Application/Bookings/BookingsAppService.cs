@@ -34,6 +34,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
     private readonly ConstraintResolver _constraintResolver;
     private readonly BookingAccess _bookingAccess;
     private readonly BookingResponses _bookingResponses;
+    private readonly BookingBusyFinder _busyFinder;
 
     public BookingsAppService(
         BookingManager bookingManager,
@@ -49,7 +50,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         IIdentityUserRepository userRepository,
         ConstraintResolver constraintResolver,
         BookingAccess bookingAccess,
-        BookingResponses bookingResponses)
+        BookingResponses bookingResponses,
+        BookingBusyFinder busyFinder)
     {
         _bookingManager = bookingManager;
         _spaceRepository = spaceRepository;
@@ -65,6 +67,7 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         _constraintResolver = constraintResolver;
         _bookingAccess = bookingAccess;
         _bookingResponses = bookingResponses;
+        _busyFinder = busyFinder;
     }
 
     public async Task<BookingPreviewDto> PreviewAsync(BookingRequestDto input)
@@ -153,7 +156,22 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         // guests' emails from a guest); to anyone else it doesn't exist.
         await _bookingAccess.EnsureAsync(booking, CurrentUser.GetId(), BookingRole.Owner, BookingRole.Guest);
 
-        return (await MapToDtosAsync(new[] { booking })).Single();
+        var dto = (await MapToDtosAsync(new[] { booking })).Single();
+
+        // A guest about to answer: am I already taken then? Only while answers are open, and
+        // never counting this booking itself.
+        var me = CurrentUser.GetId();
+        if (!dto.IsOwner && booking.Status == BookingStatus.Confirmed && booking.StartsAt > Clock.Now)
+        {
+            var busy = await _busyFinder.FindBusyAsync(
+                new[] { me }, new[] { new TimeRange(booking.StartsAt, booking.EndsAt) }, new[] { booking.Id });
+            if (busy.TryGetValue(me, out var mine))
+            {
+                dto.MyBusy = ToTimes(mine, new BuildingClock(dto.Timezone));
+            }
+        }
+
+        return dto;
     }
 
     [Authorize(DixelsPermissions.Bookings.Cancel)]

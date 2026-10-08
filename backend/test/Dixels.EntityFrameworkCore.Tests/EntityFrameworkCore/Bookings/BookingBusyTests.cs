@@ -280,6 +280,65 @@ public class BookingBusyTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         }
     }
 
+    // ---- A guest about to answer ----
+
+    [Fact]
+    public async Task A_guest_reading_an_invite_sees_when_they_are_already_taken_then()
+    {
+        var s = await CreateScenarioAsync();
+        var invite = await BookAsAsync(s.Owner, Booking(s.Room, 10, 11, 2, s.Rana));
+        // Rana's own room 10:30–11:30, and a meeting she accepted 09:00–10:15.
+        await BookAsAsync(s.Rana, new CreateBookingDto
+        {
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(10.5), LocalEnd = Tomorrow.AddHours(11.5), Attendees = 1,
+            IdempotencyKey = Guid.NewGuid().ToString(),
+        });
+        var earlier = await BookAsAsync(s.Lina, new CreateBookingDto
+        {
+            SpaceId = s.OtherRoom, LocalStart = Tomorrow.AddHours(9), LocalEnd = Tomorrow.AddHours(10.25), Attendees = 2,
+            IdempotencyKey = Guid.NewGuid().ToString(), Invitees = [new InviteeDto { UserId = s.Rana }],
+        });
+        await AnswerAsync(earlier.Id, s.Rana, InviteeResponseStatus.Accepted);
+
+        using (ActAs(s.Rana))
+        {
+            // Cut to the invite's 10–11, and the invite itself doesn't count.
+            (await _bookings.GetAsync(invite.Id)).MyBusy.Select(t => (t.LocalStart, t.LocalEnd)).ShouldBe(new[]
+            {
+                (Tomorrow.AddHours(10), Tomorrow.AddHours(10.25)),
+                (Tomorrow.AddHours(10.5), Tomorrow.AddHours(11)),
+            });
+        }
+
+        using (ActAs(s.Owner))
+        {
+            (await _bookings.GetAsync(invite.Id)).MyBusy.ShouldBeEmpty();
+        }
+    }
+
+    [Fact]
+    public async Task A_free_guest_or_one_reading_a_cancelled_invite_sees_nothing_busy()
+    {
+        var s = await CreateScenarioAsync();
+        var invite = await BookAsAsync(s.Owner, Booking(s.Room, 10, 11, 2, s.Rana));
+
+        using (ActAs(s.Rana))
+        {
+            (await _bookings.GetAsync(invite.Id)).MyBusy.ShouldBeEmpty();
+        }
+
+        await BookAsAsync(s.Rana, Booking(s.OtherRoom, 10, 11));
+        using (ActAs(s.Owner))
+        {
+            await _bookings.CancelAsync(invite.Id, new CancelBookingDto());
+        }
+
+        using (ActAs(s.Rana))
+        {
+            (await _bookings.GetAsync(invite.Id)).MyBusy.ShouldBeEmpty();
+        }
+    }
+
     // ---- My own booking over a meeting I accepted ----
 
     [Theory]
