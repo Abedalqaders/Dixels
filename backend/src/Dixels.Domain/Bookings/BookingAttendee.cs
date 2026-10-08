@@ -19,7 +19,7 @@ public abstract class InviteeRow : Entity<Guid>
     public string? Email { get; private set; }
     public string? Name { get; private set; }
 
-    /// <summary>Their answer (accept / decline). Stored now so answering needs no new columns; nothing sets it yet.</summary>
+    /// <summary>Their answer: Pending until they accept or decline (see <see cref="Respond"/>).</summary>
     public InviteeResponseStatus ResponseStatus { get; private set; }
     public DateTimeOffset? RespondedAt { get; private set; }
 
@@ -62,6 +62,18 @@ public abstract class InviteeRow : Entity<Guid>
     }
 
     public Invitee ToInvitee() => new(UserId, Email, Name);
+
+    /// <summary>Records their answer. Only Accepted or Declined: nobody answers "pending".</summary>
+    internal void Respond(InviteeResponseStatus status, DateTimeOffset now)
+    {
+        if (status == InviteeResponseStatus.Pending)
+        {
+            throw new ArgumentOutOfRangeException(nameof(status), status, "An answer is Accepted or Declined.");
+        }
+
+        ResponseStatus = status;
+        RespondedAt = now;
+    }
 
     /// <summary>32 random bytes, URL-safe: "Xp3…Q@dixels".</summary>
     private static string NewIcsUid() =>

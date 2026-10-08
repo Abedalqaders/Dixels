@@ -53,9 +53,12 @@ export type InviteeDto = ApiDto<'Dixels.Bookings.InviteeDto'>
 /** A guest as saved (or as a preview would save them). `email` is empty unless I own the booking. */
 export type BookingInviteeDto = ApiResponse<'Dixels.Bookings.BookingInviteeDto'>
 
-/** A guest's answer to the invitation (InviteeResponseStatus on the server); Pending until accept/decline exists. */
+/** A guest's answer to the invitation (InviteeResponseStatus on the server): Pending until they accept or decline. */
 export const InviteeResponseStatus = { Pending: 0, Accepted: 1, Declined: 2 } as const satisfies Record<string, InviteeResponseStatus>
 export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatus'>
+
+/** A colleague guest's answer: Accepted or Declined (Pending is refused). */
+export type RespondToInviteDto = ApiDto<'Dixels.Bookings.RespondToInviteDto'>
 
 /** The owner's new guest list and head count, for a booking or a whole series. */
 export type UpdateInviteesDto = ApiDto<'Dixels.Bookings.UpdateInviteesDto'>
@@ -221,5 +224,23 @@ export function createSeries(token: string, input: CreateSeriesDto): Promise<Ser
   return request<SeriesCreatedDto>('/api/app/bookings/series', token, {
     method: 'POST',
     body: JSON.stringify(input),
+  })
+}
+
+// ---- Answering an invitation ----
+
+/** A colleague guest accepts or declines one date; returns that booking with `myResponse` set. */
+export function respondToBooking(token: string, id: string, status: RespondToInviteDto['status']): Promise<BookingDto> {
+  return request<BookingDto>(`/api/app/bookings/${id}/response`, token, {
+    method: 'POST',
+    body: JSON.stringify({ status } satisfies RespondToInviteDto),
+  })
+}
+
+/** The same for a whole series: the series and every upcoming date (overwriting per-date answers). */
+export async function respondToSeries(token: string, seriesId: string, status: RespondToInviteDto['status']): Promise<void> {
+  await request<void>(`/api/app/bookings/series/${seriesId}/response`, token, {
+    method: 'POST',
+    body: JSON.stringify({ status } satisfies RespondToInviteDto),
   })
 }

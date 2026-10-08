@@ -63,6 +63,27 @@ public class BookingsCancelledEvent
 }
 
 /// <summary>
+/// A colleague guest answered an invitation: one date (<see cref="BookingId"/>), or a whole
+/// series and its upcoming dates (<see cref="SeriesId"/>). For the owner's "declined" email
+/// later; nothing listens yet.
+/// </summary>
+public class BookingInviteeRespondedEvent
+{
+    public Guid? BookingId { get; }
+    public Guid? SeriesId { get; }
+    public Guid UserId { get; }
+    public InviteeResponseStatus Status { get; }
+
+    public BookingInviteeRespondedEvent(Guid? bookingId, Guid? seriesId, Guid userId, InviteeResponseStatus status)
+    {
+        BookingId = bookingId;
+        SeriesId = seriesId;
+        UserId = userId;
+        Status = status;
+    }
+}
+
+/// <summary>
 /// The owner changed who's invited: on one booking (<see cref="BookingId"/>), or on a series
 /// and all its upcoming dates (<see cref="SeriesId"/>; <see cref="Added"/>/<see cref="Removed"/>
 /// are against the series' list, so one message per person covers the whole series). Raised
