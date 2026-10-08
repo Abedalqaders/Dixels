@@ -28,7 +28,7 @@ beforeAll(() => {
   }
 })
 
-const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0 }
+const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0, busyTimes: [] }
 
 function booking(patch: Partial<BookingDto> = {}): BookingDto {
   return {
@@ -148,21 +148,52 @@ describe('EditGuestsDialog', () => {
     expect(updateSeriesInvitees).toHaveBeenCalledWith('t', 'series-1', { attendees: 2, invitees: [{ userId: 'u-rana' }] })
   })
 
-  it('asks who of the listed colleagues is busy, and tags them', async () => {
-    vi.mocked(getBusyGuests).mockResolvedValue({ dates: 1, items: [{ userId: 'u-rana', busyDates: 1 }] })
+  it('asks who of the listed colleagues is busy, and shows when', async () => {
+    vi.mocked(getBusyGuests).mockResolvedValue({
+      dates: 1,
+      items: [{ userId: 'u-rana', busyDates: 1, times: [{ localStart: '2026-10-08T10:00:00', localEnd: '2026-10-08T11:00:00' }] }],
+    })
     renderDialog(booking())
 
-    expect(await screen.findByText('Busy then')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Busy 10:00–11:00' })).toBeInTheDocument()
+    expect(screen.getByText('1 person is busy at 10:00')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="busy"]')).not.toBeNull()
     expect(getBusyGuests).toHaveBeenCalledWith('t', 'b-1', ['u-rana'])
     expect(save()).toBeEnabled()
   })
 
-  it('on a series, says on how many of its dates a colleague is busy', async () => {
-    vi.mocked(getSeriesBusyGuests).mockResolvedValue({ dates: 8, items: [{ userId: 'u-rana', busyDates: 2 }] })
+  it('shows a free colleague in green, with no summary line', async () => {
+    renderDialog(booking())
+
+    expect(await screen.findByText('Free')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="free"]')).not.toBeNull()
+    expect(screen.queryByText(/is busy at/)).not.toBeInTheDocument()
+  })
+
+  it('on a series, a half ring, "busy on 2 of 8 dates" and the dates with their times', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getSeriesBusyGuests).mockResolvedValue({
+      dates: 8,
+      items: [{
+        userId: 'u-rana',
+        busyDates: 2,
+        times: [
+          { localStart: '2026-10-13T10:00:00', localEnd: '2026-10-13T10:30:00' },
+          { localStart: '2026-10-20T10:00:00', localEnd: '2026-10-20T11:00:00' },
+        ],
+      }],
+    })
     renderDialog(booking({ seriesId: 'series-1' }))
 
-    expect(await screen.findByText('Busy on 2 of 8 dates')).toBeInTheDocument()
+    const pill = await screen.findByRole('button', { name: 'Busy on 2 of 8 dates' })
+    expect(screen.getByText('Someone is busy on 2 of 8 dates')).toBeInTheDocument()
+    expect(document.querySelector('[data-presence="part"]')).not.toBeNull()
     expect(getSeriesBusyGuests).toHaveBeenCalledWith('t', 'series-1', ['u-rana'])
+
+    await user.click(pill)
+    expect(await screen.findByText('Busy on these dates')).toBeInTheDocument()
+    expect(screen.getByText('10:00–10:30')).toBeInTheDocument()
+    expect(screen.getByText('10:00–11:00')).toBeInTheDocument()
   })
 
   it("shows the server's answer under Attendees when it's about the head count", async () => {

@@ -6,7 +6,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FieldError } from '@/components/FieldError'
-import { BusyTag, PeoplePicker } from '@/components/PeoplePicker'
+import { PeoplePicker } from '@/components/PeoplePicker'
+import { BusyStatus, BusySummary, presenceOf } from '@/components/BusyStatus'
+import type { PersonBusy } from '@/components/BusyStatus'
 import { randomUuid } from '@/lib/uuid'
 import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/violationFields'
 import {
@@ -206,9 +208,13 @@ export function BookingForm({
   const followed = resolvedInvitees(invitees, resolved)
   if (followed !== invitees) setInvitees(followed)
 
-  // "Busy then" for colleagues taken at that time (on a series: on how many of its dates).
-  const busyDates = new Map((resolved ?? []).filter((i) => i.userId && i.busyDates > 0).map((i) => [i.userId!, i.busyDates]))
+  // Who of the colleagues is free or busy then (on a series: on how many of its dates), once
+  // the preview has said — Teams-style, on each guest and in one line above them.
+  const busyById = new Map<string, PersonBusy>(
+    (resolved ?? []).filter((i) => i.userId).map((i) => [i.userId!, { busyDates: i.busyDates, busyTimes: i.busyTimes }]),
+  )
   const dateCount = rule && seriesPreview.status === 'done' ? seriesPreview.preview.occurrences.length : 1
+  const knowsBusy = (p: Invitee) => resolved !== undefined && !p.isExternal && Boolean(p.userId)
 
   // Adding people raises the head count to fit them (you + everyone invited); removing
   // someone leaves it, since the number may count people who aren't named.
@@ -354,6 +360,11 @@ export function BookingForm({
             <span id="bk-people-label" className="text-sm leading-none font-medium">
               {t('BookingForm:InvitePeople')}
             </span>
+            <BusySummary
+              busy={invitees.filter(knowsBusy).flatMap((p) => busyById.get(p.userId!) ?? [])}
+              dates={dateCount}
+              start={`${date}T${start}:00`}
+            />
             <PeoplePicker
               id="bk-people"
               value={invitees}
@@ -362,10 +373,8 @@ export function BookingForm({
               search={(filter) => searchColleagues(token, filter)}
               allowGuests={guestsAllowed.data === true}
               max={MAX_INVITEES}
-              rowExtra={(p) => {
-                const dates = p.userId ? busyDates.get(p.userId) : undefined
-                return dates ? <BusyTag dates={dates} of={dateCount} /> : null
-              }}
+              presence={(p) => (knowsBusy(p) ? presenceOf(busyById.get(p.userId!), dateCount) : undefined)}
+              rowExtra={(p) => (knowsBusy(p) ? <BusyStatus busy={busyById.get(p.userId!)} dates={dateCount} /> : null)}
             />
           </div>
 

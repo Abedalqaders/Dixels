@@ -11533,6 +11533,7 @@
       "Dixels.Bookings.BookingInviteeDto": {
         "required": [
           "busyDates",
+          "busyTimes",
           "email",
           "isBusy",
           "isExternal",
@@ -11568,6 +11569,12 @@
           "busyDates": {
             "type": "integer",
             "format": "int32"
+          },
+          "busyTimes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BusyTimeDto"
+            }
           }
         },
         "additionalProperties": false
@@ -11742,6 +11749,7 @@
       "Dixels.Bookings.BusyGuestDto": {
         "required": [
           "busyDates",
+          "times",
           "userId"
         ],
         "type": "object",
@@ -11753,6 +11761,12 @@
           "busyDates": {
             "type": "integer",
             "format": "int32"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Dixels.Bookings.BusyTimeDto"
+            }
           }
         },
         "additionalProperties": false
@@ -11790,6 +11804,24 @@
             "items": {
               "$ref": "#/components/schemas/Dixels.Bookings.BusyGuestDto"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "Dixels.Bookings.BusyTimeDto": {
+        "required": [
+          "localEnd",
+          "localStart"
+        ],
+        "type": "object",
+        "properties": {
+          "localStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "localEnd": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false

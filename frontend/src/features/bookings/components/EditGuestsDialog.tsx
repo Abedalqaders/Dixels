@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Info } from 'lucide-react'
 import { FieldError } from '@/components/FieldError'
-import { BusyTag, PeoplePicker } from '@/components/PeoplePicker'
+import { PeoplePicker } from '@/components/PeoplePicker'
+import { BusyStatus, BusySummary, presenceOf } from '@/components/BusyStatus'
+import type { PersonBusy } from '@/components/BusyStatus'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -50,7 +52,11 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
         ? getSeriesBusyGuests(token, seriesId, colleagueIds)
         : getBusyGuests(token, booking.id, colleagueIds),
   )
-  const busyDates = new Map((busyGuests.data?.items ?? []).map((b) => [b.userId, b.busyDates]))
+  const busyById = new Map<string, PersonBusy>(
+    (busyGuests.data?.items ?? []).map((b) => [b.userId, { busyDates: b.busyDates, busyTimes: b.times }]),
+  )
+  const dateCount = busyGuests.data?.dates ?? 1
+  const knowsBusy = (p: Invitee) => busyGuests.data !== undefined && !p.isExternal && Boolean(p.userId)
 
   const needed = 1 + invitees.length
   const attendeesError = !Number.isInteger(attendees) || attendees < 1
@@ -115,6 +121,11 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
           <span id="eg-people-label" className="text-sm leading-none font-medium">
             {t('BookingForm:InvitePeople')}
           </span>
+          <BusySummary
+            busy={invitees.filter(knowsBusy).flatMap((p) => busyById.get(p.userId!) ?? [])}
+            dates={dateCount}
+            start={booking.localStart}
+          />
           <PeoplePicker
             id="eg-people"
             value={invitees}
@@ -123,10 +134,8 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
             search={(filter) => searchColleagues(token, filter)}
             allowGuests={guestsAllowed.data === true}
             max={MAX_INVITEES}
-            rowExtra={(p) => {
-              const dates = p.userId ? busyDates.get(p.userId) : undefined
-              return dates ? <BusyTag dates={dates} of={busyGuests.data?.dates ?? 1} /> : null
-            }}
+            presence={(p) => (knowsBusy(p) ? presenceOf(busyById.get(p.userId!), dateCount) : undefined)}
+            rowExtra={(p) => (knowsBusy(p) ? <BusyStatus busy={busyById.get(p.userId!)} dates={dateCount} /> : null)}
           />
         </div>
 

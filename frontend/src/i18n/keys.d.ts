@@ -601,9 +601,16 @@ export interface TextKeys {
   "Pagination:RowsPerPage": string
   "People:AddGuest": string
   "People:AlreadyAdded": string
+  "People:BusyAt": string
   "People:BusyOnDates": string
-  "People:BusyThen": string
+  "People:BusyOnTheseDates": string
+  "People:BusyPrivacy": string
+  "People:BusySummarySeries": string
+  "People:BusySummary_one": string
+  "People:BusySummary_other": string
+  "People:BusyTimes": string
   "People:EmailInvalid": string
+  "People:Free": string
   "People:Full": string
   "People:Guest": string
   "People:GuestEmail": string

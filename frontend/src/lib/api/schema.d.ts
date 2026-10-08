@@ -6842,6 +6842,7 @@ export interface components {
         "Dixels.Bookings.BookingInviteeDto": {
             /** Format: int32 */
             busyDates: number;
+            busyTimes: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
             email: string;
             isBusy: boolean;
             isExternal: boolean;
@@ -6897,6 +6898,7 @@ export interface components {
         "Dixels.Bookings.BusyGuestDto": {
             /** Format: int32 */
             busyDates: number;
+            times: components["schemas"]["Dixels.Bookings.BusyTimeDto"][];
             /** Format: uuid */
             userId: string;
         };
@@ -6907,6 +6909,12 @@ export interface components {
             /** Format: int32 */
             dates: number;
             items: components["schemas"]["Dixels.Bookings.BusyGuestDto"][];
+        };
+        "Dixels.Bookings.BusyTimeDto": {
+            /** Format: date-time */
+            localEnd: string;
+            /** Format: date-time */
+            localStart: string;
         };
         "Dixels.Bookings.CancelBookingDto": {
             reason?: string | null;
@@ -7432,6 +7440,7 @@ export type SchemaDixelsBookingsBookingViolationDto = components['schemas']['Dix
 export type SchemaDixelsBookingsBusyGuestDto = components['schemas']['Dixels.Bookings.BusyGuestDto'];
 export type SchemaDixelsBookingsBusyGuestsInput = components['schemas']['Dixels.Bookings.BusyGuestsInput'];
 export type SchemaDixelsBookingsBusyGuestsResultDto = components['schemas']['Dixels.Bookings.BusyGuestsResultDto'];
+export type SchemaDixelsBookingsBusyTimeDto = components['schemas']['Dixels.Bookings.BusyTimeDto'];
 export type SchemaDixelsBookingsCancelBookingDto = components['schemas']['Dixels.Bookings.CancelBookingDto'];
 export type SchemaDixelsBookingsCancelScope = components['schemas']['Dixels.Bookings.CancelScope'];
 export type SchemaDixelsBookingsCreateBookingDto = components['schemas']['Dixels.Bookings.CreateBookingDto'];
