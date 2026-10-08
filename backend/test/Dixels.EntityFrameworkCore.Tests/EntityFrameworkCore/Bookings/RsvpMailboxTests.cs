@@ -205,6 +205,13 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
             ics.ShouldContain("RSVP=TRUE");
             ics.ShouldContain("mailto:rsvp@dixels.local");
 
+            // The email points at the mail app's own buttons; the answer links shrink to one
+            // backup line to the answer page, with no answer picked.
+            invite.Body.ShouldContain("Answer with Accept or Decline at the top of this email.");
+            invite.Body.ShouldContain("Answer here");
+            invite.Body.ShouldMatch("href=\"[^\"]*/rsvp/[^\"?]+\"");
+            invite.Body.ShouldNotContain("?answer=accepted");
+
             // The booker's own copy never asks anything.
             Ics(_emails.Sent.Single(e => e.To == s.Dana.Email)).ShouldContain("METHOD:PUBLISH");
         }
@@ -223,9 +230,17 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         await BookAsync(s);
         await QueuedJobs.RunAllAsync(ServiceProvider);
 
-        var ics = Ics(_emails.Sent.Single(e => e.To == s.Rana.Email));
+        var invite = _emails.Sent.Single(e => e.To == s.Rana.Email);
+        var ics = Ics(invite);
         ics.ShouldContain("METHOD:PUBLISH");
         ics.ShouldNotContain("RSVP=TRUE");
+
+        // E7's answer links are the way to answer, as they were.
+        invite.Body.ShouldContain("Will you come?");
+        invite.Body.ShouldContain("?answer=accepted");
+        invite.Body.ShouldContain("?answer=declined");
+        invite.Body.ShouldNotContain("at the top of this email");
+        invite.Body.ShouldNotContain("Answer here");
     }
 
     // ---- Reading the answers ----
@@ -258,6 +273,8 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         var s = await CreateScenarioAsync();
         var booking = await BookAsync(s);
         var row = (await GuestRowsAsync(booking.Id)).Single();
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
 
         // Read together (the reader was down), in whatever order the server lists them.
         var mailbox = new FakeMailbox();
@@ -267,6 +284,10 @@ public class RsvpMailboxTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
 
         (await GuestRowsAsync(booking.Id)).Single().ResponseStatus.ShouldBe(InviteeResponseStatus.Declined);
         mailbox.Handled.Count.ShouldBe(2);
+
+        // The booker hears of the decline once, from the same place as an answer in the app (E7).
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Sent.ShouldHaveSingleItem().To.ShouldBe(s.Dana.Email);
 
         // A later reply, read later, changes it again.
         mailbox.Receive(Reply(row.IcsUid, "ACCEPTED"));

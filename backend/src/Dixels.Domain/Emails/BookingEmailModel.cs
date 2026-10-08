@@ -79,8 +79,26 @@ public class BookingEmailModel
     /// <summary>A guest's cancel email: an admin's action, not the booker's (the reason goes in the red box).</summary>
     public bool CancelledByAdmin { get; set; }
 
+    /// <summary>A guest's email: the booker took them off the list (the meeting goes on).</summary>
+    public bool RemovedByOwner { get; set; }
+
     /// <summary>The booker's cancel email: how many guests were told it's off (0: no line).</summary>
     public int GuestsTold { get; set; }
+
+    /// <summary>A guest's invite: their own Accept / Decline links (the public answer page).</summary>
+    public string? AcceptUrl { get; set; }
+    public string? DeclineUrl { get; set; }
+
+    /// <summary>
+    /// The invite is a meeting request the guest's mail app answers itself (E6): the email then
+    /// points at its Accept / Decline bar, and the links above shrink to a backup line to
+    /// <see cref="AnswerUrl"/> (the answer page, no answer chosen yet).
+    /// </summary>
+    public bool AnswerInMailApp { get; set; }
+    public string? AnswerUrl { get; set; }
+
+    /// <summary>The booker's "can't make it" email: the guest who declined.</summary>
+    public string? AnsweredBy { get; set; }
 
     /// <summary>The calendar file the email carries, if any (not shown; attached by <see cref="SendEmailJob"/>).</summary>
     public IcsEvent? Calendar { get; set; }
@@ -114,4 +132,5 @@ public static class EmailStatus
     public const string Invitation = "Invitation";
     public const string Cancelled = "Cancelled";
     public const string Updated = "Updated";
+    public const string Declined = "Declined";
 }

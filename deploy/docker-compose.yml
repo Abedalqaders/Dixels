@@ -105,6 +105,7 @@ services:
       App__SelfUrl: ${API_URL}
       App__CorsOrigins: ${APP_URL}
       Emails__AppUrl: ${APP_URL}
+      GuestLinks__Key: ${GUEST_LINKS_KEY:?set GUEST_LINKS_KEY in .env}
       AuthServer__CertificatePath: /certs/openiddict.pfx
       AuthServer__CertificatePassword: ${OPENIDDICT_CERT_PASSWORD:?set OPENIDDICT_CERT_PASSWORD in .env}
       ForwardedHeaders__Enabled: "true"

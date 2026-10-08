@@ -518,4 +518,117 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
         omar.Body.ShouldContain("dir=\"rtl\"");
         omar.Body.ShouldContain("✕ ملغى");
     }
+
+    // ---- E4: the guest list edited ----
+
+    private Task EditGuestsAsync(Scenario s, Guid bookingId, params InviteeDto[] invitees) =>
+        AsDanaAsync(() => _bookings.UpdateInviteesAsync(bookingId, new UpdateInviteesDto { Invitees = invitees.ToList(), Attendees = 1 + invitees.Length }), s);
+
+    private Task EditSeriesGuestsAsync(Scenario s, Guid seriesId, params InviteeDto[] invitees) =>
+        AsDanaAsync(() => _bookings.UpdateSeriesInviteesAsync(seriesId, new UpdateInviteesDto { Invitees = invitees.ToList(), Attendees = 1 + invitees.Length }), s);
+
+    private async Task AsDanaAsync(Func<Task> act, Scenario s)
+    {
+        using (ActAs(s.Dana.Id))
+        {
+            await act();
+        }
+
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+    }
+
+    [Fact]
+    public async Task Editing_the_list_invites_who_was_added_and_cancels_for_who_was_removed()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, Colleague(s.Rana), Outsider("guest@outside.io", "Sara Guest"));
+        var ranaInviteUid = UidOf(Ics(To(s.Rana.Email)));
+        _emails.Clear();
+
+        // Rana off, Omar on, the outsider stays.
+        await EditGuestsAsync(s, booking.Id, Colleague(s.Omar), Outsider("guest@outside.io", "Sara Guest"));
+
+        var omar = To(s.Omar.Email);
+        omar.Subject.ShouldStartWith("Invitation: Planning · ");
+        omar.Body.ShouldContain("Dana Test added you to Planning");
+        omar.Body.ShouldContain("Sara Guest"); // the guest who stayed, by name
+        var omarIcs = Ics(omar);
+        omarIcs.ShouldContain("METHOD:PUBLISH");
+        omarIcs.ShouldContain("SEQUENCE:0");
+        UidOf(omarIcs).ShouldNotBe(ranaInviteUid);
+
+        var rana = To(s.Rana.Email);
+        rana.Subject.ShouldStartWith("Removed: Planning · ");
+        rana.Body.ShouldContain("Dana Test removed you from Planning");
+        rana.Body.ShouldContain("It's been taken off your calendar.");
+        var ranaIcs = Ics(rana);
+        ranaIcs.ShouldContain("METHOD:CANCEL");
+        ranaIcs.ShouldContain("SEQUENCE:1");
+        UidOf(ranaIcs).ShouldBe(ranaInviteUid);
+
+        // Whoever stayed, and the booker, hear nothing.
+        _emails.Sent.ShouldNotContain(e => e.To == "guest@outside.io" || e.To == s.Dana.Email);
+    }
+
+    [Fact]
+    public async Task Someone_removed_and_added_back_gets_a_new_calendar_copy()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, Colleague(s.Rana));
+        var first = UidOf(Ics(To(s.Rana.Email)));
+
+        await EditGuestsAsync(s, booking.Id);
+        await EditGuestsAsync(s, booking.Id, Colleague(s.Rana));
+
+        var mails = _emails.Sent.Where(e => e.To == s.Rana.Email).ToList();
+        mails.Select(e => e.Subject[..e.Subject.IndexOf(':')]).ShouldBe(new[] { "Invitation", "Removed", "Invitation" });
+        UidOf(Ics(mails[1])).ShouldBe(first);
+        UidOf(Ics(mails[2])).ShouldNotBe(first);
+    }
+
+    [Fact]
+    public async Task On_a_series_the_added_get_a_series_invite_and_the_removed_a_whole_series_cancel()
+    {
+        var s = await CreateScenarioAsync();
+        SeriesCreatedDto created;
+        using (ActAs(s.Dana.Id))
+        {
+            created = await _bookings.CreateSeriesAsync(ThreeWeeks(s, Colleague(s.Rana)));
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        var ranaUid = UidOf(Ics(To(s.Rana.Email)));
+        _emails.Clear();
+
+        await EditSeriesGuestsAsync(s, created.SeriesId, Colleague(s.Omar));
+
+        var omar = To(s.Omar.Email);
+        omar.Body.ShouldContain("Dana Test added you to Stand-up");
+        omar.Body.ShouldContain($"Every {Tomorrow.DayOfWeek} until");
+        Ics(omar).ShouldContain("RRULE:FREQ=WEEKLY");
+
+        var rana = To(s.Rana.Email);
+        rana.Body.ShouldContain("Dana Test removed you from Stand-up");
+        var ranaIcs = Ics(rana);
+        UidOf(ranaIcs).ShouldBe(ranaUid);
+        ranaIcs.ShouldContain("METHOD:CANCEL");
+        ranaIcs.ShouldNotContain("RECURRENCE-ID"); // off the whole series
+    }
+
+    [Fact]
+    public async Task A_guest_list_edit_that_fails_emails_nobody()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookAsync(s, Colleague(s.Rana));
+        _emails.Clear();
+
+        using (ActAs(s.Dana.Id))
+        {
+            // Too few attendees for the guests: refused, nothing changes.
+            await Should.ThrowAsync<Exception>(() => _bookings.UpdateInviteesAsync(booking.Id,
+                new UpdateInviteesDto { Invitees = new List<InviteeDto> { Colleague(s.Omar), Colleague(s.Rana) }, Attendees = 1 }));
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        _emails.Sent.ShouldBeEmpty();
+    }
 }

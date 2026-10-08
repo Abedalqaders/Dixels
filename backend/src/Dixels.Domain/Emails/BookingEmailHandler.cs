@@ -16,6 +16,7 @@ public class BookingEmailHandler :
     ILocalEventHandler<BookingsCancelledEvent>,
     ILocalEventHandler<AdminCancelEmailsDueEvent>,
     ILocalEventHandler<BookingReminderDueEvent>,
+    ILocalEventHandler<BookingInviteesChangedEvent>,
     ITransientDependency
 {
     private readonly BookingEmails _bookingEmails;
@@ -53,6 +54,9 @@ public class BookingEmailHandler :
 
     public Task HandleEventAsync(AdminCancelEmailsDueEvent eventData) =>
         _adminCancels.SendAsync(eventData);
+
+    public Task HandleEventAsync(BookingInviteesChangedEvent eventData) =>
+        _bookingEmails.SendGuestChangesAsync(eventData);
 
     public Task HandleEventAsync(BookingReminderDueEvent eventData) =>
         _bookingEmails.SendReminderAsync(eventData.Booking);

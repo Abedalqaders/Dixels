@@ -141,6 +141,7 @@ public class DixelsWebModule : AbpModule
         ConfigureHealthChecks(context.Services);
         ConfigureDistributedLocking(context.Services, configuration);
         ConfigureRateLimiting(context.Services, configuration);
+        CheckGuestLinkKey(hostingEnvironment, configuration);
 
         context.Services.AddMapperlyObjectMapper<DixelsWebModule>();
     }
@@ -200,6 +201,17 @@ public class DixelsWebModule : AbpModule
     {
         services.AddSingleton<IDistributedLockProvider>(_ =>
             new PostgresDistributedSynchronizationProvider(configuration.GetConnectionString("Default")!));
+    }
+
+    // Guest links (answer buttons in emails) are signed with this key. Development falls back to a
+    // fixed one (GuestLinks logs a warning); anywhere else a missing key would sign real links
+    // with a key anyone can read in the source, so the host refuses to start.
+    private static void CheckGuestLinkKey(IWebHostEnvironment hostingEnvironment, IConfiguration configuration)
+    {
+        if (!hostingEnvironment.IsDevelopment() && string.IsNullOrWhiteSpace(configuration["GuestLinks:Key"]))
+        {
+            throw new AbpInitializationException("GuestLinks:Key is required outside Development (GuestLinks__Key).");
+        }
     }
 
     private void ConfigureRateLimiting(IServiceCollection services, IConfiguration configuration)

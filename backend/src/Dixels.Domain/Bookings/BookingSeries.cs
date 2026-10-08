@@ -105,14 +105,15 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
     public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
 
     /// <summary>
-    /// A colleague guest's answer for the whole series (its upcoming dates are answered by the
-    /// caller, see BookingResponses). Only the series' own list here: nothing about dates.
+    /// A guest's answer for the whole series, by their <see cref="Invitee.Key"/> (its upcoming
+    /// dates are answered by the caller, see BookingResponses). Only the series' own list here:
+    /// nothing about dates. Returns the answer it replaces.
     /// </summary>
-    public void Respond(Guid userId, InviteeResponseStatus status, DateTimeOffset now)
+    public InviteeResponseStatus Respond(string guestKey, InviteeResponseStatus status, DateTimeOffset now)
     {
-        var row = _invitees.FirstOrDefault(i => i.UserId == userId)
-                  ?? throw new InvalidOperationException("Only a colleague guest of this series can answer it (BookingAccess checks that first).");
-        row.Respond(status, now);
+        var row = _invitees.FirstOrDefault(i => i.ToInvitee().Key == guestKey)
+                  ?? throw new InvalidOperationException("Only a guest of this series can answer it (BookingAccess or their link checks that first).");
+        return row.Respond(status, now);
     }
 
     /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>

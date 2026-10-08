@@ -33,6 +33,11 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
     // 16 when written: loads, lock, guest check, the batched save and the reply. Not one per date.
     private const int BoundForSeriesEdit = 18;
 
+    // Each person added or removed is emailed as the edit saves (E4): their user, language,
+    // the room's names, the email job. About 11 each (22 for one in, one out), once per person —
+    // never per date.
+    private const int BoundPerEmailedGuest = 12;
+
     public BookingInviteesPostgresTests(ITestOutputHelper output)
     {
         _output = output;
@@ -144,7 +149,7 @@ public class BookingInviteesPostgresTests : DixelsApplicationTestBase<DixelsPost
         updated.Bookings.Count.ShouldBe(100);
         updated.Bookings.ShouldAllBe(b => b.Invitees.Count == 2);
         // 100 dates × (one guest out, one in) are batched: the count doesn't grow with the dates.
-        commands.ShouldBeLessThanOrEqualTo(BoundForSeriesEdit);
+        commands.ShouldBeLessThanOrEqualTo(BoundForSeriesEdit + 2 * BoundPerEmailedGuest);
     }
 
     [PostgresFact]
