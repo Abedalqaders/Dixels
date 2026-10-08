@@ -375,9 +375,13 @@ export interface TextKeys {
   "Email:GuestsTold:One": string
   "Email:Invite:AddedHeading": string
   "Email:Invite:Answer": string
+  "Email:Invite:AnswerAtTop": string
+  "Email:Invite:AnswerAtTopSeries": string
+  "Email:Invite:AnswerHere": string
   "Email:Invite:AnswerSeries": string
   "Email:Invite:Footer": string
   "Email:Invite:Heading": string
+  "Email:Invite:NoButtons": string
   "Email:Invite:Subject": string
   "Email:Invite:SubjectSeries": string
   "Email:InvitedBy": string

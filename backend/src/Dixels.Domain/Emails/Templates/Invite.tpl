@@ -14,9 +14,14 @@
   <tr><td style="padding:5px 0;color:#71717a;width:36%;vertical-align:top;">{{ L "Email:AlsoInvited" }}</td><td style="padding:5px 0;">{{ model.also_invited | html.escape }}</td></tr>
 {{~ end ~}}
 </table>
-{{~ if model.accept_url ~}}
+{{~ if model.answer_in_mail_app ~}}
+<p style="margin:20px 0 0;font-size:14px;color:#3f3f46;">{{ if model.is_series }}{{ L "Email:Invite:AnswerAtTopSeries" }}{{ else }}{{ L "Email:Invite:AnswerAtTop" }}{{ end }}</p>
+{{~ else if model.accept_url ~}}
 <p style="margin:20px 0 0;font-size:14px;color:#3f3f46;">{{ if model.is_series }}{{ L "Email:Invite:AnswerSeries" }}{{ else }}{{ L "Email:Invite:Answer" }}{{ end }} <a href="{{ model.accept_url | html.escape }}" style="color:#1c5a2b;font-weight:600;">{{ L "Email:Accept" }}</a> · <a href="{{ model.decline_url | html.escape }}" style="color:#8d2b1e;font-weight:600;">{{ L "Email:Decline" }}</a></p>
 {{~ end ~}}
 {{~ if model.can_open ~}}
 <table role="presentation" style="margin-top:20px;border-collapse:collapse;"><tr><td><a href="{{ model.view_url | html.escape }}" style="display:inline-block;background:#713c91;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:14px;">{{ L "Email:OpenInDixels" }}</a></td></tr></table>
+{{~ end ~}}
+{{~ if model.answer_in_mail_app && model.answer_url ~}}
+<p style="margin:20px 0 0;font-size:12px;color:#71717a;">{{ L "Email:Invite:NoButtons" }} <a href="{{ model.answer_url | html.escape }}" style="color:#713c91;">{{ L "Email:Invite:AnswerHere" }}</a></p>
 {{~ end ~}}

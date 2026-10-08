@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Dixels.Bookings;
+using Dixels.Emails.Rsvp;
 using Dixels.EntityFrameworkCore;
 using Dixels.Localization;
 using Dixels.MultiTenancy;
@@ -414,12 +415,13 @@ public class DixelsWebModule : AbpModule
         });
     }
 
-    // Here rather than in the domain module, so only the API host sends reminders and cleans up
-    // guests' details — the migrator loads the domain too and must not.
+    // Here rather than in the domain module, so only the API host sends reminders, cleans up
+    // guests' details and reads the rsvp@ mailbox — the migrator loads the domain too and must not.
     public override async Task OnPostApplicationInitializationAsync(ApplicationInitializationContext context)
     {
         await context.AddBackgroundWorkerAsync<BookingReminderWorker>();
         await context.AddBackgroundWorkerAsync<ExternalGuestCleanupWorker>();
+        await context.AddBackgroundWorkerAsync<RsvpMailboxWorker>();
     }
 
     private static class HealthCheckTags

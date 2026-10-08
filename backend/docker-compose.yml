@@ -38,3 +38,6 @@ services:
       # unset (the backend in Docker reaches smtp4dev:25 itself), Docker picks a free one,
       # so worktrees running side by side never clash.
       - "127.0.0.1:${DIXELS_SMTP_PORT:-}:25"
+      # IMAP, where the API reads guests' Accept / Decline replies to rsvp@ (E6); the same
+      # deal as SMTP. smtp4dev serves every caught email there, and the reader skips non-replies.
+      - "127.0.0.1:${DIXELS_IMAP_PORT:-}:143"

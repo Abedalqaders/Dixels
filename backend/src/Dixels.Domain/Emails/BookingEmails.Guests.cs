@@ -79,6 +79,8 @@ public partial class BookingEmails
             var fromName = string.Format(ViaDixels, ownerName);
             var ownerLanguage = await _userLanguage.GetAsync(ownerId);
             var rsvpMailbox = await _settingProvider.GetOrNullAsync(DixelsSettings.RsvpMailboxAddress) ?? "rsvp@dixels.local";
+            // A real meeting request (the mail app's own Accept / Decline) only while rsvp@ is read.
+            var askToAnswer = await _settingProvider.IsTrueAsync(DixelsSettings.RsvpMailboxEnabled);
 
             var colleagueIds = everyone.Where(g => g.UserId is not null).Select(g => g.UserId!.Value).ToList();
             var colleagues = (await _userRepository.GetListByIdsAsync(colleagueIds)).ToDictionary(u => u.Id);
@@ -125,6 +127,7 @@ public partial class BookingEmails
                     Describe(model, clock, startsAt, endsAt, title, colleague ? openId : null);
                     model.AlsoInvited = OthersNames(everyone, guest, colleagues);
                     AddAnswerLinks(model, guest);
+                    model.AnswerInMailApp = askToAnswer;
                     model.Heading = _localizer[added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
 
                     string subject;
@@ -144,6 +147,7 @@ public partial class BookingEmails
 
                     var calendar = Calendar(model, clock, guest.IcsUid, guest.IcsSequence, startsAt, endsAt, series?.Rule, skipped,
                         new IcsPerson(fromName, rsvpMailbox), new IcsPerson(name, to)) with { RuleAnchor = series?.FirstDate };
+                    calendar = askToAnswer ? calendar with { Method = IcsMethods.Request, AskToAnswer = true } : calendar;
 
                     await _backgroundJobManager.EnqueueAsync(new SendEmailArgs
                     {
