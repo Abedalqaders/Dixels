@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Info } from 'lucide-react'
 import { FieldError } from '@/components/FieldError'
-import { PeoplePicker } from '@/components/PeoplePicker'
+import { BusyTag, PeoplePicker } from '@/components/PeoplePicker'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useApiQuery } from '@/hooks/useApiQuery'
 import { dateOf, formatDate, timeOf } from '@/lib/time/buildingTime'
-import { ApiError, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
+import { ApiError, getBusyGuests, getSeriesBusyGuests, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { getExternalGuestsEnabled, searchColleagues } from '@/features/bookings/api/inviteesApi'
 import { fromInviteeDtos, headCountFor, MAX_INVITEES, toInviteeDtos } from '@/features/bookings/invitees'
@@ -39,6 +39,18 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
   const [serverError, setServerError] = useState<{ attendees: boolean; message: string } | null>(null)
   const guestsAllowed = useApiQuery(queryKeys.bookings.externalGuestsEnabled(), () => getExternalGuestsEnabled(token))
   const seriesId = booking.seriesId
+
+  // "Busy then" for the colleagues listed: at this booking's time, or across the series'
+  // upcoming dates (this booking itself doesn't count). Asked again as the list changes.
+  const colleagueIds = invitees.filter((p) => !p.isExternal && p.userId).map((p) => p.userId!).sort()
+  const busyGuests = useApiQuery(queryKeys.bookings.busyGuests(seriesId ?? booking.id, colleagueIds), () =>
+    colleagueIds.length === 0
+      ? Promise.resolve({ dates: 1, items: [] })
+      : seriesId
+        ? getSeriesBusyGuests(token, seriesId, colleagueIds)
+        : getBusyGuests(token, booking.id, colleagueIds),
+  )
+  const busyDates = new Map((busyGuests.data?.items ?? []).map((b) => [b.userId, b.busyDates]))
 
   const needed = 1 + invitees.length
   const attendeesError = !Number.isInteger(attendees) || attendees < 1
@@ -111,6 +123,10 @@ export function EditGuestsDialog({ token, booking, onClose, onSaved }: EditGuest
             search={(filter) => searchColleagues(token, filter)}
             allowGuests={guestsAllowed.data === true}
             max={MAX_INVITEES}
+            rowExtra={(p) => {
+              const dates = p.userId ? busyDates.get(p.userId) : undefined
+              return dates ? <BusyTag dates={dates} of={busyGuests.data?.dates ?? 1} /> : null
+            }}
           />
         </div>
 

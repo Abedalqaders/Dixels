@@ -60,6 +60,9 @@ export type InviteeResponseStatus = ApiDto<'Dixels.Bookings.InviteeResponseStatu
 /** The owner's new guest list and head count, for a booking or a whole series. */
 export type UpdateInviteesDto = ApiDto<'Dixels.Bookings.UpdateInviteesDto'>
 
+/** The busy ones among the colleagues asked about, and how many dates were checked ("busy on 2 of 8 dates"). */
+export type BusyGuestsResultDto = ApiResponse<'Dixels.Bookings.BusyGuestsResultDto'>
+
 /** Someone in my building the guest picker offers (`GET /api/app/colleagues`). */
 export type ColleagueDto = ApiResponse<'Dixels.Users.ColleagueDto'>
 
@@ -155,6 +158,22 @@ export function getBooking(token: string, id: string): Promise<BookingDto> {
  */
 export function updateInvitees(token: string, id: string, input: UpdateInviteesDto): Promise<BookingDto> {
   return request<BookingDto>(`/api/app/bookings/${id}/invitees`, token, { method: 'PUT', body: JSON.stringify(input) })
+}
+
+/**
+ * Which of these colleagues are busy at the time of one of my bookings — their own booking or
+ * a meeting they accepted; this booking itself doesn't count. Never says with what.
+ */
+export function getBusyGuests(token: string, id: string, userIds: string[]): Promise<BusyGuestsResultDto> {
+  return request<BusyGuestsResultDto>(`/api/app/bookings/${id}/busy-guests`, token, { method: 'POST', body: JSON.stringify({ userIds }) })
+}
+
+/** The same across a series' upcoming dates, each with how many of them they're busy on. */
+export function getSeriesBusyGuests(token: string, seriesId: string, userIds: string[]): Promise<BusyGuestsResultDto> {
+  return request<BusyGuestsResultDto>(`/api/app/bookings/series/${seriesId}/busy-guests`, token, {
+    method: 'POST',
+    body: JSON.stringify({ userIds }),
+  })
 }
 
 /** The same for a whole series: its list and every upcoming date. Returns those dates. */

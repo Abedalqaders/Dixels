@@ -2,7 +2,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ApiError, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
+import { ApiError, getBusyGuests, getSeriesBusyGuests, updateInvitees, updateSeriesInvitees } from '@/features/bookings/api/bookingsApi'
 import type { BookingDto } from '@/features/bookings/api/bookingsApi'
 import { getExternalGuestsEnabled, searchColleagues } from '@/features/bookings/api/inviteesApi'
 import { TestProviders } from '@/test/providers'
@@ -10,7 +10,7 @@ import { EditGuestsDialog } from './EditGuestsDialog'
 
 vi.mock('@/features/bookings/api/bookingsApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/bookings/api/bookingsApi')>()
-  return { ...actual, updateInvitees: vi.fn(), updateSeriesInvitees: vi.fn() }
+  return { ...actual, updateInvitees: vi.fn(), updateSeriesInvitees: vi.fn(), getBusyGuests: vi.fn(), getSeriesBusyGuests: vi.fn() }
 })
 
 vi.mock('@/features/bookings/api/inviteesApi', () => ({
@@ -28,7 +28,7 @@ beforeAll(() => {
   }
 })
 
-const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const }
+const rana = { userId: 'u-rana', name: 'Rana Saleh', email: 'rana@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0 }
 
 function booking(patch: Partial<BookingDto> = {}): BookingDto {
   return {
@@ -76,6 +76,8 @@ describe('EditGuestsDialog', () => {
     vi.mocked(updateInvitees).mockReset().mockResolvedValue(booking())
     vi.mocked(updateSeriesInvitees).mockReset().mockResolvedValue({ seriesId: 'series-1', bookings: [] })
     vi.mocked(getExternalGuestsEnabled).mockReset().mockResolvedValue(false)
+    vi.mocked(getBusyGuests).mockReset().mockResolvedValue({ dates: 1, items: [] })
+    vi.mocked(getSeriesBusyGuests).mockReset().mockResolvedValue({ dates: 1, items: [] })
     vi.mocked(searchColleagues).mockReset().mockResolvedValue([{ id: 'u-omar', name: 'Omar Haddad', email: 'omar@dixels.io' }])
   })
 
@@ -143,6 +145,23 @@ describe('EditGuestsDialog', () => {
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     expect(updateSeriesInvitees).toHaveBeenCalledWith('t', 'series-1', { attendees: 2, invitees: [{ userId: 'u-rana' }] })
+  })
+
+  it('asks who of the listed colleagues is busy, and tags them', async () => {
+    vi.mocked(getBusyGuests).mockResolvedValue({ dates: 1, items: [{ userId: 'u-rana', busyDates: 1 }] })
+    renderDialog(booking())
+
+    expect(await screen.findByText('Busy then')).toBeInTheDocument()
+    expect(getBusyGuests).toHaveBeenCalledWith('t', 'b-1', ['u-rana'])
+    expect(save()).toBeEnabled()
+  })
+
+  it('on a series, says on how many of its dates a colleague is busy', async () => {
+    vi.mocked(getSeriesBusyGuests).mockResolvedValue({ dates: 8, items: [{ userId: 'u-rana', busyDates: 2 }] })
+    renderDialog(booking({ seriesId: 'series-1' }))
+
+    expect(await screen.findByText('Busy on 2 of 8 dates')).toBeInTheDocument()
+    expect(getSeriesBusyGuests).toHaveBeenCalledWith('t', 'series-1', ['u-rana'])
   })
 
   it("shows the server's answer under Attendees when it's about the head count", async () => {

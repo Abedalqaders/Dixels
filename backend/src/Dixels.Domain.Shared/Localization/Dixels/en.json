@@ -854,6 +854,8 @@
     "People:EmailInvalid": "Enter a full email, like name@company.com.",
     "People:AlreadyAdded": "This person is already invited.",
     "People:Guest": "Guest",
+    "People:BusyThen": "Busy then",
+    "People:BusyOnDates": "Busy on {count} of {total} dates",
     "FindSpace:NoBuilding": "You haven't been assigned to a building yet, so there's nothing to book.",
     "Calendar:Lead": "times in {timezone}",
     "FindSpace:Lead_one": "times in {timezone} · book up to {count} days ahead",

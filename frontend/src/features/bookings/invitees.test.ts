@@ -33,15 +33,15 @@ describe('toInviteeDtos', () => {
 describe('resolvedInvitees', () => {
   it("turns a guest's email that belongs to a colleague into that colleague", () => {
     const typed: Invitee = { userId: null, name: '', email: 'Sara@Dixels.io ', isExternal: true }
-    const next = resolvedInvitees([typed], [{ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 }])
+    const next = resolvedInvitees([typed], [{ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0 }])
     expect(next).toEqual([sara])
   })
 
   it('returns the same list when nothing changed, so the form stops adjusting', () => {
     const current = [sara, guest]
     const next = resolvedInvitees(current, [
-      { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 },
-      { userId: null, name: 'Omar', email: 'omar@acme.com', isExternal: true, responseStatus: 0 },
+      { userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0 },
+      { userId: null, name: 'Omar', email: 'omar@acme.com', isExternal: true, responseStatus: 0, isBusy: false, busyDates: 0 },
     ])
     expect(next).toBe(current)
   })
@@ -49,7 +49,7 @@ describe('resolvedInvitees', () => {
   it('ignores an answer about a different list', () => {
     const current = [guest]
     expect(resolvedInvitees(current, [])).toBe(current)
-    expect(resolvedInvitees(current, [{ userId: 'u-x', name: 'X', email: 'x@dixels.io', isExternal: false, responseStatus: 0 }])).toBe(current)
+    expect(resolvedInvitees(current, [{ userId: 'u-x', name: 'X', email: 'x@dixels.io', isExternal: false, responseStatus: 0, isBusy: false, busyDates: 0 }])).toBe(current)
     expect(resolvedInvitees(current, undefined)).toBe(current)
   })
 })

@@ -131,7 +131,7 @@ describe('BookingForm invitees', () => {
       const invitees = input.invitees ?? []
       return {
         ...valid,
-        invitees: invitees.map(() => ({ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const })),
+        invitees: invitees.map(() => ({ userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: false, busyDates: 0 })),
       }
     })
     const user = userEvent.setup()
@@ -164,6 +164,23 @@ describe('BookingForm invitees', () => {
       attendees: 3,
       invitees: [{ userId: 'u-sara' }, { email: 'omar@acme.com', name: 'Omar' }],
     })
+  })
+
+  it('tags a colleague who is busy then, and still books with them', async () => {
+    vi.mocked(previewBooking).mockImplementation(async (_token, input) => ({
+      ...valid,
+      invitees: (input.invitees ?? []).map(() => ({
+        userId: 'u-sara', name: 'Sara Ali', email: 'sara@dixels.io', isExternal: false, responseStatus: 0 as const, isBusy: true, busyDates: 1,
+      })),
+    }))
+    const user = userEvent.setup()
+    renderForm()
+
+    await inviteSara(user)
+
+    const list = screen.getByRole('list', { name: 'Invited' })
+    await waitFor(() => expect(within(list).getByText('Busy then')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Book' })).toBeEnabled())
   })
 
   it('offers no outside guests while they are switched off', async () => {

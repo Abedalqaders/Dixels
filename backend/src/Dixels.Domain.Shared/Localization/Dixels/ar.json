@@ -1030,6 +1030,8 @@
     "People:EmailInvalid": "اكتب بريدًا كاملًا، مثل name@company.com.",
     "People:AlreadyAdded": "هذا الشخص مدعو بالفعل.",
     "People:Guest": "ضيف",
+    "People:BusyThen": "مشغول حينها",
+    "People:BusyOnDates": "مشغول في {count} من {total} تواريخ",
     "FindSpace:NoBuilding": "لم تُعيَّن لمبنى بعد، لذلك لا يوجد ما يمكن حجزه.",
     "Calendar:Lead": "الأوقات بتوقيت {timezone}",
     "FindSpace:Lead_zero": "الأوقات بتوقيت {timezone} · يمكن الحجز قبل {count} يوم كحد أقصى",

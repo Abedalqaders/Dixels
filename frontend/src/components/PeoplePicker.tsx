@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Command as CommandPrimitive } from 'cmdk'
-import { Mail, SearchIcon, X } from 'lucide-react'
+import { Clock, Mail, SearchIcon, X } from 'lucide-react'
 import type { QueryKey } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -331,6 +331,21 @@ export function Initials({ name, guest = false }: { name: string; guest?: boolea
 }
 
 /** The small amber "Guest" tag beside someone invited by email. */
+/**
+ * "Busy then" — a colleague with their own booking or a meeting they accepted at that time.
+ * Only a heads-up: they can still be invited. On a series, `dates` of `of` ("busy on 2 of 8
+ * dates"). Amber like the Guest tag; never both on one row, since outsiders are never busy.
+ */
+export function BusyTag({ dates = 1, of = 1 }: { dates?: number; of?: number }) {
+  const { t } = useTranslation()
+  return (
+    <span className="inline-flex flex-none items-center gap-1 rounded-sm bg-[var(--state-expired-soft)] px-1.5 py-px text-[11px] font-medium text-[var(--state-expired-ink)]">
+      <Clock className="size-3" aria-hidden="true" />
+      {of > 1 ? t('People:BusyOnDates', { count: dates, total: of }) : t('People:BusyThen')}
+    </span>
+  )
+}
+
 export function GuestTag() {
   const { t } = useTranslation()
   return (

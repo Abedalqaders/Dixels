@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { FieldError } from '@/components/FieldError'
-import { PeoplePicker } from '@/components/PeoplePicker'
+import { BusyTag, PeoplePicker } from '@/components/PeoplePicker'
 import { randomUuid } from '@/lib/uuid'
 import { groupViolations, issueText, NO_ISSUES } from '@/features/bookings/violationFields'
 import {
@@ -206,6 +206,10 @@ export function BookingForm({
   const followed = resolvedInvitees(invitees, resolved)
   if (followed !== invitees) setInvitees(followed)
 
+  // "Busy then" for colleagues taken at that time (on a series: on how many of its dates).
+  const busyDates = new Map((resolved ?? []).filter((i) => i.userId && i.busyDates > 0).map((i) => [i.userId!, i.busyDates]))
+  const dateCount = rule && seriesPreview.status === 'done' ? seriesPreview.preview.occurrences.length : 1
+
   // Adding people raises the head count to fit them (you + everyone invited); removing
   // someone leaves it, since the number may count people who aren't named.
   function changeInvitees(next: Invitee[]) {
@@ -358,6 +362,10 @@ export function BookingForm({
               search={(filter) => searchColleagues(token, filter)}
               allowGuests={guestsAllowed.data === true}
               max={MAX_INVITEES}
+              rowExtra={(p) => {
+                const dates = p.userId ? busyDates.get(p.userId) : undefined
+                return dates ? <BusyTag dates={dates} of={dateCount} /> : null
+              }}
             />
           </div>
 
