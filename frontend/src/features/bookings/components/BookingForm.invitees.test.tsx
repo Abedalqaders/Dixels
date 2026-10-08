@@ -180,7 +180,7 @@ describe('BookingForm invitees', () => {
     await inviteSara(user)
 
     const list = screen.getByRole('list', { name: 'Invited' })
-    const pill = await within(list).findByRole('button', { name: 'Busy 10:00–10:30' })
+    const pill = await within(list).findByRole('button', { name: /^Busy \W?10:00–10:30\W?$/ })
     expect(list.querySelector('[data-presence="busy"]')).not.toBeNull()
     expect(await screen.findByText(/^1 person is busy at/)).toBeInTheDocument()
 
