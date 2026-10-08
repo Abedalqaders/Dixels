@@ -1148,6 +1148,13 @@
     "Email:Invite:Heading": "دعوة من {0} إلى {1}",
     "Email:Invite:Subject": "دعوة: {0} · {1}، {2}",
     "Email:Invite:SubjectSeries": "دعوة: {0} · من {1}",
-    "Email:Invite:Footer": "أرسل Dixels هذه الرسالة لأنك مدعو إلى اجتماع من {0}."
+    "Email:Invite:Footer": "أرسل Dixels هذه الرسالة لأنك مدعو إلى اجتماع من {0}.",
+    "Email:GuestCancelled:Subject": "أُلغي: {0} · {1}",
+    "Email:GuestCancelled:SubjectSeries": "أُلغي: {0}",
+    "Email:GuestCancelled:Heading": "أُلغي {0}",
+    "Email:GuestCancelled:ByOwner": "أُلغي هذا الاجتماع من قِبل {0}، وحُذف من تقويمك.",
+    "Email:GuestCancelled:ByAdmin": "ألغى أحد المسؤولين هذا الاجتماع، وحُذف من تقويمك.",
+    "Email:GuestsTold": "أُبلغ ضيوفك ({0}) بالإلغاء.",
+    "Email:GuestsTold:One": "أُبلغ ضيفك بالإلغاء."
   }
 }

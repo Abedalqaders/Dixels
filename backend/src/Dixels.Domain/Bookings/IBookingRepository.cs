@@ -106,6 +106,21 @@ public interface IBookingRepository : IRepository<Booking, Guid>
     /// </summary>
     Task<bool> IsUpcomingGuestAsync(string icsUid, DateTimeOffset now, CancellationToken cancellationToken = default);
 
+    /// <summary>These bookings' guest rows (with their calendar UID and SEQUENCE), not tracked.</summary>
+    Task<List<BookingAttendee>> GetGuestRowsAsync(IReadOnlyCollection<Guid> bookingIds, CancellationToken cancellationToken = default);
+
+    /// <summary>These series' own guest rows (with their calendar UID and SEQUENCE), not tracked.</summary>
+    Task<List<BookingSeriesAttendee>> GetSeriesGuestRowsAsync(IReadOnlyCollection<Guid> seriesIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Which of these series still have a confirmed date that hasn't started.</summary>
+    Task<HashSet<Guid>> GetSeriesWithUpcomingAsync(IReadOnlyCollection<Guid> seriesIds, DateTimeOffset now, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// One more on the calendar SEQUENCE of these guests' copies (booking or series guests, by
+    /// UID): an update or cancel just sent to them must replace what they have.
+    /// </summary>
+    Task BumpIcsSequenceAsync(IReadOnlyCollection<string> icsUids, CancellationToken cancellationToken = default);
+
     Task<Booking?> FindByIdempotencyKeyAsync(Guid userId, string idempotencyKey, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -39,6 +39,7 @@ public partial class BookingEmails : DomainService
 {
     private readonly IIdentityUserRepository _userRepository;
     private readonly IBookingRepository _bookingRepository;
+    private readonly IRepository<BookingSeries, Guid> _seriesRepository;
     private readonly UserLanguageManager _userLanguage;
     private readonly IRepository<Space, Guid> _spaceRepository;
     private readonly IRepository<Floor, Guid> _floorRepository;
@@ -55,6 +56,7 @@ public partial class BookingEmails : DomainService
     public BookingEmails(
         IIdentityUserRepository userRepository,
         IBookingRepository bookingRepository,
+        IRepository<BookingSeries, Guid> seriesRepository,
         UserLanguageManager userLanguage,
         IRepository<Space, Guid> spaceRepository,
         IRepository<Floor, Guid> floorRepository,
@@ -70,6 +72,7 @@ public partial class BookingEmails : DomainService
     {
         _userRepository = userRepository;
         _bookingRepository = bookingRepository;
+        _seriesRepository = seriesRepository;
         _userLanguage = userLanguage;
         _spaceRepository = spaceRepository;
         _floorRepository = floorRepository;
@@ -148,7 +151,7 @@ public partial class BookingEmails : DomainService
     /// "You cancelled" — for what the employee just cancelled themselves: one booking, or
     /// several dates of one series, in one email. (Admin cancellations have their own.)
     /// </summary>
-    public Task SendCancelledAsync(IReadOnlyCollection<Booking> cancelled)
+    public Task SendCancelledAsync(IReadOnlyCollection<Booking> cancelled, int guestsTold = 0)
     {
         if (cancelled.Count == 0)
         {
@@ -164,6 +167,7 @@ public partial class BookingEmails : DomainService
             model.Cancelled = true;
             model.Count = cancelled.Count;
             model.Reason = first.CancelReason;
+            model.GuestsTold = guestsTold;
             if (cancelled.Count > 1)
             {
                 // Several dates of a series: the first to the last, at the series' time.
@@ -185,7 +189,7 @@ public partial class BookingEmails : DomainService
     /// <see cref="AdminCancelledEmailJob"/>, so it sends right away (and throws, for the job
     /// to retry). Nobody is emailed whose account is gone or switched off.
     /// </summary>
-    public async Task SendAdminCancelledAsync(Guid userId, IReadOnlyCollection<Guid> bookingIds, int count)
+    public async Task SendAdminCancelledAsync(Guid userId, IReadOnlyCollection<Guid> bookingIds, int count, int guestsTold = 0)
     {
         var user = await _userRepository.FindAsync(userId, includeDetails: false);
         if (user is null || !user.IsActive || string.IsNullOrWhiteSpace(user.Email))
@@ -235,6 +239,7 @@ public partial class BookingEmails : DomainService
                 RecipientName = DisplayName(user),
                 FindUrl = AppLink("/find-space"),
                 Count = Math.Max(count, bookings.Count),
+                GuestsTold = guestsTold,
             };
             foreach (var booking in bookings)
             {
@@ -375,16 +380,19 @@ public partial class BookingEmails : DomainService
         model.Title = title;
         model.Count = 1;
         model.ViewUrl = AppLink($"/my-calendar?view=day&date={date:yyyy-MM-dd}");
-        model.Rows.Add(new BookingEmailRow
-        {
-            SpaceName = model.SpaceName,
-            FloorName = model.FloorName,
-            BuildingName = model.BuildingName,
-            Date = model.Date,
-            Time = TimeRange(clock.ToLocal(startsAt), clock.ToLocal(endsAt)),
-            Zone = ZoneLabel(clock, startsAt),
-        });
+        model.Rows.Add(Row(model, clock, startsAt, endsAt));
     }
+
+    /// <summary>Another When / Where block in the model's room (one more date of a series).</summary>
+    private BookingEmailRow Row(BookingEmailModel model, BuildingClock clock, DateTimeOffset startsAt, DateTimeOffset endsAt) => new()
+    {
+        SpaceName = model.SpaceName,
+        FloorName = model.FloorName,
+        BuildingName = model.BuildingName,
+        Date = BookingFormat.Date(clock.LocalDate(startsAt)),
+        Time = TimeRange(clock.ToLocal(startsAt), clock.ToLocal(endsAt)),
+        Zone = ZoneLabel(clock, startsAt),
+    };
 
     private static string TitleOrRoom(BookingEmailModel model) =>
         string.IsNullOrWhiteSpace(model.Title) ? model.SpaceName : model.Title;

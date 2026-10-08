@@ -960,6 +960,13 @@
     "Email:Invite:Heading": "{0} invited you to {1}",
     "Email:Invite:Subject": "Invitation: {0} · {1}, {2}",
     "Email:Invite:SubjectSeries": "Invitation: {0} · from {1}",
-    "Email:Invite:Footer": "Dixels sent you this email because {0} invited you to a meeting."
+    "Email:Invite:Footer": "Dixels sent you this email because {0} invited you to a meeting.",
+    "Email:GuestCancelled:Subject": "Cancelled: {0} · {1}",
+    "Email:GuestCancelled:SubjectSeries": "Cancelled: {0}",
+    "Email:GuestCancelled:Heading": "{0} is cancelled",
+    "Email:GuestCancelled:ByOwner": "{0} cancelled this meeting. It's been taken off your calendar.",
+    "Email:GuestCancelled:ByAdmin": "An administrator cancelled this meeting. It's been taken off your calendar.",
+    "Email:GuestsTold": "Your {0} guests were told it's cancelled.",
+    "Email:GuestsTold:One": "Your guest was told it's cancelled."
   }
 }

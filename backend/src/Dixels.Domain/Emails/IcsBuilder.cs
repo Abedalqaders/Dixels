@@ -56,8 +56,11 @@ public record IcsEvent
     /// <summary>A series: the dates the rule lands on that aren't booked (building-local starts).</summary>
     public IReadOnlyList<DateTime> LocalExceptions { get; init; } = Array.Empty<DateTime>();
 
-    /// <summary>One date of a series this file is about (its original local start), e.g. cancelling just that date.</summary>
-    public DateTime? LocalRecurrenceId { get; init; }
+    /// <summary>
+    /// Dates of a series this file is about, by their original local start — cancelling just
+    /// those: one event each (RECURRENCE-ID), all with the series' UID. Empty: the whole event.
+    /// </summary>
+    public IReadOnlyList<DateTime> LocalRecurrenceIds { get; init; } = Array.Empty<DateTime>();
 
     public IcsPerson? Organizer { get; init; }
 
@@ -85,6 +88,37 @@ public static class IcsBuilder
         calendar.ProductId = "-//Dixels//Bookings//EN";
         calendar.AddTimeZone(VTimeZone.FromDateTimeZone(e.TimeZoneId));
 
+        if (e.LocalRecurrenceIds.Count == 0)
+        {
+            var evt = Event(e, e.LocalStart, e.LocalEnd);
+            if (e.Rule is not null)
+            {
+                evt.RecurrenceRules.Add(Pattern(e.Rule, e.LocalStart, e.TimeZoneId));
+                foreach (var date in e.LocalExceptions)
+                {
+                    evt.ExceptionDates.Add(Local(date, e.TimeZoneId));
+                }
+            }
+
+            calendar.Events.Add(evt);
+        }
+        else
+        {
+            var length = e.LocalEnd - e.LocalStart;
+            foreach (var start in e.LocalRecurrenceIds)
+            {
+                var evt = Event(e, start, start + length);
+                evt.RecurrenceId = Local(start, e.TimeZoneId);
+                calendar.Events.Add(evt);
+            }
+        }
+
+        return new CalendarSerializer().SerializeToString(calendar)!;
+    }
+
+    /// <summary>The event (or one date of it), with its people.</summary>
+    private static CalendarEvent Event(IcsEvent e, DateTime localStart, DateTime localEnd)
+    {
         var evt = new CalendarEvent
         {
             Uid = e.Uid,
@@ -92,26 +126,12 @@ public static class IcsBuilder
             Summary = e.Summary,
             Location = e.Location,
             Description = e.Description,
-            DtStart = Local(e.LocalStart, e.TimeZoneId),
-            DtEnd = Local(e.LocalEnd, e.TimeZoneId),
+            DtStart = Local(localStart, e.TimeZoneId),
+            DtEnd = Local(localEnd, e.TimeZoneId),
             DtStamp = new CalDateTime(DateTime.SpecifyKind(e.StampUtc, DateTimeKind.Utc)),
             Status = e.Method == IcsMethods.Cancel ? EventStatus.Cancelled : EventStatus.Confirmed,
             Transparency = TransparencyType.Opaque,
         };
-
-        if (e.Rule is not null)
-        {
-            evt.RecurrenceRules.Add(Pattern(e.Rule, e.LocalStart, e.TimeZoneId));
-            foreach (var date in e.LocalExceptions)
-            {
-                evt.ExceptionDates.Add(Local(date, e.TimeZoneId));
-            }
-        }
-
-        if (e.LocalRecurrenceId is { } recurrenceId)
-        {
-            evt.RecurrenceId = Local(recurrenceId, e.TimeZoneId);
-        }
 
         if (e.Organizer is { } organizer)
         {
@@ -129,8 +149,7 @@ public static class IcsBuilder
             });
         }
 
-        calendar.Events.Add(evt);
-        return new CalendarSerializer().SerializeToString(calendar)!;
+        return evt;
     }
 
     private static CalDateTime Local(DateTime local, string timeZoneId) =>

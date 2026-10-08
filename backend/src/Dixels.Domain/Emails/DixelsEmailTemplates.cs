@@ -18,6 +18,7 @@ public static class DixelsEmailTemplates
     public const string BookingReminder = "Dixels.Email.BookingReminder";
     public const string AdminCancelled = "Dixels.Email.AdminCancelled";
     public const string Invite = "Dixels.Email.Invite";
+    public const string GuestCancelled = "Dixels.Email.GuestCancelled";
 }
 
 public class DixelsEmailTemplateDefinitionProvider : TemplateDefinitionProvider
@@ -31,6 +32,7 @@ public class DixelsEmailTemplateDefinitionProvider : TemplateDefinitionProvider
         context.Add(Template(DixelsEmailTemplates.BookingReminder, "BookingReminder"));
         context.Add(Template(DixelsEmailTemplates.AdminCancelled, "AdminCancelled"));
         context.Add(Template(DixelsEmailTemplates.Invite, "Invite"));
+        context.Add(Template(DixelsEmailTemplates.GuestCancelled, "GuestCancelled"));
     }
 
     private static TemplateDefinition Template(string name, string file, bool isLayout = false)
