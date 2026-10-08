@@ -151,6 +151,13 @@ public class Booking : AuditedAggregateRoot<Guid>
         return SetInvitees(invitees, guidGenerator);
     }
 
+    /// <summary>
+    /// A colleague who left (deactivated, removed, or moved to another building) coming off
+    /// the guest list. The head count stays: it may count people who aren't named. Returns
+    /// whether they were on it.
+    /// </summary>
+    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+
     /// <summary>The same people (by <see cref="Invitee.Key"/>), with the same names for external guests.</summary>
     internal static bool SameInvitees(IEnumerable<Invitee> stored, IReadOnlyCollection<Invitee> requested)
     {

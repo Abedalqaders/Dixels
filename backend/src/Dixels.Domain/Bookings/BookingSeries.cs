@@ -101,6 +101,9 @@ public class BookingSeries : AuditedAggregateRoot<Guid>
         return SetInvitees(invitees, guidGenerator);
     }
 
+    /// <summary>The same as <see cref="Booking.RemoveInvitee"/>, for the series' own list.</summary>
+    public bool RemoveInvitee(Guid userId) => _invitees.RemoveColleague(userId);
+
     /// <summary>Whether a retried create (same key) asks for the same people as this series was made with.</summary>
     public bool MatchesInvitees(IReadOnlyCollection<Invitee> invitees) =>
         Booking.SameInvitees(_invitees.Select(i => i.ToInvitee()), invitees);
