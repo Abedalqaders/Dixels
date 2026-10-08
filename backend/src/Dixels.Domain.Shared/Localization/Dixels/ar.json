@@ -1171,6 +1171,10 @@
     "Email:GuestCancelled:ByOwner": "أُلغي هذا الاجتماع من قِبل {0}، وحُذف من تقويمك.",
     "Email:GuestCancelled:ByAdmin": "ألغى أحد المسؤولين هذا الاجتماع، وحُذف من تقويمك.",
     "Email:GuestsTold": "أُبلغ ضيوفك ({0}) بالإلغاء.",
-    "Email:GuestsTold:One": "أُبلغ ضيفك بالإلغاء."
+    "Email:GuestsTold:One": "أُبلغ ضيفك بالإلغاء.",
+    "Email:Invite:AddedHeading": "أُضفت إلى {1} بدعوة من {0}",
+    "Email:GuestRemoved:Heading": "أُزلت من {1} بواسطة {0}",
+    "Email:GuestRemoved:Subject": "أُزلت: {0} · {1}",
+    "Email:GuestRemoved:Note": "حُذف من تقويمك."
   }
 }

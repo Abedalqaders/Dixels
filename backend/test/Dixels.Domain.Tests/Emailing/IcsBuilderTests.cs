@@ -99,6 +99,25 @@ public class IcsBuilderTests
     }
 
     [Fact]
+    public void Joining_a_series_part_way_keeps_its_own_day_of_the_month()
+    {
+        // "Monthly on day 30" from 30 Oct: February's date is the 28th. Someone joining then
+        // still gets day 30 for the months after, not "day 28".
+        var rule = new RecurrenceRule(RecurrenceFrequency.Monthly, 1, null, MonthlyRepeat.OnDay, new DateOnly(2027, 6, 30));
+        var anchor = new DateOnly(2026, 10, 30);
+        var joined = new DateOnly(2027, 2, 28);
+        var ics = Build(Single() with
+        {
+            LocalStart = joined.ToDateTime(new TimeOnly(10, 0)),
+            LocalEnd = joined.ToDateTime(new TimeOnly(11, 0)),
+            Rule = rule,
+            RuleAnchor = anchor,
+        });
+
+        Dates(ics).ShouldBe(RecurrenceExpander.Expand(rule, anchor, 500).Where(d => d >= joined));
+    }
+
+    [Fact]
     public void Dates_that_werent_booked_are_left_out()
     {
         var rule = new RecurrenceRule(RecurrenceFrequency.Weekly, 1, new[] { DayOfWeek.Monday }, MonthlyRepeat.OnDay, new DateOnly(2026, 11, 2));
