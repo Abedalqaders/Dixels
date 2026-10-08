@@ -42,10 +42,36 @@ public partial class BookingEmails
         return InviteAsync(series.UserId, series.SpaceId, series.Invitees.ToList(), series.Title, first.StartsAt, first.EndsAt, series, bookings, openId: first.Id);
     }
 
+    /// <summary>The emails <see cref="InviteAsync"/> writes to guests.</summary>
+    private enum GuestEmail
+    {
+        /// <summary>"Sara Ali invited you", with their calendar file.</summary>
+        Invite,
+
+        /// <summary>"Sara Ali added you" — the same, for someone added to an existing list.</summary>
+        Added,
+
+        /// <summary>"Q4 planning starts at 10:00" — a plain email, no calendar file.</summary>
+        Reminder,
+    }
+
     /// <summary>
-    /// Invites <paramref name="guests"/> — all of a new booking's, or only those just added
-    /// (<paramref name="added"/>: "added you"); <paramref name="everyone"/> is the whole list,
-    /// for the names of the others. <paramref name="openId"/> is the date a colleague's "Open in
+    /// "Q4 planning starts soon" to each guest of a booking due its reminder, at the same time
+    /// as the booker's (see <see cref="BookingReminders"/>). A plain email — no calendar file,
+    /// so no second event in their calendar. Guests who declined aren't reminded.
+    /// </summary>
+    public async Task SendGuestRemindersAsync(Booking booking)
+    {
+        var everyone = (await _bookingRepository.GetGuestRowsAsync(new[] { booking.Id })).Cast<InviteeRow>().ToList();
+        var toRemind = everyone.Where(g => g.ResponseStatus != InviteeResponseStatus.Declined).ToList();
+        await InviteAsync(booking.UserId, booking.SpaceId, toRemind, booking.Title, booking.StartsAt, booking.EndsAt, null, null,
+            everyone, GuestEmail.Reminder, booking.Id);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="kind"/> to <paramref name="guests"/> — all of a new booking's,
+    /// only those just added, or those to remind; <paramref name="everyone"/> is the whole
+    /// list, for the names of the others. <paramref name="openId"/> is the date a colleague's "Open in
     /// Dixels" opens (outsiders have no account, so theirs has no button).
     /// </summary>
     private async Task InviteAsync(
@@ -58,7 +84,7 @@ public partial class BookingEmails
         BookingSeries? series,
         IReadOnlyCollection<Booking>? dates,
         IReadOnlyList<InviteeRow>? everyone = null,
-        bool added = false,
+        GuestEmail kind = GuestEmail.Invite,
         Guid? openId = null)
     {
         everyone ??= guests;
@@ -116,7 +142,7 @@ public partial class BookingEmails
                 {
                     var model = new BookingEmailModel
                     {
-                        Status = EmailStatus.Invitation,
+                        Status = kind == GuestEmail.Reminder ? EmailStatus.Reminder : EmailStatus.Invitation,
                         RecipientName = name,
                         InvitedBy = ownerName,
                         CanOpen = colleague,
@@ -126,14 +152,36 @@ public partial class BookingEmails
                     await NamePlaceAsync(model, space, floor, building);
                     Describe(model, clock, startsAt, endsAt, title, colleague ? openId : null);
                     model.AlsoInvited = OthersNames(everyone, guest, colleagues);
+                    var startTime = BookingFormat.Clock(TimeOnly.FromDateTime(clock.ToLocal(startsAt)));
+                    if (kind == GuestEmail.Reminder)
+                    {
+                        // Yes / No buttons only for those who haven't answered yet.
+                        if (guest.ResponseStatus == InviteeResponseStatus.Pending)
+                        {
+                            AddAnswerLinks(model, guest);
+                            model.AnswerNudge = _localizer["Email:GuestReminder:Nudge", ownerName];
+                        }
+
+                        model.Heading = _localizer["Email:BookingReminder:Heading", TitleOrRoom(model), startTime];
+                        await _backgroundJobManager.EnqueueAsync(new SendEmailArgs
+                        {
+                            To = to,
+                            Subject = _localizer["Email:GuestReminder:Subject", TitleOrRoom(model), startTime],
+                            Body = await RenderAsync(DixelsEmailTemplates.GuestReminder, model, language),
+                            ReplyTo = owner.Email,
+                            FromName = fromName,
+                            GuestIcsUid = guest.IcsUid,
+                        });
+                        continue;
+                    }
+
                     AddAnswerLinks(model, guest);
                     model.AnswerInMailApp = askToAnswer;
-                    model.Heading = _localizer[added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
+                    model.Heading = _localizer[kind == GuestEmail.Added ? "Email:Invite:AddedHeading" : "Email:Invite:Heading", ownerName, TitleOrRoom(model)];
 
                     string subject;
                     if (series is null)
                     {
-                        var startTime = BookingFormat.Clock(TimeOnly.FromDateTime(clock.ToLocal(startsAt)));
                         subject = _localizer["Email:Invite:Subject", TitleOrRoom(model), model.Date, startTime];
                     }
                     else
@@ -192,13 +240,13 @@ public partial class BookingEmails
                     var series = await _seriesRepository.GetAsync(seriesId);
                     var everyone = await _bookingRepository.GetSeriesGuestRowsAsync(new[] { seriesId });
                     await InviteAsync(series.UserId, series.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
-                        series.Title, first.StartsAt, first.EndsAt, series, change.Bookings, everyone, added: true, openId: first.Id);
+                        series.Title, first.StartsAt, first.EndsAt, series, change.Bookings, everyone, GuestEmail.Added, first.Id);
                 }
                 else
                 {
                     var everyone = first.Invitees.ToList();
                     await InviteAsync(first.UserId, first.SpaceId, everyone.Where(r => addedKeys.Contains(r.ToInvitee().Key)).ToList(),
-                        first.Title, first.StartsAt, first.EndsAt, null, null, everyone, added: true, openId: first.Id);
+                        first.Title, first.StartsAt, first.EndsAt, null, null, everyone, GuestEmail.Added, first.Id);
                 }
             }
 

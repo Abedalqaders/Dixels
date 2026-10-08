@@ -631,4 +631,115 @@ public class GuestEmailsTests : DixelsApplicationTestBase<DixelsEntityFrameworkC
 
         _emails.Sent.ShouldBeEmpty();
     }
+
+    // ---- E5: reminders ----
+
+    /// <summary>A booking with these guests starting 15–30 minutes from now, made "yesterday" (so it's due its reminder).</summary>
+    private async Task<BookingDto> BookSoonAsync(Scenario s, params InviteeDto[] invitees)
+    {
+        var now = DateTime.UtcNow;
+        var start = new DateTime(now.Ticks - now.Ticks % TimeSpan.FromMinutes(15).Ticks, DateTimeKind.Utc).AddMinutes(30);
+        BookingDto booking;
+        using (ActAs(s.Dana.Id))
+        {
+            var request = Request(s.SpaceId, invitees);
+            request.LocalStart = start;
+            request.LocalEnd = start.AddHours(1);
+            booking = await _bookings.CreateAsync(request);
+        }
+
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var db = await GetRequiredService<IDbContextProvider<DixelsDbContext>>().GetDbContextAsync();
+            await db.Bookings.Where(b => b.Id == booking.Id)
+                .ExecuteUpdateAsync(u => u.SetProperty(b => b.CreationTime, DateTime.UtcNow.AddDays(-1)));
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+        return booking;
+    }
+
+    private async Task SendDueRemindersAsync()
+    {
+        await GetRequiredService<BookingReminders>().SendDueAsync();
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+    }
+
+    [Fact]
+    public async Task Guests_are_reminded_with_the_booker_once_and_in_their_language()
+    {
+        var s = await CreateScenarioAsync();
+        await WithUnitOfWorkAsync(() => _userLanguage.SetAsync(s.Rana.Id, "ar"));
+        await BookSoonAsync(s, Colleague(s.Rana), Outsider("guest@outside.io", "Sara Guest"));
+
+        await SendDueRemindersAsync();
+        await SendDueRemindersAsync(); // once only
+
+        To(s.Dana.Email).Subject.ShouldStartWith("Reminder: Room 1 at ");
+        var outsider = To("guest@outside.io");
+        outsider.Subject.ShouldStartWith("Reminder: Planning at ");
+        outsider.Body.ShouldContain("⏰ Reminder");
+        outsider.Body.ShouldContain("Planning starts at ");
+        outsider.Body.ShouldContain("Hi Sara Guest,");
+        outsider.Body.ShouldNotContain("Open in Dixels");
+        outsider.Mail!.ReplyToList.ShouldHaveSingleItem().Address.ShouldBe(s.Dana.Email);
+        outsider.Mail.Attachments.ShouldBeEmpty(); // a plain email: no second event in their calendar
+        outsider.Mail.AlternateViews.ShouldBeEmpty();
+        // Not answered yet: the two answer buttons, on their own link.
+        outsider.Body.ShouldContain("heard from you yet. Let them know if you"); // after "Dana Test hasn't"
+        outsider.Body.ShouldContain("Yes, I'm coming");
+        outsider.Body.ShouldContain("No, I can't make it");
+        outsider.Body.ShouldContain("/rsvp/");
+        outsider.Body.ShouldContain("answer=accepted");
+        outsider.Body.ShouldContain("answer=declined");
+
+        var rana = To(s.Rana.Email);
+        rana.Subject.ShouldStartWith("تذكير: Planning الساعة ");
+        rana.Body.ShouldContain("dir=\"rtl\"");
+        rana.Body.ShouldContain("نعم، سأحضر"); // not answered yet: the Yes / No buttons (in place of "Open in Dixels")
+    }
+
+    [Fact]
+    public async Task A_guest_who_declined_is_not_reminded_and_one_who_accepted_gets_no_buttons()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookSoonAsync(s, Colleague(s.Rana), Colleague(s.Omar));
+        using (ActAs(s.Rana.Id))
+        {
+            await _bookings.RespondAsync(booking.Id, new RespondToInviteDto { Status = InviteeResponseStatus.Declined });
+        }
+        using (ActAs(s.Omar.Id))
+        {
+            await _bookings.RespondAsync(booking.Id, new RespondToInviteDto { Status = InviteeResponseStatus.Accepted });
+        }
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+        _emails.Clear();
+
+        await SendDueRemindersAsync();
+
+        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
+        var omar = To(s.Omar.Email);
+        omar.Subject.ShouldStartWith("Reminder: Planning at ");
+        omar.Body.ShouldNotContain("/rsvp/"); // already answered: the plain reminder
+        omar.Body.ShouldContain("Open in Dixels");
+    }
+
+    [Fact]
+    public async Task A_guest_taken_off_before_the_reminder_goes_is_not_reminded()
+    {
+        var s = await CreateScenarioAsync();
+        var booking = await BookSoonAsync(s, Colleague(s.Rana), Colleague(s.Omar));
+
+        // The reminder is queued; Rana comes off the list before it's sent.
+        await GetRequiredService<BookingReminders>().SendDueAsync();
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var db = await GetRequiredService<IDbContextProvider<DixelsDbContext>>().GetDbContextAsync();
+            await db.Set<BookingAttendee>().Where(a => a.BookingId == booking.Id && a.UserId == s.Rana.Id).ExecuteDeleteAsync();
+        });
+        await QueuedJobs.RunAllAsync(ServiceProvider);
+
+        _emails.Sent.ShouldNotContain(e => e.To == s.Rana.Email);
+        To(s.Omar.Email);
+    }
 }

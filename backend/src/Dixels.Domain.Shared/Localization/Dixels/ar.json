@@ -1211,6 +1211,10 @@
     "Email:Invite:AddedHeading": "أُضفت إلى {1} بدعوة من {0}",
     "Email:GuestRemoved:Heading": "أُزلت من {1} بواسطة {0}",
     "Email:GuestRemoved:Subject": "أُزلت: {0} · {1}",
-    "Email:GuestRemoved:Note": "حُذف من تقويمك."
+    "Email:GuestRemoved:Note": "حُذف من تقويمك.",
+    "Email:GuestReminder:Subject": "تذكير: {0} الساعة {1}",
+    "Email:GuestReminder:Nudge": "لم يصل ردّك إلى {0} بعد. أخبره إن كنت ستحضر:",
+    "Email:GuestReminder:Yes": "نعم، سأحضر",
+    "Email:GuestReminder:No": "لا، لن أتمكن"
   }
 }

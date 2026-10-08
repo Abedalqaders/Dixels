@@ -1019,6 +1019,10 @@
     "Email:Invite:AddedHeading": "{0} added you to {1}",
     "Email:GuestRemoved:Heading": "{0} removed you from {1}",
     "Email:GuestRemoved:Subject": "Removed: {0} · {1}",
-    "Email:GuestRemoved:Note": "It's been taken off your calendar."
+    "Email:GuestRemoved:Note": "It's been taken off your calendar.",
+    "Email:GuestReminder:Subject": "Reminder: {0} at {1}",
+    "Email:GuestReminder:Nudge": "{0} hasn't heard from you yet. Let them know if you're coming:",
+    "Email:GuestReminder:Yes": "Yes, I'm coming",
+    "Email:GuestReminder:No": "No, I can't make it"
   }
 }
