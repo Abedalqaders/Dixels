@@ -25,6 +25,9 @@ public static class DixelsDomainErrorCodes
     public const string SpaceTypeNameAlreadyExistsConcurrently = Prefix + "SpaceTypeNameAlreadyExistsConcurrently";
     public const string SpaceTypeInUse = Prefix + "SpaceTypeInUse";
     public const string ParentIsDeleted = Prefix + "ParentIsDeleted";
+    // An "add building / floor / space" retried with its key but different details, or after
+    // what it made was deleted (HierarchyCreateReplays).
+    public const string HierarchyIdempotencyKeyReused = Prefix + "IdempotencyKeyReused";
 
     public const string InvalidBuildingId = "Dixels:Users:InvalidBuildingId";
     public const string WrongCurrentPassword = "Dixels:Users:WrongCurrentPassword";

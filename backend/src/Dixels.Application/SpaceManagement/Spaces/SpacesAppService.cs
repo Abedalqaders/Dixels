@@ -155,6 +155,21 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
         var space = new Space(GuidGenerator.Create(), input.FloorId, names[0].Language, names[0].Name, input.SpaceTypeId, input.Capacity);
         space.SetNames(names);
+
+        // Sent before (a double-click, a retry): the room that request made, not a second one.
+        if (!string.IsNullOrWhiteSpace(input.IdempotencyKey))
+        {
+            var first = await CreateReplays.FindAsync(_spaceRepository, CurrentUser.GetId(), input.IdempotencyKey,
+                s => s.FloorId == space.FloorId && s.SpaceTypeId == space.SpaceTypeId && s.Capacity == space.Capacity
+                     && s.Translations.HasSameNames(space.Translations));
+            if (first is not null)
+            {
+                return await MapToDtoAsync(first);
+            }
+
+            space.SetIdempotencyKey(input.IdempotencyKey);
+        }
+
         await _spaceRepository.InsertAsync(space);
 
         return await MapToDtoAsync(space);
@@ -409,6 +424,8 @@ public class SpacesAppService : DixelsAppService, ISpacesAppService
         var name = space.Translations.First();
         return new Space(space.Id, space.FloorId, name.Language, name.Name, space.SpaceTypeId, space.Capacity);
     }
+
+    private HierarchyCreateReplays CreateReplays => LazyServiceProvider.LazyGetRequiredService<HierarchyCreateReplays>();
 
     private async Task<SpaceDto> MapToDtoAsync(Space space)
     {

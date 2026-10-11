@@ -25,6 +25,7 @@ public class HttpExceptionStatusCodeTests
         {
             [DixelsDomainErrorCodes.BookingOverlap] = HttpStatusCode.Conflict,
             [DixelsDomainErrorCodes.BookingIdempotencyKeyReused] = HttpStatusCode.Conflict,
+            [DixelsDomainErrorCodes.HierarchyIdempotencyKeyReused] = HttpStatusCode.Conflict,
             [DixelsDomainErrorCodes.BookingOrganiserOnly] = HttpStatusCode.Forbidden,
             [DixelsDomainErrorCodes.BookingOnlyOrganiserCancels] = HttpStatusCode.Forbidden,
             [DixelsDomainErrorCodes.BookingOrganiserCannotRespond] = HttpStatusCode.Forbidden,
@@ -46,6 +47,7 @@ public class HttpExceptionStatusCodeTests
     {
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingOverlap)).ShouldBe(HttpStatusCode.Conflict);
         StatusOf(new BusinessException(DixelsDomainErrorCodes.BookingIdempotencyKeyReused)).ShouldBe(HttpStatusCode.Conflict);
+        StatusOf(new BusinessException(DixelsDomainErrorCodes.HierarchyIdempotencyKeyReused)).ShouldBe(HttpStatusCode.Conflict);
     }
 
     [Fact]

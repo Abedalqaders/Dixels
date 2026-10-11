@@ -14,7 +14,7 @@ namespace Dixels.SpaceManagement;
 /// is required (non-null) — this guarantees resolution always terminates with a real value,
 /// so the resolver never has to handle "no value set anywhere".
 /// </summary>
-public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<BuildingTranslation>
+public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<BuildingTranslation>, IHasIdempotencyKey
 {
     /// <summary>
     /// Its name, once per language (ABP MultiLingualObjects) — there's no single Name. Which
@@ -44,6 +44,18 @@ public class Building : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<Buil
     /// <see cref="SpaceHierarchyManager"/>.
     /// </summary>
     public Guid? DeletionBatchId { get; internal set; }
+
+    /// <summary>
+    /// The key the admin's "add" was sent with: a retry with the same key gets this one back
+    /// instead of a second copy (see <see cref="HierarchyCreateReplays"/>). Null for anything
+    /// made another way (seed data, rows from before keys, a client that sent none).
+    /// </summary>
+    public string? IdempotencyKey { get; private set; }
+
+    public void SetIdempotencyKey(string idempotencyKey)
+    {
+        IdempotencyKey = Check.NotNullOrWhiteSpace(idempotencyKey, nameof(idempotencyKey), HierarchyConsts.MaxIdempotencyKeyLength);
+    }
 
     /// <summary>
     /// Clears this building's own batch id when it's the entity being directly restored by

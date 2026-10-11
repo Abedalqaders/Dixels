@@ -306,6 +306,7 @@ export interface TextKeys {
   "Dixels:SpaceManagement:CapacityMustBePositive": string
   "Dixels:SpaceManagement:DaysNotNarrower": string
   "Dixels:SpaceManagement:HoursNotNarrower": string
+  "Dixels:SpaceManagement:IdempotencyKeyReused": string
   "Dixels:SpaceManagement:InvalidOwnOverlapPolicy": string
   "Dixels:SpaceManagement:InvalidTimezone": string
   "Dixels:SpaceManagement:MaxDurationMustBePositive": string

@@ -39,6 +39,7 @@ public class DixelsHttpApiModule : AbpModule
         {
             options.Map(DixelsDomainErrorCodes.BookingOverlap, HttpStatusCode.Conflict);
             options.Map(DixelsDomainErrorCodes.BookingIdempotencyKeyReused, HttpStatusCode.Conflict);
+            options.Map(DixelsDomainErrorCodes.HierarchyIdempotencyKeyReused, HttpStatusCode.Conflict);
             options.Map(DixelsDomainErrorCodes.BookingOrganiserOnly, HttpStatusCode.Forbidden);
             options.Map(DixelsDomainErrorCodes.BookingOnlyOrganiserCancels, HttpStatusCode.Forbidden);
             options.Map(DixelsDomainErrorCodes.BookingOrganiserCannotRespond, HttpStatusCode.Forbidden);

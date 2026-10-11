@@ -37,4 +37,11 @@ public class CreateBuildingDto
 
     /// <summary>Whether one person may hold two bookings at once in this building. Warn when left out.</summary>
     public OwnOverlapPolicy OwnOverlapPolicy { get; set; } = OwnOverlapPolicy.Warn;
+
+    /// <summary>
+    /// Optional: one per opening of the add dialog. Sending the same request again with it
+    /// (a double-click, a retry) returns the first result instead of a second copy.
+    /// </summary>
+    [StringLength(HierarchyConsts.MaxIdempotencyKeyLength)]
+    public string? IdempotencyKey { get; set; }
 }

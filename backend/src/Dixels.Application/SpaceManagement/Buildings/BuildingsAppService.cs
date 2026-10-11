@@ -137,6 +137,23 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         building.SetNames(names);
         building.SetAddresses(ToAddressMap(input.Addresses));
 
+        // Sent before (a double-click, a retry): the building that request made, not a second
+        // one. Its rules aren't compared: the add dialog always sends the same defaults.
+        if (!string.IsNullOrWhiteSpace(input.IdempotencyKey))
+        {
+            var first = await CreateReplays.FindAsync(_buildingRepository, CurrentUser.GetId(), input.IdempotencyKey,
+                b => b.BuildingNumber == building.BuildingNumber && b.Timezone == building.Timezone
+                     && b.Translations.HasSameNames(building.Translations)
+                     && b.Translations.Select(t => (t.Language, t.Address)).ToHashSet()
+                         .SetEquals(building.Translations.Select(t => (t.Language, t.Address))));
+            if (first is not null)
+            {
+                return await MapToDtoAsync(first);
+            }
+
+            building.SetIdempotencyKey(input.IdempotencyKey);
+        }
+
         await _buildingRepository.InsertAsync(building);
 
         return await MapToDtoAsync(building);
@@ -384,6 +401,8 @@ public class BuildingsAppService : DixelsAppService, IBuildingsAppService
         addresses
             .GroupBy(a => a.Language.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => (string?)g.Last().Address, StringComparer.OrdinalIgnoreCase);
+
+    private HierarchyCreateReplays CreateReplays => LazyServiceProvider.LazyGetRequiredService<HierarchyCreateReplays>();
 
     private async Task<BuildingDto> MapToDtoAsync(Building building)
     {

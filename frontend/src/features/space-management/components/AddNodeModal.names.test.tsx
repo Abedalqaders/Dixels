@@ -53,7 +53,33 @@ describe('AddNodeModal names', () => {
         { language: 'ar', name: 'الطابق الثاني' },
       ],
       floorNumber: null,
+      idempotencyKey: expect.stringMatching(/^[0-9a-f-]{36}$/),
     })
+  })
+
+  it('sends a retry after an error with the same key, so a save that did go through is not made twice', async () => {
+    vi.mocked(createFloor).mockClear().mockRejectedValueOnce(new Error('network'))
+    const onError = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <AddNodeModal
+        state={{ kind: 'floor', parentName: 'HQ', parentId: 'b1' }}
+        token="t"
+        spaceTypes={[]}
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        onError={onError}
+      />,
+    )
+
+    await user.type(screen.getByLabelText(/^Name/), 'Level 3')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(onError).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    const [first, retry] = vi.mocked(createFloor).mock.calls.map(([, input]) => input.idempotencyKey)
+    expect(first).toBeTruthy()
+    expect(retry).toBe(first)
   })
 
   it('asks for the English name even when only the Arabic one was typed', async () => {

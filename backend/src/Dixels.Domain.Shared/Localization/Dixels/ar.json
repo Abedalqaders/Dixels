@@ -26,6 +26,7 @@
     "Dixels:Localization:UnsupportedLanguage": "'{language}' ليست من لغات هذا التطبيق.",
     "Dixels:Localization:LanguageListedTwice": "اللغة {language} مذكورة مرتين. أبقِ اسمًا واحدًا لكل لغة.",
     "Dixels:SpaceManagement:ParentIsDeleted": "لا يمكن استعادة هذا العنصر ما دام {parent} الذي ينتمي إليه محذوفًا. استعد {parent} أولًا.",
+    "Dixels:SpaceManagement:IdempotencyKeyReused": "سبقت إضافة هذا العنصر بتفاصيل مختلفة، أو حُذف بعد إضافته. أغلق هذه النافذة وأضفه مرة أخرى.",
     "Dixels:Users:InvalidBuildingId": "معرّف المبنى غير صالح. اختر مبنى من القائمة.",
     "Dixels:Users:WrongCurrentPassword": "هذه ليست كلمة المرور الحالية.",
     "Dixels:Users:ProfilePictureTooLarge": "هذه الصورة كبيرة جدًا. اختر صورة أصغر من {maxKb} كيلوبايت.",

@@ -140,6 +140,20 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         var names = await _nameValidator.NormalizeAsync(input.Names.ToNames());
         var floor = new Floor(GuidGenerator.Create(), input.BuildingId, names[0].Language, names[0].Name, input.FloorNumber);
         floor.SetNames(names);
+
+        // Sent before (a double-click, a retry): the floor that request made, not a second one.
+        if (!string.IsNullOrWhiteSpace(input.IdempotencyKey))
+        {
+            var first = await CreateReplays.FindAsync(_floorRepository, CurrentUser.GetId(), input.IdempotencyKey,
+                f => f.BuildingId == floor.BuildingId && f.FloorNumber == floor.FloorNumber && f.Translations.HasSameNames(floor.Translations));
+            if (first is not null)
+            {
+                return await MapToDtoAsync(first);
+            }
+
+            floor.SetIdempotencyKey(input.IdempotencyKey);
+        }
+
         await _floorRepository.InsertAsync(floor);
 
         return await MapToDtoAsync(floor);
@@ -350,6 +364,8 @@ public class FloorsAppService : DixelsAppService, IFloorsAppService
         _ = buildingId;
         return Task.CompletedTask;
     }
+
+    private HierarchyCreateReplays CreateReplays => LazyServiceProvider.LazyGetRequiredService<HierarchyCreateReplays>();
 
     private async Task<FloorDto> MapToDtoAsync(Floor floor)
     {

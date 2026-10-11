@@ -20,4 +20,11 @@ public class CreateSpaceDto
 
     [Required]
     public int Capacity { get; set; }
+
+    /// <summary>
+    /// Optional: one per opening of the add dialog. Sending the same request again with it
+    /// (a double-click, a retry) returns the first result instead of a second copy.
+    /// </summary>
+    [StringLength(HierarchyConsts.MaxIdempotencyKeyLength)]
+    public string? IdempotencyKey { get; set; }
 }

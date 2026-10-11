@@ -26,6 +26,7 @@
     "Dixels:Localization:UnsupportedLanguage": "'{language}' isn't one of this app's languages.",
     "Dixels:Localization:LanguageListedTwice": "{language} is listed twice. Keep one name per language.",
     "Dixels:SpaceManagement:ParentIsDeleted": "This can't be restored while the {parent} it belongs to is deleted. Restore the {parent} first.",
+    "Dixels:SpaceManagement:IdempotencyKeyReused": "This was already added with different details, or has since been deleted. Close this window and add it again.",
     "Dixels:Users:InvalidBuildingId": "The building id is not valid. Pick a building from the list.",
     "Dixels:Users:WrongCurrentPassword": "That isn’t your current password.",
     "Dixels:Users:ProfilePictureTooLarge": "That picture is too big. Pick one under {maxKb} KB.",

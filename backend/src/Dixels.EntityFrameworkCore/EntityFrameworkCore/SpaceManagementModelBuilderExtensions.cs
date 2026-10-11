@@ -4,6 +4,7 @@ using Dixels.Localization;
 using Dixels.SpaceManagement;
 using Dixels.SpaceManagement.ValueObjects;
 using Volo.Abp.EntityFrameworkCore.Modeling;
+using Volo.Abp.Auditing;
 
 namespace Dixels.EntityFrameworkCore;
 
@@ -20,6 +21,15 @@ namespace Dixels.EntityFrameworkCore;
 /// </summary>
 public static class SpaceManagementModelBuilderExtensions
 {
+    // A retried "add" finds the first one by (creator, key); two can never both be saved. Rows
+    // without a key (seed data, older rows) are left out of the index.
+    private static void ConfigureIdempotencyKey<T>(EntityTypeBuilder<T> b)
+        where T : class, IHasIdempotencyKey, IMayHaveCreator
+    {
+        b.Property(x => x.IdempotencyKey).HasMaxLength(HierarchyConsts.MaxIdempotencyKeyLength);
+        b.HasIndex(x => new { x.CreatorId, x.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+    }
+
     // OperatingWindow is immutable (no setters, only a constructor), so unlike a plain
     // scalar property, EF Core won't auto-discover Open/Close/IsOpen24Hours by convention —
     // they must be declared explicitly so EF knows to bind them through the constructor.
@@ -81,6 +91,7 @@ public static class SpaceManagementModelBuilderExtensions
 
             // The names, one row per language (ABP MultiLingualObjects).
             b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.BuildingId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            ConfigureIdempotencyKey(b);
             b.Property(x => x.BuildingNumber).HasMaxLength(BuildingConsts.MaxBuildingNumberLength);
             b.Property(x => x.Timezone).HasMaxLength(BuildingConsts.MaxTimezoneLength).IsRequired();
             b.Property(x => x.OwnOverlapPolicy).HasConversion<string>().HasMaxLength(16).IsRequired();
@@ -98,6 +109,7 @@ public static class SpaceManagementModelBuilderExtensions
             b.ConfigureByConvention();
 
             b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.FloorId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            ConfigureIdempotencyKey(b);
 
             b.OwnsOne(x => x.Days, days => days.Property(d => d.Mask).HasColumnName("Days"));
             b.OwnsOne(x => x.Hours, ConfigureHours);
@@ -120,6 +132,7 @@ public static class SpaceManagementModelBuilderExtensions
             b.ConfigureByConvention();
 
             b.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.SpaceId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+            ConfigureIdempotencyKey(b);
 
             b.OwnsOne(x => x.Days, days => days.Property(d => d.Mask).HasColumnName("Days"));
             b.OwnsOne(x => x.Hours, ConfigureHours);

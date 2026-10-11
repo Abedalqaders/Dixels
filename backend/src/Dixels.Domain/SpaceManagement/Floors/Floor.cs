@@ -13,7 +13,7 @@ namespace Dixels.SpaceManagement;
 /// means "inherit from the Building" — except <see cref="MaxDurationMinutes"/>-style policy
 /// overrides and the days/hours narrow-only rule, both enforced by this class's own setters.
 /// </summary>
-public class Floor : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<FloorTranslation>
+public class Floor : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<FloorTranslation>, IHasIdempotencyKey
 {
     public Guid BuildingId { get; private set; }
 
@@ -35,6 +35,18 @@ public class Floor : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<FloorTr
     /// <see cref="SpaceHierarchyManager"/>.
     /// </summary>
     public Guid? DeletionBatchId { get; internal set; }
+
+    /// <summary>
+    /// The key the admin's "add" was sent with: a retry with the same key gets this one back
+    /// instead of a second copy (see <see cref="HierarchyCreateReplays"/>). Null for anything
+    /// made another way (seed data, rows from before keys, a client that sent none).
+    /// </summary>
+    public string? IdempotencyKey { get; private set; }
+
+    public void SetIdempotencyKey(string idempotencyKey)
+    {
+        IdempotencyKey = Check.NotNullOrWhiteSpace(idempotencyKey, nameof(idempotencyKey), HierarchyConsts.MaxIdempotencyKeyLength);
+    }
 
     /// <summary>Clears this floor's own batch id when it's the entity being directly
     /// restored by id — see <see cref="Building.ClearDeletionBatch"/> for why this can't
