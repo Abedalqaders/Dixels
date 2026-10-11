@@ -15,6 +15,11 @@ public static class NameTranslationCollectionExtensions
         where T : NameTranslation =>
         translations.FirstOrDefault(t => t.Language == language)?.Name;
 
+    /// <summary>Whether both have exactly the same names, language for language.</summary>
+    public static bool HasSameNames<T>(this IEnumerable<T> translations, IEnumerable<T> others)
+        where T : NameTranslation =>
+        translations.Select(t => (t.Language, t.Name)).ToHashSet().SetEquals(others.Select(t => (t.Language, t.Name)));
+
     /// <summary>Adds or changes the name in one language; <paramref name="create"/> makes a new row.</summary>
     public static void SetName<T>(this ICollection<T> translations, string language, string name, Func<string, string, T> create)
         where T : NameTranslation

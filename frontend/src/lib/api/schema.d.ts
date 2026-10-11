@@ -7386,6 +7386,7 @@ export interface components {
             buildingNumber?: string | null;
             days: number[];
             hours: components["schemas"]["Dixels.SpaceManagement.OperatingWindowDto"];
+            idempotencyKey?: string | null;
             /** Format: int32 */
             maxDurationMinutes: number;
             /** Format: int32 */
@@ -7403,6 +7404,7 @@ export interface components {
             buildingId: string;
             /** Format: int32 */
             floorNumber?: number | null;
+            idempotencyKey?: string | null;
             names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
         };
         "Dixels.SpaceManagement.CreateSpaceDto": {
@@ -7410,6 +7412,7 @@ export interface components {
             capacity: number;
             /** Format: uuid */
             floorId: string;
+            idempotencyKey?: string | null;
             names: components["schemas"]["Dixels.Localization.LocalizedNameDto"][];
             /** Format: uuid */
             spaceTypeId: string;

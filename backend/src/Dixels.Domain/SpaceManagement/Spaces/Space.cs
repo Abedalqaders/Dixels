@@ -13,7 +13,7 @@ namespace Dixels.SpaceManagement;
 /// the *resolved* Floor value (the Floor's own override if set, else the Building's),
 /// never the raw Floor row.
 /// </summary>
-public class Space : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTranslation>
+public class Space : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTranslation>, IHasIdempotencyKey
 {
     public Guid FloorId { get; private set; }
 
@@ -37,6 +37,18 @@ public class Space : FullAuditedAggregateRoot<Guid>, IMultiLingualObject<SpaceTr
     /// <see cref="SpaceHierarchyManager"/>.
     /// </summary>
     public Guid? DeletionBatchId { get; internal set; }
+
+    /// <summary>
+    /// The key the admin's "add" was sent with: a retry with the same key gets this one back
+    /// instead of a second copy (see <see cref="HierarchyCreateReplays"/>). Null for anything
+    /// made another way (seed data, rows from before keys, a client that sent none).
+    /// </summary>
+    public string? IdempotencyKey { get; private set; }
+
+    public void SetIdempotencyKey(string idempotencyKey)
+    {
+        IdempotencyKey = Check.NotNullOrWhiteSpace(idempotencyKey, nameof(idempotencyKey), HierarchyConsts.MaxIdempotencyKeyLength);
+    }
 
     /// <summary>Clears this space's own batch id when it's the entity being directly
     /// restored by id — see <see cref="Building.ClearDeletionBatch"/> for why this can't

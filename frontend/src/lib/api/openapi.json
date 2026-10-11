@@ -13264,6 +13264,12 @@
                 "$ref": "#/components/schemas/Dixels.SpaceManagement.OwnOverlapPolicy"
               }
             ]
+          },
+          "idempotencyKey": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -13289,6 +13295,12 @@
           "floorNumber": {
             "type": "integer",
             "format": "int32",
+            "nullable": true
+          },
+          "idempotencyKey": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": "string",
             "nullable": true
           }
         },
@@ -13321,6 +13333,12 @@
           "capacity": {
             "type": "integer",
             "format": "int32"
+          },
+          "idempotencyKey": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false

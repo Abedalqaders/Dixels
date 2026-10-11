@@ -13,6 +13,7 @@ import { LocalizedAddressField, addressNote, toAddressList } from '@/components/
 import type { LocalizedAddresses } from '@/components/LocalizedAddressField'
 import { getDefaultLanguage } from '@/i18n'
 import { TimezonePicker } from '@/components/TimezonePicker'
+import { randomUuid } from '@/lib/uuid'
 import {
   ApiError,
   createBuilding,
@@ -65,6 +66,10 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
   const [timezone, setTimezone] = useState('UTC')
   const [spaceTypeId, setSpaceTypeId] = useState(spaceTypes[0]?.id ?? '')
   const [submitting, setSubmitting] = useState(false)
+  // One key per opening of the dialog: a retry of the same add (double-click, network blip,
+  // trying again after an error whose save did go through) can never make a second copy —
+  // the server answers it with the first one.
+  const [idempotencyKey] = useState(() => randomUuid())
   const f = useFieldErrors<Field>('add')
 
   const titles = { building: t('Hierarchy:AddBuilding'), floor: t('Hierarchy:AddFloor'), space: t('Hierarchy:AddSpace') }
@@ -121,15 +126,23 @@ export function AddNodeModal({ state, token, spaceTypes, onClose, onCreated, onE
           maxHorizonDays: DEFAULT_BUILDING_MAX_HORIZON_DAYS,
           minLeadMinutes: DEFAULT_BUILDING_MIN_LEAD_MINUTES,
           ownOverlapPolicy: OwnOverlapPolicy.Warn,
+          idempotencyKey,
         })
       } else if (state.kind === 'floor') {
         await createFloor(token, {
           buildingId: state.parentId,
           names: toNameList(names),
           floorNumber: meta.trim() ? Number(meta) : null,
+          idempotencyKey,
         })
       } else {
-        await createSpace(token, { floorId: state.parentId, names: toNameList(names), spaceTypeId, capacity: Number(meta) })
+        await createSpace(token, {
+          floorId: state.parentId,
+          names: toNameList(names),
+          spaceTypeId,
+          capacity: Number(meta),
+          idempotencyKey,
+        })
       }
 
       onCreated()
