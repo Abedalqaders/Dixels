@@ -5,9 +5,9 @@ description: Open the PR for a reviewed and verified Dixels branch — screensho
 
 # Finalize task
 
-1. **Screenshots.** Commit verify-task's images to the orphan branch `pr-screenshots` under `<branch-name>/` and push it (`docs/development.md#screenshots-of-the-ui`). Done when each image URL opens.
+1. **Screenshots.** Commit verify-task's images to the orphan branch `pr-screenshots` under `<task>/` (a short task name, no slashes) and push it (`docs/development.md#screenshots-of-the-ui`). Done when each image URL opens.
 
-2. **Push and open the PR** against `main` with `gh pr create --body-file`, body in this shape:
+2. **Push and open the PR** against `main` with `gh pr create --body-file` (gh by full path, see `docs/development.md#pull-requests`), body in this shape:
 
    ```markdown
    ## What

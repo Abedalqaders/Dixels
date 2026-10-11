@@ -12,9 +12,9 @@ description: Implement groomed Dixels steps in a worktree — test first, code, 
 3. **Generated files.** For everything the change touched, regenerate and commit the generated file (`docs/conventions.md#generated-files-regenerate-never-hand-edit`): migration, API types (against this branch's own backend and database), i18n keys, feature boundaries. Every new error code or text is in every language file.
 
 4. **All checks, green.**
-   - Backend: build `Dixels.slnx`; run Domain, EntityFrameworkCore and Web tests; run Postgres tests (`DIXELS_POSTGRES_TESTS=1`, Docker running) whenever SQL, a migration, a lock, an index or a race is involved. If Docker can't run, say so; don't skip silently.
-   - Frontend: `npx tsc -b`, `npm run lint`, `npm run lint:boundaries`, `npx vitest run --maxWorkers=4`.
-   - `dotnet ef migrations has-pending-model-changes` is clean.
+   - Backend: build `Dixels.slnx` with `-warnaserror:CS8600,CS8602,CS8603,CS8604`; run Domain, EntityFrameworkCore and Web tests; run Postgres tests (`DIXELS_POSTGRES_TESTS=1`, Docker running) whenever SQL, a migration, a lock, an index or a race is involved. If Docker can't run, say so; don't skip silently.
+   - Frontend: `npx tsc -b`, `npx oxlint --deny-warnings`, `npm run lint:boundaries`, `npx vitest run --maxWorkers=4`; `npm audit --omit=dev --audit-level=high` when a dependency changed; `npx vite build` when config or imports changed.
+   - `dotnet ef migrations has-pending-model-changes --project src/Dixels.EntityFrameworkCore` (from `backend/`) is clean.
 
    Done when every command passed on the final code. Record each suite's pass count for the PR.
 

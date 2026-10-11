@@ -25,7 +25,7 @@ Each layer may use only the layers above it in this list.
 
 ## Backend modules
 
-Folders with the same name sit in each layer (`Bookings/`, `SpaceManagement/`, `Users/`, `Emails/`, `Reservations/`).
+A module is a folder of the same name in the layers it needs (`Bookings/`, `SpaceManagement/`, `Users/` in most; `Emails/` only in Domain; `Reservations/` in Application and Contracts; controllers under `HttpApi/Controllers/<Module>/`).
 
 - **SpaceManagement**: buildings, floors, spaces, space types, constraints (days, hours, durations, capacity), closures/openings (`AvailabilityOverride`). Names are stored per language (`*Translation` rows).
 - **Bookings**: bookings and recurring series, guests (colleagues and outsiders), answers (accept / maybe / decline), reminders, guest answer links.
@@ -34,7 +34,8 @@ Folders with the same name sit in each layer (`Bookings/`, `SpaceManagement/`, `
 - **Reservations**: the contract between space management and anything that holds rooms for people.
 
 ### Boundaries
-- **SpaceManagement and Users never reference Bookings.** They announce what happened with local events (`ILocalEventBus`; `…Event` classes in a `…Events.cs` file, `…Handler` listeners), and Bookings reacts. Examples: `SpaceRulesChangedEvent`, `ClosureCreatedEvent`, `SpaceDeletedEvent`, `UserMovedBuildingEvent`; Bookings announces its own (`BookingConfirmedEvent`, `BookingsCancelledEvent`…) for Emails to react to.
+- **SpaceManagement and Users don't reference Bookings.** They announce what happened with local events (`ILocalEventBus`; `…Event` classes in a `…Events.cs` file, `…Handler` listeners), and Bookings reacts. Examples: `SpaceRulesChangedEvent`, `ClosureCreatedEvent`, `SpaceDeletedEvent`, `UserMovedBuildingEvent`; Bookings announces its own (`BookingConfirmedEvent`, `BookingsCancelledEvent`…) for Emails to react to. The handlers live with the module that reacts: `Dixels.Application/Bookings` (`BookingSpaceEventHandler`, `BookingUserEventHandler`) and `Dixels.Domain/Emails`.
+  - Known exception: `Dixels.Application/Users/ColleaguesAppService` uses `BookingAccessChecker` (Bookings). The `using Dixels.Bookings;` lines in the SpaceManagement/Users contracts and controllers are unused leftovers (they use `Dixels.Reservations` types). Add no new references; removing these is a separate task.
 - **Previews go through `IReservationImpactProvider`** (`Application/Reservations`): "this change would affect N reservations" is asked in space-management terms, and each holding module (Bookings today; parking or visitors later) answers. A new module plugs in by implementing it, without editing space management.
 - **Emails are sent from events, never inline.** Background jobs queue the email in the same transaction as the change ("no booking, no email").
 
@@ -44,14 +45,15 @@ Folders with the same name sit in each layer (`Bookings/`, `SpaceManagement/`, `
 src/app/                  router (data router), module registry (modules.ts), route permissions
 src/features/<feature>/   api/ components/ hooks/ routes/ + module.tsx (pages, routes, menu, permissions)
 src/components/           app-wide pieces and ui/ (shadcn)
-src/lib/api/              fetch wrapper (ABP error envelope, 401 → silent renew → retry), query cache, generated API types
+src/lib/api/              fetch wrapper (ABP error envelope, 401 → silent renew → retry), query cache, generated API types (schemaTypes.ts)
 src/lib/time/             building-clock date maths; format.ts is the only date formatter
 src/i18n/                 texts come from the backend; keys.d.ts is generated
 ```
 
-- **Modules**: a feature is its folder plus one line in `src/app/modules.ts`. `module.tsx` declares its pages, routes, menu and permissions; `registry.test.tsx` checks they match.
+- **Modules**: a feature with pages is its folder plus one line in `src/app/modules.ts`. `module.tsx` declares its pages, routes, menu and permissions; `registry.test.tsx` checks they match. (`auth` has no pages; `guest-links` is a public page routed directly in `app/App.tsx`.)
+- **Query keys**: each feature owns `features/<feature>/queryKeys.ts`; `lib/api/queryKeys.ts` re-exports them.
 - **Feature boundaries**: a feature may import another feature only through the files listed as public in `scripts/feature-boundaries.mjs` (and every feature's `module`, `permissions` and `queryKeys`). oxlint enforces it, and CI fails if `.oxlintrc.json` drifts from the list.
-- **API types**: `src/lib/api/openapi.json` and `schema.d.ts` are generated from the backend's Swagger; `schema.contract.test.ts` checks the hand-written DTO types against them.
+- **API types**: `src/lib/api/openapi.json` and `schema.d.ts` are generated from the backend's Swagger. DTO types are never hand-written: feature `api/*.ts` files name them with `ApiDto<'Dixels.X.YDto'>` / `ApiResponse<…>` from `lib/api/schemaTypes.ts`, so a backend change is a `tsc` error where it's used. Enum const objects are checked against the schema in `features/*/api/enumChecks.ts`.
 
 ## Data
 - PostgreSQL in every environment except the EF unit tests (SQLite in memory).

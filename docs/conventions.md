@@ -22,7 +22,7 @@
 | A feature's public files | `npm run lint:boundaries` | `frontend/.oxlintrc.json` |
 | An entity or EF model | `dotnet ef migrations add <Name>` in `backend/src/Dixels.EntityFrameworkCore` | the migration, its Designer, the snapshot |
 
-CI regenerates all four and fails on any difference. `dotnet ef migrations has-pending-model-changes` must be clean.
+CI regenerates the first three and fails on any difference, and fails when the model has changes no migration covers. Check that locally from `backend/`: `dotnet ef migrations has-pending-model-changes --project src/Dixels.EntityFrameworkCore`.
 
 ## Line endings (Windows, `core.autocrlf=true`)
 Many backend files are CRLF in the repository, and `en.json` / `ar.json` are CRLF blobs with a few `\r\r\n` lines.

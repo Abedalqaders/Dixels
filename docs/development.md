@@ -13,22 +13,22 @@ git worktree add -b feature/<name> ../Dixels-<name> origin/main
 Then, inside the new worktree:
 - **Frontend dependencies**: link the main checkout's `node_modules` instead of installing (`npm ci` hits EPERM while another dev server holds files):
   `New-Item -ItemType Junction -Path frontend\node_modules -Target ..\Dixels\frontend\node_modules`
-- **Backend static libs**: copy `backend/src/Dixels.Web/wwwroot/libs` from the main checkout (git-ignored; without it every request is a 500 "Libs folder is missing").
+- **Backend static libs**: copy `backend/src/Dixels.Web/wwwroot/libs` from the main checkout (git-ignored; without it every request is a 500 "Libs folder is missing"). With no copy to take, run `abp install-libs` in `backend/src/Dixels.Web` (Volo.Abp.Studio.Cli, as CI does).
 - **Running it next to another checkout**: copy `backend/.env` and give it its own `DIXELS_API_PORT`, `DIXELS_MAIL_PORT`, `App__SelfUrl`, `App__CorsOrigins`, `Emails__AppUrl` and its own database (`Database=` in the connection string). A copy of the main database: `CREATE DATABASE "Dixels_<name>" TEMPLATE "Dixels"` (needs zero connections on `Dixels`). Frontend overrides go in `frontend/.env.development.local` (`VITE_API_BASE_URL`, `VITE_OIDC_AUTHORITY`, `DEV_PORT`). `frontend/.env.local` is tracked (LAN server values); leave it alone.
 - **Sign-in on a new web port**: web ports 5173–5176 are registered by default. Another port needs `.\run-local.ps1 -Migrate` with `App__CorsOrigins` listing every port in use (it replaces the list), then a backend restart (OpenIddict caches the client).
 
 Remove the worktree after its PR merges: `git worktree remove ../Dixels-<name>`.
 
 ## Running
-- **Backend**: `backend\run-local.ps1` (API with `dotnet watch`; smtp4dev in Docker). `-Migrate` migrates and seeds this worktree's database first. Alternative: `docker compose up -d --build` in `backend/` (a plain restart reuses the old image).
+- **Backend**: `backend\run-local.ps1` (API with `dotnet watch`; smtp4dev in Docker). `.\run-local.ps1 -Migrate` migrates and seeds this worktree's database, then exits; run it again without `-Migrate` to start the API. Alternative: `docker compose up -d --build` in `backend/` (a plain restart reuses the old image).
 - **Frontend**: `npm run dev` in `frontend/` (http://localhost:5173 unless `DEV_PORT` says otherwise).
 - **Emails** land in smtp4dev: http://localhost:5000 (or this worktree's `DIXELS_MAIL_PORT`).
 - **Sign in** with `Dixels__AdminEmail` / `Dixels__AdminPassword` from `backend/.env`. `Dixels__DemoData=true` seeds a demo building and three employees.
 
 ## Tests
 ```bash
-# backend (from backend/)
-dotnet build Dixels.slnx
+# backend (from backend/), with the nullable warnings CI treats as errors
+dotnet build Dixels.slnx -warnaserror:CS8600,CS8602,CS8603,CS8604
 dotnet test test/Dixels.Domain.Tests --no-build
 dotnet test test/Dixels.EntityFrameworkCore.Tests --no-build
 dotnet test test/Dixels.Web.Tests --no-build
@@ -38,8 +38,10 @@ DIXELS_POSTGRES_TESTS=1 dotnet test test/Dixels.Postgres.Tests --no-build   # ne
 dotnet test test/Dixels.EntityFrameworkCore.Tests --filter "FullyQualifiedName~HierarchyCreateReplayTests"
 
 # frontend (from frontend/)
-npx tsc -b && npm run lint && npm run lint:boundaries && npx vitest run --maxWorkers=4
+npx tsc -b && npx oxlint --deny-warnings && npm run lint:boundaries && npx vitest run --maxWorkers=4
 ```
+- `npm run lint` lets warnings through; CI runs `oxlint --deny-warnings`, so use that.
+- CI also runs `npm audit --omit=dev --audit-level=high`, `npx vite build` and the Docker image builds: run the audit after adding a dependency, the build after touching config or imports.
 - Without `DIXELS_POSTGRES_TESTS=1` the Postgres tests are skipped, not run. CI always runs them.
 - vitest can flake under full parallelism on Windows; `--maxWorkers=4` keeps it stable.
 

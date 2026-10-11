@@ -9,7 +9,7 @@ description: Review a Dixels branch's diff against its plan, the architecture an
 
 2. **The checklist.**
    - **Spec**: every plan item is implemented; nothing beyond it is.
-   - **Architecture** (`docs/architecture.md`): layer rules; SpaceManagement/Users don't reference Bookings; cross-module effects go through events or `IReservationImpactProvider`; frontend feature boundaries.
+   - **Architecture** (`docs/architecture.md`): layer rules; no new reference from SpaceManagement/Users to Bookings (the known exception is listed there); cross-module effects go through events or `IReservationImpactProvider`; frontend feature boundaries.
    - **Guidelines** (`docs/engineering-guidelines.md`): ABP building blocks; error codes and their HTTP status; transactions, concurrency, races, idempotency, soft-delete-aware indexes; N+1 and missing indexes.
    - **Security**: every new endpoint authorizes (permission attribute, building access); input validated; a user can't reach another user's or building's data; no secret in code, logs or text.
    - **Tests**: every behaviour change has a test at a level that can catch it; races and SQL are proven on Postgres; tests assert the behaviour (not weakened to pass); the failure paths are tested too.
