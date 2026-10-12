@@ -22,41 +22,41 @@ public class SpacesController : DixelsController, ISpacesAppService
     }
 
     [HttpGet("{id}")]
-    public virtual Task<SpaceDto> GetAsync(Guid id) => _spacesAppService.GetAsync(id);
+    public virtual async Task<SpaceDto> GetAsync(Guid id) => await _spacesAppService.GetAsync(id);
 
     [HttpGet]
-    public virtual Task<PagedResultDto<SpaceDto>> GetListAsync([FromQuery] GetSpacesInput input) =>
-        _spacesAppService.GetListAsync(input);
+    public virtual async Task<PagedResultDto<SpaceDto>> GetListAsync([FromQuery] GetSpacesInput input) =>
+        await _spacesAppService.GetListAsync(input);
 
     [HttpPost]
-    public virtual Task<SpaceDto> CreateAsync([FromBody] CreateSpaceDto input) => _spacesAppService.CreateAsync(input);
+    public virtual async Task<SpaceDto> CreateAsync([FromBody] CreateSpaceDto input) => await _spacesAppService.CreateAsync(input);
 
     [HttpPut("{id}")]
-    public virtual Task<SpaceDto> UpdateAsync(Guid id, [FromBody] UpdateSpaceDto input) =>
-        _spacesAppService.UpdateAsync(id, input);
+    public virtual async Task<SpaceDto> UpdateAsync(Guid id, [FromBody] UpdateSpaceDto input) =>
+        await _spacesAppService.UpdateAsync(id, input);
 
     [HttpPost("{id}/constraints/impact")]
-    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateSpaceConstraintsDto input, [FromQuery] int skip = 0) =>
-        _spacesAppService.GetConstraintsImpactAsync(id, input, skip);
+    public virtual async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateSpaceConstraintsDto input, [FromQuery] int skip = 0) =>
+        await _spacesAppService.GetConstraintsImpactAsync(id, input, skip);
 
     [HttpPost("{id}/impact")]
-    public virtual Task<ReservationImpactDto> GetUpdateImpactAsync(Guid id, [FromBody] UpdateSpaceDto input, [FromQuery] int skip = 0) =>
-        _spacesAppService.GetUpdateImpactAsync(id, input, skip);
+    public virtual async Task<ReservationImpactDto> GetUpdateImpactAsync(Guid id, [FromBody] UpdateSpaceDto input, [FromQuery] int skip = 0) =>
+        await _spacesAppService.GetUpdateImpactAsync(id, input, skip);
 
     [HttpGet("{id}/delete-impact")]
-    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => _spacesAppService.GetDeleteImpactAsync(id, skip);
+    public virtual async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => await _spacesAppService.GetDeleteImpactAsync(id, skip);
 
     [HttpPut("{id}/constraints")]
-    public virtual Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateSpaceConstraintsDto input) =>
-        _spacesAppService.UpdateConstraintsAsync(id, input);
+    public virtual async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateSpaceConstraintsDto input) =>
+        await _spacesAppService.UpdateConstraintsAsync(id, input);
 
     [HttpGet("{id}/resolved-constraints")]
-    public virtual Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id) =>
-        _spacesAppService.GetResolvedConstraintsAsync(id);
+    public virtual async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id) =>
+        await _spacesAppService.GetResolvedConstraintsAsync(id);
 
     [HttpDelete("{id}")]
-    public virtual Task DeleteAsync(Guid id) => _spacesAppService.DeleteAsync(id);
+    public virtual async Task DeleteAsync(Guid id) => await _spacesAppService.DeleteAsync(id);
 
     [HttpPost("{id}/restore")]
-    public virtual Task RestoreAsync(Guid id) => _spacesAppService.RestoreAsync(id);
+    public virtual async Task RestoreAsync(Guid id) => await _spacesAppService.RestoreAsync(id);
 }

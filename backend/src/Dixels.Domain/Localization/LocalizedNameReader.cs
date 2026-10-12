@@ -42,10 +42,10 @@ public class LocalizedNameReader : ITransientDependency
     }
 
     /// <summary>The translation whose name is shown — for what else it holds (a building's address).</summary>
-    public Task<TTranslation?> ShownTranslationAsync<TTranslation>(IMultiLingualObject<TTranslation> entity)
+    public async Task<TTranslation?> ShownTranslationAsync<TTranslation>(IMultiLingualObject<TTranslation> entity)
         where TTranslation : NameTranslation
     {
-        return _multiLingualObjectManager.GetTranslationAsync<IMultiLingualObject<TTranslation>, TTranslation>(entity);
+        return await _multiLingualObjectManager.GetTranslationAsync<IMultiLingualObject<TTranslation>, TTranslation>(entity);
     }
 
     /// <summary>The name to show for each entity, by id, worked out in one pass.</summary>

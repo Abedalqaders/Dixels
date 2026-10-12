@@ -20,53 +20,53 @@ public class BookingsController : DixelsController, IBookingsAppService
     }
 
     [HttpPost("preview")]
-    public virtual Task<BookingPreviewDto> PreviewAsync([FromBody] BookingRequestDto input) =>
-        _bookingsAppService.PreviewAsync(input);
+    public virtual async Task<BookingPreviewDto> PreviewAsync([FromBody] BookingRequestDto input) =>
+        await _bookingsAppService.PreviewAsync(input);
 
     [HttpPost]
-    public virtual Task<BookingDto> CreateAsync([FromBody] CreateBookingDto input) => _bookingsAppService.CreateAsync(input);
+    public virtual async Task<BookingDto> CreateAsync([FromBody] CreateBookingDto input) => await _bookingsAppService.CreateAsync(input);
 
     [HttpGet("mine")]
-    public virtual Task<ListResultDto<BookingSummaryDto>> GetMineAsync([FromQuery] GetMyBookingsInput input) =>
-        _bookingsAppService.GetMineAsync(input);
+    public virtual async Task<ListResultDto<BookingSummaryDto>> GetMineAsync([FromQuery] GetMyBookingsInput input) =>
+        await _bookingsAppService.GetMineAsync(input);
 
     [HttpGet("{id}")]
-    public virtual Task<BookingDto> GetAsync(Guid id) => _bookingsAppService.GetAsync(id);
+    public virtual async Task<BookingDto> GetAsync(Guid id) => await _bookingsAppService.GetAsync(id);
 
     [HttpPost("{id}/cancel")]
-    public virtual Task<ListResultDto<BookingDto>> CancelAsync(Guid id, [FromBody] CancelBookingDto input) =>
-        _bookingsAppService.CancelAsync(id, input);
+    public virtual async Task<ListResultDto<BookingDto>> CancelAsync(Guid id, [FromBody] CancelBookingDto input) =>
+        await _bookingsAppService.CancelAsync(id, input);
 
     [HttpPost("{id}/response")]
-    public virtual Task<BookingDto> RespondAsync(Guid id, [FromBody] RespondToInviteDto input) =>
-        _bookingsAppService.RespondAsync(id, input);
+    public virtual async Task<BookingDto> RespondAsync(Guid id, [FromBody] RespondToInviteDto input) =>
+        await _bookingsAppService.RespondAsync(id, input);
 
     [HttpPost("series/{seriesId}/response")]
-    public virtual Task RespondToSeriesAsync(Guid seriesId, [FromBody] RespondToInviteDto input) =>
-        _bookingsAppService.RespondToSeriesAsync(seriesId, input);
+    public virtual async Task RespondToSeriesAsync(Guid seriesId, [FromBody] RespondToInviteDto input) =>
+        await _bookingsAppService.RespondToSeriesAsync(seriesId, input);
 
     [HttpPost("series/preview")]
-    public virtual Task<SeriesPreviewDto> PreviewSeriesAsync([FromBody] SeriesRequestDto input) =>
-        _bookingsAppService.PreviewSeriesAsync(input);
+    public virtual async Task<SeriesPreviewDto> PreviewSeriesAsync([FromBody] SeriesRequestDto input) =>
+        await _bookingsAppService.PreviewSeriesAsync(input);
 
     [HttpPut("{id}/invitees")]
-    public virtual Task<BookingDto> UpdateInviteesAsync(Guid id, [FromBody] UpdateInviteesDto input) =>
-        _bookingsAppService.UpdateInviteesAsync(id, input);
+    public virtual async Task<BookingDto> UpdateInviteesAsync(Guid id, [FromBody] UpdateInviteesDto input) =>
+        await _bookingsAppService.UpdateInviteesAsync(id, input);
 
     // POST, not GET: the ids go in the body (up to 50 would make a long URL). Reads only.
     [HttpPost("{id}/busy-guests")]
-    public virtual Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, [FromBody] BusyGuestsInput input) =>
-        _bookingsAppService.GetBusyGuestsAsync(id, input);
+    public virtual async Task<BusyGuestsResultDto> GetBusyGuestsAsync(Guid id, [FromBody] BusyGuestsInput input) =>
+        await _bookingsAppService.GetBusyGuestsAsync(id, input);
 
     [HttpPost("series/{seriesId}/busy-guests")]
-    public virtual Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, [FromBody] BusyGuestsInput input) =>
-        _bookingsAppService.GetSeriesBusyGuestsAsync(seriesId, input);
+    public virtual async Task<BusyGuestsResultDto> GetSeriesBusyGuestsAsync(Guid seriesId, [FromBody] BusyGuestsInput input) =>
+        await _bookingsAppService.GetSeriesBusyGuestsAsync(seriesId, input);
 
     [HttpPut("series/{seriesId}/invitees")]
-    public virtual Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, [FromBody] UpdateInviteesDto input) =>
-        _bookingsAppService.UpdateSeriesInviteesAsync(seriesId, input);
+    public virtual async Task<SeriesCreatedDto> UpdateSeriesInviteesAsync(Guid seriesId, [FromBody] UpdateInviteesDto input) =>
+        await _bookingsAppService.UpdateSeriesInviteesAsync(seriesId, input);
 
     [HttpPost("series")]
-    public virtual Task<SeriesCreatedDto> CreateSeriesAsync([FromBody] CreateSeriesDto input) =>
-        _bookingsAppService.CreateSeriesAsync(input);
+    public virtual async Task<SeriesCreatedDto> CreateSeriesAsync([FromBody] CreateSeriesDto input) =>
+        await _bookingsAppService.CreateSeriesAsync(input);
 }

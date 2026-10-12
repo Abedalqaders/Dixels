@@ -37,8 +37,8 @@ public class ProfilePictureController : DixelsController, IProfilePictureAppServ
     }
 
     [HttpPut]
-    public virtual Task UpdateAsync(IRemoteStreamContent file) => _profilePictureAppService.UpdateAsync(file);
+    public virtual async Task UpdateAsync(IRemoteStreamContent file) => await _profilePictureAppService.UpdateAsync(file);
 
     [HttpDelete]
-    public virtual Task DeleteAsync() => _profilePictureAppService.DeleteAsync();
+    public virtual async Task DeleteAsync() => await _profilePictureAppService.DeleteAsync();
 }

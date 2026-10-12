@@ -27,11 +27,11 @@ public class BookingUserEventHandler :
         _bookingManager = bookingManager;
     }
 
-    public Task HandleEventAsync(UserDeactivatedEvent eventData) =>
-        LeaveAsync(eventData.UserId, eventData.ByUserId, "Dixels:Bookings:CancelReason:AccountDeactivated");
+    public async Task HandleEventAsync(UserDeactivatedEvent eventData) =>
+        await LeaveAsync(eventData.UserId, eventData.ByUserId, "Dixels:Bookings:CancelReason:AccountDeactivated");
 
-    public Task HandleEventAsync(UserDeletedEvent eventData) =>
-        LeaveAsync(eventData.UserId, eventData.ByUserId, "Dixels:Bookings:CancelReason:AccountRemoved");
+    public async Task HandleEventAsync(UserDeletedEvent eventData) =>
+        await LeaveAsync(eventData.UserId, eventData.ByUserId, "Dixels:Bookings:CancelReason:AccountRemoved");
 
     // They can only book, and be invited as a colleague, in one building: the old one's go.
     public async Task HandleEventAsync(UserMovedBuildingEvent eventData)

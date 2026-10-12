@@ -190,8 +190,8 @@ public class BookingsAppService : DixelsAppService, IBookingsAppService
         return (await MapToDtosAsync(new[] { booking })).Single();
     }
 
-    public Task RespondToSeriesAsync(Guid seriesId, RespondToInviteDto input) =>
-        _bookingResponses.RespondToSeriesAsync(seriesId, CurrentUser.GetId(), input.Status);
+    public async Task RespondToSeriesAsync(Guid seriesId, RespondToInviteDto input) =>
+        await _bookingResponses.RespondToSeriesAsync(seriesId, CurrentUser.GetId(), input.Status);
 
     public async Task<SeriesPreviewDto> PreviewSeriesAsync(SeriesRequestDto input)
     {

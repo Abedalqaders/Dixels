@@ -24,8 +24,8 @@ public class RsvpController : DixelsController, IRsvpAppService
     }
 
     [HttpPost("lookup")]
-    public virtual Task<GuestInvitationDto> LookupAsync([FromBody] GuestLinkInput input) => _rsvpAppService.LookupAsync(input);
+    public virtual async Task<GuestInvitationDto> LookupAsync([FromBody] GuestLinkInput input) => await _rsvpAppService.LookupAsync(input);
 
     [HttpPost]
-    public virtual Task<GuestInvitationDto> AnswerAsync([FromBody] GuestAnswerInput input) => _rsvpAppService.AnswerAsync(input);
+    public virtual async Task<GuestInvitationDto> AnswerAsync([FromBody] GuestAnswerInput input) => await _rsvpAppService.AnswerAsync(input);
 }

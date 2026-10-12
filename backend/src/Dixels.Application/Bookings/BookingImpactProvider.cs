@@ -48,8 +48,8 @@ public class BookingImpactProvider : IReservationImpactProvider, ITransientDepen
         return _bookingImpact.ToAffected(misfits);
     }
 
-    public Task<int> CountUpcomingAsync(RoomScope scope) =>
-        _bookingImpact.Checker.CountUpcomingAsync(scope);
+    public async Task<int> CountUpcomingAsync(RoomScope scope) =>
+        await _bookingImpact.Checker.CountUpcomingAsync(scope);
 
     public async Task<ReservationImpactPart> FindForPersonLeavingAsync(Guid userId, Building building, string reason, int first)
     {

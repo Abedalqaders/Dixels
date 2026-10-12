@@ -26,17 +26,17 @@ public class ProfilePictureCleanup : ILocalEventHandler<EntityDeletedEventData<I
         _unitOfWorkManager = unitOfWorkManager;
     }
 
-    public Task HandleEventAsync(EntityDeletedEventData<IdentityUser> eventData)
+    public async Task HandleEventAsync(EntityDeletedEventData<IdentityUser> eventData)
     {
         var userId = eventData.Entity.Id;
         var unitOfWork = _unitOfWorkManager.Current;
         if (unitOfWork is null)
         {
-            return _pictures.DeleteAsync(userId);
+            await _pictures.DeleteAsync(userId);
+            return;
         }
 
         // Resolved again when the save completes: this handler's own scope is disposed by then.
         unitOfWork.OnCompleted(() => unitOfWork.ServiceProvider.GetRequiredService<ProfilePictureManager>().DeleteAsync(userId));
-        return Task.CompletedTask;
     }
 }

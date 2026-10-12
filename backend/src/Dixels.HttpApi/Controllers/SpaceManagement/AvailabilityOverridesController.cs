@@ -22,21 +22,21 @@ public class AvailabilityOverridesController : DixelsController, IAvailabilityOv
     }
 
     [HttpGet]
-    public virtual Task<PagedResultDto<AvailabilityOverrideDto>> GetListAsync([FromQuery] GetAvailabilityOverridesInput input) =>
-        _overridesAppService.GetListAsync(input);
+    public virtual async Task<PagedResultDto<AvailabilityOverrideDto>> GetListAsync([FromQuery] GetAvailabilityOverridesInput input) =>
+        await _overridesAppService.GetListAsync(input);
 
     [HttpGet("active")]
-    public virtual Task<ListResultDto<AvailabilityOverrideDto>> GetActiveAsync([FromQuery] OverrideScope scope, [FromQuery] Guid scopeId) =>
-        _overridesAppService.GetActiveAsync(scope, scopeId);
+    public virtual async Task<ListResultDto<AvailabilityOverrideDto>> GetActiveAsync([FromQuery] OverrideScope scope, [FromQuery] Guid scopeId) =>
+        await _overridesAppService.GetActiveAsync(scope, scopeId);
 
     [HttpPost]
-    public virtual Task<AvailabilityOverrideDto> CreateAsync([FromBody] CreateAvailabilityOverrideDto input) =>
-        _overridesAppService.CreateAsync(input);
+    public virtual async Task<AvailabilityOverrideDto> CreateAsync([FromBody] CreateAvailabilityOverrideDto input) =>
+        await _overridesAppService.CreateAsync(input);
 
     [HttpPost("impact")]
-    public virtual Task<ReservationImpactDto> GetCreateImpactAsync([FromBody] CreateAvailabilityOverrideDto input, [FromQuery] int skip = 0) =>
-        _overridesAppService.GetCreateImpactAsync(input, skip);
+    public virtual async Task<ReservationImpactDto> GetCreateImpactAsync([FromBody] CreateAvailabilityOverrideDto input, [FromQuery] int skip = 0) =>
+        await _overridesAppService.GetCreateImpactAsync(input, skip);
 
     [HttpDelete("{id}")]
-    public virtual Task DeleteAsync(Guid id) => _overridesAppService.DeleteAsync(id);
+    public virtual async Task DeleteAsync(Guid id) => await _overridesAppService.DeleteAsync(id);
 }

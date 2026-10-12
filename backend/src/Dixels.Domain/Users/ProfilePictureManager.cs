@@ -53,7 +53,7 @@ public class ProfilePictureManager : DomainService
     }
 
     /// <summary>Removes the user's picture; nothing happens when they have none.</summary>
-    public Task DeleteAsync(Guid userId) => _container.DeleteAsync(BlobName(userId));
+    public async Task DeleteAsync(Guid userId) => await _container.DeleteAsync(BlobName(userId));
 
     /// <summary>The image type the first bytes say this is, or null when they're not one of
     /// the three kept: JPEG (FF D8 FF), PNG (89 "PNG" 0D 0A 1A 0A), WebP ("RIFF", size, "WEBP").</summary>

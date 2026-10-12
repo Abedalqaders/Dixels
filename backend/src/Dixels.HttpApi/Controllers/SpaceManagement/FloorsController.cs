@@ -22,37 +22,37 @@ public class FloorsController : DixelsController, IFloorsAppService
     }
 
     [HttpGet("{id}")]
-    public virtual Task<FloorDto> GetAsync(Guid id) => _floorsAppService.GetAsync(id);
+    public virtual async Task<FloorDto> GetAsync(Guid id) => await _floorsAppService.GetAsync(id);
 
     [HttpGet]
-    public virtual Task<PagedResultDto<FloorDto>> GetListAsync([FromQuery] GetFloorsInput input) =>
-        _floorsAppService.GetListAsync(input);
+    public virtual async Task<PagedResultDto<FloorDto>> GetListAsync([FromQuery] GetFloorsInput input) =>
+        await _floorsAppService.GetListAsync(input);
 
     [HttpPost]
-    public virtual Task<FloorDto> CreateAsync([FromBody] CreateFloorDto input) => _floorsAppService.CreateAsync(input);
+    public virtual async Task<FloorDto> CreateAsync([FromBody] CreateFloorDto input) => await _floorsAppService.CreateAsync(input);
 
     [HttpPut("{id}")]
-    public virtual Task<FloorDto> UpdateAsync(Guid id, [FromBody] UpdateFloorDto input) =>
-        _floorsAppService.UpdateAsync(id, input);
+    public virtual async Task<FloorDto> UpdateAsync(Guid id, [FromBody] UpdateFloorDto input) =>
+        await _floorsAppService.UpdateAsync(id, input);
 
     [HttpPost("{id}/constraints/impact")]
-    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input, [FromQuery] int skip = 0) =>
-        _floorsAppService.GetConstraintsImpactAsync(id, input, skip);
+    public virtual async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input, [FromQuery] int skip = 0) =>
+        await _floorsAppService.GetConstraintsImpactAsync(id, input, skip);
 
     [HttpGet("{id}/delete-impact")]
-    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => _floorsAppService.GetDeleteImpactAsync(id, skip);
+    public virtual async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => await _floorsAppService.GetDeleteImpactAsync(id, skip);
 
     [HttpPut("{id}/constraints")]
-    public virtual Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input) =>
-        _floorsAppService.UpdateConstraintsAsync(id, input);
+    public virtual async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateFloorConstraintsDto input) =>
+        await _floorsAppService.UpdateConstraintsAsync(id, input);
 
     [HttpGet("{id}/resolved-constraints")]
-    public virtual Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id) =>
-        _floorsAppService.GetResolvedConstraintsAsync(id);
+    public virtual async Task<ResolvedConstraintsDto> GetResolvedConstraintsAsync(Guid id) =>
+        await _floorsAppService.GetResolvedConstraintsAsync(id);
 
     [HttpDelete("{id}")]
-    public virtual Task DeleteAsync(Guid id) => _floorsAppService.DeleteAsync(id);
+    public virtual async Task DeleteAsync(Guid id) => await _floorsAppService.DeleteAsync(id);
 
     [HttpPost("{id}/restore")]
-    public virtual Task RestoreAsync(Guid id) => _floorsAppService.RestoreAsync(id);
+    public virtual async Task RestoreAsync(Guid id) => await _floorsAppService.RestoreAsync(id);
 }

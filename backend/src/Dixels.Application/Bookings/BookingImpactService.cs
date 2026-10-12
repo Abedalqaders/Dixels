@@ -144,12 +144,12 @@ public class BookingImpactService : ITransientDependency
     }
 
     /// <summary>Cancels bookings a rule change broke: "Rules changed: Open 09:00–17:00 only".</summary>
-    public Task CancelForRuleChangeAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId)
+    public async Task CancelForRuleChangeAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId)
     {
         var reasons = impacts.ToDictionary(
             i => i.Booking.Id,
             i => _localizer["Dixels:Bookings:CancelReason:RulesChanged", _violationLocalizer.ToDto(i.Violations[0]).ShortMessage].Value);
-        return CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
+        await CancelInBatchesAsync(reasons.Keys, adminId, id => reasons[id]);
     }
 
     /// <summary>
@@ -163,16 +163,16 @@ public class BookingImpactService : ITransientDependency
     }
 
     /// <summary>Cancels bookings with one reason for all (a closure, a removed room).</summary>
-    public Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
-        CancelInBatchesAsync(impacts.Select(i => i.Booking.Id), adminId, _ => reason);
+    public async Task CancelAllAsync(IReadOnlyList<BookingImpact> impacts, Guid adminId, string reason) =>
+        await CancelInBatchesAsync(impacts.Select(i => i.Booking.Id), adminId, _ => reason);
 
     /// <summary>The same, for bookings already read (a person's, when they leave or are removed).</summary>
-    public Task CancelAllAsync(IReadOnlyList<Booking> bookings, Guid adminId, string reason) =>
-        CancelInBatchesAsync(bookings.Select(b => b.Id), adminId, _ => reason);
+    public async Task CancelAllAsync(IReadOnlyList<Booking> bookings, Guid adminId, string reason) =>
+        await CancelInBatchesAsync(bookings.Select(b => b.Id), adminId, _ => reason);
 
     /// <summary>The same, for what the save's own preview already found (bookings only).</summary>
-    public Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason) =>
-        CancelInBatchesAsync(OwnOf(affected).Select(a => a.Id), adminId, _ => reason);
+    public async Task CancelAllAsync(IReadOnlyList<AffectedReservation> affected, Guid adminId, string reason) =>
+        await CancelInBatchesAsync(OwnOf(affected).Select(a => a.Id), adminId, _ => reason);
 
     /// <summary>How many bookings one round cancels (one UPDATE and one event per reason), like CancelBookingsInRemovedRoomsJob.</summary>
     public const int CancelBatchSize = 500;

@@ -23,13 +23,13 @@ public class BookableSpacesController : DixelsController, IAvailabilityAppServic
     }
 
     [HttpGet("my-building")]
-    public virtual Task<BookableBuildingDto?> GetMyBuildingAsync() => _availabilityAppService.GetMyBuildingAsync();
+    public virtual async Task<BookableBuildingDto?> GetMyBuildingAsync() => await _availabilityAppService.GetMyBuildingAsync();
 
     [HttpGet("search")]
-    public virtual Task<AvailabilitySearchResultDto> SearchAsync([FromQuery] SearchAvailabilityInput input) =>
-        _availabilityAppService.SearchAsync(input);
+    public virtual async Task<AvailabilitySearchResultDto> SearchAsync([FromQuery] SearchAvailabilityInput input) =>
+        await _availabilityAppService.SearchAsync(input);
 
     [HttpGet("{spaceId}/days")]
-    public virtual Task<SpaceDaysDto> GetSpaceDaysAsync(Guid spaceId, [FromQuery] GetSpaceDaysInput input) =>
-        _availabilityAppService.GetSpaceDaysAsync(spaceId, input);
+    public virtual async Task<SpaceDaysDto> GetSpaceDaysAsync(Guid spaceId, [FromQuery] GetSpaceDaysInput input) =>
+        await _availabilityAppService.GetSpaceDaysAsync(spaceId, input);
 }

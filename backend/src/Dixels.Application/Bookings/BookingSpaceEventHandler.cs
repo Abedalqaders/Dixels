@@ -44,14 +44,14 @@ public class BookingSpaceEventHandler :
         _backgroundJobManager = backgroundJobManager;
     }
 
-    public Task HandleEventAsync(SpaceDeletedEvent eventData) =>
-        CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:SpaceRemoved");
+    public async Task HandleEventAsync(SpaceDeletedEvent eventData) =>
+        await CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:SpaceRemoved");
 
-    public Task HandleEventAsync(FloorDeletedEvent eventData) =>
-        CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:FloorRemoved");
+    public async Task HandleEventAsync(FloorDeletedEvent eventData) =>
+        await CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:FloorRemoved");
 
-    public Task HandleEventAsync(BuildingDeletedEvent eventData) =>
-        CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:BuildingRemoved");
+    public async Task HandleEventAsync(BuildingDeletedEvent eventData) =>
+        await CancelUpcomingAsync(eventData.SpaceIds, eventData.ByUserId, "Dixels:Bookings:CancelReason:BuildingRemoved");
 
     public async Task HandleEventAsync(SpaceRulesChangedEvent eventData)
     {

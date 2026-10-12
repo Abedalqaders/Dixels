@@ -29,8 +29,8 @@ public class ReservationImpactPreview : ITransientDependency
     }
 
     /// <summary>Reservations the proposed rules (or a new closure) would no longer allow.</summary>
-    public Task<ReservationImpactDto> NoLongerFittingAsync(RoomRulesChange change, int? skip = null) =>
-        GatherAsync(skip, (provider, first) => provider.FindNoLongerFittingAsync(change, first));
+    public async Task<ReservationImpactDto> NoLongerFittingAsync(RoomRulesChange change, int? skip = null) =>
+        await GatherAsync(skip, (provider, first) => provider.FindNoLongerFittingAsync(change, first));
 
     /// <summary>
     /// What a save's event carries on (<see cref="SpaceRulesChangedEvent.Affected"/>): every
@@ -49,8 +49,8 @@ public class ReservationImpactPreview : ITransientDependency
     }
 
     /// <summary>Every upcoming reservation in <paramref name="scope"/>: what a delete would take.</summary>
-    public Task<ReservationImpactDto> UpcomingAsync(Building building, RoomScope scope, string reason, int? skip = null) =>
-        GatherAsync(skip, (provider, first) => provider.FindUpcomingAsync(building, scope, reason, first));
+    public async Task<ReservationImpactDto> UpcomingAsync(Building building, RoomScope scope, string reason, int? skip = null) =>
+        await GatherAsync(skip, (provider, first) => provider.FindUpcomingAsync(building, scope, reason, first));
 
     /// <summary>How many upcoming reservations the rooms in <paramref name="scope"/> hold, across every module — when only the number matters.</summary>
     public async Task<int> CountUpcomingAsync(RoomScope scope)
@@ -65,8 +65,8 @@ public class ReservationImpactPreview : ITransientDependency
     }
 
     /// <summary>What a person holds in a building they're leaving.</summary>
-    public Task<ReservationImpactDto> PersonLeavingAsync(Guid userId, Building building, string reason, int? skip = null) =>
-        GatherAsync(skip, (provider, first) => provider.FindForPersonLeavingAsync(userId, building, reason, first));
+    public async Task<ReservationImpactDto> PersonLeavingAsync(Guid userId, Building building, string reason, int? skip = null) =>
+        await GatherAsync(skip, (provider, first) => provider.FindForPersonLeavingAsync(userId, building, reason, first));
 
     // Each module answers with its total and its own first skip + PageSize; the page is cut
     // from those merged, so it's right however many modules answer. Soonest first, then by id,
