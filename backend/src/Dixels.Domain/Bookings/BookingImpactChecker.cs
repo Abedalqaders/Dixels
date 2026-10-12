@@ -285,8 +285,8 @@ public class BookingImpactChecker : DomainService
     }
 
     // Space management's own room query: the same rooms its saves and deletes name.
-    private Task<IQueryable<Guid>> RoomIdsAsync(RoomScope scope) =>
-        LazyServiceProvider.LazyGetRequiredService<RoomIdReader>().QueryAsync(scope);
+    private async Task<IQueryable<Guid>> RoomIdsAsync(RoomScope scope) =>
+        await LazyServiceProvider.LazyGetRequiredService<RoomIdReader>().QueryAsync(scope);
 
     /// <summary>
     /// Soonest first, then by id so the order is the same on every call (a preview is read a

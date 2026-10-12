@@ -18,6 +18,6 @@ public class MyPreferencesController : DixelsController, IMyPreferencesAppServic
     }
 
     [HttpPut("language")]
-    public virtual Task UpdateLanguageAsync([FromBody] UpdateMyLanguageDto input) =>
-        _myPreferencesAppService.UpdateLanguageAsync(input);
+    public virtual async Task UpdateLanguageAsync([FromBody] UpdateMyLanguageDto input) =>
+        await _myPreferencesAppService.UpdateLanguageAsync(input);
 }

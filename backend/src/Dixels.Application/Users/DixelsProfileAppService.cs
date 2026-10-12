@@ -31,10 +31,10 @@ public class DixelsProfileAppService : ProfileAppService
     {
     }
 
-    public override Task<ProfileDto> UpdateAsync(UpdateProfileDto input)
+    public override async Task<ProfileDto> UpdateAsync(UpdateProfileDto input)
     {
         input.ExtraProperties.Clear();
-        return base.UpdateAsync(input);
+        return await base.UpdateAsync(input);
     }
 
     public override async Task ChangePasswordAsync(ChangePasswordInput input)

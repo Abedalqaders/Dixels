@@ -20,17 +20,17 @@ public class SpaceTypesController : DixelsController, ISpaceTypesAppService
     }
 
     [HttpGet]
-    public virtual Task<PagedResultDto<SpaceTypeDto>> GetListAsync([FromQuery] GetSpaceTypesInput input) =>
-        _spaceTypesAppService.GetListAsync(input);
+    public virtual async Task<PagedResultDto<SpaceTypeDto>> GetListAsync([FromQuery] GetSpaceTypesInput input) =>
+        await _spaceTypesAppService.GetListAsync(input);
 
     [HttpPost]
-    public virtual Task<SpaceTypeDto> CreateAsync([FromBody] CreateSpaceTypeDto input) =>
-        _spaceTypesAppService.CreateAsync(input);
+    public virtual async Task<SpaceTypeDto> CreateAsync([FromBody] CreateSpaceTypeDto input) =>
+        await _spaceTypesAppService.CreateAsync(input);
 
     [HttpPut("{id}")]
-    public virtual Task<SpaceTypeDto> UpdateAsync(Guid id, [FromBody] UpdateSpaceTypeDto input) =>
-        _spaceTypesAppService.UpdateAsync(id, input);
+    public virtual async Task<SpaceTypeDto> UpdateAsync(Guid id, [FromBody] UpdateSpaceTypeDto input) =>
+        await _spaceTypesAppService.UpdateAsync(id, input);
 
     [HttpDelete("{id}")]
-    public virtual Task DeleteAsync(Guid id) => _spaceTypesAppService.DeleteAsync(id);
+    public virtual async Task DeleteAsync(Guid id) => await _spaceTypesAppService.DeleteAsync(id);
 }

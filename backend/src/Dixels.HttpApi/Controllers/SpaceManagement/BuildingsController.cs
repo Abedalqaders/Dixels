@@ -22,34 +22,34 @@ public class BuildingsController : DixelsController, IBuildingsAppService
     }
 
     [HttpGet("{id}")]
-    public virtual Task<BuildingDto> GetAsync(Guid id) => _buildingsAppService.GetAsync(id);
+    public virtual async Task<BuildingDto> GetAsync(Guid id) => await _buildingsAppService.GetAsync(id);
 
     [HttpGet]
-    public virtual Task<PagedResultDto<BuildingDto>> GetListAsync([FromQuery] GetBuildingsInput input) =>
-        _buildingsAppService.GetListAsync(input);
+    public virtual async Task<PagedResultDto<BuildingDto>> GetListAsync([FromQuery] GetBuildingsInput input) =>
+        await _buildingsAppService.GetListAsync(input);
 
     [HttpPost]
-    public virtual Task<BuildingDto> CreateAsync([FromBody] CreateBuildingDto input) =>
-        _buildingsAppService.CreateAsync(input);
+    public virtual async Task<BuildingDto> CreateAsync([FromBody] CreateBuildingDto input) =>
+        await _buildingsAppService.CreateAsync(input);
 
     [HttpPut("{id}")]
-    public virtual Task<BuildingDto> UpdateAsync(Guid id, [FromBody] UpdateBuildingDto input) =>
-        _buildingsAppService.UpdateAsync(id, input);
+    public virtual async Task<BuildingDto> UpdateAsync(Guid id, [FromBody] UpdateBuildingDto input) =>
+        await _buildingsAppService.UpdateAsync(id, input);
 
     [HttpPost("{id}/constraints/impact")]
-    public virtual Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input, [FromQuery] int skip = 0) =>
-        _buildingsAppService.GetConstraintsImpactAsync(id, input, skip);
+    public virtual async Task<ReservationImpactDto> GetConstraintsImpactAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input, [FromQuery] int skip = 0) =>
+        await _buildingsAppService.GetConstraintsImpactAsync(id, input, skip);
 
     [HttpGet("{id}/delete-impact")]
-    public virtual Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => _buildingsAppService.GetDeleteImpactAsync(id, skip);
+    public virtual async Task<ReservationImpactDto> GetDeleteImpactAsync(Guid id, [FromQuery] int skip = 0) => await _buildingsAppService.GetDeleteImpactAsync(id, skip);
 
     [HttpPut("{id}/constraints")]
-    public virtual Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input) =>
-        _buildingsAppService.UpdateConstraintsAsync(id, input);
+    public virtual async Task<ConstraintsSaveResultDto> UpdateConstraintsAsync(Guid id, [FromBody] UpdateBuildingConstraintsDto input) =>
+        await _buildingsAppService.UpdateConstraintsAsync(id, input);
 
     [HttpDelete("{id}")]
-    public virtual Task DeleteAsync(Guid id) => _buildingsAppService.DeleteAsync(id);
+    public virtual async Task DeleteAsync(Guid id) => await _buildingsAppService.DeleteAsync(id);
 
     [HttpPost("{id}/restore")]
-    public virtual Task RestoreAsync(Guid id) => _buildingsAppService.RestoreAsync(id);
+    public virtual async Task RestoreAsync(Guid id) => await _buildingsAppService.RestoreAsync(id);
 }

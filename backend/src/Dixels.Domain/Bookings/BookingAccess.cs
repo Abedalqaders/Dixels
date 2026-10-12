@@ -60,8 +60,8 @@ public class BookingAccess : DomainService
     /// plainly (403, <see cref="DixelsDomainErrorCodes.BookingOrganiserOnly"/> or the code
     /// given), since they already know it exists.
     /// </summary>
-    public Task EnsureAsync(Booking booking, Guid userId, params BookingRole[] allowed) =>
-        EnsureAsync(booking, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
+    public async Task EnsureAsync(Booking booking, Guid userId, params BookingRole[] allowed) =>
+        await EnsureAsync(booking, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
 
     /// <summary>The same, with the error code a refused (known) role gets — e.g. one that names the action.</summary>
     public async Task EnsureAsync(Booking booking, Guid userId, string refusedCode, params BookingRole[] allowed)
@@ -85,8 +85,8 @@ public class BookingAccess : DomainService
     }
 
     /// <summary>The rule of <see cref="EnsureAsync(Booking, Guid, BookingRole[])"/> for a whole series: 404 for no role, 403 for a known role that isn't allowed.</summary>
-    public Task EnsureSeriesAsync(BookingSeries series, Guid userId, params BookingRole[] allowed) =>
-        EnsureSeriesAsync(series, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
+    public async Task EnsureSeriesAsync(BookingSeries series, Guid userId, params BookingRole[] allowed) =>
+        await EnsureSeriesAsync(series, userId, DixelsDomainErrorCodes.BookingOrganiserOnly, allowed);
 
     /// <summary>The same, with the error code a refused (known) role gets.</summary>
     public async Task EnsureSeriesAsync(BookingSeries series, Guid userId, string refusedCode, params BookingRole[] allowed)

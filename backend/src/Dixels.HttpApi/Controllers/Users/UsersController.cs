@@ -24,16 +24,16 @@ public class UsersController : DixelsController, IUsersAppService
     }
 
     [HttpGet("{userId}/reassign-impact")]
-    public virtual Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, [FromQuery] int skip = 0) => _usersAppService.GetReassignImpactAsync(userId, skip);
+    public virtual async Task<ReservationImpactDto> GetReassignImpactAsync(Guid userId, [FromQuery] int skip = 0) => await _usersAppService.GetReassignImpactAsync(userId, skip);
 
     [HttpPut("{userId}/building")]
-    public virtual Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>
-        _usersAppService.AssignBuildingAsync(userId, input);
+    public virtual async Task AssignBuildingAsync(Guid userId, [FromBody] AssignUserBuildingDto input) =>
+        await _usersAppService.AssignBuildingAsync(userId, input);
 
     [HttpGet("page-details")]
-    public virtual Task<List<UserPageDetailsDto>> GetPageDetailsAsync([FromQuery] GetUserPageDetailsInput input) =>
-        _usersAppService.GetPageDetailsAsync(input);
+    public virtual async Task<List<UserPageDetailsDto>> GetPageDetailsAsync([FromQuery] GetUserPageDetailsInput input) =>
+        await _usersAppService.GetPageDetailsAsync(input);
 
     [HttpGet("role-names")]
-    public virtual Task<List<string>> GetRoleNamesAsync() => _usersAppService.GetRoleNamesAsync();
+    public virtual async Task<List<string>> GetRoleNamesAsync() => await _usersAppService.GetRoleNamesAsync();
 }

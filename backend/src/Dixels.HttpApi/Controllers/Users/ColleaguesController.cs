@@ -19,6 +19,6 @@ public class ColleaguesController : DixelsController, IColleaguesAppService
     }
 
     [HttpGet]
-    public virtual Task<ListResultDto<ColleagueDto>> GetListAsync([FromQuery] GetColleaguesInput input) =>
-        _colleaguesAppService.GetListAsync(input);
+    public virtual async Task<ListResultDto<ColleagueDto>> GetListAsync([FromQuery] GetColleaguesInput input) =>
+        await _colleaguesAppService.GetListAsync(input);
 }
