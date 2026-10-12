@@ -4,6 +4,7 @@
 - **Match the file you're in**: its naming, its idiom, its comment density.
 - **Comments explain why**, in plain sentences, on the class or the non-obvious line. The surrounding code is the model: `/// <summary>` on public types and members, short `//` lines above the tricky part.
 - **Names say what the thing is in the product's words**: `CancelOwnAsync`, `IsOpenForAnswers`, `HierarchyCreateReplays`.
+- **Async methods `await`**: a method returning `Task` is `async` and awaits what it calls, even a one-line pass-through (`async Task<X> GetAsync() => await _service.GetAsync();`). The stack trace keeps the frame, errors always arrive through the task, and a later `try`/`using` around the call stays correct. The one exception is a method with nothing to await, which returns `Task.CompletedTask`.
 - **Test names are sentences**: `A_booking_cannot_be_cancelled_twice` (C#), `it('sends a retry after an error with the same key')` (TS).
 - **Frontend**: server state through `useApiQuery(key, fetcher)` with a key from `queryKeys` (the token never in a key); mutations call `emitBookingsChanged()` / `notifyHierarchyChanged()`; dates through `lib/time/format`; destructive actions ask through `useConfirm()`; feedback through `useToast()`; dialogs are shadcn; RTL-safe logical classes (`ms-`, `border-s`, `insetInlineStart`).
 
